@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+*/build/
+
+# Java / JVM build artifacts
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# Logs and runtime dumps
+*.log
+logs/
+*.out
+
+# IDE/editor
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local env/config overrides
+.env
+.env.*
+
+# Temporary files
+*.tmp
+*.swp
+*~

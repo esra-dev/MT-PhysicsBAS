@@ -1,0 +1,456 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix elem:  <http://w3id.org/elementary#> .
+@prefix hvac:  <http://w3id.org/elementary/hvac#> .
+@prefix qudt:  <http://qudt.org/schema/qudt/> .
+@prefix unit:  <http://qudt.org/vocab/unit/> .
+@prefix sosa:  <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:   <http://example.org/was/lab#> .
+@prefix ws:    <http://example.org/was/lab/stereotypes#> .
+
+
+# ===========================================================================
+# Ontology Declaration
+# ===========================================================================
+
+lab:WASLabOntology a owl:Ontology ;
+    rdfs:label "WAS Smart Factory Lab – Elementary + Brick Description" ;
+    rdfs:comment """
+        Describes the HSG WAS smart factory lab (Exercise 11) using the
+        Elementary ontology for component stereotypes and physical mechanisms,
+        interlinked with the Brick ontology for structural/topological
+        descriptions, as proposed by Ramanathan & Mayer (BuildSys 2023).
+    """ .
+
+
+# ===========================================================================
+# 1.  PHYSICAL MECHANISMS  (elem:PhysicalMechanism individuals)
+# ===========================================================================
+
+# --- 1.1  Illumination mechanism (light source → indoor illuminance) --------
+
+ws:illumination a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illumination" ;
+    rdfs:comment "A light source converts electrical energy into visible light (lux)." ;
+    elem:hasManipulatedVariable ws:electricalPowerInput ;
+    elem:hasDependentVariable   ws:indoorIlluminance .
+
+# --- 1.2  Daylighting / blind-aperture mechanism ----------------------------
+
+ws:daylighting a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Daylighting through blind aperture" ;
+    rdfs:comment """
+        Raising the blinds allows outdoor sunlight (lux) to pass through
+        the window aperture, thereby increasing indoor illuminance.
+        The outdoor illuminance is an uncontrolled independent variable;
+        the blind position (up/down) is the manipulated variable.
+    """ ;
+    elem:hasIndependentVariable ws:outdoorIlluminance ;
+    elem:hasManipulatedVariable ws:blindApertureRatio ;
+    elem:hasDependentVariable   ws:indoorIlluminance .
+
+# --- 1.3  Sensing / measurement mechanism -----------------------------------
+
+ws:illuminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illuminance sensing" ;
+    rdfs:comment "A photo-sensor converts ambient light intensity to a measurable lux signal." ;
+    elem:hasIndependentVariable ws:indoorIlluminance ;
+    elem:hasDependentVariable   ws:sensedIlluminance .
+
+ws:outdoorIlluminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Outdoor illuminance sensing" ;
+    rdfs:comment "Weather station photo-sensor converts outdoor sunlight to a lux signal." ;
+    elem:hasIndependentVariable ws:outdoorIlluminanceRaw ;
+    elem:hasDependentVariable   ws:sensedOutdoorIlluminance .
+
+
+# ===========================================================================
+# 2.  PROCESS VARIABLES  (elem:ProcessVariable individuals)
+# ===========================================================================
+
+ws:electricalPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to light" ;
+    elem:dealsWithStuff  ws:ElectricalEnergy ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     ws:Power .
+
+ws:outdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    elem:dealsWithStuff  ws:VisibleLight ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     ws:Illuminance .
+
+ws:outdoorIlluminanceRaw a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Raw outdoor illuminance at weather station inlet" ;
+    elem:dealsWithStuff  ws:VisibleLight ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     ws:Illuminance .
+
+ws:blindApertureRatio a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Blind aperture ratio (open vs. closed)" ;
+    rdfs:comment "Binary: Up (open, ratio≈1) or Down (closed, ratio≈0)." ;
+    elem:dealsWithStuff  ws:MechanicalPosition ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     ws:OpeningRatio .
+
+ws:indoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor illuminance level" ;
+    rdfs:comment "Resultant lux level inside the workstation zone [0, 1000 lux]." ;
+    elem:dealsWithStuff  ws:VisibleLight ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     ws:Illuminance .
+
+ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor illuminance signal" ;
+    elem:dealsWithStuff  ws:VisibleLight ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     ws:Illuminance .
+
+ws:sensedOutdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed outdoor illuminance signal" ;
+    elem:dealsWithStuff  ws:VisibleLight ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     ws:Illuminance .
+
+
+# ===========================================================================
+# 3.  PHYSICAL STUFF  (elem:PhysicalStuff)
+# ===========================================================================
+
+ws:VisibleLight a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visible light (photons)" .
+
+ws:ElectricalEnergy a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Electrical energy" .
+
+ws:MechanicalPosition a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Mechanical position / aperture" .
+
+
+# ===========================================================================
+# 4.  QUANTITIES  (placeholders – bridge to QUDT / Brick quantities)
+# ===========================================================================
+
+ws:Illuminance a owl:NamedIndividual ;
+    rdfs:label "Illuminance (lux)" .
+
+ws:Power a owl:NamedIndividual ;
+    rdfs:label "Electrical power" .
+
+ws:OpeningRatio a owl:NamedIndividual ;
+    rdfs:label "Dimensionless opening ratio [0,1]" .
+
+
+# ===========================================================================
+# 5.  STREAM KINDS
+# ===========================================================================
+
+ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor lighting stream" ;
+    rdfs:comment "The flow of visible light that determines indoor illuminance." .
+
+ws:OutdoorSunlightStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Outdoor sunlight stream" ;
+    rdfs:comment "The flow of outdoor sunlight (weather input)." .
+
+
+# ===========================================================================
+# 6.  COMPONENT STEREOTYPES  (elem:Stereotype individuals)
+# ===========================================================================
+
+# --- 6.1  Ceiling Light stereotype -----------------------------------------
+
+ws:CeilingLightStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Ceiling light stereotype" ;
+    rdfs:comment """
+        A binary on/off ceiling light converts electrical energy into visible
+        light via the illumination mechanism.  Turning the light ON increases
+        indoor illuminance; turning it OFF removes that contribution.
+        Energy cost: 50 units per activation.
+    """ ;
+    elem:hasProcessMechanism ws:illumination ;
+    elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet .
+
+ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of ceiling light" ;
+    elem:dealsWithStuff ws:ElectricalEnergy ;
+    elem:manipulates    ws:electricalPowerInput .
+
+ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of ceiling light" ;
+    elem:dealsWithStuff        ws:VisibleLight ;
+    elem:isRelatedToVariable   ws:indoorIlluminance ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# --- 6.2  Blind stereotype --------------------------------------------------
+
+ws:BlindStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Window blind stereotype" ;
+    rdfs:comment """
+        A motorised roller blind controls the fraction of outdoor sunlight
+        admitted into the workstation zone.  The blind aperture ratio is the
+        manipulated variable; indoor illuminance is the dependent variable.
+        Energy cost: 1 unit per raise action.
+        Anti-glare constraint: when outdoor illuminance is Rank 3 AND the
+        operator is human, the blind MUST be closed (Down).
+    """ ;
+    elem:hasProcessMechanism ws:daylighting ;
+    elem:hasConnectionPoint  ws:cp_blind_outdoor_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_actuator_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_light_outlet .
+
+ws:cp_blind_outdoor_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Outdoor sunlight inlet of blind" ;
+    elem:dealsWithStuff        ws:VisibleLight ;
+    elem:isRelatedToVariable   ws:outdoorIlluminance ;
+    elem:suitableFor           ws:OutdoorSunlightStream .
+
+ws:cp_blind_actuator_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Actuator inlet of blind (Up / Down command)" ;
+    elem:dealsWithStuff ws:MechanicalPosition ;
+    elem:manipulates    ws:blindApertureRatio .
+
+ws:cp_blind_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Indoor light outlet of blind" ;
+    elem:dealsWithStuff        ws:VisibleLight ;
+    elem:isRelatedToVariable   ws:indoorIlluminance ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# --- 6.3  Light sensor stereotype ------------------------------------------
+
+ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor light sensor stereotype" ;
+    rdfs:comment """
+        A photo-diode sensor measures indoor illuminance [0, 1000 lux]
+        and reports it as a discrete rank (0–3).
+    """ ;
+    elem:hasProcessMechanism ws:illuminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet .
+
+ws:cp_lightsensor_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of indoor light sensor" ;
+    elem:dealsWithStuff      ws:VisibleLight ;
+    elem:isRelatedToVariable ws:indoorIlluminance ;
+    elem:suitableFor         ws:IndoorLightingStream .
+
+ws:cp_lightsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of indoor light sensor" ;
+    elem:dealsWithStuff      ws:VisibleLight ;
+    elem:isRelatedToVariable ws:sensedIlluminance .
+
+# --- 6.4  Weather station stereotype ----------------------------------------
+
+ws:WeatherStationStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Weather station (outdoor illuminance sensor) stereotype" ;
+    rdfs:comment """
+        Photo-sensor that measures outdoor sunlight [0, 1500 lux].
+    """ ;
+    elem:hasProcessMechanism ws:outdoorIlluminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_ws_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_ws_signal_outlet .
+
+ws:cp_ws_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of weather station" ;
+    elem:dealsWithStuff      ws:VisibleLight ;
+    elem:isRelatedToVariable ws:outdoorIlluminanceRaw ;
+    elem:suitableFor         ws:OutdoorSunlightStream .
+
+ws:cp_ws_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of weather station" ;
+    elem:dealsWithStuff      ws:VisibleLight ;
+    elem:isRelatedToVariable ws:sensedOutdoorIlluminance .
+
+
+# ===========================================================================
+# 7.  BUILDING TOPOLOGY (Brick structural description)
+# ===========================================================================
+
+# --- 7.1  Building & floors ------------------------------------------------
+
+lab:SmartFactoryBuilding a brick:Building ;
+    rdfs:label "HSG WAS Smart Factory Lab" ;
+    brick:hasPart lab:FactoryFloor .
+
+lab:FactoryFloor a brick:Floor ;
+    rdfs:label "Factory floor" ;
+    brick:hasPart lab:Zone1 ;
+    brick:hasPart lab:Zone2 .
+
+# --- 7.2  Zones (Rooms) -----------------------------------------------------
+
+lab:Zone1 a brick:Room ;
+    rdfs:label "Workstation Zone 1" ;
+    rdfs:comment "Physical zone containing workstation 1." .
+
+lab:Zone2 a brick:Room ;
+    rdfs:label "Workstation Zone 2" ;
+    rdfs:comment "Physical zone containing workstation 2." .
+
+
+# ===========================================================================
+# 8.  COMPONENT INSTANCES (Brick equipment + Elementary stereotype links)
+# ===========================================================================
+
+# --- 8.1  Ceiling lights ----------------------------------------------------
+
+lab:CeilingLight_Z1 a brick:Luminaire ;
+    rdfs:label "Ceiling light – Zone 1" ;
+    rdfs:comment "Binary on/off ceiling light in workstation zone 1. Energy cost: 50 units per activation." ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasStereotype ws:CeilingLightStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream_Z1 .
+
+lab:CeilingLight_Z2 a brick:Luminaire ;
+    rdfs:label "Ceiling light – Zone 2" ;
+    rdfs:comment "Binary on/off ceiling light in workstation zone 2. Energy cost: 50 units per activation." ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasStereotype ws:CeilingLightStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream_Z2 .
+
+# --- 8.2  Blinds ------------------------------------------------------------
+
+lab:Blind_Z1 a brick:Shade ;
+    rdfs:label "Window blind – Zone 1" ;
+    rdfs:comment "Motorised roller blind in workstation zone 1. Actions: Up / Down. Energy cost: 1 unit per raise." ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream_Z1 ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:Blind_Z2 a brick:Shade ;
+    rdfs:label "Window blind – Zone 2" ;
+    rdfs:comment "Motorised roller blind in workstation zone 2. Actions: Up / Down. Energy cost: 1 unit per raise." ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream_Z2 ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+# --- 8.3  Indoor light sensors ----------------------------------------------
+
+lab:LightSensor_Z1 a brick:Illuminance_Sensor ;
+    rdfs:label "Indoor illuminance sensor – Zone 1" ;
+    rdfs:comment "Measures indoor lux in Zone 1. Range: [0, 1000] lux. Reported as ranks 0–3." ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorIlluminance_Z1 ;
+    elem:hasStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream_Z1 .
+
+lab:LightSensor_Z2 a brick:Illuminance_Sensor ;
+    rdfs:label "Indoor illuminance sensor – Zone 2" ;
+    rdfs:comment "Measures indoor lux in Zone 2. Range: [0, 1000] lux. Reported as ranks 0–3." ;
+    brick:isLocatedIn lab:Zone2 ;
+    sosa:observes     lab:IndoorIlluminance_Z2 ;
+    elem:hasStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream_Z2 .
+
+# --- 8.4  Weather station ---------------------------------------------------
+
+lab:WeatherStation a brick:Weather_Station ;
+    rdfs:label "Outdoor weather station" ;
+    rdfs:comment "Measures outdoor sunlight. Range: [0, 1500] lux. Shared by both zones." ;
+    brick:isLocatedIn lab:SmartFactoryBuilding ;
+    sosa:observes     lab:OutdoorIlluminance ;
+    elem:hasStereotype ws:WeatherStationStereotype ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+
+# ===========================================================================
+# 9.  STREAMS (elem:Stream instances)
+# ===========================================================================
+
+lab:IndoorLightingStream_Z1 a elem:Stream ;
+    rdfs:label "Indoor lighting process stream – Zone 1" ;
+    elem:hasStreamKind ws:IndoorLightingStream ;
+    rdfs:comment """
+        Light flows from CeilingLight_Z1 and through Blind_Z1 (when raised)
+        into the indoor space of Zone 1, where it is measured by LightSensor_Z1.
+    """ .
+
+lab:IndoorLightingStream_Z2 a elem:Stream ;
+    rdfs:label "Indoor lighting process stream – Zone 2" ;
+    elem:hasStreamKind ws:IndoorLightingStream ;
+    rdfs:comment """
+        Light flows from CeilingLight_Z2 and through Blind_Z2 (when raised)
+        into the indoor space of Zone 2, where it is measured by LightSensor_Z2.
+    """ .
+
+lab:OutdoorSunlightStream a elem:Stream ;
+    rdfs:label "Outdoor sunlight stream (shared)" ;
+    elem:hasStreamKind ws:OutdoorSunlightStream ;
+    rdfs:comment """
+        Outdoor sunlight observed by the WeatherStation feeds both Blind_Z1
+        and Blind_Z2 as the uncontrolled light source.  The same outdoor
+        illuminance affects both zones because the zones are physically close.
+    """ .
+
+
+# ===========================================================================
+# 10.  TOPOLOGICAL CONNECTIONS (brick:feeds relationships)
+#       Interpreted via Elementary inference rules (Section 3.4 of the paper)
+# ===========================================================================
+
+# Outdoor sunlight → blinds (each blind is fed by the weather station)
+lab:WeatherStation   brick:feeds  lab:Blind_Z1 .
+lab:WeatherStation   brick:feeds  lab:Blind_Z2 .
+
+# Ceiling lights and blinds both feed into the indoor light sensor
+# (their respective zone sensors observe the combined illuminance)
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z1 .
+
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z2 .
+
+# Cross-zone influence: as stated in the assignment, actions on lights/blinds
+# in one zone typically influence illuminance in BOTH zones.
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z2 .
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z1 .
+
+
+# ===========================================================================
+# 11.  OBSERVED PROPERTIES (sosa:ObservableProperty)
+# ===========================================================================
+
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty, brick:Illuminance ;
+    rdfs:label "Indoor illuminance – Zone 1" ;
+    rdfs:comment "Lux level in Zone 1 [0, 1000]. Rank 0:<50, Rank 1:50-100, Rank 2:100-300, Rank 3:300-1000." .
+
+lab:IndoorIlluminance_Z2 a sosa:ObservableProperty, brick:Illuminance ;
+    rdfs:label "Indoor illuminance – Zone 2" ;
+    rdfs:comment "Lux level in Zone 2 [0, 1000]. Rank 0:<50, Rank 1:50-100, Rank 2:100-300, Rank 3:300-1000." .
+
+lab:OutdoorIlluminance a sosa:ObservableProperty, brick:Illuminance ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    rdfs:comment "Measured by weather station [0, 1500] lux. Rank 3 (≥300 lux) triggers anti-glare constraint for human operators." .
+
+
+# ===========================================================================
+# 12.  TASK / OPERATOR CONTEXT  (domain-specific extension)
+# ===========================================================================
+
+lab:Workstation_Z1 a brick:Workstation ;
+    rdfs:label "Workstation – Zone 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    rdfs:comment """
+        Task requirements specify a desired illuminance rank [0–3].
+        Operator type (human / robot) further constrains blind usage:
+        if operator is human AND outdoor rank = 3, blinds MUST be Down.
+    """ .
+
+lab:Workstation_Z2 a brick:Workstation ;
+    rdfs:label "Workstation – Zone 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    rdfs:comment """
+        Task requirements specify a desired illuminance rank [0–3].
+        Operator type (human / robot) further constrains blind usage:
+        if operator is human AND outdoor rank = 3, blinds MUST be Down.
+    """ .
