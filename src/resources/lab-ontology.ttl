@@ -75,7 +75,7 @@ ws:outdoorIlluminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
 
 ws:electricalPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Electrical power input to light" ;
-    elem:dealsWithStuff  ws:ElectricalEnergy ;
+    elem:dealsWithStuff  elem:electrical_energy ;
     elem:hasProcessPosition elem:inlet ;
     elem:hasQuantity     ws:Power .
 
@@ -125,8 +125,8 @@ ws:sensedOutdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
 ws:VisibleLight a owl:NamedIndividual, elem:PhysicalStuff ;
     rdfs:label "Visible light (photons)" .
 
-ws:ElectricalEnergy a owl:NamedIndividual, elem:PhysicalStuff ;
-    rdfs:label "Electrical energy" .
+# Using Elementary's predefined electrical_energy instead of custom definition
+# elem:electrical_energy is already defined in the Elementary ontology
 
 ws:MechanicalPosition a owl:NamedIndividual, elem:PhysicalStuff ;
     rdfs:label "Mechanical position / aperture" .
@@ -173,13 +173,13 @@ ws:CeilingLightStereotype a owl:NamedIndividual, elem:Stereotype ;
         indoor illuminance; turning it OFF removes that contribution.
         Energy cost: 50 units per activation.
     """ ;
-    elem:hasProcessMechanism ws:illumination ;
+    elem:hasPhysicalMechanism ws:illumination ;
     elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
     elem:hasConnectionPoint  ws:cp_light_photon_outlet .
 
 ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
     rdfs:label "Electrical inlet of ceiling light" ;
-    elem:dealsWithStuff ws:ElectricalEnergy ;
+    elem:dealsWithStuff elem:electrical_energy ;
     elem:manipulates    ws:electricalPowerInput .
 
 ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
@@ -200,7 +200,7 @@ ws:BlindStereotype a owl:NamedIndividual, elem:Stereotype ;
         Anti-glare constraint: when outdoor illuminance is Rank 3 AND the
         operator is human, the blind MUST be closed (Down).
     """ ;
-    elem:hasProcessMechanism ws:daylighting ;
+    elem:hasPhysicalMechanism ws:daylighting ;
     elem:hasConnectionPoint  ws:cp_blind_outdoor_inlet ;
     elem:hasConnectionPoint  ws:cp_blind_actuator_inlet ;
     elem:hasConnectionPoint  ws:cp_blind_light_outlet .
@@ -230,7 +230,7 @@ ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
         A photo-diode sensor measures indoor illuminance [0, 1000 lux]
         and reports it as a discrete rank (0–3).
     """ ;
-    elem:hasProcessMechanism ws:illuminanceSensing ;
+    elem:hasPhysicalMechanism ws:illuminanceSensing ;
     elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
     elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet .
 
@@ -252,7 +252,7 @@ ws:WeatherStationStereotype a owl:NamedIndividual, elem:Stereotype ;
     rdfs:comment """
         Photo-sensor that measures outdoor sunlight [0, 1500 lux].
     """ ;
-    elem:hasProcessMechanism ws:outdoorIlluminanceSensing ;
+    elem:hasPhysicalMechanism ws:outdoorIlluminanceSensing ;
     elem:hasConnectionPoint  ws:cp_ws_photon_inlet ;
     elem:hasConnectionPoint  ws:cp_ws_signal_outlet .
 
@@ -316,7 +316,7 @@ lab:CeilingLight_Z2 a brick:Luminaire ;
 
 # --- 8.2  Blinds ------------------------------------------------------------
 
-lab:Blind_Z1 a brick:Shade ;
+lab:Blind_Z1 a brick:Blind ;
     rdfs:label "Window blind – Zone 1" ;
     rdfs:comment "Motorised roller blind in workstation zone 1. Actions: Up / Down. Energy cost: 1 unit per raise." ;
     brick:isLocatedIn lab:Zone1 ;
@@ -324,7 +324,7 @@ lab:Blind_Z1 a brick:Shade ;
     elem:isPartOf      lab:IndoorLightingStream_Z1 ;
     elem:isPartOf      lab:OutdoorSunlightStream .
 
-lab:Blind_Z2 a brick:Shade ;
+lab:Blind_Z2 a brick:Blind ;
     rdfs:label "Window blind – Zone 2" ;
     rdfs:comment "Motorised roller blind in workstation zone 2. Actions: Up / Down. Energy cost: 1 unit per raise." ;
     brick:isLocatedIn lab:Zone2 ;
@@ -437,7 +437,13 @@ lab:OutdoorIlluminance a sosa:ObservableProperty, brick:Illuminance ;
 # 12.  TASK / OPERATOR CONTEXT  (domain-specific extension)
 # ===========================================================================
 
-lab:Workstation_Z1 a brick:Workstation ;
+# Custom class for workstations (not defined in Brick 1.4.4)
+lab:Workstation a owl:Class ;
+    rdfs:label "Workstation" ;
+    rdfs:comment "A designated work area within a zone, associated with task requirements and operator constraints." ;
+    rdfs:subClassOf brick:Space .
+
+lab:Workstation_Z1 a owl:NamedIndividual, lab:Workstation ;
     rdfs:label "Workstation – Zone 1" ;
     brick:isLocatedIn lab:Zone1 ;
     rdfs:comment """
@@ -446,7 +452,7 @@ lab:Workstation_Z1 a brick:Workstation ;
         if operator is human AND outdoor rank = 3, blinds MUST be Down.
     """ .
 
-lab:Workstation_Z2 a brick:Workstation ;
+lab:Workstation_Z2 a owl:NamedIndividual, lab:Workstation ;
     rdfs:label "Workstation – Zone 2" ;
     brick:isLocatedIn lab:Zone2 ;
     rdfs:comment """
