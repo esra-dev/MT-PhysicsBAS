@@ -3,7 +3,6 @@
 
 /*
  * This agent controls the illuminance in two workstations (Zone 1 and Zone 2)
- * using rule-based logic instead of Q-learning.
  * 
  * The agent interacts with:
  * - Light sensors in each workstation

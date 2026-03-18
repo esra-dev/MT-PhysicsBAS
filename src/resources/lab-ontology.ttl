@@ -22,7 +22,7 @@
 lab:WASLabOntology a owl:Ontology ;
     rdfs:label "WAS Smart Factory Lab – Elementary + Brick Description" ;
     rdfs:comment """
-        Describes the HSG WAS smart factory lab (Exercise 11) using the
+        Describes the HSG WAS smart factory lab using the
         Elementary ontology for component stereotypes and physical mechanisms,
         interlinked with the Brick ontology for structural/topological
         descriptions, as proposed by Ramanathan & Mayer (BuildSys 2023).

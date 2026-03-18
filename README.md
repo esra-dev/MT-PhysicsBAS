@@ -122,17 +122,3 @@ The lab state is represented as a 7-element vector:
 - `ZxBlinds`: Blinds status (true=up/open, false=down/closed)
 - `Sunshine`: External sunshine rank (0-3)
 
-## Comparison with Original Assignment-11
-
-| Feature | Assignment-11 | MT-Esra |
-|---------|---------------|---------|
-| Control method | Q-learning | Rule-based |
-| Adaptation | Learns optimal policy | Fixed rules |
-| Complexity | High | Low |
-| Training required | Yes | No |
-| Predictability | Varies | High |
-| Setup time | Long (training) | Immediate |
-
-## License
-
-Educational project for Web-based and Autonomous Systems course.
