@@ -7,6 +7,7 @@
 @prefix elem:  <http://w3id.org/elementary#> .
 @prefix hvac:  <http://w3id.org/elementary/hvac#> .
 @prefix qudt:  <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
 @prefix unit:  <http://qudt.org/vocab/unit/> .
 @prefix sosa:  <http://www.w3.org/ns/sosa/> .
 
@@ -77,45 +78,45 @@ ws:electricalPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Electrical power input to light" ;
     elem:dealsWithStuff  elem:electrical_energy ;
     elem:hasProcessPosition elem:inlet ;
-    elem:hasQuantity     ws:Power .
+    elem:hasQuantity     qudtqk:ActivePower .
 
 ws:outdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Outdoor illuminance (sunshine)" ;
     elem:dealsWithStuff  ws:VisibleLight ;
     elem:hasProcessPosition elem:inlet ;
-    elem:hasQuantity     ws:Illuminance .
+    elem:hasQuantity     qudtqk:Illuminance .
 
 ws:outdoorIlluminanceRaw a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Raw outdoor illuminance at weather station inlet" ;
     elem:dealsWithStuff  ws:VisibleLight ;
     elem:hasProcessPosition elem:inlet ;
-    elem:hasQuantity     ws:Illuminance .
+    elem:hasQuantity     qudtqk:Illuminance .
 
 ws:blindApertureRatio a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Blind aperture ratio (open vs. closed)" ;
     rdfs:comment "Binary: Up (open, ratio≈1) or Down (closed, ratio≈0)." ;
     elem:dealsWithStuff  ws:MechanicalPosition ;
     elem:hasProcessPosition elem:inlet ;
-    elem:hasQuantity     ws:OpeningRatio .
+    elem:hasQuantity     qudtqk:DimensionlessRatio .
 
 ws:indoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Indoor illuminance level" ;
     rdfs:comment "Resultant lux level inside the workstation zone [0, 1000 lux]." ;
     elem:dealsWithStuff  ws:VisibleLight ;
     elem:hasProcessPosition elem:outlet ;
-    elem:hasQuantity     ws:Illuminance .
+    elem:hasQuantity     qudtqk:Illuminance .
 
 ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Sensed indoor illuminance signal" ;
     elem:dealsWithStuff  ws:VisibleLight ;
     elem:hasProcessPosition elem:outlet ;
-    elem:hasQuantity     ws:Illuminance .
+    elem:hasQuantity     qudtqk:Illuminance .
 
 ws:sensedOutdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Sensed outdoor illuminance signal" ;
     elem:dealsWithStuff  ws:VisibleLight ;
     elem:hasProcessPosition elem:outlet ;
-    elem:hasQuantity     ws:Illuminance .
+    elem:hasQuantity     qudtqk:Illuminance .
 
 
 # ===========================================================================
@@ -133,17 +134,13 @@ ws:MechanicalPosition a owl:NamedIndividual, elem:PhysicalStuff ;
 
 
 # ===========================================================================
-# 4.  QUANTITIES  (placeholders – bridge to QUDT / Brick quantities)
+# 4.  QUANTITIES  (using QUDT quantity kinds aligned with Brick schema)
 # ===========================================================================
 
-ws:Illuminance a owl:NamedIndividual ;
-    rdfs:label "Illuminance (lux)" .
-
-ws:Power a owl:NamedIndividual ;
-    rdfs:label "Electrical power" .
-
-ws:OpeningRatio a owl:NamedIndividual ;
-    rdfs:label "Dimensionless opening ratio [0,1]" .
+# All quantities now use QUDT standard quantity kinds via the qudtqk: prefix
+# - qudtqk:Illuminance for light intensity measurements (lux)
+# - qudtqk:ActivePower for electrical power consumption (watts)
+# - qudtqk:DimensionlessRatio for opening ratios [0,1]
 
 
 # ===========================================================================
@@ -298,6 +295,12 @@ lab:Zone2 a brick:Room ;
 # 8.  COMPONENT INSTANCES (Brick equipment + Elementary stereotype links)
 # ===========================================================================
 
+# Custom equipment class for indoor illuminance sensors (Brick defines Illuminance_Sensor as Point class, not equipment)
+lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
+    rdfs:label "Indoor illuminance sensor equipment" ;
+    rdfs:comment "Physical illuminance sensor device. Note: brick:Illuminance_Sensor is a Point class in Brick 1.4.4." ;
+    rdfs:subClassOf brick:Sensor_Equipment .
+
 # --- 8.1  Ceiling lights ----------------------------------------------------
 
 lab:CeilingLight_Z1 a brick:Luminaire ;
@@ -334,7 +337,7 @@ lab:Blind_Z2 a brick:Blind ;
 
 # --- 8.3  Indoor light sensors ----------------------------------------------
 
-lab:LightSensor_Z1 a brick:Illuminance_Sensor ;
+lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment ;
     rdfs:label "Indoor illuminance sensor – Zone 1" ;
     rdfs:comment "Measures indoor lux in Zone 1. Range: [0, 1000] lux. Reported as ranks 0–3." ;
     brick:isLocatedIn lab:Zone1 ;
@@ -342,7 +345,7 @@ lab:LightSensor_Z1 a brick:Illuminance_Sensor ;
     elem:hasStereotype ws:LightSensorStereotype ;
     elem:isPartOf      lab:IndoorLightingStream_Z1 .
 
-lab:LightSensor_Z2 a brick:Illuminance_Sensor ;
+lab:LightSensor_Z2 a lab:Indoor_Illuminance_Sensor_Equipment ;
     rdfs:label "Indoor illuminance sensor – Zone 2" ;
     rdfs:comment "Measures indoor lux in Zone 2. Range: [0, 1000] lux. Reported as ranks 0–3." ;
     brick:isLocatedIn lab:Zone2 ;
@@ -420,16 +423,19 @@ lab:Blind_Z2         brick:feeds  lab:LightSensor_Z1 .
 # 11.  OBSERVED PROPERTIES (sosa:ObservableProperty)
 # ===========================================================================
 
-lab:IndoorIlluminance_Z1 a sosa:ObservableProperty, brick:Illuminance ;
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty ;
     rdfs:label "Indoor illuminance – Zone 1" ;
+    qudt:hasQuantityKind qudtqk:Illuminance ;
     rdfs:comment "Lux level in Zone 1 [0, 1000]. Rank 0:<50, Rank 1:50-100, Rank 2:100-300, Rank 3:300-1000." .
 
-lab:IndoorIlluminance_Z2 a sosa:ObservableProperty, brick:Illuminance ;
+lab:IndoorIlluminance_Z2 a sosa:ObservableProperty ;
     rdfs:label "Indoor illuminance – Zone 2" ;
+    qudt:hasQuantityKind qudtqk:Illuminance ;
     rdfs:comment "Lux level in Zone 2 [0, 1000]. Rank 0:<50, Rank 1:50-100, Rank 2:100-300, Rank 3:300-1000." .
 
-lab:OutdoorIlluminance a sosa:ObservableProperty, brick:Illuminance ;
+lab:OutdoorIlluminance a sosa:ObservableProperty ;
     rdfs:label "Outdoor illuminance (sunshine)" ;
+    qudt:hasQuantityKind qudtqk:Illuminance ;
     rdfs:comment "Measured by weather station [0, 1500] lux. Rank 3 (≥300 lux) triggers anti-glare constraint for human operators." .
 
 

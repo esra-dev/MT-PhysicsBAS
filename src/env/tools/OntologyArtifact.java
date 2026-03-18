@@ -68,7 +68,7 @@ public class OntologyArtifact extends Artifact {
     /** SPARQL SELECT that retrieves ALL components in a zone with their metadata.
      *  Traverses the three-layer Elementary Ontology architecture:
      *    ?comp --(elem:hasStereotype)--> ?stereo
-     *          --(elem:hasProcessMechanism)--> ?mech
+     *          --(elem:hasPhysicalMechanism)--> ?mech
      *          --(elem:hasManipulatedVariable / hasDependentVariable / hasIndependentVariable)--> variables
      *  The zone URI is injected as a string literal into the query at call time.
      *  ivLabel is OPTIONAL (absent for mechanisms with no IV; Java defaults it to "none").
@@ -80,7 +80,7 @@ public class OntologyArtifact extends Artifact {
             "WHERE { " +
             "  ?comp  brick:isLocatedIn          <%s> . " +   // %s = zone URI
             "  ?comp  elem:hasStereotype         ?stereo . " +
-            "  ?stereo elem:hasProcessMechanism  ?mech . " +
+            "  ?stereo elem:hasPhysicalMechanism  ?mech . " +
             "  ?mech  rdfs:label                 ?mechanism . " +
             "  ?mech  elem:hasManipulatedVariable ?mv . " +
             "  ?mv    rdfs:label                  ?mvLabel . " +

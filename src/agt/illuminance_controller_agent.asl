@@ -30,7 +30,7 @@ lab_environment_real("https://raw.githubusercontent.com/Interactions-HSG/example
 // Target illuminance levels for each workstation
 // Zone 1 target: Rank 2 (medium illuminance: 100-300 lux)
 // Zone 2 target: Rank 3 (high illuminance: >= 300 lux)
-task_requirements([2, 3]).
+task_requirements([3, 3]).
 
 // Maximum control attempts to prevent infinite loops
 max_control_attempts(10).
