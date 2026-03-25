@@ -129,11 +129,11 @@ needs_less_light(Current, Target) :- Current > Target.
     +ontology_artifact(OntArtifactId);
     .print("Ontology artifact created. KG loaded from lab-ontology.ttl.");
     .print("  Architecture: Three-layer Elementary Ontology (Cecconi et al. 2023)");
-    .print("  Layer 1 - PhysicalMechanism: ws:illumination (light), ws:daylighting (blind)");
-    .print("  Layer 2 - Stereotypes     : ws:CeilingLightStereotype (MV=electricalPowerInput, IV=none)");
+    .print("  Layer 1 - PhysicalMechanism: ws:pm_incandescent_light_emission (light), ws:pm_daylight_ingress (blind)");
+    .print("  Layer 2 - Stereotypes     : ws:LampIncandescentStereotype (MV=electrical_power_input, IV=none)");
     .print("                              ws:BlindStereotype (MV=blindApertureRatio, IV=outdoorIlluminance)");
     .print("  Layer 3 - BRICK instances : lab:CeilingLight_Z1/Z2, lab:Blind_Z1/Z2 via elem:hasStereotype");
-    .print("  Decisions: SPARQL traverses hasStereotype->hasProcessMechanism->MV/DV/IV + Java IV filter");
+    .print("  Decisions: SPARQL traverses hasStereotype->hasPhysicalMechanism->MV/DV/IV + Java IV filter");
     .print("----------------------------------------------------------");
 
     // Start the control loop

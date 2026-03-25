@@ -299,8 +299,8 @@ public class OntologyArtifact extends Artifact {
                 row.put("dvLabel",   sol.getLiteral("dvLabel").getString());
 
                 // ivLabel is OPTIONAL: only present when the mechanism has an IV.
-                // Mechanisms without an IV (e.g. ws:illumination) produce no binding;
-                // Java defaults to "none". When present (ws:daylighting), ivLabel is
+                // Mechanisms without an IV (e.g. ws:pm_incandescent_light_emission) produce no binding;
+                // Java defaults to "none". When present (ws:pm_daylight_ingress), ivLabel is
                 // "Outdoor illuminance (sunshine)" — used as the IV-presence signal.
                 RDFNode ivNode = sol.get("ivLabel");
                 row.put("ivLabel", (ivNode != null && ivNode.isLiteral())
