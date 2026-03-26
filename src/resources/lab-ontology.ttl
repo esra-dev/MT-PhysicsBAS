@@ -55,10 +55,25 @@ ws:pm_daylight_ingress a owl:NamedIndividual, elem:PhysicalMechanism ;
     elem:hasManipulatedVariable ws:blindApertureRatio ;
     elem:hasDependentVariable   elem:luminiscence .
 
-# --- 1.3  pm_room_illuminance_accumulation mechanism ---------------------------
+# --- 1.2b  pm_electrical_power_control mechanism (dimmer) --------------------
 
-ws:pm_room_illuminance_accumulation a owl:NamedIndividual, elem:PhysicalMechanism ;
-    rdfs:label "pm_room_illuminance_accumulation" ;
+ws:pm_electrical_power_control a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_electrical_power_control" ;
+    rdfs:comment """
+        A dimmer controls the electrical power flow from the power source to
+        the connected load (e.g., incandescent lamp). The incoming electrical
+        power is the independent variable, the dimmer setting is the manipulated
+        variable, and the outgoing (controlled) electrical power is the dependent
+        variable.
+    """ ;
+    elem:hasIndependentVariable elem:electrical_power_input ;
+    elem:hasManipulatedVariable ws:dimmer_control_signal ;
+    elem:hasDependentVariable   elem:electrical_power_output .
+
+# --- 1.3  pm_room_luminance_accumulation mechanism ---------------------------
+
+ws:pm_room_luminance_accumulation a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_room_luminance_accumulation" ;
     rdfs:comment """
         PASSIVE SUMMATION MECHANISM (no manipulated variable - cannot be actuated).
         A room spatially accumulates light from multiple sources (lamps and daylight
@@ -73,7 +88,7 @@ ws:pm_room_illuminance_accumulation a owl:NamedIndividual, elem:PhysicalMechanis
     # NO elem:hasManipulatedVariable → NOT ACTUATABLE
     elem:hasIndependentVariable ws:lamp_light_contribution ;
     elem:hasIndependentVariable ws:blind_light_contribution ;
-    elem:hasDependentVariable   ws:room_contained_illuminance .
+    elem:hasDependentVariable   ws:room_contained_luminance .
 
 # --- 1.4  Sensing / measurement mechanism -----------------------------------
 
@@ -99,6 +114,19 @@ elem:electrical_power_input a owl:NamedIndividual, elem:ProcessVariable ;
     elem:dealsWithStuff  elem:electrical_power ;
     elem:hasProcessPosition elem:inlet ;
     elem:hasQuantity     qudtqk:ActivePower .
+
+elem:electrical_power_output a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power output from dimmer" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:dimmer_control_signal a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Dimmer control signal (brightness setting)" ;
+    rdfs:comment "Manipulated variable controlling the dimmer's power modulation. Range: [0, 1] (0=off, 1=full power)." ;
+    elem:dealsWithStuff  ws:ElectricalControlSignal ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:DimensionlessRatio .
 
 ws:outdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Outdoor illuminance (sunshine)" ;
@@ -164,14 +192,14 @@ ws:blind_light_contribution a owl:NamedIndividual, elem:ProcessVariable ;
     elem:hasProcessPosition elem:inlet ;
     elem:hasQuantity     qudtqk:Illuminance .
 
-ws:room_contained_illuminance a owl:NamedIndividual, elem:ProcessVariable ;
+ws:room_contained_luminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Contained illuminance within room space" ;
     rdfs:comment """
         The accumulated illuminance level inside the room from all sources (lamps
         and daylight through blinds). This is a passive summation - the room has no
         manipulated variable and cannot be directly actuated. Sensors located in or
         fed by the room observe this contained brightness.
-        Connection point: ws:cp_room_contained_illuminance.
+        Connection point: ws:cp_room_contained_luminance.
     """ ;
     elem:dealsWithStuff  elem:photons ;
     elem:hasProcessPosition elem:contained ;
@@ -186,10 +214,14 @@ elem:photons a owl:NamedIndividual, elem:PhysicalStuff ;
     rdfs:label "Visible light (photons)" .
 
 # Using Elementary's electrical_power instead of custom definition
-# elem:electrical_power which will be defined in Elementary soon. 
+# elem:electrical_power which will be defined in Elementary soon.
 
 ws:MechanicalPosition a owl:NamedIndividual, elem:PhysicalStuff ;
     rdfs:label "Mechanical position / aperture" .
+
+ws:ElectricalControlSignal a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Electrical control signal" ;
+    rdfs:comment "Digital or analog signal used to control electrical equipment." .
 
 
 # ===========================================================================
@@ -337,10 +369,10 @@ ws:RoomStereotype a owl:NamedIndividual, elem:Stereotype ;
         lab:Lab instance has this stereotype; workstations (Zone1, Zone2) are
         lab:Workstation instances without stereotypes.
     """ ;
-    elem:hasPhysicalMechanism ws:pm_room_illuminance_accumulation ;
+    elem:hasPhysicalMechanism ws:pm_room_luminance_accumulation ;
     elem:hasConnectionPoint  ws:cp_room_lamp_inlet ;
     elem:hasConnectionPoint  ws:cp_room_blind_inlet ;
-    elem:hasConnectionPoint  ws:cp_room_contained_illuminance .
+    elem:hasConnectionPoint  ws:cp_room_contained_luminance .
 
 ws:cp_ws_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
     rdfs:label "Photon inlet of weather station" ;
@@ -352,6 +384,37 @@ ws:cp_ws_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
     rdfs:label "Measurement signal outlet of weather station" ;
     elem:dealsWithStuff      elem:photons ;
     elem:isRelatedToVariable ws:sensedOutdoorIlluminance .
+
+# --- 6.6  Dimmer stereotype --------------------------------------------------
+
+ws:DimmerStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Dimmer stereotype" ;
+    rdfs:comment """
+        A dimmer modulates electrical power flow from the power source to a
+        connected electrical load (typically an incandescent lamp). The dimmer
+        receives incoming electrical power at its inlet, applies control via a
+        manipulated variable (dimmer setting), and outputs modulated electrical
+        power at its outlet. This enables continuous control of lamp brightness.
+    """ ;
+    elem:hasPhysicalMechanism ws:pm_electrical_power_control ;
+    elem:hasConnectionPoint  ws:cp_electrical_power_inlet ;
+    elem:hasConnectionPoint  ws:cp_dimmer_control_inlet ;
+    elem:hasConnectionPoint  ws:cp_electrical_power_outlet .
+
+ws:cp_electrical_power_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical power inlet of dimmer" ;
+    elem:dealsWithStuff      elem:electrical_power ;
+    elem:isRelatedToVariable elem:electrical_power_input .
+
+ws:cp_dimmer_control_inlet a owl:NamedIndividual, elem:ActuationConnectionPoint ;
+    rdfs:label "Control signal inlet of dimmer" ;
+    elem:dealsWithStuff ws:ElectricalControlSignal ;
+    elem:manipulates    ws:dimmer_control_signal .
+
+ws:cp_electrical_power_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Electrical power outlet of dimmer" ;
+    elem:dealsWithStuff      elem:electrical_power ;
+    elem:isRelatedToVariable elem:electrical_power_output .
 
 
 # ===========================================================================
@@ -372,11 +435,11 @@ ws:cp_room_blind_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
     elem:isRelatedToVariable   ws:blind_light_contribution ;
     elem:suitableFor           ws:IndoorLightingStream .
 
-ws:cp_room_contained_illuminance a owl:NamedIndividual, elem:ConnectionPoint ;
+ws:cp_room_contained_luminance a owl:NamedIndividual, elem:ConnectionPoint ;
     rdfs:label "Contained illuminance within room" ;
     rdfs:comment "The brightness level contained within the room space." ;
     elem:dealsWithStuff        elem:photons ;
-    elem:isRelatedToVariable   ws:room_contained_illuminance ;
+    elem:isRelatedToVariable   ws:room_contained_luminance ;
     elem:suitableFor           ws:IndoorLightingStream .
 
 
@@ -448,6 +511,12 @@ lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
     rdfs:comment "Physical illuminance sensor device. Note: brick:Illuminance_Sensor is a Point class in Brick 1.4.4." ;
     rdfs:subClassOf brick:Sensor_Equipment .
 
+# Custom equipment class for electrical dimmers
+lab:Dimmer_Equipment a owl:Class ;
+    rdfs:label "Dimmer equipment" ;
+    rdfs:comment "Electrical power modulation device for controlling lamp brightness." ;
+    rdfs:subClassOf brick:Equipment .
+
 # --- 8.1  Incandescent lamps ------------------------------------------------
 
 lab:CeilingLight_Z1 a brick:Luminaire ;
@@ -509,6 +578,20 @@ lab:WeatherStation a brick:Weather_Station ;
     sosa:observes     lab:OutdoorIlluminance ;
     elem:hasStereotype ws:WeatherStationStereotype ;
     elem:isPartOf      lab:OutdoorSunlightStream .
+
+# --- 8.5  Dimmers -----------------------------------------------------------
+
+lab:dimmer_lamp_Z1 a lab:Dimmer_Equipment ;
+    rdfs:label "Dimmer – Workstation 1" ;
+    rdfs:comment "Electrical dimmer controlling CeilingLight_Z1 brightness in workstation 1." ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasStereotype ws:DimmerStereotype .
+
+lab:dimmer_lamp_Z2 a lab:Dimmer_Equipment ;
+    rdfs:label "Dimmer – Workstation 2" ;
+    rdfs:comment "Electrical dimmer controlling CeilingLight_Z2 brightness in workstation 2." ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasStereotype ws:DimmerStereotype .
 
 
 # ===========================================================================
@@ -579,7 +662,7 @@ lab:Blind_Z2         brick:feeds  lab:Lab .
 
 # LAB ROOM → SENSORS:
 # The lab's contained illuminance is what sensors observe.
-# - Lab's cp_room_contained_illuminance (ws:room_contained_illuminance)
+# - Lab's cp_room_contained_luminance (ws:room_contained_luminance)
 #     → Sensor's cp_lightsensor_photon_inlet (receives elem:luminiscence as IV)
 # Each sensor in its workstation observes the overall lab room brightness.
 lab:Lab              brick:feeds  lab:LightSensor_Z1 .
