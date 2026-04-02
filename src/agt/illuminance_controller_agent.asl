@@ -174,32 +174,32 @@ action_delay(2000).
     -+lab_bool_state(SKs, SVs);
     .print("[Lab snapshot] sunshine=", SunshineRank, " active_states=", SKs);
     // readLabStatus returns levels in ascending zone-index order (TreeMap in Java).
-    // Collect and sort zone indices the same way, then pair them positionally.
-    // This stores current_level(ZIdx, Level) beliefs that each zone goal looks up
-    // by its own ZIdx — no positional coupling between the goal list and level list.
+    // Collect and sort zone indices the same way, then pass both sorted lists into
+    // process_zone_steps so each goal can look up its level by index directly.
     .findall(I, zone_goal(_, I, _, _, _), ZIdxUnsorted);
     .sort(ZIdxUnsorted, ZIdxSorted);
-    !store_zone_levels(ZIdxSorted, ZoneLevels);
-    !process_zone_steps(ZoneGoals, SunshineRank, SKs, SVs).
+    !process_zone_steps(ZoneGoals, ZIdxSorted, ZoneLevels, SunshineRank, SKs, SVs).
 
-// Pair sorted zone-index list with the same-ordered level array from readLabStatus,
-// storing current_level(ZIdx, Level) beliefs for index-safe lookup during processing.
-@store_zone_levels_done
-+!store_zone_levels([], []) <- true.
+/* ============================================
+ * Level lookup — walks two parallel sorted lists (indices, levels) until the
+ * requested index is found. Pure unification: no arithmetic, no belief mutations.
+ * Works for any number of zones.
+ * ============================================ */
+@get_zone_level_found
++!get_zone_level([ZIdx|_], [Level|_], ZIdx, Level) <- true.
 
-@store_zone_levels_step
-+!store_zone_levels([ZIdx|RestIdx], [Level|RestLevels]) <-
-    -+current_level(ZIdx, Level);
-    !store_zone_levels(RestIdx, RestLevels).
+@get_zone_level_search
++!get_zone_level([_|RestIdx], [_|RestLevels], ZIdx, Level) <-
+    !get_zone_level(RestIdx, RestLevels, ZIdx, Level).
 
 @process_zone_steps_empty
-+!process_zone_steps([], _, _, _) <- true.
++!process_zone_steps([], _, _, _, _, _) <- true.
 
 @process_zone_steps_step
 +!process_zone_steps([goal(ZUri, ZIdx, QUri, QLabel, Target)|RestGoals],
-                     SunshineRank, SKs, SVs) <-
-    // Fetch this zone's current level by its own index — no positional assumption.
-    ?current_level(ZIdx, Level);
+                     ZIdxSorted, ZoneLevels, SunshineRank, SKs, SVs) <-
+    // Look up this zone's current level by index — order-independent.
+    !get_zone_level(ZIdxSorted, ZoneLevels, ZIdx, Level);
     .print("[Zone ", ZIdx, "] '", QLabel, "' level=", Level, "/", Target,
            " sunshine=", SunshineRank);
     if (Level == Target) {
@@ -212,9 +212,9 @@ action_delay(2000).
             !decrease_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs)
         }
     };
-    !process_zone_steps(RestGoals, SunshineRank, SKs, SVs).
+    !process_zone_steps(RestGoals, ZIdxSorted, ZoneLevels, SunshineRank, SKs, SVs).
 
--!process_zone_steps(_, _, _, _) <-
+-!process_zone_steps(_, _, _, _, _, _) <-
     .print("WARNING: Zone step processing encountered an error.").
 
 /* ============================================
