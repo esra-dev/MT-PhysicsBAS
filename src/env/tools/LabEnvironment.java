@@ -1,10 +1,16 @@
 package tools;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hc.client5.http.impl.DefaultConnectionKeepAliveStrategy;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -39,6 +45,9 @@ public class LabEnvironment extends Artifact {
     private ThingDescription td;
     private static final Logger LOGGER = Logger.getLogger(LabEnvironment.class.getName());
 
+    private double[] lightBounds    = {50.0, 100.0, 300.0};
+    private double[] sunshineBounds = {50.0, 200.0, 700.0};
+
     /**
      * Initialize the artifact with a W3C WoT Thing Description URL.
      * 
@@ -62,26 +71,43 @@ public class LabEnvironment extends Artifact {
     }
 
     /**
-     * Read the current state of the lab environment.
-     * 
-     * @param z1Level    Output: Illuminance level rank in Zone 1 (0-3)
-     * @param z2Level    Output: Illuminance level rank in Zone 2 (0-3)
-     * @param z1Light    Output: Light status in Zone 1 (true=on, false=off)
-     * @param z2Light    Output: Light status in Zone 2 (true=on, false=off)
-     * @param z1Blinds   Output: Blinds status in Zone 1 (true=up, false=down)
-     * @param z2Blinds   Output: Blinds status in Zone 2 (true=up, false=down)
-     * @param sunshine   Output: Sunshine level rank (0-3)
+     * Configure discretisation thresholds from ontology-provided arrays.
+     * Called once at startup after getDiscretizationBounds is queried.
+     *
+     * @param lBounds  Double[3] rank boundaries for indoor light level.
+     * @param sBounds  Double[3] rank boundaries for sunshine.
      */
     @OPERATION
-    public void readState(OpFeedbackParam<Integer> z1Level,
-                         OpFeedbackParam<Integer> z2Level,
-                         OpFeedbackParam<Boolean> z1Light,
-                         OpFeedbackParam<Boolean> z2Light,
-                         OpFeedbackParam<Boolean> z1Blinds,
-                         OpFeedbackParam<Boolean> z2Blinds,
-                         OpFeedbackParam<Integer> sunshine) {
-        
-        Optional<PropertyAffordance> p = this.td.getFirstPropertyBySemanticType("https://example.org/was#Status");
+    public void configureDiscretization(Object[] lBounds, Object[] sBounds) {
+        this.lightBounds    = toDoubleArray(lBounds);
+        this.sunshineBounds = toDoubleArray(sBounds);
+        LOGGER.info("Discretisation configured: light=" + Arrays.toString(lightBounds) +
+                    " sunshine=" + Arrays.toString(sunshineBounds));
+    }
+
+    /**
+     * Read the current state of the lab in a single HTTP call.
+     *
+     * Returns:
+     *   zoneLevels       — discretised illuminance rank per zone, ordered by zone index.
+     *   sunshineRank     — discretised outdoor sunshine rank (0–3), shared across zones.
+     *   boolStateKeys    — all WoT status property URIs carrying boolean values.
+     *   boolStateValues  — current boolean value for each key (parallel array).
+     *
+     * @param zoneLevels      Output: Integer[] of per-zone illuminance ranks.
+     * @param sunshineRank    Output: sunshine rank.
+     * @param boolStateKeys   Output: WoT status URI strings.
+     * @param boolStateValues Output: corresponding boolean values.
+     */
+    @OPERATION
+    public void readLabStatus(
+            OpFeedbackParam<Object[]> zoneLevels,
+            OpFeedbackParam<Integer>  sunshineRank,
+            OpFeedbackParam<Object[]> boolStateKeys,
+            OpFeedbackParam<Object[]> boolStateValues) {
+
+        Optional<PropertyAffordance> p =
+                this.td.getFirstPropertyBySemanticType("https://example.org/was#Status");
 
         if (p.isPresent()) {
             Optional<Form> f = p.get().getFirstFormForOperationType(TD.readProperty);
@@ -89,49 +115,89 @@ public class LabEnvironment extends Artifact {
 
             if (f.isPresent()) {
                 TDHttpRequest request = new TDHttpRequest(f.get(), TD.readProperty);
-
                 try {
                     TDHttpResponse response = request.execute();
-                    Map<String, Object> status = response.getPayloadAsObject((ObjectSchema) ds);
+                    Map<String, Object> status =
+                            response.getPayloadAsObject((ObjectSchema) ds);
 
-                    // Parse and discretize values
-                    int z1Lvl = discretizeLightLevel((Double) status.get("http://example.org/was#Z1Level"));
-                    int z2Lvl = discretizeLightLevel((Double) status.get("http://example.org/was#Z2Level"));
-                    boolean z1Lt = (Boolean) status.get("http://example.org/was#Z1Light");
-                    boolean z2Lt = (Boolean) status.get("http://example.org/was#Z2Light");
-                    boolean z1Bl = (Boolean) status.get("http://example.org/was#Z1Blinds");
-                    boolean z2Bl = (Boolean) status.get("http://example.org/was#Z2Blinds");
-                    int sun = discretizeSunshine((Double) status.get("http://example.org/was#Sunshine"));
+                    // Collect zone illuminance levels keyed by zone index
+                    Pattern zonePattern = Pattern.compile(".+#Z(\\d+)Level$");
+                    TreeMap<Integer, Integer> zoneMap = new TreeMap<>();
+                    List<String>  bKeys = new ArrayList<>();
+                    List<Boolean> bVals = new ArrayList<>();
 
-                    // Set output parameters
-                    z1Level.set(z1Lvl);
-                    z2Level.set(z2Lvl);
-                    z1Light.set(z1Lt);
-                    z2Light.set(z2Lt);
-                    z1Blinds.set(z1Bl);
-                    z2Blinds.set(z2Bl);
-                    sunshine.set(sun);
+                    for (Map.Entry<String, Object> entry : status.entrySet()) {
+                        String key   = entry.getKey();
+                        Object value = entry.getValue();
 
-                    LOGGER.info("Read state: Z1Level=" + z1Lvl + ", Z2Level=" + z2Lvl + 
-                               ", Z1Light=" + z1Lt + ", Z2Light=" + z2Lt +
-                               ", Z1Blinds=" + z1Bl + ", Z2Blinds=" + z2Bl +
-                               ", Sunshine=" + sun);
+                        Matcher m = zonePattern.matcher(key);
+                        if (m.matches()) {
+                            int zIdx = Integer.parseInt(m.group(1));
+                            zoneMap.put(zIdx, discretize((Double) value, lightBounds));
+                        } else if (value instanceof Boolean) {
+                            bKeys.add(key);
+                            bVals.add((Boolean) value);
+                        }
+                    }
+
+                    int sun = discretize(
+                            (Double) status.get("http://example.org/was#Sunshine"),
+                            sunshineBounds);
+
+                    zoneLevels.set(zoneMap.values().toArray());
+                    sunshineRank.set(sun);
+                    boolStateKeys.set(bKeys.toArray());
+                    boolStateValues.set(bVals.toArray());
+
+                    LOGGER.info("readLabStatus: zones=" + zoneMap +
+                                " sunshine=" + sun + " boolStates=" + bKeys);
 
                 } catch (IOException e) {
-                    LOGGER.severe("Failed to read state: " + e.getMessage());
+                    LOGGER.severe("readLabStatus failed: " + e.getMessage());
                 }
             }
         }
     }
 
     /**
-     * Read only the illuminance levels (shorthand operation).
+     * Generic action dispatch: looks up the WoT action affordance by its
+     * semantic type URI (as stored in ws:hasWoTActionSemanticType) and
+     * invokes it with the given boolean value.
+     *
+     * Replaces the per-component setZ1Light / setZ2Light / … convenience
+     * operations for the dynamic, ontology-driven control path.
+     *
+     * @param wotSemanticType  Full action @type URI, e.g.
+     *                         "http://example.org/was#SetZ1Light".
+     * @param value            true = activate / open; false = deactivate / close.
      */
     @OPERATION
-    public void readIlluminanceLevels(OpFeedbackParam<Integer> z1Level,
-                                      OpFeedbackParam<Integer> z2Level) {
-        
-        Optional<PropertyAffordance> p = this.td.getFirstPropertyBySemanticType("https://example.org/was#Status");
+    public void invokeAction(String wotSemanticType, boolean value) {
+        LOGGER.info("invokeAction: " + wotSemanticType + " = " + value);
+        performBooleanAction(wotSemanticType, value);
+    }
+
+    /**
+     * Read the current state for a single zone.
+     *
+     * @deprecated Use {@link #readLabStatus} instead to collect all zones in one HTTP call.
+     *
+     * @param zoneIndex       Zone index (1 or 2).
+     * @param level           Output: illuminance rank for the zone.
+     * @param sunshineRank    Output: sunshine rank.
+     * @param boolStateKeys   Output: WoT status URI strings.
+     * @param boolStateValues Output: corresponding boolean values.
+     */
+    @Deprecated
+    @OPERATION
+    public void readZoneState(int zoneIndex,
+                              OpFeedbackParam<Integer> level,
+                              OpFeedbackParam<Integer> sunshineRank,
+                              OpFeedbackParam<Object[]> boolStateKeys,
+                              OpFeedbackParam<Object[]> boolStateValues) {
+
+        Optional<PropertyAffordance> p =
+                this.td.getFirstPropertyBySemanticType("https://example.org/was#Status");
 
         if (p.isPresent()) {
             Optional<Form> f = p.get().getFirstFormForOperationType(TD.readProperty);
@@ -139,68 +205,41 @@ public class LabEnvironment extends Artifact {
 
             if (f.isPresent()) {
                 TDHttpRequest request = new TDHttpRequest(f.get(), TD.readProperty);
-
                 try {
                     TDHttpResponse response = request.execute();
-                    Map<String, Object> status = response.getPayloadAsObject((ObjectSchema) ds);
+                    Map<String, Object> status =
+                            response.getPayloadAsObject((ObjectSchema) ds);
 
-                    int z1Lvl = discretizeLightLevel((Double) status.get("http://example.org/was#Z1Level"));
-                    int z2Lvl = discretizeLightLevel((Double) status.get("http://example.org/was#Z2Level"));
+                    String base = "http://example.org/was#Z" + zoneIndex;
+                    level.set(discretize(
+                            (Double) status.get(base + "Level"), lightBounds));
+                    sunshineRank.set(discretize(
+                            (Double) status.get("http://example.org/was#Sunshine"),
+                            sunshineBounds));
 
-                    z1Level.set(z1Lvl);
-                    z2Level.set(z2Lvl);
+                    // Collect all boolean entries so OntologyArtifact can look up
+                    // each actuator's current state by its WoT state semantic type URI.
+                    java.util.List<String>  keys = new java.util.ArrayList<>();
+                    java.util.List<Boolean> vals = new java.util.ArrayList<>();
+                    for (Map.Entry<String, Object> entry : status.entrySet()) {
+                        if (entry.getValue() instanceof Boolean) {
+                            keys.add(entry.getKey());
+                            vals.add((Boolean) entry.getValue());
+                        }
+                    }
+                    boolStateKeys.set(keys.toArray());
+                    boolStateValues.set(vals.toArray());
 
-                    LOGGER.info("Read illuminance levels: Z1=" + z1Lvl + ", Z2=" + z2Lvl);
+                    LOGGER.info("readZoneState(Z" + zoneIndex + "): level=" +
+                            level.get() + " sunshine=" + sunshineRank.get() +
+                            " boolStates=" + keys);
 
                 } catch (IOException e) {
-                    LOGGER.severe("Failed to read illuminance levels: " + e.getMessage());
+                    LOGGER.severe("readZoneState Z" + zoneIndex +
+                                  " failed: " + e.getMessage());
                 }
             }
         }
-    }
-
-    /**
-     * Set the light in Zone 1.
-     * 
-     * @param turnOn True to turn on, false to turn off
-     */
-    @OPERATION
-    public void setZ1Light(boolean turnOn) {
-        LOGGER.info("Setting Z1 Light: " + (turnOn ? "ON" : "OFF"));
-        performBooleanAction("http://example.org/was#SetZ1Light", turnOn);
-    }
-
-    /**
-     * Set the light in Zone 2.
-     * 
-     * @param turnOn True to turn on, false to turn off
-     */
-    @OPERATION
-    public void setZ2Light(boolean turnOn) {
-        LOGGER.info("Setting Z2 Light: " + (turnOn ? "ON" : "OFF"));
-        performBooleanAction("http://example.org/was#SetZ2Light", turnOn);
-    }
-
-    /**
-     * Set the blinds in Zone 1.
-     * 
-     * @param raiseUp True to raise up (open), false to lower down (close)
-     */
-    @OPERATION
-    public void setZ1Blinds(boolean raiseUp) {
-        LOGGER.info("Setting Z1 Blinds: " + (raiseUp ? "UP" : "DOWN"));
-        performBooleanAction("http://example.org/was#SetZ1Blinds", raiseUp);
-    }
-
-    /**
-     * Set the blinds in Zone 2.
-     * 
-     * @param raiseUp True to raise up (open), false to lower down (close)
-     */
-    @OPERATION
-    public void setZ2Blinds(boolean raiseUp) {
-        LOGGER.info("Setting Z2 Blinds: " + (raiseUp ? "UP" : "DOWN"));
-        performBooleanAction("http://example.org/was#SetZ2Blinds", raiseUp);
     }
 
     /**
@@ -241,39 +280,30 @@ public class LabEnvironment extends Artifact {
         }
     }
 
-    /**
-     * Maps lux values to light levels:
-     * lux < 50 -> level 0
-     * lux in [50,100) -> level 1
-     * lux in [100,300) -> level 2
-     * lux >= 300 -> level 3
-     */
-    private int discretizeLightLevel(Double value) {
-        if (value < 50) {
-            return 0;
-        } else if (value < 100) {
-            return 1;
-        } else if (value < 300) {
-            return 2;
-        }
+    private double[] toDoubleArray(Object[] arr) {
+        double[] d = new double[arr.length];
+        for (int i = 0; i < arr.length; i++) d[i] = ((Number) arr[i]).doubleValue();
+        return d;
+    }
+
+    private int discretize(double value, double[] bounds) {
+        if (value < bounds[0]) return 0;
+        if (value < bounds[1]) return 1;
+        if (value < bounds[2]) return 2;
         return 3;
     }
 
     /**
-     * Maps sunshine values to levels:
-     * lux < 50 -> level 0
-     * lux in [50,200) -> level 1
-     * lux in [200,700) -> level 2
-     * lux >= 700 -> level 3
+     * Maps lux values to light levels using configured bounds.
+     */
+    private int discretizeLightLevel(Double value) {
+        return discretize(value, lightBounds);
+    }
+
+    /**
+     * Maps sunshine values to levels using configured bounds.
      */
     private int discretizeSunshine(Double value) {
-        if (value < 50) {
-            return 0;
-        } else if (value < 200) {
-            return 1;
-        } else if (value < 700) {
-            return 2;
-        }
-        return 3;
+        return discretize(value, sunshineBounds);
     }
 }

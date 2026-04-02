@@ -1,347 +1,296 @@
-// Illuminance Controller Agent - Simplified Rule-Based Control
+// Illuminance Controller Agent — Ontology-Driven Dynamic Control
 // MT-Esra Project
-
-/*
- * This agent controls the illuminance in two workstations (Zone 1 and Zone 2)
- * 
- * The agent interacts with:
- * - Light sensors in each workstation
- * - Weather station (sunshine level)
- * - Blinds in each workstation (up/down)
- * - Ceiling lights in each workstation (on/off)
- */
+//
+// All zone discovery, goal mapping, and actuator dispatch are resolved at
+// runtime from the BRICK + Elementary Ontology knowledge graph.
+// No component names, zone names, or WoT action URIs are hardcoded here.
 
 /* ============================================
- * URL Configuration
- * ============================================
- * To switch between simulated and real environments, change the LabURL assignment
- * in the @start plan below.
- */
+ * Initial Beliefs
+ * ============================================ */
 
-//* Initial beliefs *//
-
-// Simulated lab WoT Thing Description URL
+// WoT Thing Description URLs
 lab_environment_simulated("https://raw.githubusercontent.com/Interactions-HSG/example-tds/was/tds/interactions-lab.ttl").
-
-// Real lab WoT Thing Description URL
 lab_environment_real("https://raw.githubusercontent.com/Interactions-HSG/example-tds/was/tds/interactions-lab-real.ttl").
 
-// Target illuminance levels for each workstation
-// Zone 1 target: Rank 2 (medium illuminance: 100-300 lux)
-// Zone 2 target: Rank 3 (high illuminance: >= 300 lux)
-task_requirements([3, 3]).
+// Target illuminance rank per zone (0 = dark … 3 = bright). Keyed by ws:zoneIndex value.
+// Edit these beliefs to set different target ranks per workstation.
+zone_target(1, 3).
+zone_target(2, 2).
 
 // Maximum control attempts to prevent infinite loops
 max_control_attempts(10).
 
-// Delay between actions in milliseconds (for environment to stabilize)
+// Delay between actions in milliseconds (for environment to stabilise)
 action_delay(2000).
 
 /* ============================================
- * Helper Rules - Illuminance Level Discretization
- * ============================================
- * Converts continuous lux values to discrete ranks (0-3)
- */
-
-// Light level ranks:
-// Rank 0: < 50 lux (very dark)
-// Rank 1: 50-100 lux (dim)
-// Rank 2: 100-300 lux (medium)
-// Rank 3: >= 300 lux (bright)
-light_rank(Value, 0) :- Value < 50.
-light_rank(Value, 1) :- Value >= 50 & Value < 100.
-light_rank(Value, 2) :- Value >= 100 & Value < 300.
-light_rank(Value, 3) :- Value >= 300.
-
-// Sunshine level ranks:
-// Rank 0: < 50 lux (overcast/night)
-// Rank 1: 50-200 lux (cloudy)
-// Rank 2: 200-700 lux (partly sunny)
-// Rank 3: >= 700 lux (sunny)
-sunshine_rank(Value, 0) :- Value < 50.
-sunshine_rank(Value, 1) :- Value >= 50 & Value < 200.
-sunshine_rank(Value, 2) :- Value >= 200 & Value < 700.
-sunshine_rank(Value, 3) :- Value >= 700.
-
-// Rule to check if goal is achieved for both zones
-goal_achieved(CurrentZ1, CurrentZ2, TargetZ1, TargetZ2) :-
-    CurrentZ1 == TargetZ1 & CurrentZ2 == TargetZ2.
-
-// Rule to check if a single zone has achieved its target
-zone_goal_achieved(Current, Target) :- Current == Target.
-
-// Rule to check if zone needs more light
-needs_more_light(Current, Target) :- Current < Target.
-
-// Rule to check if zone needs less light
-needs_less_light(Current, Target) :- Current > Target.
-
-//* Initial goals *//
+ * Initial Goals
+ * ============================================ */
 
 !start. // The agent has the goal to start
 
 /* ============================================
- * Main Plans
+ * @start Plan — Initialise artifacts and discover zones from ontology
  * ============================================
- */
-
-/* 
- * Plan: start
- * Initializes the agent and starts the illuminance control process.
- * 
- * IMPORTANT: To switch between simulated and real environments,
- * change the line "LabURL = SimulatedURL;" to "LabURL = RealURL;"
+ * ENVIRONMENT SELECTION: change LabURL = SimulatedURL to LabURL = RealURL
+ * for the physical lab.
  */
 @start
-+!start : lab_environment_simulated(SimulatedURL)
-        & lab_environment_real(RealURL)
-        & task_requirements([Z1Target, Z2Target]) <-
++!start : lab_environment_simulated(SimulatedURL) <-
 
     // ========================================
-    // ENVIRONMENT SELECTION - CHANGE HERE TO SWITCH
+    // ENVIRONMENT SELECTION — change here to switch
     // ========================================
-    // For SIMULATED environment:
     LabURL = SimulatedURL;
-    // For REAL environment, comment the line above and uncomment:
+    // For the real lab, comment the line above and uncomment:
     // LabURL = RealURL;
     // ========================================
 
     .print("==========================================================");
-    .print("   ILLUMINANCE CONTROLLER AGENT - STARTING");
+    .print("   ILLUMINANCE CONTROLLER AGENT — DYNAMIC DISCOVERY");
     .print("   Architecture: BRICK + Elementary Ontology via SPARQL");
     .print("   Ref: Cecconi et al., Component Stereotypes (2023)");
     .print("==========================================================");
-    .print("Target illuminance levels:");
-    .print("  Zone 1: Rank ", Z1Target);
-    .print("  Zone 2: Rank ", Z2Target);
-    .print("Environment URL: ", LabURL);
-    .print("----------------------------------------------------------");
 
-    // Create the LabEnvironment artifact for interacting with the lab
+    // Create the LabEnvironment artifact (loads WoT Thing Description)
     makeArtifact("lab", "tools.LabEnvironment", [LabURL], LabArtifactId);
     +lab_artifact(LabArtifactId);
     .print("Lab artifact created (WoT Thing Description loaded).");
 
-    // Create the OntologyArtifact — loads lab-ontology.ttl (BRICK + Elementary Ontology)
-    // into Apache Jena. All actuation decisions from this point on are driven by
-    // SPARQL queries over this knowledge graph instead of hardcoded plan guards.
+    // Create the OntologyArtifact (loads lab-ontology.ttl into Apache Jena)
     makeArtifact("ontology", "tools.OntologyArtifact", ["lab-ontology.ttl"], OntArtifactId);
     +ontology_artifact(OntArtifactId);
     .print("Ontology artifact created. KG loaded from lab-ontology.ttl.");
-    .print("  Architecture: Three-layer Elementary Ontology (Cecconi et al. 2023)");
-    .print("  Layer 1 - PhysicalMechanism: ws:pm_incandescent_light_emission (light), ws:pm_daylight_ingress (blind)");
-    .print("  Layer 2 - Stereotypes     : ws:LampIncandescentStereotype (MV=electrical_power_input, IV=none)");
-    .print("                              ws:BlindStereotype (MV=blindApertureRatio, IV=outdoorIlluminance)");
-    .print("  Layer 3 - BRICK instances : lab:CeilingLight_Z1/Z2, lab:Blind_Z1/Z2 via elem:hasStereotype");
-    .print("  Decisions: SPARQL traverses hasStereotype->hasPhysicalMechanism->MV/DV/IV + Java IV filter");
+    .print("  Three-layer Elementary Ontology: Mechanism -> Stereotype -> Instance");
+    .print("  SPARQL drives all discovery: no component names hardcoded.");
+
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │  Discretisation Bounds — read from ontology, configure LabEnv    │
+    // └───────────────────────────────────────────────────────────────┘
+    getDiscretizationBounds("http://w3id.org/elementary#luminiscence",
+        LightBounds)[artifact_id(OntArtifactId)];
+    getDiscretizationBounds("http://example.org/was/lab/stereotypes#outdoorIlluminance",
+        SunshineBounds)[artifact_id(OntArtifactId)];
+    configureDiscretization(LightBounds, SunshineBounds)[artifact_id(LabArtifactId)];
+    .print("  Discretisation bounds from ontology: light=", LightBounds,
+           " sunshine=", SunshineBounds);
+
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │  Zone Discovery — queries ws:zoneIndex, returns sorted parallel arrays   │
+    // │  ZoneURIs  = ["http://…/lab#Zone1", "http://…/lab#Zone2"]              │
+    // │  ZoneIdxs  = [1, 2]                                                       │
+    // └───────────────────────────────────────────────────────────────┘
+    discoverZones(ZoneURIs, ZoneIdxs)[artifact_id(OntArtifactId)];
+    .length(ZoneURIs, NZones);
+    .print("Discovered ", NZones, " zone(s) from ontology: ", ZoneURIs);
+
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │  For each zone, discover the actuatable process variable              │
+    // │  (DV of actuators = IV of sensors = "Indoor illuminance               │
+    // │   level"). Build zone_goal/5 beliefs paired with targets.            │
+    // └───────────────────────────────────────────────────────────────┘
+    !setup_zone_goals(ZoneURIs, ZoneIdxs);
+
+    .print("Zone goals established. Starting control loop.");
     .print("----------------------------------------------------------");
+    !control_illuminance(0).
 
-    // Start the control loop
-    !control_illuminance(Z1Target, Z2Target, 0).
+/* ============================================
+ * Zone Goal Setup — recursive
+ * Asserts zone_goal(ZoneURI, ZoneIdx, QUri, QLabel, Target) for each zone
+ * ============================================ */
+@setup_zone_goals_done
++!setup_zone_goals([], []) <-
+    .print("Zone goal setup complete.").
 
-/* 
- * Plan: control_illuminance
- * Main control loop that reads current state and takes actions to achieve target.
- * Uses rule-based logic to decide which action to take.
- */
-@control_illuminance_main
-+!control_illuminance(Z1Target, Z2Target, Attempt) 
-    : max_control_attempts(MaxAttempts) 
+@setup_zone_goals_step
++!setup_zone_goals([ZoneURI|RestURIs], [ZoneIdx|RestIdx]) <-
+    ?ontology_artifact(OntId);
+    ?zone_target(ZoneIdx, Target);
+    // discoverZoneQuantity traverses: sensor IV -> actuator DV -> shared variable
+    discoverZoneQuantity(ZoneURI, QUri, QLabel)[artifact_id(OntId)];
+    +zone_goal(ZoneURI, ZoneIdx, QUri, QLabel, Target);
+    .print("  zone_goal: idx=", ZoneIdx, " quantity='", QLabel,
+           "' target=", Target, " zone=", ZoneURI);
+    !setup_zone_goals(RestURIs, RestIdx).
+
+/* ============================================
+ * Main Control Loop
+ * ============================================ */
+@control_illuminance_loop
++!control_illuminance(Attempt)
+    : max_control_attempts(MaxAttempts)
     & Attempt < MaxAttempts <-
 
-    ?lab_artifact(LabId);
-    
     .print("");
     .print("--- Control Attempt ", Attempt + 1, " of ", MaxAttempts, " ---");
 
-    // Read current state from the lab
-    readState(Z1Level, Z2Level, Z1Light, Z2Light, Z1Blinds, Z2Blinds, Sunshine)[artifact_id(LabId)];
-    
-    .print("Current State:");
-    .print("  Zone 1: Level=", Z1Level, ", Light=", Z1Light, ", Blinds=", Z1Blinds);
-    .print("  Zone 2: Level=", Z2Level, ", Light=", Z2Light, ", Blinds=", Z2Blinds);
-    .print("  Sunshine: ", Sunshine);
-    .print("Target: Zone1=", Z1Target, ", Zone2=", Z2Target);
+    // Collect all current zone goals
+    .findall(goal(ZUri, ZIdx, QUri, QLabel, Target),
+             zone_goal(ZUri, ZIdx, QUri, QLabel, Target),
+             ZoneGoals);
 
-    // Check if both goals are achieved
-    if (goal_achieved(Z1Level, Z2Level, Z1Target, Z2Target)) {
+    // Reset the "all satisfied" flag (optimistic: assume done until a zone is not)
+    -all_zones_satisfied(_);
+    +all_zones_satisfied(true);
+
+    // Read state and adjust each zone; updates all_zones_satisfied if any is off-target
+    !process_zone_list(ZoneGoals);
+
+    ?all_zones_satisfied(Done);
+    -all_zones_satisfied(_);
+
+    if (Done) {
         .print("");
         .print("==========================================================");
-        .print("   SUCCESS! Both zones have reached target illuminance!");
+        .print("   SUCCESS! All zones have reached target illuminance!");
         .print("==========================================================");
-        .print("Final State: Zone1=", Z1Level, ", Zone2=", Z2Level);
     } else {
-        // Determine and execute actions for each zone
-        !adjust_zone(1, Z1Level, Z1Target, Z1Light, Z1Blinds, Sunshine);
-        !adjust_zone(2, Z2Level, Z2Target, Z2Light, Z2Blinds, Sunshine);
-        
-        // Wait for environment to stabilize
         ?action_delay(Delay);
         .wait(Delay);
-        
-        // Continue control loop
-        !control_illuminance(Z1Target, Z2Target, Attempt + 1);
+        !control_illuminance(Attempt + 1);
     }.
 
-/* 
- * Plan: control_illuminance (max attempts reached)
- * Handles the case when maximum attempts are reached.
- */
 @control_illuminance_max_reached
-+!control_illuminance(Z1Target, Z2Target, Attempt) 
-    : max_control_attempts(MaxAttempts) 
++!control_illuminance(Attempt)
+    : max_control_attempts(MaxAttempts)
     & Attempt >= MaxAttempts <-
-
-    ?lab_artifact(LabId);
-    readState(Z1Level, Z2Level, _, _, _, _, _)[artifact_id(LabId)];
-    
-    .print("");
     .print("==========================================================");
-    .print("   Maximum control attempts reached (", MaxAttempts, ")");
-    .print("==========================================================");
-    .print("Final State: Zone1=", Z1Level, " (target: ", Z1Target, ")");
-    .print("             Zone2=", Z2Level, " (target: ", Z2Target, ")");
-    
-    if (goal_achieved(Z1Level, Z2Level, Z1Target, Z2Target)) {
-        .print("Status: SUCCESS - Goals achieved!");
-    } else {
-        .print("Status: PARTIAL - Goals not fully achieved.");
-        .print("Consider adjusting max_control_attempts or checking environment constraints.");
-    }.
+    .print("   Maximum control attempts (", MaxAttempts, ") reached.");
+    .print("==========================================================").
 
 /* ============================================
- * Zone Adjustment Plans — SPARQL / Ontology Driven
- * ============================================
- * Each plan calls OntologyArtifact to run a SPARQL SELECT over
- * lab-ontology.ttl (BRICK + Elementary Ontology knowledge graph).
- *
- * The artifact returns the best component matching three criteria:
- *   1. Located in the requested zone (brick:isLocatedIn)
- *   2. IV satisfied: "none" always OK; "sunshine" requires rank >= 1
- *   3. Current state actionable: not already in target position
- *
- * Results are ordered by IV type (components with satisfied IVs pass the filter
- * first). The agent picks the first candidate that passes both the IV check and
- * the current-state check.
- *
- * The agent prints the full mechanism trace (mechanism, MV, DV, IV)
- * from the SPARQL result before dispatching the physical WoT action.
- */
-
-/* Zone goal already achieved — no actuation needed */
-@adjust_zone_achieved
-+!adjust_zone(Zone, CurrentLevel, TargetLevel, _, _, _)
-    : zone_goal_achieved(CurrentLevel, TargetLevel) <-
-    .print("[KG QUERY] Zone ", Zone, ": Goal met. illuminance rank=", CurrentLevel,
-           " equals target=", TargetLevel, ". No mechanism activation needed.").
-
-/* Need MORE illuminance — query KG for best increase action */
-@adjust_zone_increase
-+!adjust_zone(Zone, CurrentLevel, TargetLevel, LightOn, BlindsUp, Sunshine)
-    : needs_more_light(CurrentLevel, TargetLevel) <-
-    ?ontology_artifact(OntId);
+ * Zone List Processor
+ * One HTTP call per cycle; dispatches to per-zone step plans.
+ * Also stores lab state as agent beliefs (P14).
+ * ============================================ */
+@process_zone_list
++!process_zone_list(ZoneGoals) <-
     ?lab_artifact(LabId);
-    // SPARQL SELECT on lab-ontology.ttl:
-    //   SELECT components in zone, ordered by natural SPARQL order
-    //   Java filter: IV satisfaction (sunshine>=1 for blinds) + state check
-    queryBestIncreaseAction(Zone, LightOn, BlindsUp, Sunshine,
-        CompId, Mechanism, MvLabel, DvLabel, IvLabel)[artifact_id(OntId)];
-    if (CompId \== "none") {
-        .print("[KG QUERY] Zone ", Zone, " needs MORE illuminance. SPARQL selected: ", CompId);
-        .print("  Mechanism  : ", Mechanism);
-        .print("  MV (action): ", MvLabel, " -> ACTIVATE");
-        .print("  DV (effect): ", DvLabel, " will INCREASE");
-        .print("  IV (check) : ", IvLabel, " | current sunshine rank = ", Sunshine);
-        !dispatch_action(CompId, activate, LabId);
-    } else {
-        .print("[KG QUERY] Zone ", Zone, ": SPARQL found NO actionable component to increase illuminance.");
-        .print("  -> All candidates eliminated: IV unsatisfied OR already in target state.");
-        .print("  -> sunshine=", Sunshine, " | LightOn=", LightOn, " | BlindsUp=", BlindsUp);
-        .print("  -> Waiting for external conditions (e.g. sunrise / cloud change).");
-    }.
+    // Single HTTP call: all zone levels, sunshine rank, all boolean WoT states.
+    readLabStatus(ZoneLevels, SunshineRank, SKs, SVs)[artifact_id(LabId)];
+    -+lab_sunshine(SunshineRank);
+    -+lab_bool_state(SKs, SVs);
+    .print("[Lab snapshot] sunshine=", SunshineRank, " active_states=", SKs);
+    // readLabStatus returns levels in ascending zone-index order (TreeMap in Java).
+    // Collect and sort zone indices the same way, then pair them positionally.
+    // This stores current_level(ZIdx, Level) beliefs that each zone goal looks up
+    // by its own ZIdx — no positional coupling between the goal list and level list.
+    .findall(I, zone_goal(_, I, _, _, _), ZIdxUnsorted);
+    .sort(ZIdxUnsorted, ZIdxSorted);
+    !store_zone_levels(ZIdxSorted, ZoneLevels);
+    !process_zone_steps(ZoneGoals, SunshineRank, SKs, SVs).
 
-/* Need LESS illuminance — query KG for best decrease action */
-@adjust_zone_decrease
-+!adjust_zone(Zone, CurrentLevel, TargetLevel, LightOn, BlindsUp, Sunshine)
-    : needs_less_light(CurrentLevel, TargetLevel) <-
-    ?ontology_artifact(OntId);
-    ?lab_artifact(LabId);
-    // SPARQL SELECT on lab-ontology.ttl:
-    //   Same query, filtered by current state only.
-    queryBestDecreaseAction(Zone, LightOn, BlindsUp, Sunshine,
-        CompId, Mechanism, MvLabel, DvLabel, IvLabel)[artifact_id(OntId)];
-    if (CompId \== "none") {
-        .print("[KG QUERY] Zone ", Zone, " needs LESS illuminance. SPARQL selected: ", CompId);
-        .print("  Mechanism  : ", Mechanism);
-        .print("  MV (action): ", MvLabel, " -> DEACTIVATE");
-        .print("  DV (effect): ", DvLabel, " will DECREASE");
-        !dispatch_action(CompId, deactivate, LabId);
+// Pair sorted zone-index list with the same-ordered level array from readLabStatus,
+// storing current_level(ZIdx, Level) beliefs for index-safe lookup during processing.
+@store_zone_levels_done
++!store_zone_levels([], []) <- true.
+
+@store_zone_levels_step
++!store_zone_levels([ZIdx|RestIdx], [Level|RestLevels]) <-
+    -+current_level(ZIdx, Level);
+    !store_zone_levels(RestIdx, RestLevels).
+
+@process_zone_steps_empty
++!process_zone_steps([], _, _, _) <- true.
+
+@process_zone_steps_step
++!process_zone_steps([goal(ZUri, ZIdx, QUri, QLabel, Target)|RestGoals],
+                     SunshineRank, SKs, SVs) <-
+    // Fetch this zone's current level by its own index — no positional assumption.
+    ?current_level(ZIdx, Level);
+    .print("[Zone ", ZIdx, "] '", QLabel, "' level=", Level, "/", Target,
+           " sunshine=", SunshineRank);
+    if (Level == Target) {
+        .print("[Zone ", ZIdx, "] At target. No action needed.")
     } else {
-        .print("[KG QUERY] Zone ", Zone, ": SPARQL found NO actionable component to decrease illuminance.");
-        .print("  -> sunshine=", Sunshine, " | LightOn=", LightOn, " | BlindsUp=", BlindsUp);
-        .print("  -> Waiting for external conditions to change.");
-    }.
+        -all_zones_satisfied(_); +all_zones_satisfied(false);
+        if (Level < Target) {
+            !increase_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs)
+        } else {
+            !decrease_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs)
+        }
+    };
+    !process_zone_steps(RestGoals, SunshineRank, SKs, SVs).
+
+-!process_zone_steps(_, _, _, _) <-
+    .print("WARNING: Zone step processing encountered an error.").
 
 /* ============================================
- * Action Dispatch Plan
+ * Ontology-Driven Actuator Selection and Dispatch
  * ============================================
- * Translates the component ID returned by SPARQL into a concrete
- * WoT action call on the LabEnvironment artifact.
- * CompId comes from the KG (lab:z1_light local name = "z1_light", etc.).
- * Direction is the atom 'activate' or 'deactivate'.
- */
-@dispatch_action
-+!dispatch_action(CompId, Direction, LabId) <-
-    if      (CompId == "CeilingLight_Z1"  & Direction == activate)   {
-        setZ1Light(true)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ1Light(true) -> WoT action sent");
-    } elif  (CompId == "CeilingLight_Z1"  & Direction == deactivate) {
-        setZ1Light(false)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ1Light(false) -> WoT action sent");
-    } elif  (CompId == "CeilingLight_Z2"  & Direction == activate)   {
-        setZ2Light(true)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ2Light(true) -> WoT action sent");
-    } elif  (CompId == "CeilingLight_Z2"  & Direction == deactivate) {
-        setZ2Light(false)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ2Light(false) -> WoT action sent");
-    } elif  (CompId == "Blind_Z1" & Direction == activate)   {
-        setZ1Blinds(true)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ1Blinds(true) -> WoT action sent");
-    } elif  (CompId == "Blind_Z1" & Direction == deactivate) {
-        setZ1Blinds(false)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ1Blinds(false) -> WoT action sent");
-    } elif  (CompId == "Blind_Z2" & Direction == activate)   {
-        setZ2Blinds(true)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ2Blinds(true) -> WoT action sent");
-    } elif  (CompId == "Blind_Z2" & Direction == deactivate) {
-        setZ2Blinds(false)[artifact_id(LabId)];
-        .print("[DISPATCH] setZ2Blinds(false) -> WoT action sent");
+ * queryBestIncreaseAction / queryBestDecreaseAction:
+ *   Input:  zone URI, DV URI (from discoverZoneQuantity), current sensor states
+ *   Output: CompId (ontology local name), mechanism/MV/DV/IV labels, WotActionType URI
+ *
+ * invokeAction:
+ *   Sends the WoT action identified by its @type URI — no if-elif chain needed.
+ * ============================================ */
+@increase_zone
++!increase_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs) <-
+    ?ontology_artifact(OntId);
+    ?lab_artifact(LabId);
+    // SPARQL: filter components in zone whose DV = QUri, IV rank satisfied,
+    // and current state (looked up via ws:hasWoTStateSemanticType) is inactive.
+    queryBestIncreaseAction(ZUri, QUri, SunshineRank, SKs, SVs,
+        CompId, Mechanism, MvLabel, DvLabel, IvLabel, WotActionType)[artifact_id(OntId)];
+    if (CompId \== "none") {
+        .print("[Zone ", ZIdx, "] INCREASE '", QLabel, "' via: ", CompId);
+        .print("  Mechanism : ", Mechanism);
+        .print("  MV (input): ", MvLabel, " -> ACTIVATE");
+        .print("  DV (goal) : ", DvLabel, " will INCREASE");
+        .print("  IV (cond) : ", IvLabel, " | sunshine=", SunshineRank);
+        .print("  WoT action: ", WotActionType);
+        // Generic dispatch: WoT action URI comes from ontology, no component name needed
+        invokeAction(WotActionType, true)[artifact_id(LabId)];
+        .print("[DISPATCH] invokeAction(", WotActionType, ", true) -> sent")
     } else {
-        .print("[DISPATCH] WARNING: Unknown component '", CompId, "' or direction '", Direction, "'.");
+        .print("[Zone ", ZIdx, "] No component can INCREASE '", QLabel, "'.");
+        .print("  Cause: IV rank unsatisfied or all components already active.");
+        .print("  sunshine=", SunshineRank)
+    }.
+
+@decrease_zone
++!decrease_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs) <-
+    ?ontology_artifact(OntId);
+    ?lab_artifact(LabId);
+    // SPARQL: filter components in zone whose DV = QUri, and current state
+    // (via ws:hasWoTStateSemanticType map lookup) is active (true).
+    queryBestDecreaseAction(ZUri, QUri, SunshineRank, SKs, SVs,
+        CompId, Mechanism, MvLabel, DvLabel, IvLabel, WotActionType)[artifact_id(OntId)];
+    if (CompId \== "none") {
+        .print("[Zone ", ZIdx, "] DECREASE '", QLabel, "' via: ", CompId);
+        .print("  Mechanism : ", Mechanism);
+        .print("  MV (input): ", MvLabel, " -> DEACTIVATE");
+        .print("  DV (goal) : ", DvLabel, " will DECREASE");
+        .print("  WoT action: ", WotActionType);
+        invokeAction(WotActionType, false)[artifact_id(LabId)];
+        .print("[DISPATCH] invokeAction(", WotActionType, ", false) -> sent")
+    } else {
+        .print("[Zone ", ZIdx, "] No component can DECREASE '", QLabel, "'.");
+        .print("  Cause: All components already deactivated.")
     }.
 
 /* ============================================
  * Failure Handling Plans
- * ============================================
- */
+ * ============================================ */
 
 -!start <-
     .print("ERROR: Failed to start the illuminance controller agent.");
     .print("Check that the Thing Description URL is accessible and lab-ontology.ttl is in src/resources/.").
 
--!control_illuminance(Z1Target, Z2Target, Attempt) <-
-    .print("ERROR: Control loop failed at attempt ", Attempt);
-    .print("Will retry...");
-    .wait(5000);
-    !control_illuminance(Z1Target, Z2Target, Attempt + 1).
+-!control_illuminance(Attempt) : max_control_attempts(MaxAttempts) & Attempt < MaxAttempts <-
+    .print("WARNING: Control attempt ", Attempt + 1, " failed. Retrying.");
+    ?action_delay(Delay);
+    .wait(Delay);
+    !control_illuminance(Attempt + 1).
 
--!adjust_zone(Zone, _, _, _, _, _) <-
-    .print("WARNING: Failed to adjust Zone ", Zone, ". Check OntologyArtifact and LabEnvironment are running.").
+-!control_illuminance(Attempt) <-
+    .print("ERROR: Control loop permanently failed at attempt ", Attempt + 1, ".").
 
--!dispatch_action(CompId, Direction, _) <-
-    .print("WARNING: Failed to dispatch action for component '", CompId, "', direction '", Direction, "'.").
+-!setup_zone_goals(_, _) <-
+    .print("ERROR: Zone goal setup failed. Check OntologyArtifact logs.").
 
-
-
-
-
+-!process_zone_list(_) <-
+    .print("WARNING: Zone list processing encountered an error.").

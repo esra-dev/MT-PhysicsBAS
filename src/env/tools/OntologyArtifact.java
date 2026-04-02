@@ -30,28 +30,27 @@ import cartago.OpFeedbackParam;
  *   Cecconi et al., "Reasoning about Physical Processes in Buildings
  *   through Component Stereotypes", CPS-IoT Week 2023.
  *
- * At init() time the artifact loads lab-ontology.ttl (which must be on the
- * Java classpath, i.e., in src/resources/) into an Apache Jena OntModel with
- * OWL Micro Rule inference (RDFS + OWL-micro entailment).
- *
- * The two main operations each:
- *   1. Run a SPARQL SELECT to fetch all components in the requested zone
- *      together with their Elementary Ontology stereotype metadata
- *      (mechanism, MV label, DV label, IV label, IV type).
- *   2. Filter results in Java using runtime state (lightOn, blindsUp, sunshine).
- *   3. Return the first candidate's metadata via OpFeedbackParam to the agent.
- *
- * Usage in illuminance_controller_agent.asl:
- *   makeArtifact("ontology", "tools.OntologyArtifact", ["lab-ontology.ttl"], OntId);
- *   queryBestIncreaseAction(Zone, LightOn, BlindsUp, Sunshine,
- *       CompId, Mechanism, MvLabel, DvLabel, IvLabel)[artifact_id(OntId)];
+ * Design goals:
+ *   - All component discovery is fully dynamic: no component names, zone names,
+ *     or action types are hardcoded in Java or in the agent.
+ *   - discoverZones()        → returns all lab:Workstation URIs + ws:zoneIndex values.
+ *   - discoverZoneQuantity() → finds the quantity (DV) that actuators in a zone
+ *                              influence and that the zone's light sensor measures.
+ *                              The agent's goal is named after this quantity label.
+ *   - queryBestIncreaseAction() / queryBestDecreaseAction()
+ *                            → filter by zone URI + target DV URI; return the WoT
+ *                              action URI directly from the ontology so the agent
+ *                              dispatches without any if-elif chain.
  */
 public class OntologyArtifact extends Artifact {
 
     private static final Logger LOGGER =
             Logger.getLogger(OntologyArtifact.class.getName());
 
-    /** Shared SPARQL prefix block prepended to every query. */
+    // ----------------------------------------------------------------
+    // SPARQL prefix block
+    // ----------------------------------------------------------------
+
     private static final String PREFIXES =
             "PREFIX owl:   <http://www.w3.org/2002/07/owl#> " +
             "PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> " +
@@ -62,35 +61,81 @@ public class OntologyArtifact extends Artifact {
             "PREFIX ws:    <http://example.org/was/lab/stereotypes#> " +
             "PREFIX lab:   <http://example.org/was/lab#> ";
 
-    /** Base namespace for lab instances — used to build zone URIs. */
+    /** Base namespace for lab instances. */
     private static final String LAB_NS = "http://example.org/was/lab#";
 
-    /** SPARQL SELECT that retrieves ALL components in a zone with their metadata.
-     *  Traverses the three-layer Elementary Ontology architecture:
-     *    ?comp --(elem:hasStereotype)--> ?stereo
-     *          --(elem:hasPhysicalMechanism)--> ?mech
-     *          --(elem:hasManipulatedVariable / hasDependentVariable / hasIndependentVariable)--> variables
-     *  The zone URI is injected as a string literal into the query at call time.
-     *  ivLabel is OPTIONAL (absent for mechanisms with no IV; Java defaults it to "none").
-     *  Note: the new ontology uses elem:hasProcessMechanism (not hasPhysicalMechanism)
-     *  and does not carry elem:hasIVType — IV presence is detected by ivLabel != "none". */
+    // ----------------------------------------------------------------
+    // SPARQL queries
+    // ----------------------------------------------------------------
+
+    /**
+     * Discovers all lab:Workstation instances, their ws:zoneIndex ordinals, and
+     * their ws:targetIlluminanceRank. Results are ordered by zone index so
+     * positional pairing across returned arrays is deterministic.
+     */
+    private static final String DISCOVER_ZONES_QUERY =
+            PREFIXES +
+            "SELECT ?zone ?idx " +
+            "WHERE { " +
+            "  ?zone a lab:Workstation . " +
+            "  ?zone ws:zoneIndex ?idx . " +
+            "} ORDER BY ?idx";
+
+    /**
+     * For a given zone URI (%s), finds the observable quantity (process variable)
+     * that the zone's light sensors use as their independent variable (what they
+     * sense) AND that at least one actuatable mechanism produces as its dependent
+     * variable. This shared variable is the semantic bridge between goal and sensor.
+     */
+    private static final String DISCOVER_ZONE_QUANTITY_QUERY =
+            PREFIXES +
+            "SELECT ?quantityURI ?quantityLabel " +
+            "WHERE { " +
+            "  ?sensor  brick:isLocatedIn    <%s> . " +
+            "  ?sensor  elem:hasStereotype   ?sensorStereo . " +
+            "  ?sensorStereo elem:hasPhysicalMechanism ?sensMech . " +
+            "  ?sensMech elem:hasIndependentVariable   ?quantityURI . " +
+            "  ?quantityURI  rdfs:label                ?quantityLabel . " +
+            "  ?actMech elem:hasDependentVariable   ?quantityURI . " +
+            "  ?actMech elem:hasManipulatedVariable ?anyMv . " +
+            "} ORDER BY ?quantityURI LIMIT 1";
+
+    /**
+     * Finds all actuatable components in zone (%1$s) whose mechanism produces
+     * the target DV URI (%2$s). Returns per-candidate:
+     *   ?comp, ?mechanism, ?mvLabel, ?dvLabel, ?ivLabel (OPTIONAL),
+     *   ?wotActionType (from ws:hasWoTActionSemanticType),
+     *   ?actuatorKind  (from ws:actuatorStateKind on the stereotype).
+     */
     private static final String ZONE_COMPONENTS_QUERY =
             PREFIXES +
-            "SELECT ?comp ?mechanism ?mvLabel ?dvLabel ?ivLabel " +
+            "SELECT ?comp ?mechanism ?mvLabel ?dvLabel ?ivLabel ?wotActionType ?wotStateType ?ivMinRank " +
             "WHERE { " +
-            "  ?comp  brick:isLocatedIn          <%s> . " +   // %s = zone URI
+            "  ?comp  brick:isLocatedIn          <%1$s> . " +
             "  ?comp  elem:hasStereotype         ?stereo . " +
             "  ?stereo elem:hasPhysicalMechanism  ?mech . " +
             "  ?mech  rdfs:label                 ?mechanism . " +
             "  ?mech  elem:hasManipulatedVariable ?mv . " +
             "  ?mv    rdfs:label                  ?mvLabel . " +
-            "  ?mech  elem:hasDependentVariable   ?dv . " +
-            "  ?dv    rdfs:label                  ?dvLabel . " +
+            "  ?mech  elem:hasDependentVariable   <%2$s> . " +
+            "  <%2$s> rdfs:label                  ?dvLabel . " +
             "  OPTIONAL { " +
             "    ?mech elem:hasIndependentVariable ?iv . " +
-            "    ?iv   rdfs:label                  ?ivLabel . " +
+            "    ?iv   ws:ivMinRank               ?ivMinRank . " +
+            "    ?iv   rdfs:label                 ?ivLabel . " +
             "  } " +
+            "  OPTIONAL { ?comp ws:hasWoTActionSemanticType ?wotActionType . } " +
+            "  OPTIONAL { ?comp ws:hasWoTStateSemanticType  ?wotStateType . } " +
             "}";
+
+    /**
+     * For a given process variable URI (%s), fetches the three rank boundary values
+     * stored as ws:rankBound_1, ws:rankBound_2, ws:rankBound_3.
+     */
+    private static final String DISCRETIZATION_BOUNDS_QUERY =
+            PREFIXES +
+            "SELECT ?b1 ?b2 ?b3 " +
+            "WHERE { <%s> ws:rankBound_1 ?b1 ; ws:rankBound_2 ?b2 ; ws:rankBound_3 ?b3 . }";
 
     private OntModel ontModel;
 
@@ -102,167 +147,276 @@ public class OntologyArtifact extends Artifact {
      * Load the RDF/Turtle ontology file from the Java classpath.
      *
      * @param ttlResourcePath  Classpath resource name, e.g. "lab-ontology.ttl".
-     *                         Place the file in src/resources/ so Gradle copies
-     *                         it onto the runtime classpath automatically.
      */
     @OPERATION
     public void init(String ttlResourcePath) {
-        // OWL_MEM_MICRO_RULE_INF applies RDFS entailment + OWL Micro rules
-        // (subclass/subproperty/owl:hasValue) without full OWL-DL reasoning.
-        // Enables rdfs:subClassOf/subPropertyOf traversal (e.g. elem:manipulates
-        // as a sub-property of elem:isRelatedToVariable) and class membership inference.
         ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF);
-
         InputStream in = getClass().getClassLoader().getResourceAsStream(ttlResourcePath);
         if (in != null) {
             ontModel.read(in, null, "TURTLE");
-            long tripleCount = ontModel.size();
             LOGGER.info("OntologyArtifact: loaded '" + ttlResourcePath +
-                        "'. Base triples: " + tripleCount);
+                        "'. Base triples: " + ontModel.size());
         } else {
-            LOGGER.severe("OntologyArtifact: resource NOT found on classpath: '" +
-                          ttlResourcePath + "'. Ensure the file is in src/resources/.");
+            LOGGER.severe("OntologyArtifact: resource NOT found: '" + ttlResourcePath + "'.");
         }
     }
 
+    // ----------------------------------------------------------------
+    // Zone / goal discovery operations
+    // ----------------------------------------------------------------
+
     /**
-     * Query the KG for the best component to INCREASE illuminance in a zone.
+     * Discover all workstation zones from the ontology.
+     *
+     * Returns two parallel arrays (same length, same index = same zone):
+     *   zoneURIs    — full URI strings (e.g. "http://example.org/was/lab#Zone1")
+     *   zoneIndices — ws:zoneIndex integer values
+     *
+     * Control targets are held as zone_target/2 beliefs in the agent.
+     *
+     * @param zoneURIs    Output: zone URI strings ordered by ws:zoneIndex.
+     * @param zoneIndices Output: zone index integers matching zoneURIs order.
+     */
+    @OPERATION
+    public void discoverZones(
+            OpFeedbackParam<Object[]> zoneURIs,
+            OpFeedbackParam<Object[]> zoneIndices) {
+
+        LOGGER.info("discoverZones: querying ontology");
+        List<String>  uris = new ArrayList<>();
+        List<Integer> idxs = new ArrayList<>();
+
+        Query q = QueryFactory.create(DISCOVER_ZONES_QUERY);
+        try (QueryExecution qe = QueryExecutionFactory.create(q, ontModel)) {
+            ResultSet rs = qe.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution sol = rs.nextSolution();
+                uris.add(sol.getResource("zone").getURI());
+                idxs.add(sol.getLiteral("idx").getInt());
+            }
+        } catch (Exception e) {
+            LOGGER.severe("discoverZones SPARQL failed: " + e.getMessage());
+        }
+
+        zoneURIs.set(uris.toArray());
+        zoneIndices.set(idxs.toArray());
+        LOGGER.info("discoverZones: found " + uris.size() + " zone(s): " + uris);
+    }
+
+    /**
+     * Fetch the three discretisation rank boundaries for a process variable.
+     * Reads ws:rankBound_1/2/3 from the ontology; falls back to {50, 100, 300}
+     * with a warning if the triples are absent.
+     *
+     * @param pvUri  Full URI of the process variable.
+     * @param bounds Output: Double[3] containing [rankBound_1, rankBound_2, rankBound_3].
+     */
+    @OPERATION
+    public void getDiscretizationBounds(String pvUri,
+            OpFeedbackParam<Object[]> bounds) {
+
+        LOGGER.info("getDiscretizationBounds: pv=" + pvUri);
+        String sparql = String.format(DISCRETIZATION_BOUNDS_QUERY, pvUri);
+        Query q = QueryFactory.create(sparql);
+
+        try (QueryExecution qe = QueryExecutionFactory.create(q, ontModel)) {
+            ResultSet rs = qe.execSelect();
+            if (rs.hasNext()) {
+                QuerySolution sol = rs.nextSolution();
+                bounds.set(new Object[]{
+                        sol.getLiteral("b1").getDouble(),
+                        sol.getLiteral("b2").getDouble(),
+                        sol.getLiteral("b3").getDouble()
+                });
+                LOGGER.info("  bounds: " + bounds.get()[0] + ", " +
+                            bounds.get()[1] + ", " + bounds.get()[2]);
+                return;
+            }
+        } catch (Exception e) {
+            LOGGER.severe("getDiscretizationBounds SPARQL failed: " + e.getMessage());
+        }
+
+        LOGGER.warning("getDiscretizationBounds: no rankBound triples for " + pvUri +
+                       ". Using defaults {50, 100, 300}.");
+        bounds.set(new Object[]{50.0, 100.0, 300.0});
+    }
+
+    /**
+     * For a given zone URI, discover the observable quantity (process variable)
+     * that light sensors in the zone measure and that actuators can influence.
+     * The agent maps its goal name to the returned quantity label.
+     *
+     * @param zoneUri       Full URI of the zone.
+     * @param quantityUri   Output: URI of the shared DV/IV process variable.
+     * @param quantityLabel Output: rdfs:label of that variable.
+     */
+    @OPERATION
+    public void discoverZoneQuantity(
+            String zoneUri,
+            OpFeedbackParam<String> quantityUri,
+            OpFeedbackParam<String> quantityLabel) {
+
+        LOGGER.info("discoverZoneQuantity: zone=" + zoneUri);
+        String sparql = String.format(DISCOVER_ZONE_QUANTITY_QUERY, zoneUri);
+        Query q = QueryFactory.create(sparql);
+
+        try (QueryExecution qe = QueryExecutionFactory.create(q, ontModel)) {
+            ResultSet rs = qe.execSelect();
+            if (rs.hasNext()) {
+                QuerySolution sol = rs.nextSolution();
+                String uri   = sol.getResource("quantityURI").getURI();
+                String label = sol.getLiteral("quantityLabel").getString();
+                quantityUri.set(uri);
+                quantityLabel.set(label);
+                LOGGER.info("  quantity: " + uri + " (\"" + label + "\")");
+                return;
+            }
+        } catch (Exception e) {
+            LOGGER.severe("discoverZoneQuantity SPARQL failed: " + e.getMessage());
+        }
+
+        quantityUri.set("none");
+        quantityLabel.set("none");
+        LOGGER.warning("discoverZoneQuantity: no actuatable quantity found for " + zoneUri);
+    }
+
+    // ----------------------------------------------------------------
+    // Actuation decision operations
+    // ----------------------------------------------------------------
+
+    /**
+     * Query the KG for the best component to INCREASE the target quantity in a zone.
      *
      * Algorithm:
-     *   1. SPARQL SELECT: fetch all components in zone with their stereotype metadata.
-     *   2. Java filter — IV satisfaction: skip component if its IV type is "sunshine"
-     *      AND sunshineRank < 1 (blind cannot increase illuminance without solar input).
-     *   3. Java filter — current state: skip if already in the activated state
-     *      (light already ON, or blind already UP — nothing to do).
-     *   4. Return the first candidate that passes both filters.
+     *   1. SPARQL SELECT: fetch actuatable components in zone that produce dvUri.
+     *   2. Java filter — IV satisfaction: if the mechanism has an IV, require
+     *      sunshineRank >= ws:ivMinRank stored on the mechanism (default 1 if absent).
+     *   3. Java filter — current state: look up ws:hasWoTStateSemanticType in the
+     *      stateMap built from the parallel stateKeys/stateValues arrays returned by
+     *      LabEnvironment.readZoneState. Skip if already active.
+     *   4. Return first passing candidate including the WoT action URI.
      *
-     * @param zone          Zone number (1 or 2).
-     * @param lightOn       Current state: is the ceiling light ON?
-     * @param blindsUp      Current state: are the blinds UP (open)?
-     * @param sunshineRank  Current sunshine discretised rank (0–3).
+     * @param zoneUri       Full URI of the zone.
+     * @param dvUri         URI of the target process variable (from discoverZoneQuantity).
+     * @param sunshineRank  Current sunshine rank (0–3).
+     * @param stateKeys     WoT status property URIs (from readZoneState).
+     * @param stateValues   Corresponding boolean values (parallel to stateKeys).
      * @param componentId   Output: local name of selected component, or "none".
-     * @param mechanism     Output: mechanism name (e.g. "light_throttling").
-     * @param mvLabel       Output: MV human-readable label.
-     * @param dvLabel       Output: DV human-readable label.
-     * @param ivLabel       Output: IV human-readable label, or "none".
+     * @param mechanism     Output: mechanism rdfs:label.
+     * @param mvLabel       Output: MV rdfs:label.
+     * @param dvLabel       Output: DV rdfs:label.
+     * @param ivLabel       Output: IV rdfs:label, or "none".
+     * @param wotActionType Output: WoT TD action @type URI for generic dispatch.
      */
     @OPERATION
     public void queryBestIncreaseAction(
-            int zone, boolean lightOn, boolean blindsUp, int sunshineRank,
+            String zoneUri, String dvUri,
+            int sunshineRank, Object[] stateKeys, Object[] stateValues,
             OpFeedbackParam<String> componentId,
             OpFeedbackParam<String> mechanism,
             OpFeedbackParam<String> mvLabel,
             OpFeedbackParam<String> dvLabel,
-            OpFeedbackParam<String> ivLabel) {
+            OpFeedbackParam<String> ivLabel,
+            OpFeedbackParam<String> wotActionType) {
 
-        LOGGER.info("queryBestIncreaseAction: zone=" + zone +
-                    " lightOn=" + lightOn + " blindsUp=" + blindsUp +
+        LOGGER.info("queryBestIncreaseAction: zone=" + zoneUri + " dv=" + dvUri +
                     " sunshine=" + sunshineRank);
 
-        List<Map<String, String>> candidates = queryZoneComponents(zone);
+        Map<String, Boolean> stateMap = buildStateMap(stateKeys, stateValues);
+        List<Map<String, String>> candidates = queryZoneComponents(zoneUri, dvUri);
 
         for (Map<String, String> c : candidates) {
-            String cId      = c.get("compId");
-            String ivLabelVal = c.get("ivLabel");
+            String cId          = c.get("compId");
+            String ivVal        = c.get("ivLabel");
+            String wotStateType = c.get("wotStateType");
+            String ivMinRankStr = c.get("ivMinRank");
 
-            // --- Filter 1: IV satisfaction ---
-            // If the mechanism has an IV (ivLabel != "none"), it is outdoor illuminance
-            // (sunshine). The blind can only increase illuminance if sunshineRank >= 1.
-            boolean ivOk = ivLabelVal.equals("none") || sunshineRank >= 1;
-            if (!ivOk) {
-                LOGGER.info("  Skipping " + cId + ": IV '" + ivLabelVal +
-                            "' not satisfied (sunshine=" + sunshineRank + ")");
+            // Filter 1: IV satisfaction — minimum rank from ontology, default 1
+            if (!"none".equals(ivVal)) {
+                int minRank = (ivMinRankStr != null && !"none".equals(ivMinRankStr))
+                              ? Integer.parseInt(ivMinRankStr) : 1;
+                if (sunshineRank < minRank) {
+                    LOGGER.info("  Skipping " + cId + ": IV '" + ivVal +
+                                "' requires rank >= " + minRank +
+                                " (sunshine=" + sunshineRank + ")");
+                    continue;
+                }
+            }
+
+            // Filter 2: Current state — can we increase?
+            // Look up via ws:hasWoTStateSemanticType → no if-elif on component names
+            Boolean isActive = stateMap.get(wotStateType);
+            if (!Boolean.FALSE.equals(isActive)) {  // null = URI missing; true = already ON/UP
+                LOGGER.info("  Skipping " + cId + ": already in activated state "
+                            + "(wotStateType=" + wotStateType + " isActive=" + isActive + ")");
                 continue;
             }
 
-            // --- Filter 2: Current state actionability for INCREASE ---
-            // A light can increase illuminance only if it is currently OFF (can turn ON).
-            // A blind can increase illuminance only if it is currently DOWN (can raise UP).
-            boolean stateOk;
-            if (cId.toLowerCase().contains("light")) {
-                stateOk = !lightOn;
-            } else if (cId.toLowerCase().contains("blind")) {
-                stateOk = !blindsUp;
-            } else {
-                stateOk = false;
-            }
-            if (!stateOk) {
-                LOGGER.info("  Skipping " + cId + ": already in target state for increase " +
-                            "(lightOn=" + lightOn + " blindsUp=" + blindsUp + ")");
-                continue;
-            }
-
-            // --- Candidate selected ---
-            setOutputs(componentId, mechanism, mvLabel, dvLabel, ivLabel, c);
-            LOGGER.info("  Selected: " + cId + " (mechanism=" + c.get("mechanism") + ")");
+            setOutputs(componentId, mechanism, mvLabel, dvLabel, ivLabel, wotActionType, c);
+            LOGGER.info("  Selected: " + cId + " wotAction=" + c.get("wotActionType"));
             return;
         }
 
-        setNoResult(componentId, mechanism, mvLabel, dvLabel, ivLabel);
-        LOGGER.info("  No actionable component found for increase in zone " + zone);
+        setNoResult(componentId, mechanism, mvLabel, dvLabel, ivLabel, wotActionType);
+        LOGGER.info("  No actionable component found for increase in zone " + zoneUri);
     }
 
     /**
-     * Query the KG for the best component to DECREASE illuminance in a zone.
+     * Query the KG for the best component to DECREASE the target quantity in a zone.
      *
      * Algorithm:
-     *   1. SPARQL SELECT: fetch all components in zone with their stereotype metadata.
-     *   2. Java filter — current state: skip if already in the deactivated state
-     *      (light already OFF, or blind already DOWN — nothing to deactivate).
-     *      No IV filter needed for deactivation.
-     *   3. Return the first candidate that passes the state filter.
+     *   1. SPARQL SELECT: same as increase query.
+     *   2. Java filter — current state: skip if already deactivated.
+     *      State is looked up via ws:hasWoTStateSemanticType in stateMap.
+     *   3. Return first passing candidate.
      *
-     * @param zone          Zone number (1 or 2).
-     * @param lightOn       Current state: is the ceiling light ON?
-     * @param blindsUp      Current state: are the blinds UP (open)?
-     * @param sunshineRank  Current sunshine rank (passed through for logging only).
+     * @param zoneUri       Full URI of the zone.
+     * @param dvUri         URI of the target process variable.
+     * @param sunshineRank  Current sunshine rank (logged only).
+     * @param stateKeys     WoT status property URIs (from readZoneState).
+     * @param stateValues   Corresponding boolean values (parallel to stateKeys).
      * @param componentId   Output: local name of selected component, or "none".
-     * @param mechanism     Output: mechanism name.
-     * @param mvLabel       Output: MV label.
-     * @param dvLabel       Output: DV label.
-     * @param ivLabel       Output: IV label.
+     * @param mechanism     Output: mechanism rdfs:label.
+     * @param mvLabel       Output: MV rdfs:label.
+     * @param dvLabel       Output: DV rdfs:label.
+     * @param ivLabel       Output: IV rdfs:label, or "none".
+     * @param wotActionType Output: WoT TD action @type URI for generic dispatch.
      */
     @OPERATION
     public void queryBestDecreaseAction(
-            int zone, boolean lightOn, boolean blindsUp, int sunshineRank,
+            String zoneUri, String dvUri,
+            int sunshineRank, Object[] stateKeys, Object[] stateValues,
             OpFeedbackParam<String> componentId,
             OpFeedbackParam<String> mechanism,
             OpFeedbackParam<String> mvLabel,
             OpFeedbackParam<String> dvLabel,
-            OpFeedbackParam<String> ivLabel) {
+            OpFeedbackParam<String> ivLabel,
+            OpFeedbackParam<String> wotActionType) {
 
-        LOGGER.info("queryBestDecreaseAction: zone=" + zone +
-                    " lightOn=" + lightOn + " blindsUp=" + blindsUp);
+        LOGGER.info("queryBestDecreaseAction: zone=" + zoneUri + " dv=" + dvUri +
+                    " sunshine=" + sunshineRank);
 
-        List<Map<String, String>> candidates = queryZoneComponents(zone);
+        Map<String, Boolean> stateMap = buildStateMap(stateKeys, stateValues);
+        List<Map<String, String>> candidates = queryZoneComponents(zoneUri, dvUri);
 
         for (Map<String, String> c : candidates) {
-            String cId = c.get("compId");
+            String cId          = c.get("compId");
+            String wotStateType = c.get("wotStateType");
 
-            // --- Filter: Current state actionability for DECREASE ---
-            // A light can decrease illuminance only if it is currently ON (can turn OFF).
-            // A blind can decrease illuminance only if it is currently UP (can lower DOWN).
-            boolean stateOk;
-            if (cId.toLowerCase().contains("light")) {
-                stateOk = lightOn;
-            } else if (cId.toLowerCase().contains("blind")) {
-                stateOk = blindsUp;
-            } else {
-                stateOk = false;
-            }
-            if (!stateOk) {
-                LOGGER.info("  Skipping " + cId + ": not in deactivatable state " +
-                            "(lightOn=" + lightOn + " blindsUp=" + blindsUp + ")");
+            Boolean isActive = stateMap.get(wotStateType);
+            if (!Boolean.TRUE.equals(isActive)) {  // null = URI missing; false = already OFF/DOWN
+                LOGGER.info("  Skipping " + cId + ": not in deactivatable state "
+                            + "(wotStateType=" + wotStateType + " isActive=" + isActive + ")");
                 continue;
             }
 
-            setOutputs(componentId, mechanism, mvLabel, dvLabel, ivLabel, c);
-            LOGGER.info("  Selected: " + cId + " (mechanism=" + c.get("mechanism") + ")");
+            setOutputs(componentId, mechanism, mvLabel, dvLabel, ivLabel, wotActionType, c);
+            LOGGER.info("  Selected: " + cId + " wotAction=" + c.get("wotActionType"));
             return;
         }
 
-        setNoResult(componentId, mechanism, mvLabel, dvLabel, ivLabel);
-        LOGGER.info("  No actionable component found for decrease in zone " + zone);
+        setNoResult(componentId, mechanism, mvLabel, dvLabel, ivLabel, wotActionType);
+        LOGGER.info("  No actionable component found for decrease in zone " + zoneUri);
     }
 
     // ----------------------------------------------------------------
@@ -270,16 +424,13 @@ public class OntologyArtifact extends Artifact {
     // ----------------------------------------------------------------
 
     /**
-     * Execute the zone-components SPARQL SELECT and return results as a list
-     * of property maps.
-     *
-     * Each map contains the keys:
-     *   compId, mechanism, mvLabel, dvLabel, ivType, ivLabel
+     * Execute the zone-components SPARQL SELECT filtered by target DV URI.
+     * Returns a list of property maps with keys:
+     *   compId, mechanism, mvLabel, dvLabel, ivLabel,
+     *   wotActionType, wotStateType, ivMinRank
      */
-    private List<Map<String, String>> queryZoneComponents(int zone) {
-        String zoneUri = LAB_NS + "Zone" + zone;
-        String sparql  = String.format(ZONE_COMPONENTS_QUERY, zoneUri);
-
+    private List<Map<String, String>> queryZoneComponents(String zoneUri, String dvUri) {
+        String sparql = String.format(ZONE_COMPONENTS_QUERY, zoneUri, dvUri);
         LOGGER.fine("SPARQL:\n" + sparql);
 
         List<Map<String, String>> results = new ArrayList<>();
@@ -291,60 +442,83 @@ public class OntologyArtifact extends Artifact {
                 QuerySolution sol = rs.nextSolution();
                 Map<String, String> row = new LinkedHashMap<>();
 
-                // Component local name — extracted from the resource URI
-                // e.g. <http://example.org/was/lab#CeilingLight_Z1> → "CeilingLight_Z1"
                 row.put("compId",    sol.getResource("comp").getLocalName());
                 row.put("mechanism", sol.getLiteral("mechanism").getString());
                 row.put("mvLabel",   sol.getLiteral("mvLabel").getString());
                 row.put("dvLabel",   sol.getLiteral("dvLabel").getString());
 
-                // ivLabel is OPTIONAL: only present when the mechanism has an IV.
-                // Mechanisms without an IV (e.g. ws:pm_incandescent_light_emission) produce no binding;
-                // Java defaults to "none". When present (ws:pm_daylight_ingress), ivLabel is
-                // "Outdoor illuminance (sunshine)" — used as the IV-presence signal.
                 RDFNode ivNode = sol.get("ivLabel");
                 row.put("ivLabel", (ivNode != null && ivNode.isLiteral())
-                        ? ivNode.asLiteral().getString()
-                        : "none");
+                        ? ivNode.asLiteral().getString() : "none");
+
+                RDFNode wotActNode = sol.get("wotActionType");
+                row.put("wotActionType", (wotActNode != null && wotActNode.isLiteral())
+                        ? wotActNode.asLiteral().getString() : "none");
+
+                RDFNode wotStNode = sol.get("wotStateType");
+                row.put("wotStateType", (wotStNode != null && wotStNode.isLiteral())
+                        ? wotStNode.asLiteral().getString() : null);
+
+                RDFNode ivMinNode = sol.get("ivMinRank");
+                row.put("ivMinRank", (ivMinNode != null && ivMinNode.isLiteral())
+                        ? ivMinNode.asLiteral().getString() : null);
 
                 results.add(row);
-                LOGGER.fine("  SPARQL row: " + row);
+                LOGGER.fine("  row: " + row);
             }
         } catch (Exception e) {
-            LOGGER.severe("SPARQL query failed for zone " + zone + ": " + e.getMessage());
+            LOGGER.severe("SPARQL query failed for zone " + zoneUri + ": " + e.getMessage());
         }
 
-        LOGGER.info("queryZoneComponents(zone=" + zone + "): " +
-                    results.size() + " candidate(s) found.");
+        LOGGER.info("queryZoneComponents(" + zoneUri + "): " + results.size() + " candidate(s)");
         return results;
     }
 
-    /** Set all five output parameters from a candidate result map. */
+    /**
+     * Build a Boolean lookup map from the parallel stateKeys / stateValues arrays
+     * returned by LabEnvironment.readZoneState.
+     * Key: WoT status property URI (e.g. "http://example.org/was#Z1Light")
+     * Value: current boolean state (true = on/up, false = off/down)
+     */
+    private Map<String, Boolean> buildStateMap(Object[] keys, Object[] values) {
+        Map<String, Boolean> map = new LinkedHashMap<>();
+        int len = Math.min(keys.length, values.length);
+        for (int i = 0; i < len; i++) {
+            if (keys[i] instanceof String && values[i] instanceof Boolean) {
+                map.put((String) keys[i], (Boolean) values[i]);
+            }
+        }
+        return map;
+    }
+
     private void setOutputs(
             OpFeedbackParam<String> componentId,
             OpFeedbackParam<String> mechanism,
             OpFeedbackParam<String> mvLabel,
             OpFeedbackParam<String> dvLabel,
             OpFeedbackParam<String> ivLabel,
+            OpFeedbackParam<String> wotActionType,
             Map<String, String> c) {
         componentId.set(c.get("compId"));
         mechanism.set(c.get("mechanism"));
         mvLabel.set(c.get("mvLabel"));
         dvLabel.set(c.get("dvLabel"));
         ivLabel.set(c.get("ivLabel"));
+        wotActionType.set(c.get("wotActionType"));
     }
 
-    /** Set all five output parameters to "none" when no component is found. */
     private void setNoResult(
             OpFeedbackParam<String> componentId,
             OpFeedbackParam<String> mechanism,
             OpFeedbackParam<String> mvLabel,
             OpFeedbackParam<String> dvLabel,
-            OpFeedbackParam<String> ivLabel) {
+            OpFeedbackParam<String> ivLabel,
+            OpFeedbackParam<String> wotActionType) {
         componentId.set("none");
         mechanism.set("none");
         mvLabel.set("none");
         dvLabel.set("none");
         ivLabel.set("none");
+        wotActionType.set("none");
     }
 }
