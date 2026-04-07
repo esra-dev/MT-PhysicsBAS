@@ -98,7 +98,12 @@ public class OntologyArtifact extends Artifact {
             "  ?quantityURI  rdfs:label                ?quantityLabel . " +
             "  ?actMech elem:hasDependentVariable   ?quantityURI . " +
             "  ?actMech elem:hasManipulatedVariable ?anyMv . " +
-            "} ORDER BY ?quantityURI LIMIT 1";
+            // Restrict to illuminance quantities so that temperature sensors
+            // introduced alongside radiators do not interfere with zone discovery.
+            // elem:luminiscence already declares elem:hasQuantity qudtqk:Illuminance
+            // in the ontology — no new properties required.
+            "  FILTER EXISTS { ?quantityURI elem:hasQuantity qudtqk:Illuminance } " +
+            "} LIMIT 1";
 
     /**
      * Finds all actuatable components in zone (%1$s) whose mechanism produces

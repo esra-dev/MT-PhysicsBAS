@@ -12,6 +12,7 @@
 // WoT Thing Description URLs
 lab_environment_simulated("https://raw.githubusercontent.com/Interactions-HSG/example-tds/was/tds/interactions-lab.ttl").
 lab_environment_real("https://raw.githubusercontent.com/Interactions-HSG/example-tds/was/tds/interactions-lab-real.ttl").
+lab_environment_custom("classpath:interactions-lab-custom.ttl").
 
 // Target illuminance rank per zone (0 = dark … 3 = bright). Keyed by ws:zoneIndex value.
 // Edit these beliefs to set different target ranks per workstation.
@@ -33,17 +34,23 @@ action_delay(2000).
 /* ============================================
  * @start Plan — Initialise artifacts and discover zones from ontology
  * ============================================
- * ENVIRONMENT SELECTION: change LabURL = SimulatedURL to LabURL = RealURL
- * for the physical lab.
+ * ENVIRONMENT SELECTION: change LabURL = SimulatedURL to switch environments.
+ *   SimulatedURL — original simulated lab (port 1880, fetched from GitHub)
+ *   CustomURL    — custom lab with spotlight + radiators (port 1881, local TD)
+ *   RealURL      — physical lab
  */
 @start
-+!start : lab_environment_simulated(SimulatedURL) <-
++!start : lab_environment_simulated(SimulatedURL)
+        & lab_environment_custom(CustomURL)
+        & lab_environment_real(RealURL) <-
 
     // ========================================
     // ENVIRONMENT SELECTION — change here to switch
     // ========================================
     LabURL = SimulatedURL;
-    // For the real lab, comment the line above and uncomment:
+    // Custom lab (port 1881, spotlight + radiators):
+    // LabURL = CustomURL;
+    // Real lab:
     // LabURL = RealURL;
     // ========================================
 

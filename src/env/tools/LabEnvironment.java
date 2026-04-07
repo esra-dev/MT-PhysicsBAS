@@ -62,6 +62,17 @@ public class LabEnvironment extends Artifact {
                 .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
                 .build();
 
+            // Resolve classpath: URIs so local TD files bundled in src/resources/
+            // can be referenced as "classpath:interactions-lab-custom.ttl".
+            if (tdUrl.startsWith("classpath:")) {
+                java.net.URL resource = getClass().getClassLoader()
+                        .getResource(tdUrl.substring("classpath:".length()));
+                if (resource == null) {
+                    throw new IOException("Classpath resource not found: " + tdUrl);
+                }
+                tdUrl = resource.toString();
+            }
+
             this.td = TDGraphReader.readFromURL(TDFormat.RDF_TURTLE, tdUrl);
             LOGGER.info("LabEnvironment initialized with Thing Description from: " + tdUrl);
             
