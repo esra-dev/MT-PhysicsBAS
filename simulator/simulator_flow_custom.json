@@ -123,6 +123,42 @@
         "wires": [["custom_env_fn"]]
     },
     {
+        "id": "custom_http_reset",
+        "type": "http in",
+        "z": "custom_tab",
+        "name": "",
+        "url": "/was/rl/reset",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 620,
+        "wires": [["custom_reset_fn"]]
+    },
+    {
+        "id": "custom_reset_fn",
+        "type": "function",
+        "z": "custom_tab",
+        "name": "Reset episode",
+        "func": "// Randomise state for a new Q-learning training episode.\nvar levels = [25, 75, 150, 500];\nvar sunshine = [0, 100, 400, 900];\nflow.set('Z1Level', levels[Math.floor(Math.random() * levels.length)]);\nflow.set('Z2Level', levels[Math.floor(Math.random() * levels.length)]);\nflow.set('Z1Light',  Math.random() < 0.5);\nflow.set('Z2Light',  Math.random() < 0.5);\nflow.set('Z1Blinds', Math.random() < 0.5);\nflow.set('Z2Blinds', Math.random() < 0.5);\nflow.set('Spotlight', false);\nflow.set('Z1Radiator', false);\nflow.set('Z2Radiator', false);\nflow.set('Z1Temp', 20.0);\nflow.set('Z2Temp', 20.0);\nflow.set('Sunshine', sunshine[Math.floor(Math.random() * sunshine.length)]);\nflow.set('EnergyCost', 0);\nmsg.payload = { reset: true };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 620,
+        "wires": [["custom_http_reset_resp"]]
+    },
+    {
+        "id": "custom_http_reset_resp",
+        "type": "http response",
+        "z": "custom_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 660,
+        "y": 620,
+        "wires": []
+    },
+    {
         "id": "custom_env_fn",
         "type": "function",
         "z": "custom_tab",

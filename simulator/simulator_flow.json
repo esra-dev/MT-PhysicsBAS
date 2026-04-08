@@ -143,6 +143,42 @@
         ]
     },
     {
+        "id": "rl_http_reset",
+        "type": "http in",
+        "z": "fe43b7b5.f59c78",
+        "name": "",
+        "url": "/was/rl/reset",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 600,
+        "wires": [["rl_reset_fn"]]
+    },
+    {
+        "id": "rl_reset_fn",
+        "type": "function",
+        "z": "fe43b7b5.f59c78",
+        "name": "Reset episode",
+        "func": "// Randomise state for a new Q-learning training episode.\nvar levels = [25, 75, 150, 500];\nvar sunshine = [0, 100, 400, 900];\nflow.set('Z1Level', levels[Math.floor(Math.random() * levels.length)]);\nflow.set('Z2Level', levels[Math.floor(Math.random() * levels.length)]);\nflow.set('Z1Light',  Math.random() < 0.5);\nflow.set('Z2Light',  Math.random() < 0.5);\nflow.set('Z1Blinds', Math.random() < 0.5);\nflow.set('Z2Blinds', Math.random() < 0.5);\nflow.set('Sunshine', sunshine[Math.floor(Math.random() * sunshine.length)]);\nflow.set('EnergyCost', 0);\nmsg.payload = { reset: true };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 600,
+        "wires": [["rl_http_reset_resp"]]
+    },
+    {
+        "id": "rl_http_reset_resp",
+        "type": "http response",
+        "z": "fe43b7b5.f59c78",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 660,
+        "y": 600,
+        "wires": []
+    },
+    {
         "id": "fabfde02.08c86",
         "type": "inject",
         "z": "fe43b7b5.f59c78",

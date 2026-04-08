@@ -58,6 +58,18 @@ task task (type: JavaExec, dependsOn: 'classes') {
     classpath sourceSets.main.runtimeClasspath
 }
 
+// Q-Learning agent task.
+// Switch stereotype mode:  edit use_stereotypes(true/false) in
+//   src/agt/illuminance_controller_agent_ql.asl
+// Run while Node-RED simulator is running (port 1881 for custom lab).
+task taskQl (type: JavaExec, dependsOn: 'classes') {
+    description 'runs the Q-learning illuminance controller agent'
+    group ' JaCaMo'
+    main = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_ql.jcm'
+    classpath sourceSets.main.runtimeClasspath
+}
+
 clean {
     delete 'bin'
     delete 'build'

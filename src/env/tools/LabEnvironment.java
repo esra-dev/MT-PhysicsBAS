@@ -202,6 +202,57 @@ public class LabEnvironment extends Artifact {
     }
 
     /**
+     * Reset the simulator to a random initial state for a new Q-learning episode.
+     * Sends POST to the /was/rl/reset endpoint derived from the Thing Description base URL.
+     * The simulator randomises all actuator states and lux levels on receipt.
+     */
+    @OPERATION
+    public void resetLab() {
+        // Derive the reset URL from the base URL stored in the TD.
+        // Both standard (port 1880) and custom (port 1881) flows expose the same path.
+        String baseUrl = null;
+        try {
+            baseUrl = this.td.getThingURI().isPresent()
+                    ? this.td.getThingURI().get() : null;
+        } catch (Exception ignored) {}
+
+        // Fallback: construct from a known action endpoint
+        String resetUrl = null;
+        Optional<ActionAffordance> anyAction = this.td.getFirstActionBySemanticType(
+                "http://example.org/was#SetZ1Light");
+        if (anyAction.isPresent()) {
+            Optional<Form> f = anyAction.get().getFirstFormForOperationType(TD.invokeAction);
+            if (f.isPresent()) {
+                String target = f.get().getTarget();
+                // Replace the action suffix with "reset"
+                resetUrl = target.replaceAll("/action$", "/reset");
+            }
+        }
+
+        if (resetUrl == null) {
+            LOGGER.warning("resetLab: could not derive reset URL — skipping reset");
+            return;
+        }
+
+        try {
+            org.apache.hc.client5.http.impl.classic.CloseableHttpClient client =
+                    org.apache.hc.client5.http.impl.classic.HttpClients.createDefault();
+            org.apache.hc.client5.http.classic.methods.HttpPost post =
+                    new org.apache.hc.client5.http.classic.methods.HttpPost(resetUrl);
+            post.setHeader("Content-Type", "application/json");
+            post.setEntity(new org.apache.hc.core5.http.io.entity.StringEntity("{}",
+                    org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
+            try (org.apache.hc.client5.http.impl.classic.CloseableHttpResponse resp =
+                    client.execute(post)) {
+                LOGGER.info("resetLab: POST " + resetUrl + " → " + resp.getCode());
+            }
+            client.close();
+        } catch (IOException e) {
+            LOGGER.warning("resetLab: POST failed: " + e.getMessage());
+        }
+    }
+
+    /**
      * Generic action dispatch: looks up the WoT action affordance by its
      * semantic type URI (as stored in ws:hasWoTActionSemanticType) and
      * invokes it with the given boolean value.
