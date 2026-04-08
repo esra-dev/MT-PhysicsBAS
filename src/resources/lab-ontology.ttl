@@ -59,6 +59,14 @@ ws:rankBound_3 a owl:DatatypeProperty ;
     rdfs:label "Discretisation threshold rank 2->3" ;
     rdfs:range xsd:decimal .
 
+# Activation cost for an actuator component. Used to ORDER BY in ZONE_COMPONENTS_QUERY so that
+# cheap, zone-specific actuators (blinds, ceiling lights) are tried before the shared high-energy
+# Spotlight. Lower value = higher priority.
+ws:activationCost a owl:DatatypeProperty ;
+    rdfs:label "Actuator activation cost" ;
+    rdfs:comment "Priority rank for actuator selection: 1=Blinds (cheapest), 2=CeilingLight, 3=Spotlight (most expensive/shared). ORDER BY ASC(?cost) in SPARQL." ;
+    rdfs:range xsd:integer .
+
 # Integer index (1-based) used to sort zones deterministically in SPARQL (ORDER BY ws:zoneIndex).
 ws:zoneIndex a owl:DatatypeProperty ;
     rdfs:label "Zone index" ;
@@ -605,6 +613,7 @@ lab:CeilingLight_Z1 a brick:Luminaire ;
     elem:hasStereotype ws:LampIncandescentStereotype ;
     ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
     ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:activationCost 2 ;
     elem:isPartOf      lab:IndoorLightingStream .
 
 lab:CeilingLight_Z2 a brick:Luminaire ;
@@ -614,6 +623,7 @@ lab:CeilingLight_Z2 a brick:Luminaire ;
     elem:hasStereotype ws:LampIncandescentStereotype ;
     ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Light" ;
     ws:hasWoTStateSemanticType  "http://example.org/was#Z2Light" ;
+    ws:activationCost 2 ;
     elem:isPartOf      lab:IndoorLightingStream .
 
 # --- 8.2  Blinds ------------------------------------------------------------
@@ -625,6 +635,7 @@ lab:Blind_Z1 a brick:Blind ;
     elem:hasStereotype ws:BlindStereotype ;
     ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Blinds" ;
     ws:hasWoTStateSemanticType  "http://example.org/was#Z1Blinds" ;
+    ws:activationCost 1 ;
     elem:isPartOf      lab:IndoorLightingStream ;
     elem:isPartOf      lab:OutdoorSunlightStream .
 
@@ -635,6 +646,7 @@ lab:Blind_Z2 a brick:Blind ;
     elem:hasStereotype ws:BlindStereotype ;
     ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Blinds" ;
     ws:hasWoTStateSemanticType  "http://example.org/was#Z2Blinds" ;
+    ws:activationCost 1 ;
     elem:isPartOf      lab:IndoorLightingStream ;
     elem:isPartOf      lab:OutdoorSunlightStream .
 
@@ -935,6 +947,7 @@ lab:Spotlight a brick:Luminaire ;
     elem:hasStereotype ws:SpotlightStereotype ;
     ws:hasWoTActionSemanticType "http://example.org/was#SetSpotlight" ;
     ws:hasWoTStateSemanticType  "http://example.org/was#Spotlight" ;
+    ws:activationCost 3 ;
     elem:isPartOf      lab:IndoorLightingStream .
 
 lab:Radiator_Z1 a brick:Equipment ;

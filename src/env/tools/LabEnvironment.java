@@ -18,6 +18,9 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.core5.http.impl.DefaultConnectionReuseStrategy;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+
 import cartago.Artifact;
 import cartago.OPERATION;
 import cartago.OpFeedbackParam;
@@ -65,17 +68,21 @@ public class LabEnvironment extends Artifact {
             // Resolve classpath: URIs so local TD files bundled in src/resources/
             // can be referenced as "classpath:interactions-lab-custom.ttl".
             if (tdUrl.startsWith("classpath:")) {
-                java.net.URL resource = getClass().getClassLoader()
-                        .getResource(tdUrl.substring("classpath:".length()));
-                if (resource == null) {
-                    throw new IOException("Classpath resource not found: " + tdUrl);
+                String resourcePath = tdUrl.substring("classpath:".length());
+                try (java.io.InputStream is = getClass().getClassLoader()
+                        .getResourceAsStream(resourcePath)) {
+                    if (is == null) {
+                        throw new IOException("Classpath resource not found: " + tdUrl);
+                    }
+                    String content = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                    this.td = TDGraphReader.readFromString(TDFormat.RDF_TURTLE, content);
+                    LOGGER.info("LabEnvironment initialized with Thing Description from: " + tdUrl);
                 }
-                tdUrl = resource.toString();
+            } else {
+                this.td = TDGraphReader.readFromURL(TDFormat.RDF_TURTLE, tdUrl);
+                LOGGER.info("LabEnvironment initialized with Thing Description from: " + tdUrl);
             }
 
-            this.td = TDGraphReader.readFromURL(TDFormat.RDF_TURTLE, tdUrl);
-            LOGGER.info("LabEnvironment initialized with Thing Description from: " + tdUrl);
-            
         } catch (IOException e) {
             LOGGER.severe("Failed to initialize LabEnvironment: " + e.getMessage());
         }
@@ -122,14 +129,37 @@ public class LabEnvironment extends Artifact {
 
         if (p.isPresent()) {
             Optional<Form> f = p.get().getFirstFormForOperationType(TD.readProperty);
-            DataSchema ds = p.get().getDataSchema();
 
             if (f.isPresent()) {
                 TDHttpRequest request = new TDHttpRequest(f.get(), TD.readProperty);
                 try {
                     TDHttpResponse response = request.execute();
-                    Map<String, Object> status =
-                            response.getPayloadAsObject((ObjectSchema) ds);
+
+                    // Build status map directly from raw JSON (Gson) so that all
+                    // properties — including ones wot-td-java's RDF schema parser
+                    // may miss — are reliably present.  getPayload() is called once
+                    // here before anything else can consume the response body.
+                    Optional<String> rawOpt = response.getPayload();
+                    if (!rawOpt.isPresent()) {
+                        failed("readLabStatus: empty response payload");
+                        return;
+                    }
+                    Map<String, Object> status = new java.util.HashMap<>();
+                    JsonElement root = JsonParser.parseString(rawOpt.get());
+                    if (root.isJsonObject()) {
+                        for (Map.Entry<String, JsonElement> e :
+                                root.getAsJsonObject().entrySet()) {
+                            String uri = "http://example.org/was#" + e.getKey();
+                            JsonElement val = e.getValue();
+                            if (val.isJsonPrimitive()) {
+                                if (val.getAsJsonPrimitive().isBoolean()) {
+                                    status.put(uri, val.getAsBoolean());
+                                } else if (val.getAsJsonPrimitive().isNumber()) {
+                                    status.put(uri, val.getAsDouble());
+                                }
+                            }
+                        }
+                    }
 
                     // Collect zone illuminance levels keyed by zone index
                     Pattern zonePattern = Pattern.compile(".+#Z(\\d+)Level$");
@@ -165,6 +195,7 @@ public class LabEnvironment extends Artifact {
 
                 } catch (IOException e) {
                     LOGGER.severe("readLabStatus failed: " + e.getMessage());
+                    failed("readLabStatus: " + e.getMessage());
                 }
             }
         }

@@ -27,7 +27,7 @@
         "type": "function",
         "z": "custom_tab",
         "name": "Initialization",
-        "func": "flow.set(\"Z1Level\", 0);\nflow.set(\"Z2Level\", 0);\nflow.set(\"Z1Light\", false);\nflow.set(\"Z2Light\", false);\nflow.set(\"Z1Blinds\", false);\nflow.set(\"Z2Blinds\", false);\nflow.set(\"Spotlight\", false);\nflow.set(\"Z1Radiator\", false);\nflow.set(\"Z2Radiator\", false);\nflow.set(\"Z1Temp\", 20.0);\nflow.set(\"Z2Temp\", 20.0);\nflow.set(\"Sunshine\", 0);\nflow.set(\"TotalEnergyCost\", 0);\nflow.set(\"EnergyCost\", 0);\nflow.set(\"Hour\", 0);\nreturn msg;",
+        "func": "flow.set(\"Z1Level\", 500);\nflow.set(\"Z2Level\", 500);\nflow.set(\"Z1Light\", false);\nflow.set(\"Z2Light\", false);\nflow.set(\"Z1Blinds\", false);\nflow.set(\"Z2Blinds\", false);\nflow.set(\"Spotlight\", true);\nflow.set(\"Z1Radiator\", false);\nflow.set(\"Z2Radiator\", false);\nflow.set(\"Z1Temp\", 20.0);\nflow.set(\"Z2Temp\", 20.0);\nflow.set(\"Sunshine\", 0);\nflow.set(\"TotalEnergyCost\", 0);\nflow.set(\"EnergyCost\", 0);\nflow.set(\"Hour\", 0);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "x": 430,

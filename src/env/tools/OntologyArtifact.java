@@ -102,7 +102,7 @@ public class OntologyArtifact extends Artifact {
             // introduced alongside radiators do not interfere with zone discovery.
             // elem:luminiscence already declares elem:hasQuantity qudtqk:Illuminance
             // in the ontology — no new properties required.
-            "  FILTER EXISTS { ?quantityURI elem:hasQuantity qudtqk:Illuminance } " +
+            "  FILTER EXISTS { ?quantityURI elem:hasQuantity <http://qudt.org/vocab/quantitykind/Illuminance> } " +
             "} LIMIT 1";
 
     /**
@@ -131,7 +131,8 @@ public class OntologyArtifact extends Artifact {
             "  } " +
             "  OPTIONAL { ?comp ws:hasWoTActionSemanticType ?wotActionType . } " +
             "  OPTIONAL { ?comp ws:hasWoTStateSemanticType  ?wotStateType . } " +
-            "}";
+            "  OPTIONAL { ?comp ws:activationCost           ?cost . } " +
+            "} ORDER BY ASC(?cost)";
 
     /**
      * For a given process variable URI (%s), fetches the three rank boundary values

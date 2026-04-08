@@ -47,9 +47,9 @@ action_delay(2000).
     // ========================================
     // ENVIRONMENT SELECTION — change here to switch
     // ========================================
-    LabURL = SimulatedURL;
+    // LabURL = SimulatedURL;
     // Custom lab (port 1881, spotlight + radiators):
-    // LabURL = CustomURL;
+    LabURL = CustomURL;
     // Real lab:
     // LabURL = RealURL;
     // ========================================
