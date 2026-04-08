@@ -100,6 +100,8 @@ public class QLearner extends Artifact {
     private int[]      goal;         // [Z1TargetRank, Z2TargetRank]
     private boolean    useStereotypes;
     private Random     rng;
+    private int        firstGoalEpisode = -1;
+    private int        goalCount        = 0;
 
     // WoT action type URIs — must match interactions-lab-custom.ttl and
     // interactions-lab.ttl action affordances (same type URIs in both).
@@ -130,7 +132,7 @@ public class QLearner extends Artifact {
      *                       false → standard zero-init + full action space.
      */
     @OPERATION
-    public void init(Object[] goal, boolean useStereotypes) {
+    public void configureQLearner(Object[] goal, boolean useStereotypes) {
         this.goal           = new int[]{toInt(goal[0]), toInt(goal[1])};
         this.useStereotypes = useStereotypes;
         this.rng            = new Random(42);
@@ -426,6 +428,22 @@ public class QLearner extends Artifact {
     }
 
     /**
+     * Record that the agent reached the goal state during a training episode.
+     * Call once per episode whenever isTerminal returns true during training.
+     *
+     * @param episodeNum The 0-based episode number in which the goal was reached.
+     */
+    @OPERATION
+    public void notifyGoalReached(int episodeNum) {
+        goalCount++;
+        if (firstGoalEpisode < 0) {
+            firstGoalEpisode = episodeNum;
+            LOGGER.info("notifyGoalReached: first goal reached in episode " + episodeNum);
+        }
+        LOGGER.fine("notifyGoalReached: ep=" + episodeNum + " totalGoals=" + goalCount);
+    }
+
+    /**
      * Return a one-line summary of the current epsilon value and mode.
      * Used by the agent for progress logging.
      *
@@ -435,7 +453,9 @@ public class QLearner extends Artifact {
     public void getStatus(OpFeedbackParam<String> summary) {
         summary.set("mode=" + (useStereotypes ? "STEREOTYPE" : "STANDARD")
                   + " ε=" + String.format("%.4f", epsilon)
-                  + " goal=[" + goal[0] + "," + goal[1] + "]");
+                  + " goal=[" + goal[0] + "," + goal[1] + "]"
+                  + " goalsReached=" + goalCount
+                  + " firstGoalEp=" + (firstGoalEpisode < 0 ? "none" : firstGoalEpisode));
     }
 
     // -----------------------------------------------------------------------

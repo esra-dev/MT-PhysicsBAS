@@ -51,6 +51,7 @@ exec_delay_ms(2000).        // delay between actions during execution (ms)
 
 // Internal counter (do not edit)
 training_episode(0).
+exec_max_steps(30).
 
 /* ============================================================
  * Initial Goals
@@ -89,7 +90,7 @@ training_episode(0).
     +qlearner_artifact(QlId);
     .nth(0, Goal, G1);
     .nth(1, Goal, G2);
-    init([G1, G2], UseStereotypes)[artifact_id(QlId)];
+    configureQLearner([G1, G2], UseStereotypes)[artifact_id(QlId)];
     .print("QLearner artifact created and initialised.");
 
     !train.
@@ -113,13 +114,14 @@ training_episode(0).
     decayEpsilon[artifact_id(QlId)];
 
     // Advance counter
+    NNext is N + 1;
     -training_episode(_);
-    +training_episode(N + 1);
+    +training_episode(NNext);
 
     // Progress log every 50 episodes
-    if (N mod 50 == 0) {
+    if ((NNext mod 50) =:= 0) {
         getStatus(Status)[artifact_id(QlId)];
-        .print("[Training] Episode ", N + 1, "/", MaxEpisodes, " | ", Status)
+        .print("[Training] Episode ", NNext, "/", MaxEpisodes, " | ", Status)
     };
 
     !train.
@@ -131,7 +133,7 @@ training_episode(0).
     .print("   Training complete after ", N, " episodes.");
     .print("   Switching to policy execution mode.");
     .print("==========================================================");
-    !execute_policy.
+    !execute_policy(0).
 
 /* ============================================================
  * Episode execution — starts a new episode from current state
@@ -182,8 +184,12 @@ training_episode(0).
 
     // Check terminal and recurse if needed
     isTerminal(NextState, Terminal)[artifact_id(QlId)];
-    NextStep = Step + 1;
+    NextStep is Step + 1;
 
+    if (Terminal) {
+        ?training_episode(CurrentEp);
+        notifyGoalReached(CurrentEp)[artifact_id(QlId)]
+    };
     if (not Terminal & NextStep < MaxSteps) {
         !run_episode(NextStep)
     }.
@@ -192,7 +198,7 @@ training_episode(0).
  * Policy execution — greedy loop after training
  * ============================================================ */
 @execute_policy
-+!execute_policy <-
++!execute_policy(Step) : exec_max_steps(MaxExecSteps) & Step < MaxExecSteps <-
     ?lab_artifact(LabId);
     ?qlearner_artifact(QlId);
     ?exec_delay_ms(Delay);
@@ -203,7 +209,7 @@ training_episode(0).
 
     .nth(0, ZoneLevels, L1);
     .nth(1, ZoneLevels, L2);
-    .print("[Execute] State: Z1=", L1, " Z2=", L2, " sun=", SunshineRank);
+    .print("[Execute] Step ", Step, " State: Z1=", L1, " Z2=", L2, " sun=", SunshineRank);
 
     if (Terminal) {
         .print("");
@@ -214,14 +220,21 @@ training_episode(0).
         // Greedy action (no exploration)
         getActionFromState(StateVec, false, Action)[artifact_id(QlId)];
         actionToWoT(Action, WotType, WotValue)[artifact_id(QlId)];
-        .print("[Execute] Action: ", Action, " → ", WotType, "=", WotValue);
+        .print("[Execute] Action: ", Action, " \u2192 ", WotType, "=", WotValue);
 
         if (WotType \== "none") {
             invokeAction(WotType, WotValue)[artifact_id(LabId)]
         };
         .wait(Delay);
-        !execute_policy
+        NextExecStep is Step + 1;
+        !execute_policy(NextExecStep)
     }.
+
+@execute_policy_limit
++!execute_policy(Step) : exec_max_steps(MaxExecSteps) & Step >= MaxExecSteps <-
+    ?qlearner_artifact(QlId);
+    getStatus(Status)[artifact_id(QlId)];
+    .print("[Execute] Max steps reached (", MaxExecSteps, "). Final status: ", Status).
 
 /* ============================================================
  * Failure handling
@@ -240,7 +253,7 @@ training_episode(0).
 -!do_step(Step, _, _, _, _, _) <-
     .print("WARNING: do_step(", Step, ") failed — skipping step.").
 
--!execute_policy <-
-    .print("WARNING: Policy execution step failed. Retrying.");
+-!execute_policy(Step) <-
+    .print("WARNING: Policy execution step ", Step, " failed. Retrying.");
     .wait(1000);
-    !execute_policy.
+    !execute_policy(Step).
