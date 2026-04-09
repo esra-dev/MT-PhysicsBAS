@@ -1,5 +1,8 @@
 package tools;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -441,6 +444,42 @@ public class QLearner extends Artifact {
             LOGGER.info("notifyGoalReached: first goal reached in episode " + episodeNum);
         }
         LOGGER.fine("notifyGoalReached: ep=" + episodeNum + " totalGoals=" + goalCount);
+    }
+
+    /**
+     * Save the current Q-table to a CSV file.
+     * Rows with all-zero values are skipped to keep the file compact.
+     * Each row contains: stateIndex, then one value per action.
+     *
+     * @param filename Path (relative to working directory) for the output file.
+     */
+    @OPERATION
+    public void saveQTable(String filename) {
+        String[] actionNames = {
+            "Z1Light=ON", "Z1Light=OFF", "Z2Light=ON", "Z2Light=OFF",
+            "Z1Blinds=OPEN", "Z1Blinds=CLOSE", "Z2Blinds=OPEN", "Z2Blinds=CLOSE",
+            "DO_NOTHING"
+        };
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
+            // Header row
+            pw.print("StateIndex");
+            for (String a : actionNames) pw.print("," + a);
+            pw.println();
+            // Data rows — skip states that are entirely zero
+            for (int s = 0; s < N_STATES; s++) {
+                boolean anyNonZero = false;
+                for (int a = 0; a < N_ACTIONS; a++) {
+                    if (qTable[s][a] != 0.0) { anyNonZero = true; break; }
+                }
+                if (!anyNonZero) continue;
+                pw.print(s);
+                for (int a = 0; a < N_ACTIONS; a++) pw.print("," + String.format("%.2f", qTable[s][a]));
+                pw.println();
+            }
+            LOGGER.info("saveQTable: written to " + filename);
+        } catch (IOException e) {
+            LOGGER.warning("saveQTable: failed to write " + filename + " — " + e.getMessage());
+        }
     }
 
     /**

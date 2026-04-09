@@ -92,6 +92,9 @@ exec_max_steps(30).
     .nth(1, Goal, G2);
     configureQLearner([G1, G2], UseStereotypes)[artifact_id(QlId)];
     .print("QLearner artifact created and initialised.");
+    if (UseStereotypes) { InitFile = "qtable_initial_stereotypes.csv" } else { InitFile = "qtable_initial_standard.csv" };
+    saveQTable(InitFile)[artifact_id(QlId)];
+    .print("[QL] Initial Q-table saved to ", InitFile);
 
     !train.
 
@@ -133,6 +136,11 @@ exec_max_steps(30).
     .print("   Training complete after ", N, " episodes.");
     .print("   Switching to policy execution mode.");
     .print("==========================================================");
+    ?qlearner_artifact(QlId);
+    ?use_stereotypes(UseStereotypes);
+    if (UseStereotypes) { FinalFile = "qtable_final_stereotypes.csv" } else { FinalFile = "qtable_final_standard.csv" };
+    saveQTable(FinalFile)[artifact_id(QlId)];
+    .print("[QL] Final Q-table saved to ", FinalFile);
     !execute_policy(0).
 
 /* ============================================================
