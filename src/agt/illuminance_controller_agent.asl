@@ -20,10 +20,15 @@ zone_target(1, 3).
 zone_target(2, 2).
 
 // Maximum control attempts to prevent infinite loops
-max_control_attempts(10).
+max_control_attempts(20).
 
 // Delay between actions in milliseconds (for environment to stabilise)
 action_delay(2000).
+
+// Static discretisation bounds (lux): [rank-1 upper, rank-2 upper, rank-3 upper]
+// These bounds are tuned to the custom lab setup (port 1881).
+light_rank_bounds([75, 200, 400]).
+sunshine_rank_bounds([50, 150, 500]).
 
 /* ============================================
  * Initial Goals
@@ -65,22 +70,21 @@ action_delay(2000).
     +lab_artifact(LabArtifactId);
     .print("Lab artifact created (WoT Thing Description loaded).");
 
-    // Create the OntologyArtifact (loads lab-ontology.ttl into Apache Jena)
-    makeArtifact("ontology", "tools.OntologyArtifact", ["lab-ontology.ttl"], OntArtifactId);
+    // Create the OntologyArtifact (loads lab-ontology.ttl + wot-mappings.ttl into Apache Jena)
+    makeArtifact("ontology", "tools.OntologyArtifact", [["lab-ontology.ttl", "wot-mappings.ttl"]], OntArtifactId);
     +ontology_artifact(OntArtifactId);
     .print("Ontology artifact created. KG loaded from lab-ontology.ttl.");
     .print("  Three-layer Elementary Ontology: Mechanism -> Stereotype -> Instance");
     .print("  SPARQL drives all discovery: no component names hardcoded.");
 
     // ┌───────────────────────────────────────────────────────────────┐
-    // │  Discretisation Bounds — read from ontology, configure LabEnv    │
+    // │  Discretisation Bounds — static, tuned to custom lab setup     │
+    // │  light_rank_bounds / sunshine_rank_bounds defined as beliefs.   │
     // └───────────────────────────────────────────────────────────────┘
-    getDiscretizationBounds("http://w3id.org/elementary#luminiscence",
-        LightBounds)[artifact_id(OntArtifactId)];
-    getDiscretizationBounds("http://example.org/was/lab/stereotypes#outdoorIlluminance",
-        SunshineBounds)[artifact_id(OntArtifactId)];
+    ?light_rank_bounds(LightBounds);
+    ?sunshine_rank_bounds(SunshineBounds);
     configureDiscretization(LightBounds, SunshineBounds)[artifact_id(LabArtifactId)];
-    .print("  Discretisation bounds from ontology: light=", LightBounds,
+    .print("  Discretisation bounds (static): light=", LightBounds,
            " sunshine=", SunshineBounds);
 
     // ┌───────────────────────────────────────────────────────────────┐
@@ -185,7 +189,12 @@ action_delay(2000).
     // process_zone_steps so each goal can look up its level by index directly.
     .findall(I, zone_goal(_, I, _, _, _), ZIdxUnsorted);
     .sort(ZIdxUnsorted, ZIdxSorted);
-    !process_zone_steps(ZoneGoals, ZIdxSorted, ZoneLevels, SunshineRank, SKs, SVs).
+    !process_zone_steps(ZoneGoals, ZIdxSorted, ZoneLevels, SunshineRank, SKs, SVs);
+    // Recompute all_zones_satisfied based on the actual final state after all actions.
+    // This corrects for Bug 3: the flag was set false before the action was taken,
+    // so a successful last action would wrongly keep it false.
+    readLabStatus(FinalLevels, _, _, _)[artifact_id(LabId)];
+    !recheck_satisfaction(ZoneGoals, ZIdxSorted, FinalLevels).
 
 /* ============================================
  * Level lookup — walks two parallel sorted lists (indices, levels) until the
@@ -210,16 +219,21 @@ action_delay(2000).
     .print("[Zone ", ZIdx, "] '", QLabel, "' level=", Level, "/", Target,
            " sunshine=", SunshineRank);
     if (Level == Target) {
-        .print("[Zone ", ZIdx, "] At target. No action needed.")
+        .print("[Zone ", ZIdx, "] At target. No action needed.");
+        !process_zone_steps(RestGoals, ZIdxSorted, ZoneLevels, SunshineRank, SKs, SVs)
     } else {
         -all_zones_satisfied(_); +all_zones_satisfied(false);
         if (Level < Target) {
-            !increase_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs)
+            !increase_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs, ZoneLevels)
         } else {
-            !decrease_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs)
-        }
-    };
-    !process_zone_steps(RestGoals, ZIdxSorted, ZoneLevels, SunshineRank, SKs, SVs).
+            !decrease_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs, ZoneLevels)
+        };
+        // Re-read lab state after action to propagate updated sensor values
+        // to remaining zones (prevents cross-zone stale-data issues)
+        ?lab_artifact(LabId);
+        readLabStatus(FreshLevels, FreshSR, FreshSKs, FreshSVs)[artifact_id(LabId)];
+        !process_zone_steps(RestGoals, ZIdxSorted, FreshLevels, FreshSR, FreshSKs, FreshSVs)
+    }.
 
 -!process_zone_steps(_, _, _, _, _, _) <-
     .print("WARNING: Zone step processing encountered an error.").
@@ -235,7 +249,7 @@ action_delay(2000).
  *   Sends the WoT action identified by its @type URI — no if-elif chain needed.
  * ============================================ */
 @increase_zone
-+!increase_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs) <-
++!increase_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs, ZoneLevels) <-
     ?ontology_artifact(OntId);
     ?lab_artifact(LabId);
     // SPARQL: filter components in zone whose DV = QUri, IV rank satisfied,
@@ -249,9 +263,22 @@ action_delay(2000).
         .print("  DV (goal) : ", DvLabel, " will INCREASE");
         .print("  IV (cond) : ", IvLabel, " | sunshine=", SunshineRank);
         .print("  WoT action: ", WotActionType);
-        // Generic dispatch: WoT action URI comes from ontology, no component name needed
-        invokeAction(WotActionType, true)[artifact_id(LabId)];
-        .print("[DISPATCH] invokeAction(", WotActionType, ", true) -> sent")
+        // Cross-zone safety check: verify that activating a shared actuator
+        // won't overshoot other zones that are already at/above their target.
+        // Build zone targets array from beliefs, dynamically sorted by zone index
+        // so adding a third zone requires no change here.
+        .findall(t(I2,T2), zone_target(I2, T2), ZTUnsorted);
+        .sort(ZTUnsorted, ZTSorted);
+        .findall(T3, .member(t(_,T3), ZTSorted), ZoneTargets);
+        checkSharedActuatorSafe(WotActionType, ZIdx, ZoneLevels, ZoneTargets, Safe)[artifact_id(OntId)];
+        if (Safe) {
+            // Generic dispatch: WoT action URI comes from ontology, no component name needed
+            invokeAction(WotActionType, true)[artifact_id(LabId)];
+            .print("[DISPATCH] invokeAction(", WotActionType, ", true) -> sent")
+        } else {
+            .print("[Zone ", ZIdx, "] BLOCKED: shared actuator '", CompId,
+                   "' would overshoot another zone. Skipping.")
+        }
     } else {
         .print("[Zone ", ZIdx, "] No component can INCREASE '", QLabel, "'.");
         .print("  Cause: IV rank unsatisfied or all components already active.");
@@ -259,7 +286,7 @@ action_delay(2000).
     }.
 
 @decrease_zone
-+!decrease_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs) <-
++!decrease_zone(ZUri, ZIdx, QUri, QLabel, SunshineRank, SKs, SVs, ZoneLevels) <-
     ?ontology_artifact(OntId);
     ?lab_artifact(LabId);
     // SPARQL: filter components in zone whose DV = QUri, and current state
@@ -272,12 +299,44 @@ action_delay(2000).
         .print("  MV (input): ", MvLabel, " -> DEACTIVATE");
         .print("  DV (goal) : ", DvLabel, " will DECREASE");
         .print("  WoT action: ", WotActionType);
-        invokeAction(WotActionType, false)[artifact_id(LabId)];
-        .print("[DISPATCH] invokeAction(", WotActionType, ", false) -> sent")
+        // Cross-zone safety check: deactivating a shared actuator (e.g. Spotlight)
+        // is only permitted when no other zone that depends on it is still below its target.
+        // checkSharedActuatorSafeToDeactivate returns true when it is safe to remove the actuator.
+        .findall(t(I2,T2), zone_target(I2, T2), ZTUnsorted);
+        .sort(ZTUnsorted, ZTSorted);
+        .findall(T3, .member(t(_,T3), ZTSorted), ZoneTargets);
+        checkSharedActuatorSafeToDeactivate(WotActionType, ZIdx, ZoneLevels, ZoneTargets, SafeToRemove)[artifact_id(OntId)];
+        if (SafeToRemove) {
+            invokeAction(WotActionType, false)[artifact_id(LabId)];
+            .print("[DISPATCH] invokeAction(", WotActionType, ", false) -> sent")
+        } else {
+            .print("[Zone ", ZIdx, "] BLOCKED: cannot deactivate shared actuator '", CompId,
+                   "' — another zone is still below its target and needs it.")
+        }
     } else {
         .print("[Zone ", ZIdx, "] No component can DECREASE '", QLabel, "'.");
-        .print("  Cause: All components already deactivated.")
+        .print("  Cause: All controllable components are already deactivated.");
+        .print("  Note: Residual high illuminance may be due to uncontrollable");
+        .print("        ambient/sunshine conditions (sunshine rank=", SunshineRank, ").")
     }.
+
+/* ============================================
+ * Post-action satisfaction recheck
+ * Re-examines all zone goals against freshly-read levels to correctly set
+ * all_zones_satisfied (fixes Bug 3: the flag was already marked false
+ * before the action outcome was known).
+ * ============================================ */
+@recheck_satisfaction_empty
++!recheck_satisfaction([], _, _) <- true.
+
+@recheck_satisfaction_step
++!recheck_satisfaction([goal(_, ZIdx, _, _, Target)|Rest], ZIdxSorted, FinalLevels) <-
+    !get_zone_level(ZIdxSorted, FinalLevels, ZIdx, CurrentLevel);
+    if (CurrentLevel \== Target) {
+        -all_zones_satisfied(_);
+        +all_zones_satisfied(false)
+    };
+    !recheck_satisfaction(Rest, ZIdxSorted, FinalLevels).
 
 /* ============================================
  * Failure Handling Plans

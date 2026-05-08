@@ -1,0 +1,169 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix lab:   <http://example.org/was/lab#> .
+@prefix ws:    <http://example.org/was/lab/stereotypes#> .
+
+
+# ===========================================================================
+# WoT Mappings — Custom2 4-Zone Lab (port 1882)
+# ===========================================================================
+# Replaces wot-mappings.ttl when the active profile is "custom2".  Do NOT
+# load alongside wot-mappings.ttl: that would assign two different
+# ws:stateVecIndex values to the same actuator.
+#
+# State vector layout (13 slots, 4^4 * 2^8 * 4 = 262 144 cells):
+#   idx role               domain  meaning
+#   ---|------------------|-------|---------------------------------------
+#    0  zone_level (z=1)   4       Z1Level rank
+#    1  zone_level (z=2)   4       Z2Level rank
+#    2  zone_level (z=3)   4       Z3Level rank
+#    3  zone_level (z=4)   4       Z4Level rank
+#    4  boolean_actuator   2       CeilingLight_Z1 (Z1Light)
+#    5  boolean_actuator   2       CeilingLight_Z2 (Z2Light)
+#    6  boolean_actuator   2       CeilingLight_Z3 (Z3Light)
+#    7  boolean_actuator   2       CeilingLight_Z4 (Z4Light)
+#    8  boolean_actuator   2       Blind_Z1 (Z1Blinds)
+#    9  boolean_actuator   2       Blind_Z2 (Z2Blinds)
+#   10  boolean_actuator   2       Blind_Z3 (Z3Blinds)
+#   11  boolean_actuator   2       Blind_Z4 (Z4Blinds)
+#   12  sunshine           4       outdoor sunshine rank
+#
+# Shared luminaires (Spotlight, SpotlightCD, CorridorLight) and dummy
+# radiators are exposed as WoT actions ONLY — they have no
+# ws:stateVecIndex, so QLearner is memoryless w.r.t. their on/off state
+# (deliberate trade-off for the 262 k cell footprint).
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# WoT binding properties (re-declared for standalone load)
+# ---------------------------------------------------------------------------
+
+ws:hasWoTActionSemanticType a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:hasWoTStateSemanticType  a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:stateVecIndex            a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateDomainSize          a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateSlotRole            a owl:DatatypeProperty ; rdfs:range xsd:string .
+
+
+# ===========================================================================
+# State Vector Slot Registry
+# ===========================================================================
+
+# --- Pseudo-slots: zone illuminance ranks ---------------------------------
+lab:Slot_ZoneLevel_Z1
+    ws:stateVecIndex   0 ; ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "zone_level" ; ws:zoneIndex 1 .
+
+lab:Slot_ZoneLevel_Z2
+    ws:stateVecIndex   1 ; ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "zone_level" ; ws:zoneIndex 2 .
+
+lab:Slot_ZoneLevel_Z3
+    ws:stateVecIndex   2 ; ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "zone_level" ; ws:zoneIndex 3 .
+
+lab:Slot_ZoneLevel_Z4
+    ws:stateVecIndex   3 ; ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "zone_level" ; ws:zoneIndex 4 .
+
+# --- Pseudo-slot: outdoor sunshine ----------------------------------------
+lab:Slot_Sunshine
+    ws:stateVecIndex  12 ; ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "sunshine" .
+
+
+# ===========================================================================
+# WoT Action / State Mappings per Component Instance
+# ===========================================================================
+
+# --- Per-zone task lights (slots 4..7) ------------------------------------
+lab:CeilingLight_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:stateVecIndex            4 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:CeilingLight_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Light" ;
+    ws:stateVecIndex            5 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:CeilingLight_Z3
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ3Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z3Light" ;
+    ws:stateVecIndex            6 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:CeilingLight_Z4
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ4Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z4Light" ;
+    ws:stateVecIndex            7 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+# --- Per-zone blinds (slots 8..11) ----------------------------------------
+lab:Blind_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Blinds" ;
+    ws:stateVecIndex            8 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:Blind_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Blinds" ;
+    ws:stateVecIndex            9 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:Blind_Z3
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ3Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z3Blinds" ;
+    ws:stateVecIndex           10 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:Blind_Z4
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ4Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z4Blinds" ;
+    ws:stateVecIndex           11 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+# --- Shared luminaires — actions only, no state slot ----------------------
+lab:Spotlight
+    ws:hasWoTActionSemanticType "http://example.org/was#SetSpotlight" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Spotlight" .
+
+lab:SpotlightCD
+    ws:hasWoTActionSemanticType "http://example.org/was#SetSpotlightCD" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#SpotlightCD" .
+
+lab:CorridorLight
+    ws:hasWoTActionSemanticType "http://example.org/was#SetCorridorLight" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#CorridorLight" .
+
+# --- Dummy radiators (off DV, kept for parity with custom lab) ------------
+lab:Radiator_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Radiator" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Radiator" .
+
+lab:Radiator_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Radiator" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Radiator" .
+
+lab:Radiator_Z3
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ3Radiator" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z3Radiator" .
+
+lab:Radiator_Z4
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ4Radiator" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z4Radiator" .

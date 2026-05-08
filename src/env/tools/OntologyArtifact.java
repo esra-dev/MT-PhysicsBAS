@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import org.apache.jena.ontology.OntModel;
@@ -92,7 +93,7 @@ public class OntologyArtifact extends Artifact {
             "SELECT ?quantityURI ?quantityLabel " +
             "WHERE { " +
             "  ?sensor  brick:isLocatedIn    <%s> . " +
-            "  ?sensor  elem:hasStereotype   ?sensorStereo . " +
+            "  ?sensor  elem:hasBehavioralStereotype   ?sensorStereo . " +
             "  ?sensorStereo elem:hasPhysicalMechanism ?sensMech . " +
             "  ?sensMech elem:hasIndependentVariable   ?quantityURI . " +
             "  ?quantityURI  rdfs:label                ?quantityLabel . " +
@@ -114,10 +115,10 @@ public class OntologyArtifact extends Artifact {
      */
     private static final String ZONE_COMPONENTS_QUERY =
             PREFIXES +
-            "SELECT ?comp ?mechanism ?mvLabel ?dvLabel ?ivLabel ?wotActionType ?wotStateType ?ivMinRank " +
+            "SELECT ?comp ?mechanism ?mvLabel ?dvLabel ?ivLabel ?wotActionType ?wotStateType " +
             "WHERE { " +
             "  ?comp  brick:isLocatedIn          <%1$s> . " +
-            "  ?comp  elem:hasStereotype         ?stereo . " +
+            "  ?comp  elem:hasBehavioralStereotype ?stereo . " +
             "  ?stereo elem:hasPhysicalMechanism  ?mech . " +
             "  ?mech  rdfs:label                 ?mechanism . " +
             "  ?mech  elem:hasManipulatedVariable ?mv . " +
@@ -126,13 +127,11 @@ public class OntologyArtifact extends Artifact {
             "  <%2$s> rdfs:label                  ?dvLabel . " +
             "  OPTIONAL { " +
             "    ?mech elem:hasIndependentVariable ?iv . " +
-            "    ?iv   ws:ivMinRank               ?ivMinRank . " +
             "    ?iv   rdfs:label                 ?ivLabel . " +
             "  } " +
             "  OPTIONAL { ?comp ws:hasWoTActionSemanticType ?wotActionType . } " +
             "  OPTIONAL { ?comp ws:hasWoTStateSemanticType  ?wotStateType . } " +
-            "  OPTIONAL { ?comp ws:activationCost           ?cost . } " +
-            "} ORDER BY ASC(?cost)";
+            "} ORDER BY (IF(BOUND(?iv), 1, 0)) ?comp";
 
     /**
      * For a given process variable URI (%s), fetches the three rank boundary values
@@ -145,26 +144,91 @@ public class OntologyArtifact extends Artifact {
 
     private OntModel ontModel;
 
+    /**
+     * Cache for {@link #queryZoneComponents}: the (zoneUri, dvUri) → candidate
+     * row list mapping is stable for the lifetime of the loaded ontology, so
+     * memoising avoids re-running the (relatively expensive) DL-rule-inferred
+     * SELECT on every benchmark step. Cache is invalidated whenever the
+     * ontology model is mutated (see {@link #invalidateComponentCache}).
+     */
+    private final Map<String, List<Map<String, String>>> componentCache =
+            new ConcurrentHashMap<>();
+
     // ----------------------------------------------------------------
     // CArtAgO operations
     // ----------------------------------------------------------------
 
     /**
-     * Load the RDF/Turtle ontology file from the Java classpath.
+     * Load one or more RDF/Turtle ontology files from the Java classpath.
      *
-     * @param ttlResourcePath  Classpath resource name, e.g. "lab-ontology.ttl".
+     * @param ttlResourcePaths  Classpath resource names, e.g. "lab-ontology.ttl", "wot-mappings.ttl".
      */
     @OPERATION
-    public void init(String ttlResourcePath) {
+    public void init(Object[] ttlResourcePaths) {
         ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF);
-        InputStream in = getClass().getClassLoader().getResourceAsStream(ttlResourcePath);
-        if (in != null) {
-            ontModel.read(in, null, "TURTLE");
-            LOGGER.info("OntologyArtifact: loaded '" + ttlResourcePath +
-                        "'. Base triples: " + ontModel.size());
-        } else {
-            LOGGER.severe("OntologyArtifact: resource NOT found: '" + ttlResourcePath + "'.");
+        for (Object pathObj : ttlResourcePaths) {
+            String path = pathObj.toString();
+            InputStream in = getClass().getClassLoader().getResourceAsStream(path);
+            if (in != null) {
+                ontModel.read(in, null, "TURTLE");
+                LOGGER.info("OntologyArtifact: loaded '" + path +
+                            "'. Triples: " + ontModel.size());
+            } else {
+                LOGGER.severe("OntologyArtifact: resource NOT found: '" + path + "'.");
+            }
         }
+    }
+
+    /**
+     * Merge a Turtle file from the local filesystem into the live ontology
+     * model.  Used by the stereotype-feedback loop: a previous training run
+     * writes <code>learned_stereotypes_*.ttl</code> via
+     * {@link tools.StereotypeLearner#saveLearnedStereotypes(String)}, and a
+     * subsequent run imports those triples here so SPARQL queries (and the
+     * downstream agent reasoning) can see the discovered effects.
+     *
+     * <p>The file is loaded as plain RDF triples; no schema validation is
+     * performed — the Turtle is expected to use the
+     * <code>learned:</code> / <code>elem:</code> vocabularies emitted by the
+     * StereotypeLearner.  After merging, the SPARQL component cache is
+     * invalidated so the next zone-component lookup re-derives candidates
+     * with the new triples in scope.
+     *
+     * @param ttlPath  Filesystem path to the Turtle file to merge. If the
+     *                 file does not exist the operation is a no-op (count=0)
+     *                 and a warning is logged — this lets the agent call the
+     *                 operation unconditionally on startup.
+     * @param count    Output: number of new triples merged (or 0 on miss).
+     */
+    @OPERATION
+    public void importLearnedStereotypes(String ttlPath,
+                                         OpFeedbackParam<Integer> count) {
+        if (ontModel == null) {
+            LOGGER.warning("importLearnedStereotypes: ontology not initialised — skipping");
+            count.set(0);
+            return;
+        }
+        java.io.File f = new java.io.File(ttlPath);
+        if (!f.exists() || !f.isFile()) {
+            LOGGER.info("importLearnedStereotypes: '" + ttlPath
+                      + "' not found — feedback loop inactive (first run)");
+            count.set(0);
+            return;
+        }
+        long sizeBefore = ontModel.size();
+        try (java.io.InputStream in = new java.io.FileInputStream(f)) {
+            ontModel.read(in, null, "TURTLE");
+        } catch (java.io.IOException e) {
+            LOGGER.warning("importLearnedStereotypes: failed to read '"
+                         + ttlPath + "' — " + e.getMessage());
+            count.set(0);
+            return;
+        }
+        long added = ontModel.size() - sizeBefore;
+        LOGGER.info("importLearnedStereotypes: merged " + added
+                  + " triple(s) from '" + ttlPath + "'");
+        invalidateComponentCache();
+        count.set((int) added);
     }
 
     // ----------------------------------------------------------------
@@ -335,18 +399,15 @@ public class OntologyArtifact extends Artifact {
             String cId          = c.get("compId");
             String ivVal        = c.get("ivLabel");
             String wotStateType = c.get("wotStateType");
-            String ivMinRankStr = c.get("ivMinRank");
 
-            // Filter 1: IV satisfaction — minimum rank from ontology, default 1
-            if (!"none".equals(ivVal)) {
-                int minRank = (ivMinRankStr != null && !"none".equals(ivMinRankStr))
-                              ? Integer.parseInt(ivMinRankStr) : 1;
-                if (sunshineRank < minRank) {
-                    LOGGER.info("  Skipping " + cId + ": IV '" + ivVal +
-                                "' requires rank >= " + minRank +
-                                " (sunshine=" + sunshineRank + ")");
-                    continue;
-                }
+            // Filter 1: IV satisfaction — if the mechanism has an independent variable
+            // (e.g. blinds require outdoor illuminance), require sunshineRank >= 1.
+            // Opening a blind when there is no sunshine contributes 0 lux; skipping it
+            // avoids wasting an action slot and prevents an infinite increase-loop.
+            if (!"none".equals(ivVal) && sunshineRank < 1) {
+                LOGGER.info("  Skipping " + cId + ": IV not satisfied (sunshine rank "
+                            + sunshineRank + " < 1, iv='" + ivVal + "')");
+                continue;
             }
 
             // Filter 2: Current state — can we increase?
@@ -436,6 +497,13 @@ public class OntologyArtifact extends Artifact {
      *   wotActionType, wotStateType, ivMinRank
      */
     private List<Map<String, String>> queryZoneComponents(String zoneUri, String dvUri) {
+        String cacheKey = zoneUri + "|" + dvUri;
+        List<Map<String, String>> cached = componentCache.get(cacheKey);
+        if (cached != null) {
+            LOGGER.fine("queryZoneComponents: cache hit for " + cacheKey
+                       + " (" + cached.size() + " candidate(s))");
+            return cached;
+        }
         String sparql = String.format(ZONE_COMPONENTS_QUERY, zoneUri, dvUri);
         LOGGER.fine("SPARQL:\n" + sparql);
 
@@ -465,10 +533,6 @@ public class OntologyArtifact extends Artifact {
                 row.put("wotStateType", (wotStNode != null && wotStNode.isLiteral())
                         ? wotStNode.asLiteral().getString() : null);
 
-                RDFNode ivMinNode = sol.get("ivMinRank");
-                row.put("ivMinRank", (ivMinNode != null && ivMinNode.isLiteral())
-                        ? ivMinNode.asLiteral().getString() : null);
-
                 results.add(row);
                 LOGGER.fine("  row: " + row);
             }
@@ -477,7 +541,20 @@ public class OntologyArtifact extends Artifact {
         }
 
         LOGGER.info("queryZoneComponents(" + zoneUri + "): " + results.size() + " candidate(s)");
+        componentCache.put(cacheKey, results);
         return results;
+    }
+
+    /**
+     * Invalidate the {@link #componentCache} after the underlying ontology
+     * model has been mutated (e.g. by {@link #importLearnedStereotypes}).
+     */
+    private void invalidateComponentCache() {
+        if (!componentCache.isEmpty()) {
+            LOGGER.info("OntologyArtifact: invalidating component cache ("
+                      + componentCache.size() + " entries)");
+            componentCache.clear();
+        }
     }
 
     /**
@@ -526,5 +603,164 @@ public class OntologyArtifact extends Artifact {
         dvLabel.set("none");
         ivLabel.set("none");
         wotActionType.set("none");
+    }
+
+    // ----------------------------------------------------------------
+    // Cross-zone conflict resolution operations
+    // ----------------------------------------------------------------
+
+    /** SPARQL query template: find all zone indices for a given WoT action type. */
+    private static final String SHARED_ACTUATOR_ZONES_QUERY =
+            PREFIXES +
+            "SELECT DISTINCT ?zoneIdx WHERE { " +
+            "  ?comp ws:hasWoTActionSemanticType \"%s\" . " +
+            "  ?comp brick:isLocatedIn ?zone . " +
+            "  ?zone a lab:Workstation . " +
+            "  ?zone ws:zoneIndex ?zoneIdx . " +
+            "} ORDER BY ?zoneIdx";
+
+    /**
+     * Check whether activating a shared actuator is safe, i.e. it would not push
+     * any non-requesting zone above its target illuminance level.
+     *
+     * @param wotActionType    WoT action URI of the candidate actuator.
+     * @param requestingZoneIdx 1-based zone index requesting the activation.
+     * @param zoneLevels       Current zone illuminance levels (ordered by zone index).
+     * @param zoneTargets      Target illuminance ranks (ordered by zone index).
+     * @param safe             Output: true if activation is safe (no overshoot).
+     */
+    @OPERATION
+    public void checkSharedActuatorSafe(
+            String wotActionType, int requestingZoneIdx,
+            Object[] zoneLevels, Object[] zoneTargets,
+            OpFeedbackParam<Boolean> safe) {
+
+        LOGGER.info("checkSharedActuatorSafe: action=" + wotActionType
+                   + " requestingZone=" + requestingZoneIdx);
+
+        // Find all zones this actuator affects
+        String sparql = String.format(SHARED_ACTUATOR_ZONES_QUERY, wotActionType);
+        List<Integer> affectedZoneIdxs = new ArrayList<>();
+
+        try {
+            Query q = QueryFactory.create(sparql);
+            try (QueryExecution qe = QueryExecutionFactory.create(q, ontModel)) {
+                ResultSet rs = qe.execSelect();
+                while (rs.hasNext()) {
+                    QuerySolution sol = rs.nextSolution();
+                    affectedZoneIdxs.add(sol.getLiteral("zoneIdx").getInt());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.severe("checkSharedActuatorSafe SPARQL failed: " + e.getMessage());
+            safe.set(true); // fail-open: allow action if query fails
+            return;
+        }
+
+        // If actuator affects only one zone, it's always safe
+        if (affectedZoneIdxs.size() <= 1) {
+            LOGGER.info("  Single-zone actuator — safe.");
+            safe.set(true);
+            return;
+        }
+
+        // Check each non-requesting zone: if already at or above target, overshoot risk
+        for (int zIdx : affectedZoneIdxs) {
+            if (zIdx == requestingZoneIdx) continue;
+            // zoneLevels and zoneTargets are ordered by zone index (0-based array position)
+            int arrayIdx = zIdx - 1; // convert 1-based zone idx to 0-based array index
+            if (arrayIdx >= 0 && arrayIdx < zoneLevels.length && arrayIdx < zoneTargets.length) {
+                int level = toInt(zoneLevels[arrayIdx]);
+                int target = toInt(zoneTargets[arrayIdx]);
+                if (level >= target) {
+                    LOGGER.info("  Zone " + zIdx + " at level=" + level
+                              + " (target=" + target + ") — would overshoot. UNSAFE.");
+                    safe.set(false);
+                    return;
+                }
+            }
+        }
+
+        LOGGER.info("  All non-requesting zones below target — safe.");
+        safe.set(true);
+    }
+
+    /**
+     * Check whether deactivating a shared actuator is safe, i.e. no other zone that
+     * depends on this actuator is currently below its target illuminance level.
+     *
+     * <p>Semantics are the inverse of {@link #checkSharedActuatorSafe}:
+     * <ul>
+     *   <li>Single-zone actuator: always safe to deactivate ({@code safe=true}).</li>
+     *   <li>Multi-zone, ALL non-requesting zones below target: unsafe — they still need
+     *       the actuator ({@code safe=false}).</li>
+     *   <li>Multi-zone, SOME non-requesting zone at/above target: safe to deactivate
+     *       ({@code safe=true}).</li>
+     * </ul>
+     *
+     * @param wotActionType     WoT action URI of the candidate actuator.
+     * @param requestingZoneIdx 1-based zone index requesting the deactivation.
+     * @param zoneLevels        Current zone illuminance levels (ordered by zone index).
+     * @param zoneTargets       Target illuminance ranks (ordered by zone index).
+     * @param safe              Output: true if deactivation is safe.
+     */
+    @OPERATION
+    public void checkSharedActuatorSafeToDeactivate(
+            String wotActionType, int requestingZoneIdx,
+            Object[] zoneLevels, Object[] zoneTargets,
+            OpFeedbackParam<Boolean> safe) {
+
+        LOGGER.info("checkSharedActuatorSafeToDeactivate: action=" + wotActionType
+                   + " requestingZone=" + requestingZoneIdx);
+
+        String sparql = String.format(SHARED_ACTUATOR_ZONES_QUERY, wotActionType);
+        List<Integer> affectedZoneIdxs = new ArrayList<>();
+
+        try {
+            Query q = QueryFactory.create(sparql);
+            try (QueryExecution qe = QueryExecutionFactory.create(q, ontModel)) {
+                ResultSet rs = qe.execSelect();
+                while (rs.hasNext()) {
+                    QuerySolution sol = rs.nextSolution();
+                    affectedZoneIdxs.add(sol.getLiteral("zoneIdx").getInt());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.severe("checkSharedActuatorSafeToDeactivate SPARQL failed: " + e.getMessage());
+            safe.set(true); // fail-open: allow deactivation if query fails
+            return;
+        }
+
+        // Single-zone actuator: deactivation never affects another zone
+        if (affectedZoneIdxs.size() <= 1) {
+            LOGGER.info("  Single-zone actuator — safe to deactivate.");
+            safe.set(true);
+            return;
+        }
+
+        // Multi-zone: deactivation is safe only when some non-requesting zone is
+        // already at or above its target (that zone does not need this actuator).
+        for (int zIdx : affectedZoneIdxs) {
+            if (zIdx == requestingZoneIdx) continue;
+            int arrayIdx = zIdx - 1;
+            if (arrayIdx >= 0 && arrayIdx < zoneLevels.length && arrayIdx < zoneTargets.length) {
+                int level = toInt(zoneLevels[arrayIdx]);
+                int target = toInt(zoneTargets[arrayIdx]);
+                if (level >= target) {
+                    LOGGER.info("  Zone " + zIdx + " at level=" + level
+                              + " (target=" + target + ") — does not need actuator. SAFE to deactivate.");
+                    safe.set(true);
+                    return;
+                }
+            }
+        }
+
+        LOGGER.info("  All non-requesting zones below target — UNSAFE to deactivate.");
+        safe.set(false);
+    }
+
+    private static int toInt(Object o) {
+        if (o instanceof Number) return ((Number) o).intValue();
+        return Integer.parseInt(String.valueOf(o));
     }
 }
