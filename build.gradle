@@ -70,7 +70,144 @@ task taskQl (type: JavaExec, dependsOn: 'classes') {
     classpath sourceSets.main.runtimeClasspath
 }
 
+// Benchmark agent task.
+// Runs all three agent modes against 20 fixed scenarios × 5 runs.
+// Set bench_mode belief in illuminance_controller_agent_bench.asl before running,
+// or override transiently with -Pmode=<rule_based|ql_false|ql_true>.
+// Run while Node-RED simulator is running (port 1881, simulator_flow_custom.json).
+task taskBench (type: JavaExec, dependsOn: 'classes') {
+    description 'runs the execution-phase benchmark (rule-based vs ql_false vs ql_true)'
+    group ' JaCaMo'
+    main = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_bench.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pmode=<mode> transiently rewrites the bench_mode/1 belief before the
+    // run and restores the original text afterwards. Mirrors the patch logic
+    // in runFullSweep so single-cell runs are reproducible without manual
+    // edits to the ASL.
+    doFirst {
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            def benchAsl = file('src/agt/illuminance_controller_agent_bench.asl')
+            ext.benchAslOriginal = benchAsl.text
+            if (!(ext.benchAslOriginal =~ /(?m)^\s*bench_mode\("[^"]*"\)\./).find()) {
+                throw new GradleException("taskBench: bench_mode/1 belief not found in src/agt/illuminance_controller_agent_bench.asl")
+            }
+            def patchedBench = ext.benchAslOriginal.replaceAll(
+                /(?m)^\s*bench_mode\("[^"]*"\)\./,
+                "bench_mode(\"${overrideMode}\").")
+            benchAsl.text = patchedBench
+            println "taskBench: bench_mode overridden to '${overrideMode}' (-Pmode)"
+        }
+    }
+    doLast {
+        if (ext.has('benchAslOriginal')) {
+            file('src/agt/illuminance_controller_agent_bench.asl').text = ext.benchAslOriginal
+        }
+    }
+}
+
 clean {
     delete 'bin'
     delete 'build'
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 5 — full sweep harness
+//
+// Runs the benchmark across all (lab × mode) cells and archives each cell's
+// CSV/JSONL artefacts under benchmark/results/<profile>/<mode>/. The driver
+// flips two belief atoms before each cell:
+//   - active_profile("<profile>") in src/agt/lab_profiles.asl
+//   - bench_mode("<mode>")        in src/agt/illuminance_controller_agent_bench.asl
+//
+// Profiles: custom2..custom7   (4-zone weakness labs)
+// Modes:    rule_based, ql_false, ql_true
+//
+// Usage:
+//   gradlew runFullSweep                 # all profiles × all modes
+//   gradlew runFullSweep -Pprofiles=custom2,custom4 -Pmodes=ql_true
+// ─────────────────────────────────────────────────────────────────────────
+task runFullSweep(dependsOn: 'classes') {
+    description 'Phase 5: sweep benchmark over (profile × mode) cells'
+    group ' JaCaMo'
+
+    doLast {
+        def profileList = (project.findProperty('profiles')
+            ?: 'custom2,custom3,custom4,custom5,custom6,custom7')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+        def modeList    = (project.findProperty('modes')
+                ?: 'rule_based,ql_false,ql_true')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+
+        def benchAsl    = file('src/agt/illuminance_controller_agent_bench.asl')
+        def profilesAsl = file('src/agt/lab_profiles.asl')
+        def origBench   = benchAsl.text
+        def origProfile = profilesAsl.text
+        def resultsRoot = file('benchmark/results')
+        resultsRoot.mkdirs()
+
+        try {
+            profileList.each { profile ->
+                modeList.each { mode ->
+                    println "──────────────────────────────────────────────"
+                    println " runFullSweep: profile=${profile} mode=${mode}"
+                    println "──────────────────────────────────────────────"
+
+                    // Patch active_profile/1 belief in lab_profiles.asl.
+                    if (!(origProfile =~ /(?m)^\s*active_profile\("[^"]*"\)\./).find()) {
+                        throw new GradleException("runFullSweep: active_profile/1 belief not found in src/agt/lab_profiles.asl")
+                    }
+                    def patchedProfile = origProfile.replaceAll(
+                        /(?m)^\s*active_profile\("[^"]*"\)\./,
+                        "active_profile(\"${profile}\").")
+                    profilesAsl.text = patchedProfile
+
+                    // Patch bench_mode/1 belief in bench agent.
+                    if (!(origBench =~ /(?m)^\s*bench_mode\("[^"]*"\)\./).find()) {
+                        throw new GradleException("runFullSweep: bench_mode/1 belief not found in src/agt/illuminance_controller_agent_bench.asl")
+                    }
+                    def patchedBench = origBench.replaceAll(
+                        /(?m)^\s*bench_mode\("[^"]*"\)\./,
+                        "bench_mode(\"${mode}\").")
+                    benchAsl.text = patchedBench
+
+                    // Run the benchmark.
+                    javaexec {
+                        main        = 'jacamo.infra.JaCaMoLauncher'
+                        args        = ['task_bench.jcm']
+                        classpath   = sourceSets.main.runtimeClasspath
+                    }
+
+                    // Archive output artefacts (whichever exist for this mode).
+                    // Trace JSONL files are now written directly into the
+                    // cell folder by the bench agent (BenchmarkLogger creates
+                    // parent dirs), so they are not in projectDir to copy.
+                    def cellDir = file("benchmark/results/${profile}/${mode}")
+                    cellDir.mkdirs()
+                    fileTree(projectDir).matching {
+                        include 'benchmark_results_*.csv'
+                        include 'metrics_stereotypes_*.csv'
+                        include 'iv_stats_stereotypes_*.json'
+                        include 'qtable_final_stereotypes_*.csv'
+                        include 'coverage_stereotypes_*.csv'
+                        include 'first_goal_stereotypes_*.csv'
+                        include 'learned_stereotypes_*.ttl'
+                    }.each { artefact ->
+                        copy {
+                            from artefact
+                            into cellDir
+                        }
+                    }
+                }
+            }
+        } finally {
+            // Restore both ASL files even on failure.
+            benchAsl.text    = origBench
+            profilesAsl.text = origProfile
+        }
+
+        println "runFullSweep complete. Results under: ${resultsRoot}"
+    }
 }
