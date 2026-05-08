@@ -37,3 +37,14 @@ Desktop.ini
 *.tmp
 *.swp
 *~
+
+# Generated experiment/runtime artifacts
+.node-red-custom*/
+benchmark/results/
+bench_step_log_*.csv
+benchmark_results_*.csv
+metrics_stereotypes_*.csv
+iv_stats_*.json
+qtable_*.csv
+nr_custom*_*.txt
+java_pid*.hprof
