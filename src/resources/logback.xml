@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Structured logging configuration (#4).
+
+  Two appenders:
+    - CONSOLE : human-readable for interactive runs.
+    - JSON    : single JSON line per event, rolled daily, suitable for ELK /
+                Loki / Splunk ingestion. Disabled when -Dlogback.json=off.
+
+  Toggle JSON appender via -Dlogback.json=on|off (default on).
+  Override log level for an entire package via -Dlogback.level.<pkg>=DEBUG.
+-->
+<configuration>
+
+    <property name="LOG_DIR"  value="${LOG_DIR:-log}"/>
+    <property name="JSON_ON"  value="${logback.json:-on}"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{30} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/mt-esra.jsonl</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/mt-esra-%d{yyyy-MM-dd}.jsonl</fileNamePattern>
+            <maxHistory>14</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>profile</includeMdcKeyName>
+            <includeMdcKeyName>mode</includeMdcKeyName>
+            <includeMdcKeyName>episode</includeMdcKeyName>
+            <includeMdcKeyName>scenario</includeMdcKeyName>
+            <customFields>{"app":"mt-esra"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- Hot package: simulator HTTP (#5) — keep at INFO unless overridden -->
+    <logger name="tools.SimulatorHttpClient" level="INFO"/>
+    <logger name="tools.WotInputValidator"   level="INFO"/>
+    <logger name="tools.LabEnvironment"      level="INFO"/>
+
+    <!-- Apache HttpClient5 is noisy at DEBUG; pin to WARN -->
+    <logger name="org.apache.hc"             level="WARN"/>
+    <logger name="org.apache.jena"           level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="JSON"/>
+    </root>
+
+</configuration>
