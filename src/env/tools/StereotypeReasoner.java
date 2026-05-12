@@ -161,29 +161,80 @@ public class StereotypeReasoner {
     private static final double IV_EFFECTIVENESS_THRESHOLD = 0.1;
 
     // -----------------------------------------------------------------------
-    // Constructor
+    // Ontology loading — injectable for testability (#11 DI refactor)
     // -----------------------------------------------------------------------
 
     /**
-     * @param ontologyResourcePaths  classpath resource paths (e.g. "lab-ontology.ttl", "wot-mappings.ttl")
-     * @param sunshineSatisfactionProb  P(sunshine >= rank 1) from simulator distribution
+     * Strategy for producing the merged OntModel that the reasoner queries.
+     * Production code uses {@link ClasspathOntologyLoader}; unit tests use
+     * {@link InMemoryOntologyLoader} with synthetic Turtle fixtures.
+     */
+    public interface OntologyLoader {
+        OntModel load();
+    }
+
+    /** Default loader: reads Turtle files from the classpath. */
+    public static class ClasspathOntologyLoader implements OntologyLoader {
+        private final String[] paths;
+        public ClasspathOntologyLoader(String[] paths) { this.paths = paths; }
+        @Override public OntModel load() {
+            OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF);
+            for (String path : paths) {
+                InputStream is = getClass().getClassLoader().getResourceAsStream(path);
+                if (is == null) {
+                    throw new RuntimeException(
+                        "StereotypeReasoner: ontology not found on classpath: " + path);
+                }
+                model.read(is, null, "TURTLE");
+                LOGGER.info("StereotypeReasoner: loaded ontology from " + path);
+            }
+            return model;
+        }
+    }
+
+    /** Test loader: parses one or more in-memory Turtle strings. */
+    public static class InMemoryOntologyLoader implements OntologyLoader {
+        private final String[] turtleSources;
+        public InMemoryOntologyLoader(String... turtleSources) { this.turtleSources = turtleSources; }
+        @Override public OntModel load() {
+            OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF);
+            for (int i = 0; i < turtleSources.length; i++) {
+                model.read(new java.io.ByteArrayInputStream(
+                    turtleSources[i].getBytes(java.nio.charset.StandardCharsets.UTF_8)), null, "TURTLE");
+                LOGGER.fine("StereotypeReasoner: loaded in-memory ontology source #" + i);
+            }
+            return model;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Constructors
+    // -----------------------------------------------------------------------
+
+    /**
+     * Back-compat constructor: load Turtle files from the classpath.
+     *
+     * @param ontologyResourcePaths    classpath resource paths (e.g. "lab-ontology.ttl", "wot-mappings.ttl")
+     * @param sunshineSatisfactionProb P(sunshine >= rank 1) from simulator distribution
      */
     public StereotypeReasoner(String[] ontologyResourcePaths, double sunshineSatisfactionProb) {
+        this(new ClasspathOntologyLoader(ontologyResourcePaths), sunshineSatisfactionProb);
+    }
+
+    /**
+     * DI constructor: supply any {@link OntologyLoader}. Used by unit tests
+     * with synthetic fixtures via {@link InMemoryOntologyLoader}.
+     *
+     * @param loader                   strategy that returns the merged OntModel
+     * @param sunshineSatisfactionProb P(sunshine >= rank 1) from simulator distribution
+     */
+    public StereotypeReasoner(OntologyLoader loader, double sunshineSatisfactionProb) {
         this.sunshineSatisfactionProb = sunshineSatisfactionProb;
         this.crossZoneEffects = new ArrayList<>();
         this.wotActionToZones = new HashMap<>();
         this.wotStateToSvIndex = new HashMap<>();
 
-        // Load ontology — merge all TTL files into a single model
-        OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MICRO_RULE_INF);
-        for (String path : ontologyResourcePaths) {
-            InputStream is = getClass().getClassLoader().getResourceAsStream(path);
-            if (is == null) {
-                throw new RuntimeException("StereotypeReasoner: ontology not found on classpath: " + path);
-            }
-            model.read(is, null, "TURTLE");
-            LOGGER.info("StereotypeReasoner: loaded ontology from " + path);
-        }
+        OntModel model = loader.load();
 
         // Build WoT state URI → state vector index map dynamically from ws:stateVecIndex triples
         // in wot-mappings.ttl (Bug 15: replaces hardcoded map entries).

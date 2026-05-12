@@ -360,3 +360,18 @@ sunshine_rank_bounds([50, 150, 500]).
 
 -!process_zone_list(_) <-
     .print("WARNING: Zone list processing encountered an error.").
+
+/* ============================================
+ * Simulator / input failure handlers (#5, #8)
+ * Invoked explicitly when LabEnvironment signals
+ * failed("simulator_unreachable", ...) or
+ * failed("invalid_input", ...).
+ * ============================================ */
++!handle_simulator_failure(Reason, Op, Detail) <-
+    .print("ERROR: Simulator failure — reason=", Reason,
+           " op=", Op, " detail=", Detail);
+    .print("       Aborting illuminance control loop.").
+
++!handle_invalid_input(Actuator, Expected, Actual) <-
+    .print("ERROR: Invalid input — actuator=", Actuator,
+           " expected=", Expected, " actual=", Actual).

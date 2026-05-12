@@ -52,6 +52,13 @@ public class LabEnvironment extends Artifact {
     private double[] lightBounds    = {75.0, 200.0, 400.0};
     private double[] sunshineBounds = {50.0, 200.0, 700.0};
 
+    /** Fault-tolerant HTTP client shared by all simulator POSTs (#5). */
+    private final SimulatorHttpClient simHttp = new SimulatorHttpClient();
+    /** WoT-TD-driven input validator built once at init() (#8). */
+    private WotInputValidator validator;
+    /** When true, all simulator-mutating operations short-circuit (#12). */
+    private volatile boolean dryRun = false;
+
     /**
      * Initialize the artifact with a W3C WoT Thing Description URL.
      * 
@@ -59,6 +66,12 @@ public class LabEnvironment extends Artifact {
      */
     @OPERATION
     public void init(String tdUrl) {
+        // #4: route java.util.logging through Logback (idempotent).
+        LoggingBootstrap.install();
+        // #1: pick up simulator HTTP tuning from system properties so that
+        // config/run_config.json (forwarded by Gradle as -Dsim.http.*) takes
+        // effect without an explicit configureHttp call from ASL.
+        applyHttpSystemProperties();
         try {
             CloseableHttpClient httpClient = HttpClients.custom()
                 .setConnectionManager(new PoolingHttpClientConnectionManager())
@@ -83,10 +96,12 @@ public class LabEnvironment extends Artifact {
                         content = content.substring(1);
                     }
                     this.td = TDGraphReader.readFromString(TDFormat.RDF_TURTLE, content);
+                    this.validator = new WotInputValidator(this.td);
                     LOGGER.info("LabEnvironment initialized with Thing Description from: " + tdUrl);
                 }
             } else {
                 this.td = TDGraphReader.readFromURL(TDFormat.RDF_TURTLE, tdUrl);
+                this.validator = new WotInputValidator(this.td);
                 LOGGER.info("LabEnvironment initialized with Thing Description from: " + tdUrl);
             }
 
@@ -108,6 +123,59 @@ public class LabEnvironment extends Artifact {
         this.sunshineBounds = toDoubleArray(sBounds);
         LOGGER.info("Discretisation configured: light=" + Arrays.toString(lightBounds) +
                     " sunshine=" + Arrays.toString(sunshineBounds));
+    }
+
+    /**
+     * Configure the simulator HTTP client (#5). Re-tuneable at runtime so
+     * agents can tighten or relax timeouts per scenario without restarting.
+     *
+     * @param connectMs   Connect-phase timeout (ms). 0 disables.
+     * @param responseMs  Response-wait timeout (ms). 0 disables.
+     * @param maxRetries  Number of *additional* attempts after the first failure.
+     * @param backoffMs   Base backoff in ms; effective delay = base * 2^attempt.
+     */
+    @OPERATION
+    public void configureHttp(int connectMs, int responseMs, int maxRetries, int backoffMs) {
+        simHttp.configure(connectMs, responseMs, maxRetries, backoffMs);
+    }
+
+    /**
+     * Apply HTTP tuning supplied via {@code -Dsim.http.*} system properties
+     * (sourced from {@code config/run_config.json}'s {@code http_client}
+     * block via Gradle). Falls back silently to defaults when unset or
+     * non-numeric. Called once from {@link #init(String)}.
+     */
+    private void applyHttpSystemProperties() {
+        try {
+            Integer c = Integer.getInteger("sim.http.connectMs");
+            Integer r = Integer.getInteger("sim.http.responseMs");
+            Integer n = Integer.getInteger("sim.http.maxRetries");
+            Integer b = Integer.getInteger("sim.http.backoffMs");
+            if (c == null && r == null && n == null && b == null) {
+                return;  // nothing to apply
+            }
+            int connectMs  = (c != null) ? c : 2000;
+            int responseMs = (r != null) ? r : 5000;
+            int retries    = (n != null) ? n : 3;
+            int backoffMs  = (b != null) ? b : 200;
+            simHttp.configure(connectMs, responseMs, retries, backoffMs);
+            LOGGER.info("SimulatorHttpClient configured from -Dsim.http.*: connect="
+                + connectMs + "ms response=" + responseMs + "ms retries="
+                + retries + " backoff=" + backoffMs + "ms");
+        } catch (RuntimeException e) {
+            LOGGER.warning("applyHttpSystemProperties: ignored bad value (" + e.getMessage() + ")");
+        }
+    }
+
+    /**
+     * Toggle dry-run mode (#12). When enabled, mutating simulator calls
+     * ({@code resetLab}, {@code setLabState*}, {@code invokeAction}) are
+     * logged but not dispatched over HTTP. Read paths remain live.
+     */
+    @OPERATION
+    public void configureDryRun(boolean enabled) {
+        this.dryRun = enabled;
+        LOGGER.info("Dry-run mode " + (enabled ? "ENABLED" : "disabled"));
     }
 
     // ----------------------------------------------------------------
@@ -161,19 +229,19 @@ public class LabEnvironment extends Artifact {
             LOGGER.warning("doReset: could not derive reset URL — skipping");
             return;
         }
+        if (dryRun) {
+            LOGGER.info("doReset[dry-run]: would POST " + resetUrl);
+            return;
+        }
         try {
-            org.apache.hc.client5.http.impl.classic.CloseableHttpClient client =
-                    org.apache.hc.client5.http.impl.classic.HttpClients.createDefault();
-            org.apache.hc.client5.http.classic.methods.HttpPost post =
-                    new org.apache.hc.client5.http.classic.methods.HttpPost(resetUrl);
-            post.setHeader("Content-Type", "application/json");
-            post.setEntity(new org.apache.hc.core5.http.io.entity.StringEntity("{}",
-                    org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
-            try (org.apache.hc.client5.http.impl.classic.CloseableHttpResponse resp =
-                    client.execute(post)) {
-                LOGGER.fine("doReset: POST " + resetUrl + " → " + resp.getCode());
+            SimulatorHttpClient.Result r = simHttp.postJson(resetUrl, "{}");
+            LOGGER.fine("doReset: POST " + resetUrl + " → " + r.code);
+            if (r.code >= 400) {
+                LOGGER.warning("doReset: simulator returned HTTP " + r.code + " body=" + r.body);
             }
-            client.close();
+        } catch (SimulatorHttpClient.SimulatorUnreachableException e) {
+            LOGGER.severe("doReset: " + e.getMessage());
+            failed("simulator_unreachable", "reset", resetUrl);
         } catch (IOException e) {
             LOGGER.warning("doReset: POST failed: " + e.getMessage());
         }
@@ -413,6 +481,15 @@ public class LabEnvironment extends Artifact {
      */
     @OPERATION
     public void setLabStateFromMap(Object[] keys, Object[] values) {
+        if (validator != null) {
+            try {
+                validator.validateStateMap(keys, values);
+            } catch (WotInputValidator.ValidationException ve) {
+                LOGGER.warning("setLabStateFromMap rejected: " + ve.getMessage());
+                failed("invalid_input", ve.actuator, ve.expected, ve.actual);
+                return;
+            }
+        }
         String setStateUrl = deriveSimulatorUrl("/setState");
         if (setStateUrl == null) {
             LOGGER.warning("setLabStateFromMap: could not derive setState URL — skipping");
@@ -450,19 +527,19 @@ public class LabEnvironment extends Artifact {
 
     /** Internal POST helper for /setState. */
     private void postSetState(String setStateUrl, String body) {
+        if (dryRun) {
+            LOGGER.info("postSetState[dry-run]: would POST " + setStateUrl + " body=" + body);
+            return;
+        }
         try {
-            org.apache.hc.client5.http.impl.classic.CloseableHttpClient client =
-                    org.apache.hc.client5.http.impl.classic.HttpClients.createDefault();
-            org.apache.hc.client5.http.classic.methods.HttpPost post =
-                    new org.apache.hc.client5.http.classic.methods.HttpPost(setStateUrl);
-            post.setHeader("Content-Type", "application/json");
-            post.setEntity(new org.apache.hc.core5.http.io.entity.StringEntity(body,
-                    org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
-            try (org.apache.hc.client5.http.impl.classic.CloseableHttpResponse resp =
-                    client.execute(post)) {
-                LOGGER.info("setLabState: POST " + setStateUrl + " → " + resp.getCode() + " body=" + body);
+            SimulatorHttpClient.Result r = simHttp.postJson(setStateUrl, body);
+            LOGGER.info("setLabState: POST " + setStateUrl + " → " + r.code + " body=" + body);
+            if (r.code >= 400) {
+                LOGGER.warning("setLabState: simulator returned HTTP " + r.code + " body=" + r.body);
             }
-            client.close();
+        } catch (SimulatorHttpClient.SimulatorUnreachableException e) {
+            LOGGER.severe("postSetState: " + e.getMessage());
+            failed("simulator_unreachable", "setState", setStateUrl);
         } catch (IOException e) {
             LOGGER.warning("setLabState: POST failed: " + e.getMessage());
         }
@@ -653,6 +730,19 @@ public class LabEnvironment extends Artifact {
      */
     @OPERATION
     public void invokeAction(String wotSemanticType, boolean value) {
+        if (validator != null) {
+            try {
+                validator.validateAction(wotSemanticType, Boolean.valueOf(value));
+            } catch (WotInputValidator.ValidationException ve) {
+                LOGGER.warning("invokeAction rejected: " + ve.getMessage());
+                failed("invalid_input", ve.actuator, ve.expected, ve.actual);
+                return;
+            }
+        }
+        if (dryRun) {
+            LOGGER.info("invokeAction[dry-run]: " + wotSemanticType + " = " + value + " (no HTTP)");
+            return;
+        }
         LOGGER.info("invokeAction: " + wotSemanticType + " = " + value);
         performBooleanAction(wotSemanticType, value);
     }

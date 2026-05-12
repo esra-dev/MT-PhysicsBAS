@@ -66,6 +66,7 @@ exec_max_steps(20).
  * ============================================================ */
 @apply_profile_then_start
 +!apply_profile_then_start <-
+    !apply_runtime_overrides_ql;
     !profile_print;
     !profile_td(TdUrl);                     +lab_td(TdUrl);
     !profile_light_bounds(LightBounds);     +light_rank_bounds(LightBounds);
@@ -75,6 +76,20 @@ exec_max_steps(20).
     !derive_zone_goal(ZoneTargetList, []);
     !maybe_set_train_scenarios_file;
     !start.
+
+/* ============================================================
+ * Runtime parameter overrides (#7) — -Dactive.profile=… replaces
+ * the default active_profile/1 belief.
+ * ============================================================ */
+@apply_runtime_overrides_ql
++!apply_runtime_overrides_ql <-
+    tools.jia.system_prop("active.profile", "", OverrideProfile);
+    if (OverrideProfile \== "") {
+        ?active_profile(OldP);
+        -active_profile(OldP);
+        +active_profile(OverrideProfile);
+        .print("[RuntimeOverride] active_profile: ", OldP, " -> ", OverrideProfile)
+    }.
 
 // Build zone_goal/1 belief as a list of target ranks (sorted by zone idx).
 @derive_zone_goal_done
@@ -374,3 +389,15 @@ exec_max_steps(20).
     .print("WARNING: Policy execution step ", Step, " failed. Retrying.");
     .wait(1000);
     !execute_policy(Step).
+
+/* ============================================================
+ * Simulator / input failure handlers (#5, #8)
+ * ============================================================ */
++!handle_simulator_failure(Reason, Op, Detail) <-
+    .print("ERROR: Simulator failure during QL — reason=", Reason,
+           " op=", Op, " detail=", Detail);
+    .print("       Stopping training.").
+
++!handle_invalid_input(Actuator, Expected, Actual) <-
+    .print("ERROR: Invalid input during QL — actuator=", Actuator,
+           " expected=", Expected, " actual=", Actual).

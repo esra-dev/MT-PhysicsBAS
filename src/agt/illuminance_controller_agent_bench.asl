@@ -48,6 +48,7 @@ exec_delay_ms(65).
  * ============================================================ */
 @apply_profile_then_start
 +!apply_profile_then_start <-
+    !apply_runtime_overrides;
     !profile_print;
     !profile_td(TdUrl);                     +lab_td(TdUrl);
     !profile_light_bounds(LightBounds);     +light_rank_bounds(LightBounds);
@@ -56,6 +57,28 @@ exec_delay_ms(65).
     !profile_zone_targets(ZoneTargetList);
     !assert_zone_targets(ZoneTargetList);
     !bench_start.
+
+/* ============================================================
+ * Runtime parameter overrides (#7) — let -Dactive.profile=…
+ * and -Dbench.mode=… replace the default beliefs without
+ * patching the .asl files at build time.
+ * ============================================================ */
+@apply_runtime_overrides
++!apply_runtime_overrides <-
+    tools.jia.system_prop("active.profile", "", OverrideProfile);
+    if (OverrideProfile \== "") {
+        ?active_profile(OldP);
+        -active_profile(OldP);
+        +active_profile(OverrideProfile);
+        .print("[RuntimeOverride] active_profile: ", OldP, " -> ", OverrideProfile)
+    };
+    tools.jia.system_prop("bench.mode", "", OverrideMode);
+    if (OverrideMode \== "") {
+        ?bench_mode(OldM);
+        -bench_mode(OldM);
+        +bench_mode(OverrideMode);
+        .print("[RuntimeOverride] bench_mode: ", OldM, " -> ", OverrideMode)
+    }.
 
 @assert_zone_targets_done
 +!assert_zone_targets([]) <- true.
@@ -651,3 +674,15 @@ exec_delay_ms(65).
 
 -!dispatch(_, _, _, _, _, _) <-
     .print("WARNING: dispatch failed — treating step as a no-op.").
+
+/* ============================================================
+ * Simulator / input failure handlers (#5, #8)
+ * ============================================================ */
++!handle_simulator_failure(Reason, Op, Detail) <-
+    .print("ERROR: Simulator failure during benchmark — reason=", Reason,
+           " op=", Op, " detail=", Detail);
+    .print("       Current scenario will be marked as failure.").
+
++!handle_invalid_input(Actuator, Expected, Actual) <-
+    .print("ERROR: Invalid input during benchmark — actuator=", Actuator,
+           " expected=", Expected, " actual=", Actual).
