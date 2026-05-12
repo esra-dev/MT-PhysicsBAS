@@ -53,5 +53,8 @@ java_pid*.hprof
 # Analysis generated outputs
 analysis/out/
 
+# Build output resource copies
+bin/
+
 # Research papers / PDFs
 *.pdf
