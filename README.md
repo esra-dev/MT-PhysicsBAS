@@ -1,5 +1,7 @@
 # MT-Esra: Stereotype-Guided Q-Learning for Smart Building Illuminance Control
 
+![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+
 A JaCaMo-based Multi-Agent System (MAS) that investigates whether **stereotype-guided Q-learning initialization** — using ontology-encoded domain knowledge — converges faster and performs better than standard Q-learning for smart building lighting control.
 
 ## Overview
@@ -320,3 +322,85 @@ For the 4-zone weakness labs, zone targets are `[3, 2, 3, 2]` (zones 1–4).
 - [W3C Web of Things (WoT) Thing Description](https://www.w3.org/TR/wot-thing-description/)
 - [JaCaMo MAS Framework](https://jacamo-lang.github.io/)
 - [Node-RED](https://nodered.org/)
+
+---
+
+## Operations & Engineering
+
+### Run-time configuration (centralized)
+
+All run profiles live in [`config/run_config.json`](config/run_config.json). Two profiles are bundled:
+
+- `dev` — short loops for local iteration.
+- `paper` — full episode counts for the thesis benchmark.
+
+`run_full_project.ps1` loads this file via [`scripts/Read-RunConfig.ps1`](scripts/Read-RunConfig.ps1). If the file is missing or malformed the script falls back to the inline `$Configs` hashtable so legacy invocations keep working.
+
+### Preflight validation
+
+Before training runs, validate the project environment offline:
+
+```powershell
+.\gradlew.bat preflight "-Pprofiles=custom2,custom3,custom4,custom5,custom6,custom7" -PskipSimProbe
+```
+
+Checks performed per profile:
+
+- WoT TD `lab-td-<profile>.ttl` is present.
+- `benchmark/scenarios_<profile>.json` exists and parses (UTF-8 BOM tolerated).
+- `benchmark/train_scenarios_<profile>.json` parses if present (optional — most profiles share `train_scenarios_full.json`).
+- Bundled ontology `lab-ontology.ttl` and `wot-mappings.ttl` are reachable.
+- Optional liveness probe `GET http://127.0.0.1:<port>/` (omit `-PskipSimProbe` once simulators are up).
+
+The PowerShell driver runs preflight automatically between Phase 2 (simulators) and Phase 3 (training). Skip it with `.\run_full_project.ps1 -SkipPreflight`.
+
+### Turtle validation
+
+`./gradlew validateTurtle` parses every `*.ttl` under `src/resources/` with Apache Jena. Implemented as a `JavaExec` task delegating to [`tools.TurtleValidator`](src/env/tools/TurtleValidator.java); fails the build if any file does not parse.
+
+### Unit tests
+
+```powershell
+.\gradlew.bat test
+```
+
+JUnit 5 + Mockito are wired via `testImplementation`. Test sources live under `src/test/java`. Reports are emitted to `build/reports/tests/test/index.html`.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` defines three jobs that run on every push / PR to `main`:
+
+1. **build-test** — `gradlew classes` + `gradlew test`, uploads JUnit report.
+2. **validate-resources** — `gradlew validateTurtle`, validates `benchmark/*.json`, builds the dashboard.
+3. **preflight-offline** — `gradlew preflight -Pprofiles=custom2..custom7 -PskipSimProbe`.
+
+### Result versioning
+
+Long benchmark runs produce CSV / TTL artifacts that should not pollute `main`. To stage and tag them on a dedicated `results` branch:
+
+```powershell
+.\run_full_project.ps1 -RunMode paper -VersionResults
+.\run_full_project.ps1 -RunMode paper -VersionResults -PublishResults  # also pushes the branch and tag
+```
+
+Internally `scripts/version_artifacts.ps1`:
+
+- creates the `results` branch (orphan if absent) via `git worktree add`;
+- copies `qtable_*.csv`, `learned_stereotypes_*.ttl`, `metrics_*.csv`, `iv_stats_*.json`, `benchmark_results_*.csv`, `bench_step_log_*.csv`, and `benchmark/results/`;
+- writes a `RUN_MANIFEST.json` (UTC stamp, RunMode, profiles, modes, git SHA, host, user);
+- creates a lightweight tag `results-<utcStamp>-<RunMode>-<gitShortSha>`.
+
+A pre-commit guard at [`.githooks/pre-commit`](.githooks/pre-commit) warns if raw result artifacts are staged on `main`. Enable once per clone:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+### `run_full_project.ps1` flags (new)
+
+| Flag | Effect |
+|------|--------|
+| `-SkipPreflight` | Bypass the gradle `preflight` task. |
+| `-VersionResults` | Stage artifacts onto `results` branch + tag after Phase 5. |
+| `-PublishResults` | With `-VersionResults`, also `git push` the branch and tag. |
+| `-DryRun` | Reserved — wires through to the planned LabEnvironment dry-run mode. |
