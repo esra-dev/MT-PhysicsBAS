@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mt-esra/run_config.schema.json",
+  "title": "MT-Esra Run Config",
+  "type": "object",
+  "required": ["profiles", "profiles_to_run", "stereo_modes", "bench_modes",
+               "simulator_port_map", "simulator_flow_map", "qtable_suffix_map"],
+  "properties": {
+    "description": { "type": "string" },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["tick", "num_episodes", "max_steps_per_episode",
+                     "action_delay_ms", "exec_delay_ms_ql", "exec_max_steps_ql",
+                     "bench_runs", "exec_max_steps_bench", "exec_delay_ms_bench"],
+        "properties": {
+          "tick":                  { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$" },
+          "num_episodes":          { "type": "integer", "minimum": 0 },
+          "max_steps_per_episode": { "type": "integer", "minimum": 0 },
+          "action_delay_ms":       { "type": "integer", "minimum": 0 },
+          "exec_delay_ms_ql":      { "type": "integer", "minimum": 0 },
+          "exec_max_steps_ql":     { "type": "integer", "minimum": 0 },
+          "bench_runs":            { "type": "integer", "minimum": 0 },
+          "exec_max_steps_bench":  { "type": "integer", "minimum": 0 },
+          "exec_delay_ms_bench":   { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "profiles_to_run":     { "type": "array", "items": { "type": "string" } },
+    "stereo_modes":        { "type": "array", "items": { "enum": ["true", "false"] } },
+    "bench_modes":         { "type": "array", "items": { "enum": ["rule_based", "ql_false", "ql_true"] } },
+    "simulator_port_map":  { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+    "simulator_flow_map":  { "type": "object", "additionalProperties": { "type": "string" } },
+    "qtable_suffix_map":   { "type": "object", "additionalProperties": { "type": "string" } },
+    "expected_state_vec_dim": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+    "http_client": {
+      "type": "object",
+      "properties": {
+        "connect_timeout_ms":  { "type": "integer", "minimum": 0 },
+        "response_timeout_ms": { "type": "integer", "minimum": 0 },
+        "max_retries":         { "type": "integer", "minimum": 0 },
+        "backoff_base_ms":     { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "dry_run": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}
