@@ -14,6 +14,7 @@ replay_pid*
 # Logs and runtime dumps
 *.log
 logs/
+log/
 *.out
 
 # IDE/editor
@@ -48,3 +49,9 @@ iv_stats_*.json
 qtable_*.csv
 nr_custom*_*.txt
 java_pid*.hprof
+
+# Analysis generated outputs
+analysis/out/
+
+# Research papers / PDFs
+*.pdf
