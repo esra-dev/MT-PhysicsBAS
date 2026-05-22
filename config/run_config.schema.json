@@ -4,7 +4,8 @@
   "title": "MT-Esra Run Config",
   "type": "object",
   "required": ["profiles", "profiles_to_run", "stereo_modes", "bench_modes",
-               "simulator_port_map", "simulator_flow_map", "qtable_suffix_map"],
+               "simulator_port_map", "simulator_flow_map", "qtable_suffix_map",
+               "expected_state_vec_dim"],
   "properties": {
     "description": { "type": "string" },
     "profiles": {

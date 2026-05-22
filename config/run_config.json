@@ -4,7 +4,7 @@
   "profiles": {
     "dev": {
       "tick": "0.05",
-      "num_episodes": 2500,
+      "num_episodes": 50,
       "max_steps_per_episode": 20,
       "action_delay_ms": 65,
       "exec_delay_ms_ql": 65,
@@ -16,16 +16,16 @@
     "paper": {
       "tick": "0.2",
       "num_episodes": 2500,
-      "max_steps_per_episode": 30,
+      "max_steps_per_episode": 20,
       "action_delay_ms": 250,
       "exec_delay_ms_ql": 500,
-      "exec_max_steps_ql": 30,
+      "exec_max_steps_ql": 20,
       "bench_runs": 5,
-      "exec_max_steps_bench": 30,
+      "exec_max_steps_bench": 20,
       "exec_delay_ms_bench": 250
     }
   },
-  "profiles_to_run": ["custom2", "custom3", "custom4", "custom5", "custom6", "custom7"],
+  "profiles_to_run": ["custom2", "custom3", "custom4", "custom5", "custom6", "custom7", "custom8"],
   "stereo_modes": ["true", "false"],
   "bench_modes": ["rule_based", "ql_false", "ql_true"],
   "simulator_port_map": {
@@ -34,7 +34,8 @@
     "custom4": 1884,
     "custom5": 1885,
     "custom6": 1886,
-    "custom7": 1887
+    "custom7": 1887,
+    "custom8": 1888
   },
   "simulator_flow_map": {
     "custom2": "simulator_flow_custom2.json",
@@ -42,7 +43,8 @@
     "custom4": "simulator_flow_custom4.json",
     "custom5": "simulator_flow_custom5.json",
     "custom6": "simulator_flow_custom6.json",
-    "custom7": "simulator_flow_custom7.json"
+    "custom7": "simulator_flow_custom7.json",
+    "custom8": "simulator_flow_custom8.json"
   },
   "qtable_suffix_map": {
     "custom2": "_custom2",
@@ -50,21 +52,33 @@
     "custom4": "_custom4",
     "custom5": "_custom5",
     "custom6": "_custom6",
-    "custom7": "_custom7"
+    "custom7": "_custom7",
+    "custom8": "_custom8"
   },
   "expected_state_vec_dim": {
-    "custom2": 16,
-    "custom3": 16,
-    "custom4": 16,
-    "custom5": 16,
-    "custom6": 16,
-    "custom7": 16
+    "custom2": 13,
+    "custom3": 13,
+    "custom4": 13,
+    "custom5": 13,
+    "custom6": 13,
+    "custom7": 13,
+    "custom8": 13
   },
   "http_client": {
     "connect_timeout_ms": 2000,
     "response_timeout_ms": 5000,
     "max_retries": 3,
     "backoff_base_ms": 200
+  },
+  "learning": {
+    "reward_clip": 50.0,
+    "stereo_prior_scale": 5.0,
+    "stereo_prior_decay_episodes": 10000,
+    "stereo_prior_decay_floor": 0.1,
+    "reward_shaping": "none",
+    "adaptive_trust": false,
+    "adaptive_trust_min_samples": 50,
+    "adaptive_trust_floor": 0.1
   },
   "dry_run": false
 }
