@@ -26,6 +26,7 @@
             custom3\
             ...
             custom7\
+            custom8\
 
     Phases:
       A. Pre-flight + Phase 1 (timing patches) in orchestrator dir
@@ -76,6 +77,10 @@
     flag also wipes the clone's build/ and .gradle/ first to guarantee a
     clean Gradle build.
 
+.PARAMETER Fresh
+    Delete generated results/logs and the per-profile clone directories before
+    starting, then re-sync clones. Use this to redo training from scratch.
+
 .PARAMETER ClonesRoot
     Where to put the clones. Default: sibling of orchestrator named
     "<orchestrator-folder>-clones".
@@ -85,6 +90,12 @@
     .\run_full_project_parallel.ps1 -MaxParallel 4
     .\run_full_project_parallel.ps1 -RunMode paper -MaxParallel 2
     .\run_full_project_parallel.ps1 -SkipTraining   # only benchmark
+    .\run_full_project_parallel.ps1 -Fresh          # delete generated outputs and retrain
+
+.NOTES
+    Target shell: Windows PowerShell 5.1+ (also works under PowerShell 7+).
+    Do not use PS7-only syntax here — no null-conditional (?.), null-coalescing (??),
+    ternary (a ? b : c), or native command chaining (&&, ||).
 #>
 
 param(
@@ -97,11 +108,22 @@ param(
     [switch]$SkipTraining,
     [switch]$SkipBenchmark,
     [switch]$RefreshClones,
+    [switch]$Fresh,
 
-    [string]$ClonesRoot = ""
+    [string]$ClonesRoot = "",
+
+    # Research extension: seeds for CIs. When non-empty (e.g. -Seeds 1,2,3,4,5)
+    # the orchestrator runs the full train+benchmark pipeline once per seed,
+    # passing -RunSeed <N> down to each clone. Between iterations the
+    # orchestrator-side benchmark/results dir is renamed to
+    # benchmark/results_seed<N>/ and clone-side qtables / training markers
+    # are cleared so each seed trains a fresh QLearner. analysis/sweep_report.py
+    # then aggregates across results_seed*/ to produce bootstrap 95% CIs.
+    [int[]]$Seeds = @()
 )
 
 $ErrorActionPreference = "Stop"
+$script:HadFatalError = $false
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ScriptRoot
 
@@ -112,7 +134,7 @@ if (-not $ClonesRoot) {
 }
 
 # ─── Project layout (must match run_full_project.ps1) ─────────────────────────
-$Profiles = @("custom2","custom3","custom4","custom5","custom6","custom7")
+$Profiles = @("custom2","custom3","custom4","custom5","custom6","custom7","custom8")
 $BenchModes = "rule_based,ql_false,ql_true"
 $StereoModes = @("true","false")
 
@@ -123,6 +145,7 @@ $Simulators = @(
     [pscustomobject]@{ Profile="custom5"; Port=1885; Flow="simulator_flow_custom5.json" }
     [pscustomobject]@{ Profile="custom6"; Port=1886; Flow="simulator_flow_custom6.json" }
     [pscustomobject]@{ Profile="custom7"; Port=1887; Flow="simulator_flow_custom7.json" }
+    [pscustomobject]@{ Profile="custom8"; Port=1888; Flow="simulator_flow_custom8.json" }
 )
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
@@ -228,6 +251,7 @@ function Sync-CloneFromOrchestrator {
         (Join-Path $ScriptRoot ".node-red-custom5"),
         (Join-Path $ScriptRoot ".node-red-custom6"),
         (Join-Path $ScriptRoot ".node-red-custom7"),
+        (Join-Path $ScriptRoot ".node-red-custom8"),
         (Join-Path $ScriptRoot "dashboard\node_modules")
     )
     # Files at root that are training/benchmark artefacts of previous runs;
@@ -260,6 +284,115 @@ function Test-ProfileFullyTrained {
         if (-not (Test-Path $m)) { return $false }
     }
     return $true
+}
+
+function Assert-PathUnder {
+    param([string]$Path, [string]$Root)
+    $full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+    $rootFull = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Root)
+    $rootPrefix = $rootFull.TrimEnd([char[]]@('\','/')) + [System.IO.Path]::DirectorySeparatorChar
+    if (($full -ne $rootFull) -and (-not $full.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase))) {
+        throw "Refusing to remove path outside allowed root. path=$full root=$rootFull"
+    }
+    return $full
+}
+
+function Remove-GeneratedPath {
+    param([string]$Path, [string]$AllowedRoot)
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    $full = Assert-PathUnder -Path $Path -Root $AllowedRoot
+    Remove-Item -LiteralPath $full -Recurse -Force
+    Write-OK "Removed: $full"
+}
+
+function Stop-ProcessesUsingPath {
+    param([string]$PathHint)
+    if (-not $PathHint) { return }
+    try {
+        $needle = $PathHint.ToLowerInvariant()
+        $candidates = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.ProcessId -ne $PID -and
+            $_.CommandLine -and
+            $_.CommandLine.ToLowerInvariant().Contains($needle)
+        }
+        foreach ($p in $candidates) {
+            try {
+                Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop
+                Write-OK "Stopped process holding path hint '$PathHint' PID=$($p.ProcessId) Name=$($p.Name)"
+            } catch {
+                Write-Warn "Could not stop PID=$($p.ProcessId) for path hint '$PathHint': $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        Write-Warn "Path-based process scan failed for '$PathHint': $($_.Exception.Message)"
+    }
+}
+
+function Remove-GeneratedPathWithRetry {
+    param(
+        [string]$Path,
+        [string]$AllowedRoot,
+        [int]$MaxAttempts = 4,
+        [switch]$BestEffort
+    )
+    if (-not (Test-Path -LiteralPath $Path)) { return $true }
+    $full = Assert-PathUnder -Path $Path -Root $AllowedRoot
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            Remove-GeneratedPath -Path $full -AllowedRoot $AllowedRoot
+            return $true
+        } catch {
+            $msg = $_.Exception.Message
+            if ($attempt -lt $MaxAttempts) {
+                Write-Warn "Retry $attempt/$MaxAttempts removing '$full': $msg"
+                Stop-ProcessesUsingPath -PathHint $full
+                Start-Sleep -Seconds 1
+                continue
+            }
+            if ($BestEffort) {
+                Write-Warn "Best-effort cleanup skipped locked path '$full' after $MaxAttempts attempts: $msg"
+                return $false
+            }
+            throw
+        }
+    }
+    return $false
+}
+
+function Stop-OrphanParallelWorkers {
+    # Best-effort cleanup of orphaned hidden worker shells from previous runs.
+    # These are launched with powershell.exe -ExecutionPolicy Bypass -EncodedCommand.
+    try {
+        $candidates = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.ProcessId -ne $PID -and
+                $_.CommandLine -and
+                ($_.CommandLine -match '-ExecutionPolicy\s+Bypass') -and
+                ($_.CommandLine -match '-EncodedCommand')
+            }
+        foreach ($p in $candidates) {
+            try {
+                Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop
+                Write-OK "Stopped orphan worker shell PID=$($p.ProcessId)"
+            } catch {
+                Write-Warn "Could not stop orphan worker shell PID=$($p.ProcessId): $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        Write-Warn "Orphan worker scan failed: $($_.Exception.Message)"
+    }
+}
+
+function Remove-GeneratedFiles {
+    param([string]$Root, [string[]]$Patterns)
+    if (-not (Test-Path -LiteralPath $Root)) { return }
+    foreach ($pattern in $Patterns) {
+        Get-ChildItem -LiteralPath $Root -File -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object {
+            $full = Assert-PathUnder -Path $_.FullName -Root $Root
+            Remove-Item -LiteralPath $full -Force
+            Write-OK "Removed: $full"
+        }
+    }
 }
 
 # ─── Pre-flight ──────────────────────────────────────────────────────────────
@@ -302,6 +435,41 @@ Write-OK "RAM cap  : MaxParallel=$MaxParallel  (≈ $($MaxParallel * 2) GB peak 
 $SimProcs = @{}
 
 try {
+
+    $RunStamp = Get-Date -Format "yyyyMMdd_HHmmss"
+
+    if ($Fresh) {
+        Write-Header "Fresh run cleanup"
+        if ((Split-Path -Leaf $ClonesRoot) -notlike "*-clones") {
+            throw "-Fresh refuses to delete clone directories unless ClonesRoot ends with '-clones': $ClonesRoot"
+        }
+
+        Stop-OrphanParallelWorkers
+
+        Remove-GeneratedPath -Path (Join-Path $ScriptRoot "benchmark\results") -AllowedRoot $ScriptRoot
+        try {
+            Remove-GeneratedPath -Path (Join-Path $ScriptRoot "log\parallel") -AllowedRoot $ScriptRoot
+        } catch {
+            Write-Warn "Could not fully remove log\parallel (locked file). Continuing with new run-stamped logs. Reason: $($_.Exception.Message)"
+        }
+        Remove-GeneratedFiles -Root $ScriptRoot -Patterns @(
+            "qtable_*.csv",
+            "metrics_*.csv",
+            "iv_stats_*.json",
+            "coverage_*.csv",
+            "first_goal_*.csv",
+            "learned_*.ttl",
+            "benchmark_results_*.csv",
+            "bench_step_log_*.csv",
+            "run_full_project.log"
+        )
+
+        foreach ($profile in $Profiles) {
+            [void](Remove-GeneratedPathWithRetry -Path (Join-Path $ClonesRoot $profile) -AllowedRoot $ClonesRoot -BestEffort)
+        }
+        $RefreshClones = $true
+        Write-OK "Fresh cleanup complete; clones will be re-synced."
+    }
 
     # ════════════════════════════════════════════════════════════════════════
     # Phase A — Apply timing parameters in orchestrator dir
@@ -401,6 +569,21 @@ try {
     }
 
     # ════════════════════════════════════════════════════════════════════════
+    # Seed loop (research extension): if -Seeds was provided, replay phases
+    # D..G once per seed and archive each run's benchmark/results into
+    # benchmark/results_seed<N>. Phase H (analysis) runs ONCE after the loop
+    # over all archives to produce bootstrap 95% confidence intervals.
+    # ════════════════════════════════════════════════════════════════════════
+    $effectiveSeeds = if ($Seeds.Count -gt 0) { $Seeds } else { @(0) }
+    $isMultiSeed    = ($Seeds.Count -gt 0)
+    $seedArchives   = @()
+    foreach ($seedVal in $effectiveSeeds) {
+        $script:CurrentSeed = $seedVal
+        if ($isMultiSeed) {
+            Write-Header "=== Seed $seedVal  (replica $([Array]::IndexOf($effectiveSeeds, $seedVal) + 1) / $($effectiveSeeds.Count)) ==="
+        }
+
+    # ════════════════════════════════════════════════════════════════════════
     # Phase D — Training (parallel across profiles, sequential within)
     #
     # Each job runs run_full_project.ps1 inside its clone with
@@ -422,20 +605,7 @@ try {
         }
 
         if ($toTrain.Count -gt 0) {
-            $jobScript = {
-                param($CloneDir, $Profile, $RunMode)
-                Set-Location $CloneDir
-                # Pipe both streams; capture exit code in clone's exit code.
-                & ".\run_full_project.ps1" `
-                    -RunMode $RunMode `
-                    -OnlyProfiles $Profile `
-                    -SkipBenchmark *>&1
-                # PowerShell jobs return whatever was emitted; we additionally
-                # surface the exit code via a marker line the parent can grep.
-                "PARALLEL_JOB_EXIT_CODE=$LASTEXITCODE"
-            }
-
-            $jobs = @{}    # jobId -> @{Profile=...; LogPath=...}
+            $jobs = @{}    # processId -> @{Profile=...; LogPath=...; ErrPath=...; Process=...}
             $queue = New-Object System.Collections.Queue
             foreach ($p in $toTrain) { $queue.Enqueue($p) }
 
@@ -445,11 +615,42 @@ try {
             $startCloneJob = {
                 param($Profile)
                 $cloneDir = Join-Path $ClonesRoot $Profile
-                $logPath  = Join-Path $logDir "train_${Profile}.log"
+                $orchestratorRunScript = Join-Path $ScriptRoot "run_full_project.ps1"
+                $cloneRunScript = Join-Path $cloneDir "run_full_project.ps1"
+                try {
+                    Copy-Item -Path $orchestratorRunScript -Destination $cloneRunScript -Force
+                } catch {
+                    throw "Failed to refresh clone run script for ${Profile}: $($_.Exception.Message)"
+                }
+                $cloneRunSeed = if ($script:CurrentSeed) { $script:CurrentSeed } else { 0 }
+                $logPath  = Join-Path $logDir "train_${Profile}_${RunStamp}.log"
+                $errPath  = Join-Path $logDir "train_${Profile}_${RunStamp}.err.log"
+                Remove-Item -LiteralPath $logPath, $errPath -Force -ErrorAction SilentlyContinue
+
+                $runScript = $cloneRunScript
+                $cloneLiteral = $cloneDir.Replace("'", "''")
+                $scriptLiteral = $runScript.Replace("'", "''")
+                $modeLiteral = $RunMode.Replace("'", "''")
+                $profileLiteral = $Profile.Replace("'", "''")
+                $childCommand = @"
+`$ErrorActionPreference = 'Stop'
+Set-Location -LiteralPath '$cloneLiteral'
+& '$scriptLiteral' -RunMode '$modeLiteral' -OnlyProfiles '$profileLiteral' -SkipBenchmark -RunSeed $cloneRunSeed *>&1
+`$childExitCode = `$LASTEXITCODE
+exit `$childExitCode
+"@
+                $encodedCommand = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($childCommand))
+
                 Write-Info "Launching training job: profile=$Profile  log=$logPath"
-                $j = Start-Job -ScriptBlock $jobScript -ArgumentList $cloneDir, $Profile, $RunMode
-                $jobs[$j.Id] = @{ Profile=$Profile; LogPath=$logPath; CloneDir=$cloneDir }
-                return $j
+                $proc = Start-Process -FilePath "powershell.exe" `
+                    -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedCommand) `
+                    -WorkingDirectory $cloneDir `
+                    -RedirectStandardOutput $logPath `
+                    -RedirectStandardError $errPath `
+                    -PassThru `
+                    -WindowStyle Hidden
+                $jobs[$proc.Id] = @{ Profile=$Profile; LogPath=$logPath; ErrPath=$errPath; CloneDir=$cloneDir; Process=$proc; StartTime=(Get-Date); TailPos=0L; LastEpisode=""; LastHeartbeat=""; LastCellEpisode="" }
+                return $proc
             }
 
             # Prime the pool
@@ -459,28 +660,161 @@ try {
             }
 
             $failures = @()
-            while ($jobs.Count -gt 0) {
-                $jobIds = @($jobs.Keys | ForEach-Object { [int]$_ })
-                $finished = Wait-Job -Job (Get-Job -Id $jobIds) -Any
-                $info = $jobs[$finished.Id]
-                # Drain output to log file
-                $output = Receive-Job -Job $finished -Keep -ErrorAction SilentlyContinue
-                $output | Out-File -FilePath $info.LogPath -Encoding utf8 -Append
-                $exitLine = $output | Where-Object { $_ -is [string] -and $_ -match '^PARALLEL_JOB_EXIT_CODE=' } | Select-Object -Last 1
-                $exitCode = if ($exitLine) { [int]($exitLine -replace '^PARALLEL_JOB_EXIT_CODE=','') } else { -1 }
+            $summaryEverySec = 60
+            $lastStillRunningSummary = Get-Date
 
-                if ($finished.State -ne 'Completed' -or $exitCode -ne 0) {
-                    Write-Fail "Training FAILED for $($info.Profile)  state=$($finished.State)  exit=$exitCode  log=$($info.LogPath)"
-                    $failures += $info.Profile
-                } else {
-                    Write-OK "Training done : $($info.Profile)  log=$($info.LogPath)"
+            function Update-TrainingProgress {
+                # Scans wrapper log incrementally AND the clone's active cell log.
+                # Updates $JobInfo.LastEpisode, $JobInfo.LastHeartbeat, $JobInfo.LastCellEpisode.
+                # NOTE: avoid the local name $matches — that's a PowerShell automatic
+                # variable overwritten by every `-match` op, which previously wiped
+                # our accumulator and caused "waiting for first training heartbeat".
+                param([hashtable]$JobInfo)
+                $logPath = $JobInfo.LogPath
+
+                if (Test-Path -LiteralPath $logPath) {
+                    try {
+                        $fs = [System.IO.FileStream]::new(
+                            $logPath,
+                            [System.IO.FileMode]::Open,
+                            [System.IO.FileAccess]::Read,
+                            [System.IO.FileShare]::ReadWrite)
+                        [void]$fs.Seek([long]$JobInfo.TailPos, [System.IO.SeekOrigin]::Begin)
+                        # Detect BOM automatically so UTF-16 redirected logs still parse.
+                        $sr = New-Object System.IO.StreamReader($fs, $true)
+                        while (($line = $sr.ReadLine()) -ne $null) {
+                            $trim = $line.Trim()
+                            if ($trim -match '\[Training\]\s+ep\s+\d+/\d+' -or
+                                $trim -match 'Training complete after' -or
+                                $trim -match 'Training \[\d+/\d+\]') {
+                                $JobInfo.LastEpisode = $trim
+                            }
+                            elseif ($trim -match '\[Heartbeat\]') {
+                                $JobInfo.LastHeartbeat = $trim
+                            }
+                        }
+                        $JobInfo.TailPos = [long]$fs.Position
+                        $sr.Dispose(); $fs.Dispose()
+                    } catch { }
                 }
-                Remove-Job -Job $finished -Force
-                $jobs.Remove($finished.Id)
 
-                # Refill the pool
-                if ($queue.Count -gt 0) {
-                    & $startCloneJob $queue.Dequeue() | Out-Null
+                # Also inspect the clone's active cell training log directly.
+                # This is the most reliable source for episode-level progress.
+                try {
+                    $cloneLogDir = Join-Path $JobInfo.CloneDir "log"
+                    if (Test-Path -LiteralPath $cloneLogDir) {
+                        $pattern = "train_$($JobInfo.Profile)_stereo_*.log"
+                        $latestCellLog = Get-ChildItem -LiteralPath $cloneLogDir -File -Filter $pattern -ErrorAction SilentlyContinue |
+                            Sort-Object LastWriteTime -Descending |
+                            Select-Object -First 1
+                        if ($latestCellLog) {
+                            $cellLine = Get-Content -LiteralPath $latestCellLog.FullName -Tail 400 -ErrorAction SilentlyContinue |
+                                Where-Object { $_ -match '\[Training\]\s+ep\s+\d+/\d+|Training complete after|\[QL\]\s+Final' } |
+                                Select-Object -Last 1
+                            if ($cellLine) {
+                                $JobInfo.LastCellEpisode = "cell:$($latestCellLog.Name) :: $($cellLine.Trim())"
+                            }
+                        }
+                    }
+                } catch { }
+            }
+
+            while ($jobs.Count -gt 0) {
+                $finishedIds = @()
+                foreach ($id in @($jobs.Keys)) {
+                    $proc = $jobs[$id].Process
+                    try { $proc.Refresh() } catch {}
+                    if ($proc.HasExited) {
+                        $finishedIds += $id
+                    }
+                }
+
+                if ($finishedIds.Count -eq 0) {
+                    $now = Get-Date
+                    if ((New-TimeSpan -Start $lastStillRunningSummary -End $now).TotalSeconds -ge $summaryEverySec) {
+                        $parts = @()
+                        foreach ($jid in @($jobs.Keys | Sort-Object)) {
+                            $jinfo = $jobs[$jid]
+                            Update-TrainingProgress -JobInfo $jinfo
+                            $mins = [int](New-TimeSpan -Start $jinfo.StartTime -End $now).TotalMinutes
+                            $parts += "$($jinfo.Profile)=${mins}m(pid=$jid)"
+                        }
+                        Write-Info "Still running: $($parts -join '; ')"
+                        foreach ($jid in @($jobs.Keys | Sort-Object)) {
+                            $jinfo = $jobs[$jid]
+                            # Priority: cell-log episode line > wrapper-log episode line > wrapper heartbeat > waiting.
+                            # Episode lines are always preferred over heartbeats so that ep N/N is visible.
+                            $msg = $null
+                            if ($jinfo.LastCellEpisode) { $msg = $jinfo.LastCellEpisode }
+                            elseif ($jinfo.LastEpisode)  { $msg = $jinfo.LastEpisode }
+                            elseif ($jinfo.LastHeartbeat){ $msg = $jinfo.LastHeartbeat }
+                            if ($msg) {
+                                Write-Info "Progress $($jinfo.Profile): $msg"
+                            } else {
+                                Write-Info "Progress $($jinfo.Profile): waiting for first training heartbeat/episode line..."
+                            }
+                        }
+                        $lastStillRunningSummary = $now
+                    }
+                    Start-Sleep -Seconds 2
+                    continue
+                }
+
+                foreach ($id in $finishedIds) {
+                    $info = $jobs[$id]
+                    $proc = $info.Process
+                    # WaitForExit() is required before ExitCode is populated (per .NET docs).
+                    # HasExited==true does NOT guarantee ExitCode is set; without WaitForExit
+                    # ExitCode returns $null, and ($null -ne 0) is $true → every job looks failed.
+                    try { $proc.WaitForExit() } catch {}
+                    $exitCode = if ($null -ne $proc.ExitCode) { $proc.ExitCode } else { -999 }
+
+                    if (Test-Path -LiteralPath $info.ErrPath) {
+                        $errInfo = Get-Item -LiteralPath $info.ErrPath -ErrorAction SilentlyContinue
+                        if ($errInfo -and $errInfo.Length -gt 0) {
+                            # Retry on transient file-lock errors: the child gradle
+                            # daemon can still hold the log handle briefly after
+                            # WaitForExit returns (process tree teardown), so a
+                            # naive Out-File can race with the OS handle release.
+                            $appended = $false
+                            for ($try = 0; $try -lt 5 -and -not $appended; $try++) {
+                                try {
+                                    Add-Content -LiteralPath $info.LogPath -Value "`n--- STDERR ---" -Encoding utf8
+                                    Get-Content -LiteralPath $info.ErrPath | Add-Content -LiteralPath $info.LogPath -Encoding utf8
+                                    $appended = $true
+                                } catch {
+                                    Start-Sleep -Milliseconds 300
+                                }
+                            }
+                            if (-not $appended) {
+                                Write-Warn "Could not append stderr for $($info.Cell) (log locked) — see $($info.ErrPath)"
+                            }
+                        }
+                    }
+
+                    $outputText = if (Test-Path -LiteralPath $info.LogPath) {
+                        Get-Content -LiteralPath $info.LogPath -Raw
+                    } else {
+                        ""
+                    }
+                    $hadFatal    = $outputText -match '\[XX\]\s+Fatal error:'
+                    # ExitCode from Start-Process -PassThru is unreliable in PS5.1 with file
+                    # redirection — it can be null even after WaitForExit().  Use the semantic
+                    # completion marker written by run_full_project.ps1 instead.
+                    $allComplete = $outputText -match 'All phases complete'
+
+                    if ($hadFatal -or -not $allComplete) {
+                        Write-Fail "Training FAILED for $($info.Profile)  exit=$exitCode  allComplete=$allComplete  log=$($info.LogPath)"
+                        $failures += $info.Profile
+                    } else {
+                        Write-OK "Training done : $($info.Profile)  log=$($info.LogPath)"
+                    }
+                    $jobs.Remove($id)
+
+                    # Refill the pool
+                    if ($queue.Count -gt 0) {
+                        & $startCloneJob $queue.Dequeue() | Out-Null
+                    }
                 }
             }
 
@@ -586,14 +920,16 @@ try {
         Write-OK "Pre-sync complete."
 
         $benchScript = {
-            param($CloneDir, $Profile, $Modes)
+            param($CloneDir, $Profile, $Modes, $SeedArg)
             Set-Location $CloneDir
             # --no-daemon avoids cross-clone Gradle daemon registry contention.
-            & ".\gradlew.bat" "runFullSweep" `
-                "-Pprofiles=$Profile" `
-                "-Pmodes=$Modes" `
-                "--no-daemon" `
-                "--console=plain" *>&1
+            $gradleArgs = @("runFullSweep",
+                "-Pprofiles=$Profile",
+                "-Pmodes=$Modes",
+                "--no-daemon",
+                "--console=plain")
+            if ($SeedArg -and $SeedArg -ne 0) { $gradleArgs += "-Prun.seed=$SeedArg" }
+            & ".\gradlew.bat" @gradleArgs *>&1
             "PARALLEL_JOB_EXIT_CODE=$LASTEXITCODE"
         }
 
@@ -607,9 +943,9 @@ try {
         $startBenchJob = {
             param($Profile)
             $cloneDir = Join-Path $ClonesRoot $Profile
-            $logPath  = Join-Path $blogDir "bench_${Profile}.log"
+            $logPath  = Join-Path $blogDir "bench_${Profile}_${RunStamp}.log"
             Write-Info "Launching benchmark job: profile=$Profile  log=$logPath"
-            $j = Start-Job -ScriptBlock $benchScript -ArgumentList $cloneDir, $Profile, $BenchModes
+            $j = Start-Job -ScriptBlock $benchScript -ArgumentList $cloneDir, $Profile, $BenchModes, ($(if ($script:CurrentSeed) { $script:CurrentSeed } else { 0 }))
             $bjobs[$j.Id] = @{ Profile=$Profile; LogPath=$logPath; CloneDir=$cloneDir }
             return $j
         }
@@ -628,8 +964,9 @@ try {
             $output | Out-File -FilePath $info.LogPath -Encoding utf8 -Append
             $exitLine = $output | Where-Object { $_ -is [string] -and $_ -match '^PARALLEL_JOB_EXIT_CODE=' } | Select-Object -Last 1
             $exitCode = if ($exitLine) { [int]($exitLine -replace '^PARALLEL_JOB_EXIT_CODE=','') } else { -1 }
+            $hadFatal = @($output | Where-Object { "$_" -match '\[XX\]\s+Fatal error:' }).Count -gt 0
 
-            if ($finished.State -ne 'Completed' -or $exitCode -ne 0) {
+            if ($finished.State -ne 'Completed' -or $exitCode -ne 0 -or $hadFatal) {
                 Write-Fail "Benchmark FAILED for $($info.Profile)  state=$($finished.State)  exit=$exitCode  log=$($info.LogPath)"
                 $bfailures += $info.Profile
             } else {
@@ -652,7 +989,8 @@ try {
         # ════════════════════════════════════════════════════════════════════
         Write-Header "Phase G — Collecting benchmark results from clones"
 
-        $modeDirs = $BenchModes -split ','
+        $modeDirs  = $BenchModes -split ','
+        $gfailures = @()
         foreach ($p in $Profiles) {
             $cloneDir   = Join-Path $ClonesRoot $p
             $srcRoot    = Join-Path $cloneDir   "benchmark\results\$p"
@@ -665,20 +1003,58 @@ try {
                     Invoke-Robocopy -Src $src -Dst $dst
                     Write-OK "$p : $($m.Trim()) -> orchestrator"
                 } else {
-                    Write-Warn "$p : $($m.Trim()) missing in clone — runFullSweep may have skipped it"
+                    Write-Fail "$p : $($m.Trim()) benchmark results missing in clone — runFullSweep may have failed silently"
+                    $gfailures += "$p/$($m.Trim())"
                 }
             }
         }
+        if ($gfailures.Count -gt 0) {
+            throw "Benchmark results missing for: $($gfailures -join ', '). Check log\parallel\bench_<profile>.log for details."
+        }
+    } # end if (-not $SkipBenchmark) for Phase F+G
 
-        # ════════════════════════════════════════════════════════════════════
-        # Phase H — Analysis (orchestrator)
-        # ════════════════════════════════════════════════════════════════════
+    # End-of-seed archive: when running multi-seed, rename benchmark/results
+    # to benchmark/results_seed<N> and clear clone-side artefacts so the next
+    # seed retrains from scratch with a different RNG stream.
+    if ($isMultiSeed) {
+        $resultsDir  = Join-Path $ScriptRoot "benchmark\results"
+        $seedArchive = Join-Path $ScriptRoot "benchmark\results_seed$seedVal"
+        if (Test-Path $seedArchive) {
+            Remove-Item -LiteralPath $seedArchive -Recurse -Force
+        }
+        if (Test-Path $resultsDir) {
+            Move-Item -LiteralPath $resultsDir -Destination $seedArchive
+            Write-OK "Archived seed $seedVal results -> benchmark/results_seed$seedVal"
+        }
+        $seedArchives += $seedArchive
+
+        # Clean clones so next seed retrains. (Keep simulators, clones dir,
+        # Gradle caches; just wipe per-seed training/benchmark artefacts.)
+        foreach ($p in $Profiles) {
+            $cd = Join-Path $ClonesRoot $p
+            $cb = Join-Path $cd "benchmark\results"
+            if (Test-Path $cb) { Remove-Item -LiteralPath $cb -Recurse -Force -ErrorAction SilentlyContinue }
+            Get-ChildItem -Path $cd -Filter "qtable_*.csv"  -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+            Get-ChildItem -Path $cd -Filter "learned_*.ttl" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+            Get-ChildItem -Path $cd -Filter "metrics_*.csv" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+        Get-ChildItem -Path $ScriptRoot -Filter "qtable_*.csv"  -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $ScriptRoot -Filter "learned_*.ttl" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+    } # end foreach seed
+
+    # ════════════════════════════════════════════════════════════════════════
+    # Phase H — Analysis (orchestrator). Single invocation across all seeds.
+    # ════════════════════════════════════════════════════════════════════════
+    if (-not $SkipBenchmark) {
         Write-Header "Phase H — Sweep analysis report"
 
+        $analysisArgs = @("analysis\sweep_report.py")
+        if ($isMultiSeed) { $analysisArgs += @("--seeds-mode") }
         if ($PythonCmd -eq "py") {
-            & py -3 "analysis\sweep_report.py"
+            & py -3 @analysisArgs
         } else {
-            & $PythonCmd "analysis\sweep_report.py"
+            & $PythonCmd @analysisArgs
         }
         if ($LASTEXITCODE -eq 0) {
             Write-OK "Analysis complete"
@@ -696,6 +1072,7 @@ try {
     Write-OK "Orchestrator log   : $LogFile"
 
 } catch {
+    $script:HadFatalError = $true
     Write-Fail "Fatal error: $_"
     Write-Fail $_.ScriptStackTrace
 
@@ -723,4 +1100,7 @@ try {
         $LogStream.Flush(); $LogStream.Dispose()
     }
     if ($_logFs) { $_logFs.Dispose() }
+    if ($script:HadFatalError) {
+        exit 1
+    }
 }
