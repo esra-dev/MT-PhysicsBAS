@@ -1,0 +1,21 @@
+/*
+  MT-Esra: Benchmark Agent
+  
+  JaCaMo Project File — execution-phase benchmark comparison.
+  
+  To run: ./gradlew taskBench  (while the Node-RED simulator is running)
+  
+  Before running:
+    1. Ensure the Node-RED simulator is running (port 1881, simulator_flow_custom.json)
+    2. For ql_false / ql_true modes, ensure the corresponding
+       qtable_final_stereotypes_false.csv / qtable_final_stereotypes_true.csv exists
+    3. Edit src/agt/illuminance_controller_agent_bench.asl:
+       - Uncomment the desired bench_mode belief
+       - Run once per mode; output: benchmark_results_<mode>.csv
+*/
+
+mas lab_bench {
+
+    agent illuminance_controller_agent_bench
+
+}

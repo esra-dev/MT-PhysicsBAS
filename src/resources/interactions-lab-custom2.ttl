@@ -1,0 +1,163 @@
+@prefix td:     <https://www.w3.org/2019/wot/td#> .
+@prefix hctl:   <https://www.w3.org/2019/wot/hypermedia#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix eve:    <http://w3id.org/eve#> .
+@prefix wotsec: <https://www.w3.org/2019/wot/security#> .
+@prefix js:     <https://www.w3.org/2019/wot/json-schema#> .
+@prefix htv:    <http://www.w3.org/2011/http#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+# ===========================================================================
+# WoT Thing Description — Custom2 4-Zone Lab (port 1882)
+# ===========================================================================
+# 4 zones (2x2 grid), 4 task lights, 4 blinds, 3 shared luminaires
+# (Spotlight = north-row, SpotlightCD = south-row, CorridorLight = all),
+# 4 dummy radiators + 4 temp sensors. State JSON shape includes Z1..Z4
+# Level / Light / Blinds / Radiator / Temp + Sunshine + EnergyCost.
+# ===========================================================================
+
+<urn:mt-esra:interactions-lab-custom2> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
+
+    td:title "The lab of the Interactions team – Custom2 4-Zone Simulation" ;
+    td:hasSecurityConfiguration [ a wotsec:NoSecurityScheme ] ;
+    td:hasBase <http://localhost:1882/was/rl/> ;
+
+    td:hasPropertyAffordance [
+        a td:PropertyAffordance, <https://example.org/was#Status>, js:ObjectSchema ;
+        td:name "Status" ;
+        dct:title "Read the lab status" ;
+        td:hasForm [
+            htv:methodName "GET" ;
+            hctl:hasTarget <http://localhost:1882/was/rl/status> ;
+            hctl:forContentType "application/json" ;
+            hctl:hasOperationType td:readProperty
+        ] ;
+        td:isObservable false ;
+        js:properties
+            [ a js:NumberSchema,  <http://example.org/was#Z1Level>      ; js:propertyName "Z1Level"      ],
+            [ a js:NumberSchema,  <http://example.org/was#Z2Level>      ; js:propertyName "Z2Level"      ],
+            [ a js:NumberSchema,  <http://example.org/was#Z3Level>      ; js:propertyName "Z3Level"      ],
+            [ a js:NumberSchema,  <http://example.org/was#Z4Level>      ; js:propertyName "Z4Level"      ],
+            [ a js:BooleanSchema, <http://example.org/was#Z1Light>      ; js:propertyName "Z1Light"      ],
+            [ a js:BooleanSchema, <http://example.org/was#Z2Light>      ; js:propertyName "Z2Light"      ],
+            [ a js:BooleanSchema, <http://example.org/was#Z3Light>      ; js:propertyName "Z3Light"      ],
+            [ a js:BooleanSchema, <http://example.org/was#Z4Light>      ; js:propertyName "Z4Light"      ],
+            [ a js:BooleanSchema, <http://example.org/was#Z1Blinds>     ; js:propertyName "Z1Blinds"     ],
+            [ a js:BooleanSchema, <http://example.org/was#Z2Blinds>     ; js:propertyName "Z2Blinds"     ],
+            [ a js:BooleanSchema, <http://example.org/was#Z3Blinds>     ; js:propertyName "Z3Blinds"     ],
+            [ a js:BooleanSchema, <http://example.org/was#Z4Blinds>     ; js:propertyName "Z4Blinds"     ],
+            [ a js:BooleanSchema, <http://example.org/was#Spotlight>    ; js:propertyName "Spotlight"    ],
+            [ a js:BooleanSchema, <http://example.org/was#SpotlightCD>  ; js:propertyName "SpotlightCD"  ],
+            [ a js:BooleanSchema, <http://example.org/was#CorridorLight>; js:propertyName "CorridorLight"],
+            [ a js:BooleanSchema, <http://example.org/was#Z1Radiator>   ; js:propertyName "Z1Radiator"   ],
+            [ a js:BooleanSchema, <http://example.org/was#Z2Radiator>   ; js:propertyName "Z2Radiator"   ],
+            [ a js:BooleanSchema, <http://example.org/was#Z3Radiator>   ; js:propertyName "Z3Radiator"   ],
+            [ a js:BooleanSchema, <http://example.org/was#Z4Radiator>   ; js:propertyName "Z4Radiator"   ],
+            [ a js:NumberSchema,  <http://example.org/was#Z1Temp>       ; js:propertyName "Z1Temp"       ],
+            [ a js:NumberSchema,  <http://example.org/was#Z2Temp>       ; js:propertyName "Z2Temp"       ],
+            [ a js:NumberSchema,  <http://example.org/was#Z3Temp>       ; js:propertyName "Z3Temp"       ],
+            [ a js:NumberSchema,  <http://example.org/was#Z4Temp>       ; js:propertyName "Z4Temp"       ],
+            [ a js:NumberSchema,  <http://example.org/was#Sunshine>     ; js:propertyName "Sunshine"     ],
+            [ a js:NumberSchema,  <http://example.org/was#TotalEnergyCost> ; js:propertyName "TotalEnergyCost" ],
+            [ a js:NumberSchema,  <http://example.org/was#EnergyCost>   ; js:propertyName "EnergyCost"   ],
+            [ a js:NumberSchema,  <http://example.org/was#Hour>         ; js:propertyName "Hour"         ]
+    ] ;
+
+    td:hasActionAffordance
+        # ── Per-zone task lights ───────────────────────────────────────────
+        [ a td:ActionAffordance, <http://example.org/was#SetZ1Light> ;
+          td:name "Control Lights Z1" ; dct:title "Turn on and off the lights in Z1" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z1Light" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ2Light> ;
+          td:name "Control Lights Z2" ; dct:title "Turn on and off the lights in Z2" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z2Light" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ3Light> ;
+          td:name "Control Lights Z3" ; dct:title "Turn on and off the lights in Z3" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z3Light" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ4Light> ;
+          td:name "Control Lights Z4" ; dct:title "Turn on and off the lights in Z4" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z4Light" ] ]
+        ],
+        # ── Per-zone blinds ────────────────────────────────────────────────
+        [ a td:ActionAffordance, <http://example.org/was#SetZ1Blinds> ;
+          td:name "Control Blinds Z1" ; dct:title "Raise and lower the blinds in Z1" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z1Blinds" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ2Blinds> ;
+          td:name "Control Blinds Z2" ; dct:title "Raise and lower the blinds in Z2" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z2Blinds" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ3Blinds> ;
+          td:name "Control Blinds Z3" ; dct:title "Raise and lower the blinds in Z3" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z3Blinds" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ4Blinds> ;
+          td:name "Control Blinds Z4" ; dct:title "Raise and lower the blinds in Z4" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z4Blinds" ] ]
+        ],
+        # ── Shared luminaires ──────────────────────────────────────────────
+        [ a td:ActionAffordance, <http://example.org/was#SetSpotlight> ;
+          td:name "Control Spotlight (north row)" ;
+          dct:title "Turn on/off the shared north-row spotlight (affects Z1 and Z2)" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Spotlight" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetSpotlightCD> ;
+          td:name "Control Spotlight (south row)" ;
+          dct:title "Turn on/off the shared south-row spotlight (affects Z3 and Z4)" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "SpotlightCD" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetCorridorLight> ;
+          td:name "Control Corridor Light" ;
+          dct:title "Turn on/off the corridor light (visible from all 4 zones)" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "CorridorLight" ] ]
+        ],
+        # ── Dummy radiators (off DV; kept for parity) ──────────────────────
+        [ a td:ActionAffordance, <http://example.org/was#SetZ1Radiator> ;
+          td:name "Control Radiator Z1" ; dct:title "Turn on and off the radiator in Z1" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z1Radiator" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ2Radiator> ;
+          td:name "Control Radiator Z2" ; dct:title "Turn on and off the radiator in Z2" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z2Radiator" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ3Radiator> ;
+          td:name "Control Radiator Z3" ; dct:title "Turn on and off the radiator in Z3" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z3Radiator" ] ]
+        ],
+        [ a td:ActionAffordance, <http://example.org/was#SetZ4Radiator> ;
+          td:name "Control Radiator Z4" ; dct:title "Turn on and off the radiator in Z4" ;
+          td:hasForm [ htv:methodName "POST" ; hctl:hasTarget <http://localhost:1882/was/rl/action> ;
+                       hctl:forContentType "application/json" ; hctl:hasOperationType td:invokeAction ] ;
+          td:hasInputSchema [ a js:ObjectSchema ; js:properties [ a js:BooleanSchema ; js:propertyName "Z4Radiator" ] ]
+        ] .

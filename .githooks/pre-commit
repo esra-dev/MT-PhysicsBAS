@@ -1,0 +1,41 @@
+#!/bin/sh
+# Phase 12 #10 — pre-commit warning hook.
+# Warns when raw Q-tables / learned-stereotype TTLs at the workspace root are
+# about to be committed; these should be versioned via scripts/version_artifacts.ps1
+# into the dedicated `results` branch instead.
+#
+# Enable with:  git config core.hooksPath .githooks
+
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(qtable_(initial|final)_stereotypes_.*\.csv|learned_stereotypes_.*\.ttl|benchmark_results_.*\.csv|metrics_stereotypes_.*\.csv|iv_stats_stereotypes_.*\.json)$' || true)
+
+if [ -n "$staged" ]; then
+    echo ""
+    echo "WARN: pre-commit detected raw learned artifacts staged for commit on this branch:"
+    echo "$staged" | sed 's/^/  - /'
+    echo ""
+    echo "  These should normally be versioned via:"
+    echo "    pwsh -File scripts/version_artifacts.ps1 -RunMode <mode> -Profiles <list>"
+    echo ""
+
+    # Only prompt when stdin is a TTY. Git runs hooks with stdin attached to
+    # /dev/null by default, which would make `read` instantly return empty
+    # and falsely abort the commit. In that case, warn and let the commit
+    # proceed (override via MT_ESRA_BLOCK_RAW_ARTIFACTS=1).
+    if [ -t 0 ]; then
+        echo "  Continue anyway? [y/N]"
+        read -r ans
+        case "$ans" in
+            y|Y|yes|YES) ;;
+            *) echo "Aborted by pre-commit hook."; exit 1 ;;
+        esac
+    elif [ "${MT_ESRA_BLOCK_RAW_ARTIFACTS:-0}" = "1" ]; then
+        echo "  MT_ESRA_BLOCK_RAW_ARTIFACTS=1 set; aborting non-interactive commit."
+        exit 1
+    else
+        echo "  (non-interactive shell; warning only — set MT_ESRA_BLOCK_RAW_ARTIFACTS=1 to enforce)"
+    fi
+fi
+
+exit 0

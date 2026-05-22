@@ -1,0 +1,271 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick:  <https://brickschema.org/schema/Brick#> .
+@prefix elem:   <http://w3id.org/elementary#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
+@prefix sosa:   <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:    <http://example.org/was/lab#> .
+@prefix ws:     <http://example.org/was/lab/stereotypes#> .
+
+
+# ===========================================================================
+# Custom2 Lab — 4-zone extension (additive on top of lab-ontology.ttl)
+# ===========================================================================
+# This file ADDS Zones 3 and 4 (full equipment), two extra shared luminaires,
+# and the full 4x4 illuminance bleed matrix. Loaded alongside the base
+# lab-ontology.ttl so all reusable abstractions (PhysicalMechanisms,
+# ProcessVariables, Stereotypes, Streams) come from the base.
+#
+# Layout (2x2 grid):     Z1 | Z2
+#                        ---+---
+#                        Z3 | Z4
+#
+# Existing lab:Spotlight stays as the "AB" north-row spotlight (already
+# brick:isLocatedIn Z1, Z2). This file adds:
+#   - lab:SpotlightCD     — south-row spotlight (Z3 + Z4)
+#   - lab:CorridorLight   — corridor lamp visible to all 4 zones
+#
+# Note on RoomStereotype: the base lab-ontology.ttl declares lab:Lab as the
+# single ws:RoomStereotype that hosts the workstations.  Z3/Z4 are added to
+# the same lab:Lab here (brick:isLocatedIn lab:Lab below) and therefore
+# inherit that stereotype — no extra ws:RoomStereotype triples are needed.
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Workstations (Zones 3 & 4) — Zone1, Zone2 are declared in the base file
+# ---------------------------------------------------------------------------
+
+lab:Zone3 a lab:Workstation ;
+    rdfs:label "Workstation 3 (south-west)" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 3 ;
+    elem:isPartOf  lab:IndoorLightingStream .
+
+lab:Zone4 a lab:Workstation ;
+    rdfs:label "Workstation 4 (south-east)" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 4 ;
+    elem:isPartOf  lab:IndoorLightingStream .
+
+
+# ---------------------------------------------------------------------------
+# Equipment for Z3 & Z4 — task lights, blinds, light sensors,
+#                         dummy radiators + temp sensors (off DV)
+# ---------------------------------------------------------------------------
+
+lab:CeilingLight_Z3 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Task light – Workstation 3" ;
+    brick:isLocatedIn lab:Zone3 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:CeilingLight_Z4 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Task light – Workstation 4" ;
+    brick:isLocatedIn lab:Zone4 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:Blind_Z3 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 3" ;
+    brick:isLocatedIn lab:Zone3 ;
+    elem:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:Blind_Z4 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 4" ;
+    brick:isLocatedIn lab:Zone4 ;
+    elem:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:LightSensor_Z3 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Light sensor – Workstation 3" ;
+    brick:isLocatedIn lab:Zone3 ;
+    sosa:observes     lab:IndoorIlluminance_Z3 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:LightSensor_Z4 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Light sensor – Workstation 4" ;
+    brick:isLocatedIn lab:Zone4 ;
+    sosa:observes     lab:IndoorIlluminance_Z4 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:Radiator_Z3 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Radiator – Workstation 3 (dummy, not in DV)" ;
+    brick:isLocatedIn lab:Zone3 ;
+    elem:hasBehavioralStereotype ws:RadiatorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z3 .
+
+lab:Radiator_Z4 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Radiator – Workstation 4 (dummy, not in DV)" ;
+    brick:isLocatedIn lab:Zone4 ;
+    elem:hasBehavioralStereotype ws:RadiatorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z4 .
+
+lab:TempSensor_Z3 a brick:Temperature_Sensor, elem:Sensor ;
+    rdfs:label "Temperature sensor – Workstation 3" ;
+    brick:isLocatedIn lab:Zone3 ;
+    sosa:observes     lab:IndoorTemperature_Z3 ;
+    elem:hasBehavioralStereotype ws:TemperatureSensorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z3 .
+
+lab:TempSensor_Z4 a brick:Temperature_Sensor, elem:Sensor ;
+    rdfs:label "Temperature sensor – Workstation 4" ;
+    brick:isLocatedIn lab:Zone4 ;
+    sosa:observes     lab:IndoorTemperature_Z4 ;
+    elem:hasBehavioralStereotype ws:TemperatureSensorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z4 .
+
+
+# ---------------------------------------------------------------------------
+# Shared luminaires for the south row + corridor (NEW)
+# Existing lab:Spotlight in base file is reused as the "north" shared light.
+# ---------------------------------------------------------------------------
+
+lab:SpotlightCD a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Shared south-row spotlight (Z3 + Z4)" ;
+    brick:isLocatedIn lab:Zone3 ;
+    brick:isLocatedIn lab:Zone4 ;
+    elem:hasBehavioralStereotype ws:SpotlightStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:CorridorLight a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Corridor luminaire visible from all 4 workstations" ;
+    brick:isLocatedIn lab:Zone1 ;
+    brick:isLocatedIn lab:Zone2 ;
+    brick:isLocatedIn lab:Zone3 ;
+    brick:isLocatedIn lab:Zone4 ;
+    elem:isPartOf      lab:IndoorLightingStream .
+    # NOTE: deliberately no elem:hasBehavioralStereotype — agents must learn
+    # CorridorLight's effect via StereotypeLearner (W1 ablation).
+
+
+# ---------------------------------------------------------------------------
+# Streams (per-zone thermal streams for Z3, Z4 — analogous to base file's
+# IndoorThermalStream_Z1 / _Z2)
+# ---------------------------------------------------------------------------
+
+lab:IndoorThermalStream_Z3 a elem:Stream ;
+    rdfs:label "Indoor thermal stream – Workstation 3" ;
+    elem:hasStreamKind ws:IndoorThermalStream .
+
+lab:IndoorThermalStream_Z4 a elem:Stream ;
+    rdfs:label "Indoor thermal stream – Workstation 4" ;
+    elem:hasStreamKind ws:IndoorThermalStream .
+
+
+# ---------------------------------------------------------------------------
+# Sun → blind feeds for Z3, Z4 (Z1, Z2 already declared in base)
+# ---------------------------------------------------------------------------
+
+lab:Outside  brick:feeds  lab:Blind_Z3 .
+lab:Outside  brick:feeds  lab:Blind_Z4 .
+
+
+# ---------------------------------------------------------------------------
+# 4x4 illuminance bleed matrix
+#   Each task light & blind feeds ALL four light sensors (full coupling).
+#   Base file already declared the 8 arcs for the {Z1,Z2}x{Z1,Z2} sub-block.
+#   This file adds the remaining 24 arcs.
+# ---------------------------------------------------------------------------
+
+# Z1 task light + blind → Z3, Z4 sensors (cross-row)
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z3 .
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z4 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z3 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z4 .
+
+# Z2 task light + blind → Z3, Z4 sensors (cross-row)
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z3 .
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z4 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z3 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z4 .
+
+# Z3 task light + blind → all 4 sensors
+lab:CeilingLight_Z3  brick:feeds  lab:LightSensor_Z1 .
+lab:CeilingLight_Z3  brick:feeds  lab:LightSensor_Z2 .
+lab:CeilingLight_Z3  brick:feeds  lab:LightSensor_Z3 .
+lab:CeilingLight_Z3  brick:feeds  lab:LightSensor_Z4 .
+lab:Blind_Z3         brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z3         brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z3         brick:feeds  lab:LightSensor_Z3 .
+lab:Blind_Z3         brick:feeds  lab:LightSensor_Z4 .
+
+# Z4 task light + blind → all 4 sensors
+lab:CeilingLight_Z4  brick:feeds  lab:LightSensor_Z1 .
+lab:CeilingLight_Z4  brick:feeds  lab:LightSensor_Z2 .
+lab:CeilingLight_Z4  brick:feeds  lab:LightSensor_Z3 .
+lab:CeilingLight_Z4  brick:feeds  lab:LightSensor_Z4 .
+lab:Blind_Z4         brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z4         brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z4         brick:feeds  lab:LightSensor_Z3 .
+lab:Blind_Z4         brick:feeds  lab:LightSensor_Z4 .
+
+# Heating arcs (dummy, off DV)
+lab:Radiator_Z3  brick:feeds  lab:TempSensor_Z3 .
+lab:Radiator_Z4  brick:feeds  lab:TempSensor_Z4 .
+
+
+# ---------------------------------------------------------------------------
+# Observed properties for Z3, Z4
+# ---------------------------------------------------------------------------
+
+lab:IndoorIlluminance_Z3 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 3" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+lab:IndoorIlluminance_Z4 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 4" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+lab:IndoorTemperature_Z3 a sosa:ObservableProperty ;
+    rdfs:label "Indoor temperature – Workstation 3" ;
+    qudt:hasQuantityKind qudtqk:ThermodynamicTemperature .
+
+lab:IndoorTemperature_Z4 a sosa:ObservableProperty ;
+    rdfs:label "Indoor temperature – Workstation 4" ;
+    qudt:hasQuantityKind qudtqk:ThermodynamicTemperature .
+
+
+# ---------------------------------------------------------------------------
+# Component actions for the new actuators
+# ---------------------------------------------------------------------------
+
+ws:SetZ3Light_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ3Light_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z3 elem:hasComponentAction ws:SetZ3Light_ON, ws:SetZ3Light_OFF .
+
+ws:SetZ4Light_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ4Light_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z4 elem:hasComponentAction ws:SetZ4Light_ON, ws:SetZ4Light_OFF .
+
+ws:SetZ3Blinds_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ3Blinds_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z3 elem:hasComponentAction ws:SetZ3Blinds_ON, ws:SetZ3Blinds_OFF .
+
+ws:SetZ4Blinds_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ4Blinds_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z4 elem:hasComponentAction ws:SetZ4Blinds_ON, ws:SetZ4Blinds_OFF .
+
+ws:SetSpotlightCD_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetSpotlightCD_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:SpotlightCD elem:hasComponentAction ws:SetSpotlightCD_ON, ws:SetSpotlightCD_OFF .
+
+ws:SetCorridorLight_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetCorridorLight_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CorridorLight elem:hasComponentAction ws:SetCorridorLight_ON, ws:SetCorridorLight_OFF .
+
+ws:SetZ3Radiator_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ3Radiator_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Radiator_Z3 elem:hasComponentAction ws:SetZ3Radiator_ON, ws:SetZ3Radiator_OFF .
+
+ws:SetZ4Radiator_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ4Radiator_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Radiator_Z4 elem:hasComponentAction ws:SetZ4Radiator_ON, ws:SetZ4Radiator_OFF .

@@ -1,0 +1,17 @@
+/*
+  MT-Esra: Q-Learning Illuminance Controller Agent
+  
+  JaCaMo Project File — Q-Learning variant.
+  
+  To run: ./gradlew taskQl  (while the Node-RED simulator is running)
+  
+  Switch between stereotype and standard Q-learning by editing:
+    src/agt/illuminance_controller_agent_ql.asl
+    → belief: use_stereotypes(true/false)
+*/
+
+mas lab_ql {
+
+    agent illuminance_controller_agent_ql
+
+}

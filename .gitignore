@@ -14,6 +14,7 @@ replay_pid*
 # Logs and runtime dumps
 *.log
 logs/
+log/
 *.out
 
 # IDE/editor
@@ -37,3 +38,37 @@ Desktop.ini
 *.tmp
 *.swp
 *~
+
+# Generated experiment/runtime artifacts
+.node-red-custom*/
+benchmark/results/
+benchmark/results.archive_*/
+bench_step_log_*.csv
+benchmark_results_*.csv
+metrics_stereotypes_*.csv
+coverage_stereotypes_*.csv
+first_goal_stereotypes_*.csv
+learned_stereotypes_*.ttl
+iv_stats_*.json
+qtable_*.csv
+nr_custom*_*.txt
+java_pid*.hprof
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Stray work-in-progress markers (do not commit)
+*.TODO
+
+# Parallel orchestrator clone tree (sibling of project root)
+../*-clones/
+
+# Analysis generated outputs
+analysis/out/
+
+# Build output resource copies
+bin/
+
+# Research papers / PDFs
+*.pdf

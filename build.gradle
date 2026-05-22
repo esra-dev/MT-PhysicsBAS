@@ -7,20 +7,29 @@
    Gradle build file for JaCaMo Application
 */
 
-defaultTasks 'run'
+defaultTasks 'task'
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-version '1.0'
-group   'org.jacamo'
+version = '1.0'
+group = 'org.jacamo'
 
 repositories {
     mavenCentral()
 
-    maven { url "https://raw.githubusercontent.com/jacamo-lang/mvn-repo/master" }
-    maven { url "https://repo.gradle.org/gradle/libs-releases" }
-    maven { url 'https://jitpack.io' }
+    maven { url = uri('https://raw.githubusercontent.com/jacamo-lang/mvn-repo/master') }
+    maven { url = uri('https://repo.gradle.org/gradle/libs-releases') }
+    maven { url = uri('https://jitpack.io') }
+}
+
+// Keep Logback as the single SLF4J runtime provider. JaCaMo / WoT transitive
+// dependencies also bring slf4j-nop and reload4j bindings, which makes SLF4J
+// warn on stderr during preflight and can trip the PowerShell runner.
+configurations.configureEach {
+    exclude group: 'org.slf4j', module: 'slf4j-nop'
+    exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+    exclude group: 'org.slf4j', module: 'slf4j-reload4j'
 }
 
 dependencies {
@@ -33,6 +42,28 @@ dependencies {
     // Apache Jena ARQ: RDF model loading + SPARQL 1.1 query engine
     // Used by OntologyArtifact to load lab-ontology.ttl and run SPARQL SELECT queries
     implementation 'org.apache.jena:jena-arq:4.10.0'
+
+    // ── Phase 12 #4: structured logging via SLF4J + Logback ─────────────
+    // logback-classic implements SLF4J; logstash-encoder emits JSON lines
+    // for ingestion by ELK / Loki / Splunk; jul-to-slf4j routes the heavy
+    // java.util.logging usage in env/tools/* through the same pipeline.
+    implementation 'ch.qos.logback:logback-classic:1.5.6'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    implementation 'org.slf4j:jul-to-slf4j:2.0.13'
+
+    // ── Phase 12 #2: unit-test dependencies ─────────────────────────────
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+}
+
+// JUnit 5 test wiring (Phase 12 #2). Tests live under src/test/java; if the
+// directory is empty, the test task is simply a no-op.
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        showStandardStreams = false
+    }
 }
 
 sourceSets {
@@ -48,17 +79,326 @@ sourceSets {
             srcDir 'src/resources'
         }
     }
+    test {
+        java {
+            srcDir 'src/test/java'
+        }
+        resources {
+            srcDir 'src/test/resources'
+        }
+    }
 }
 
 task task (type: JavaExec, dependsOn: 'classes') {
-    description 'runs the application for task'
-    group ' JaCaMo'
-    main = 'jacamo.infra.JaCaMoLauncher'
+    description = 'runs the application for task'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
     args 'task.jcm'
     classpath sourceSets.main.runtimeClasspath
+}
+
+// Q-Learning agent task.
+// Switch stereotype mode:  edit use_stereotypes(true/false) in
+//   src/agt/illuminance_controller_agent_ql.asl
+// Run while Node-RED simulator is running (port 1881 for custom lab).
+task taskQl (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the Q-learning illuminance controller agent'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_ql.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pprofile=<id> sets the JVM system property active.profile, which the
+    // QL agent reads at startup via tools.jia.system_prop and uses to
+    // override the default active_profile/1 belief (#7). No .asl mutation
+    // required.
+    doFirst {
+        def overrideProfile = project.findProperty('profile')
+        if (overrideProfile) {
+            systemProperty 'active.profile', overrideProfile
+            println "taskQl: active.profile=${overrideProfile}"
+        }
+    }
+}
+
+// Benchmark agent task.
+// Runs all three agent modes against 20 fixed scenarios x 5 runs.
+// Set bench_mode belief in illuminance_controller_agent_bench.asl before running,
+// or override transiently with -Pmode=<rule_based|ql_false|ql_true>.
+// Run while Node-RED simulator is running (port 1881, simulator_flow_custom.json).
+task taskBench (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the execution-phase benchmark (rule-based vs ql_false vs ql_true)'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_bench.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pmode=<mode> sets the JVM system property bench.mode, which the bench
+    // agent reads at startup via tools.jia.system_prop and uses to override
+    // the default bench_mode/1 belief (#7). No .asl mutation required.
+    doFirst {
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            systemProperty 'bench.mode', overrideMode
+            println "taskBench: bench.mode=${overrideMode}"
+        }
+    }
 }
 
 clean {
     delete 'bin'
     delete 'build'
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 12 #1 — Forward simulator HTTP tuning props from -P/-D into the
+// child JVMs that run JaCaMo. Sourced from config/run_config.json by
+// run_full_project.ps1 (which appends -Psim.http.*=… to the gradle call).
+// LabEnvironment.init reads them via System.getProperty.
+// ─────────────────────────────────────────────────────────────────────────
+def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries','sim.http.backoffMs',
+                 'reward.clip','stereo.priorScale','stereo.priorDecayEpisodes','stereo.priorDecayFloor',
+                 // Research extensions: PBRS, adaptive trust, per-run seed.
+                 'reward.shaping','stereo.adaptiveTrust','stereo.adaptiveTrust.minSamples','stereo.adaptiveTrust.floor',
+                 'run.seed']
+tasks.withType(JavaExec).configureEach {
+    // QLearner allocates per-zone Q-tables of size nStates*nActions (for
+    // custom2 stereotype init: ~22 M doubles ~= 180 MB) plus serialisation
+    // buffers and the StereotypeLearner Welford accumulators. Pin a generous
+    // heap (4g) so saveQTable + episode loops never run into GC pressure.
+    // Empirically with 2g the JVM exited cleanly mid-training around episode
+    // 15-20 (Jason BaseLocalMAS.waitEnd() returned because all agent
+    // intentions had been cleared by an OOM caught silently inside CArtAgO's
+    // worker thread). 4g leaves comfortable headroom.
+    maxHeapSize = '4g'
+    // Surface any OOM clearly instead of letting it be swallowed.
+    jvmArgs '-XX:+HeapDumpOnOutOfMemoryError', "-XX:HeapDumpPath=${rootDir}/log"
+    // Keep JaCaMoLauncher's stdin reader alive: by default Gradle JavaExec
+    // attaches a closed input stream which can cause launcher utilities that
+    // read System.in to see immediate EOF.
+    standardInput = System.in
+    doFirst {
+        _httpKeys.each { key ->
+            def val = project.findProperty(key)
+            if (val != null && val.toString() != '') {
+                systemProperty key, val.toString()
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 5 -- full sweep harness
+//
+// Runs the benchmark across all (lab x mode) cells and archives each cell's
+// CSV/JSONL artefacts under benchmark/results/<profile>/<mode>/. The driver
+// flips two belief atoms before each cell:
+//   - active_profile("<profile>") in src/agt/lab_profiles.asl
+//   - bench_mode("<mode>")        in src/agt/illuminance_controller_agent_bench.asl
+//
+// Profiles: custom2..custom7   (4-zone weakness labs)
+// Modes:    rule_based, ql_false, ql_true
+//
+// Usage:
+//   gradlew runFullSweep                 # all profiles x all modes
+//   gradlew runFullSweep -Pprofiles=custom2,custom4 -Pmodes=ql_true
+// ─────────────────────────────────────────────────────────────────────────
+task runFullSweep(dependsOn: 'classes') {
+    description = 'Phase 5: sweep benchmark over (profile x mode) cells'
+    group = ' JaCaMo'
+
+    doLast {
+        def profileList = (project.findProperty('profiles')
+            ?: 'custom2,custom3,custom4,custom5,custom6,custom7')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+        def modeList    = (project.findProperty('modes')
+                ?: 'rule_based,ql_false,ql_true')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+
+        def resultsRoot = file('benchmark/results')
+        resultsRoot.mkdirs()
+
+        profileList.each { profile ->
+            modeList.each { mode ->
+                println "─────────────────────────────────────────────"
+                println " runFullSweep: profile=${profile} mode=${mode}"
+                println "─────────────────────────────────────────────"
+
+                // Pass overrides via system properties (#7). The agents
+                // read these via tools.jia.system_prop at startup and
+                // rebind active_profile/1 and bench_mode/1 accordingly,
+                // so the .asl source files are no longer mutated.
+                javaexec {
+                    mainClass   = 'jacamo.infra.JaCaMoLauncher'
+                    args        = ['task_bench.jcm']
+                    classpath   = sourceSets.main.runtimeClasspath
+                    systemProperty 'active.profile', profile
+                    systemProperty 'bench.mode',     mode
+                }
+
+                // Archive output artefacts (whichever exist for this mode).
+                def cellDir = file("benchmark/results/${profile}/${mode}")
+                cellDir.mkdirs()
+                fileTree(projectDir).matching {
+                    include 'benchmark_results_*.csv'
+                    include 'bench_step_log_*.csv'
+                    include 'metrics_stereotypes_*.csv'
+                    include 'iv_stats_stereotypes_*.json'
+                    include 'qtable_final_stereotypes_*.csv'
+                    include 'coverage_stereotypes_*.csv'
+                    include 'first_goal_stereotypes_*.csv'
+                    include 'learned_stereotypes_*.ttl'
+                }.each { artefact ->
+                    copy {
+                        from artefact
+                        into cellDir
+                    }
+                }
+            }
+        }
+
+        println "runFullSweep complete. Results under: ${resultsRoot}"
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 12 #6 — preflight & resource validation
+// ─────────────────────────────────────────────────────────────────────────
+
+// validateTurtle: parse every *.ttl under src/resources with Jena and fail
+// the build if any file is syntactically invalid. Useful as a CI gate and
+// as a precondition for the preflight task. Implemented as a JavaExec task
+// (Jena lives on the main runtime classpath, not the buildscript classpath).
+task validateTurtle(type: JavaExec, dependsOn: 'classes') {
+    description = 'Validates every Turtle file under src/resources parses with Jena.'
+    group = ' MT-Esra'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.TurtleValidator'
+    args 'src/resources'
+}
+
+// preflight: lightweight sanity checks before a long sweep. Validates that
+// each requested profile has the expected ttl, ontology, and scenario JSON
+// files, and that simulator ports respond to /health (unless -PskipSimProbe
+// is passed). Run via:
+//   gradlew preflight -Pprofiles=custom2,custom3
+//   gradlew preflight -Pprofiles=custom2 -PskipSimProbe
+task preflight(dependsOn: 'validateTurtle') {
+    description = 'Phase 12 #6: validate profiles, scenarios, ontology, and simulator availability.'
+    group = ' MT-Esra'
+
+    doLast {
+        def profileList = (project.findProperty('profiles')
+            ?: 'custom2,custom3,custom4,custom5,custom6,custom7')
+                .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+        boolean skipSim = project.hasProperty('skipSimProbe')
+
+        // #1: prefer config/run_config.json as single source of truth for
+        // the simulator port map. Falls back to the historical literal so
+        // checkouts without the config file still run.
+        def portMap = [
+            custom2: 1882, custom3: 1883, custom4: 1884,
+            custom5: 1885, custom6: 1886, custom7: 1887
+        ]
+        def runCfg = file('config/run_config.json')
+        if (runCfg.exists()) {
+            try {
+                def text = runCfg.getText('UTF-8')
+                if (text.startsWith('\uFEFF')) { text = text.substring(1) }
+                def parsed = new groovy.json.JsonSlurper().parseText(text)
+                if (parsed.simulator_port_map instanceof Map) {
+                    def loaded = [:]
+                    parsed.simulator_port_map.each { k, v -> loaded[k.toString()] = v as int }
+                    if (!loaded.isEmpty()) { portMap = loaded }
+                }
+            } catch (Throwable t) {
+                println "      (warn) failed to read simulator_port_map from ${runCfg.path}: ${t.message}"
+            }
+        }
+
+        def errors = []
+        def passed = []
+
+        profileList.each { profile ->
+            def profileErrors = []
+
+            // 1. TD interactions file (per-profile or shared 'custom').
+            def tdRes = file("src/resources/interactions-lab-${profile}.ttl")
+            def tdAlt = file("src/resources/interactions-lab-custom.ttl")
+            if (!tdRes.exists() && !tdAlt.exists()) {
+                profileErrors << "missing TD: src/resources/interactions-lab-${profile}.ttl"
+            }
+
+            // 2. Scenario JSON files. train_scenarios_<profile>.json is
+            // optional (only custom2 + a 'full' aggregate exist on disk; other
+            // profiles share train_scenarios_full.json or train_scenarios.json).
+            def scen      = file("benchmark/scenarios_${profile}.json")
+            def trainScen = file("benchmark/train_scenarios_${profile}.json")
+            if (!scen.exists()) profileErrors << "missing scenarios: ${scen.path}"
+            if (!trainScen.exists()) {
+                println "      (info) optional ${trainScen.name} not present — runs use train_scenarios_full.json"
+            }
+
+            // 3. Validate JSON parse where present (BOM-tolerant).
+            [scen, trainScen].each { jf ->
+                if (jf.exists()) {
+                    try {
+                        def text = jf.getText('UTF-8')
+                        if (text.startsWith('\uFEFF')) { text = text.substring(1) }
+                        new groovy.json.JsonSlurper().parseText(text)
+                    } catch (Throwable t) {
+                        profileErrors << "${jf.name} not valid JSON: ${t.message}"
+                    }
+                }
+            }
+
+            // 4. Ontology files. Base files required by all profiles.
+            def ont1 = file("src/resources/lab-ontology.ttl")
+            def ont2 = file("src/resources/wot-mappings.ttl")
+            if (!ont1.exists()) profileErrors << "missing ontology: ${ont1.path}"
+            if (!ont2.exists()) profileErrors << "missing wot mappings: ${ont2.path}"
+
+            // 4b. 4-zone extension ontology and WoT mappings -- required for custom2..custom7.
+            //     These extend lab-ontology.ttl with Z3/Z4, SpotlightCD, CorridorLight,
+            //     and the 13-slot state vector used by all 4-zone weakness profiles.
+            if (profile.startsWith('custom') && profile != 'custom' && profile != 'custom_full_train') {
+                def ont3 = file("src/resources/lab-ontology-custom2.ttl")
+                def ont4 = file("src/resources/wot-mappings-custom2.ttl")
+                if (!ont3.exists()) profileErrors << "missing 4-zone ontology: ${ont3.path}"
+                if (!ont4.exists()) profileErrors << "missing 4-zone wot mappings: ${ont4.path}"
+            }
+
+            // 5. Simulator /health probe (skipped in CI / when sims are down).
+            if (!skipSim && portMap.containsKey(profile)) {
+                int port = portMap[profile]
+                try {
+                    def url = new java.net.URL("http://127.0.0.1:${port}/health")
+                    def conn = (java.net.HttpURLConnection) url.openConnection()
+                    conn.setConnectTimeout(2000)
+                    conn.setReadTimeout(2000)
+                    conn.setRequestMethod('GET')
+                    int rc = conn.getResponseCode()
+                    if (rc != 200) profileErrors << "simulator health check :${port} returned HTTP ${rc}"
+                } catch (Throwable t) {
+                    profileErrors << "simulator unreachable :${port} (${t.class.simpleName}: ${t.message})"
+                }
+            }
+
+            if (profileErrors.isEmpty()) {
+                passed << profile
+                println " OK   ${profile}"
+            } else {
+                profileErrors.each { e -> println " FAIL ${profile} - ${e}" }
+                errors.addAll(profileErrors.collect { "[${profile}] ${it}" })
+            }
+        }
+
+        println "--- preflight summary: ${passed.size()}/${profileList.size()} profile(s) passed ---"
+        if (!errors.isEmpty()) {
+            throw new GradleException("preflight: ${errors.size()} check(s) failed.")
+        }
+    }
 }

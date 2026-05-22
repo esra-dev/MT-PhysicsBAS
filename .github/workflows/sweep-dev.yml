@@ -1,0 +1,317 @@
+name: Sweep (dev)
+
+# Full end-to-end pipeline (training + benchmark + analysis) using the
+# dev-mode hyperparameters from config/run_config.json. Parallelised over
+# GitHub Actions matrices: 14 training cells (7 profiles x 2 stereo modes)
+# and 21 benchmark cells (7 profiles x 3 modes). End-to-end wall-clock
+# typically 30-45 min once the Gradle cache is warm.
+#
+# Triggers:
+#   - workflow_dispatch (manual; with optional profile filter)
+#   - schedule          (nightly 02:00 UTC; comment out if not desired)
+
+on:
+  workflow_dispatch:
+    inputs:
+      profiles:
+        description: "Comma-separated profiles (default: all 7)"
+        required: false
+        default: "custom2,custom3,custom4,custom5,custom6,custom7,custom8"
+      publish_results:
+        description: "Push consolidated results to 'results' branch"
+        type: boolean
+        required: false
+        default: true
+  schedule:
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sweep-dev
+  cancel-in-progress: false
+
+env:
+  RUN_MODE: dev
+  PROFILES: ${{ github.event.inputs.profiles || 'custom2,custom3,custom4,custom5,custom6,custom7,custom8' }}
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  # setup: compile once, share build/ + Gradle cache with all matrix cells.
+  # ────────────────────────────────────────────────────────────────────────
+  setup:
+    name: Compile & cache
+    runs-on: ubuntu-latest
+    outputs:
+      profiles_json: ${{ steps.profiles.outputs.json }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Compile classes
+        run: ./gradlew --no-daemon classes
+      - name: Upload compiled build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-classes
+          path: |
+            build/classes
+            build/resources
+            build/generated
+          if-no-files-found: error
+          retention-days: 1
+      - name: Materialise matrix profile list
+        id: profiles
+        shell: bash
+        run: |
+          profs="${{ env.PROFILES }}"
+          json=$(echo "$profs" | tr ',' '\n' | jq -R . | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # train: one matrix cell per (profile, stereo). 14 jobs in dev defaults.
+  # Each cell runs the sequential orchestrator with -OnlyProfiles + -OnlyStereo
+  # so only its assigned simulator starts.
+  # ────────────────────────────────────────────────────────────────────────
+  train:
+    name: train ${{ matrix.profile }} stereo=${{ matrix.stereo }}
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
+        stereo:  ["true", "false"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Run training cell
+        shell: pwsh
+        run: |
+          ./run_full_project.ps1 `
+            -RunMode ${{ env.RUN_MODE }} `
+            -OnlyProfiles ${{ matrix.profile }} `
+            -OnlyStereo ${{ matrix.stereo }} `
+            -SkipBenchmark `
+            -SkipPreflight
+      - name: Upload training artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-${{ matrix.stereo }}
+          path: |
+            qtable_final_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}*.csv
+            qtable_initial_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}*.csv
+            metrics_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.csv
+            iv_stats_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.json
+            coverage_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.csv
+            first_goal_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.csv
+            learned_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.ttl
+            benchmark/results/${{ matrix.profile }}/training_stereo_${{ matrix.stereo }}/**
+            log/train_${{ matrix.profile }}_stereo_${{ matrix.stereo }}.log
+            log/train_${{ matrix.profile }}_stereo_${{ matrix.stereo }}.err.log
+            run_full_project.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ────────────────────────────────────────────────────────────────────────
+  # bench: one matrix cell per (profile, mode). 21 jobs in dev defaults.
+  # Each cell pulls back BOTH stereo training artefacts for its profile
+  # so the QL benchmark can load the appropriate Q-table.
+  # ────────────────────────────────────────────────────────────────────────
+  bench:
+    name: bench ${{ matrix.profile }} mode=${{ matrix.mode }}
+    needs: [setup, train]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
+        mode:    ["rule_based", "ql_false", "ql_true"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Download stereo=true training artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-true
+          path: .
+      - name: Download stereo=false training artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-false
+          path: .
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Run benchmark cell
+        shell: pwsh
+        run: |
+          ./run_full_project.ps1 `
+            -RunMode ${{ env.RUN_MODE }} `
+            -OnlyProfiles ${{ matrix.profile }} `
+            -OnlyModes ${{ matrix.mode }} `
+            -SkipTraining `
+            -SkipPreflight
+      - name: Upload benchmark artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.profile }}-${{ matrix.mode }}
+          path: |
+            benchmark/results/${{ matrix.profile }}/${{ matrix.mode }}/**
+            benchmark_results_${{ matrix.mode }}.csv
+            bench_step_log_${{ matrix.mode }}.csv
+            log/benchmark_sweep.log
+            run_full_project.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ────────────────────────────────────────────────────────────────────────
+  # aggregate: download everything, reconstruct directory layout, run the
+  # Python analysis report, and commit consolidated outputs to the orphan
+  # 'results' branch via the existing scripts/version_artifacts.ps1.
+  # ────────────────────────────────────────────────────────────────────────
+  aggregate:
+    name: Aggregate & publish
+    needs: bench
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # version_artifacts.ps1 inspects HEAD and creates worktree
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis deps
+        run: pip install numpy matplotlib
+      - name: Download all training artefacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: train-*
+          path: _artifacts/train
+      - name: Download all benchmark artefacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          path: _artifacts/bench
+      - name: Reconstruct directory layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Each train-<profile>-stereo-<s> artefact contained root-level CSVs
+          # plus benchmark/results/<profile>/training_stereo_<s>/ subtree.
+          # Move everything to the repo root preserving relative paths.
+          for d in _artifacts/train/*/; do
+            cp -rn "$d"./* . 2>/dev/null || true
+          done
+          for d in _artifacts/bench/*/; do
+            cp -rn "$d"./* . 2>/dev/null || true
+          done
+          echo "── root-level CSVs ──"
+          ls -1 *.csv *.json *.ttl 2>/dev/null | head -40 || true
+          echo "── benchmark/results layout ──"
+          find benchmark/results -maxdepth 3 -type d 2>/dev/null | sort | head -50 || true
+      - name: Run sweep analysis
+        run: python analysis/sweep_report.py --root benchmark/results --out analysis/out
+      - name: Generate job summary
+        shell: bash
+        run: |
+          {
+            echo "# Sweep (dev) — summary"
+            echo ""
+            echo "**Profiles:** \`${{ env.PROFILES }}\`"
+            echo "**Mode:** \`${{ env.RUN_MODE }}\`"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo ""
+            if [ -f analysis/out/summary_table.csv ]; then
+              echo "## summary_table.csv"
+              echo '```'
+              head -50 analysis/out/summary_table.csv
+              echo '```'
+            else
+              echo "_summary_table.csv not produced._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload consolidated artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-dev-consolidated
+          path: |
+            analysis/out/**
+            benchmark/results/**
+            qtable_final_*.csv
+            metrics_*.csv
+            learned_stereotypes_*.ttl
+            iv_stats_*.json
+            benchmark_results_*.csv
+          retention-days: 30
+      - name: Publish to 'results' branch
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.publish_results == 'true' }}
+        shell: pwsh
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          git config user.name  "$env:GIT_AUTHOR_NAME"
+          git config user.email "$env:GIT_AUTHOR_EMAIL"
+          ./scripts/version_artifacts.ps1 `
+            -RunMode ${{ env.RUN_MODE }} `
+            -Profiles "${{ env.PROFILES }}" `
+            -Modes "rule_based,ql_false,ql_true" `
+            -PublishResults
