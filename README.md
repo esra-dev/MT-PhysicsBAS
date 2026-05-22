@@ -260,7 +260,53 @@ Results are archived under `benchmark/results/<profile>/<mode>/`.
 
 # Skip training if Q-tables already exist:
 .\run_full_project.ps1 -SkipTraining
+
+# Single-cell CI-style invocation (one profile x one stereo, training only):
+.\run_full_project.ps1 -RunMode dev -OnlyProfiles custom2 -OnlyStereo false -SkipBenchmark -SkipPreflight
+
+# Single-cell benchmark (one profile x one mode):
+.\run_full_project.ps1 -RunMode dev -OnlyProfiles custom2 -OnlyModes ql_true -SkipTraining -SkipPreflight
 ```
+
+### Running on GitHub Actions (recommended)
+
+The full pipeline is also wired up as three GitHub Actions workflows under [.github/workflows/](.github/workflows/). They run on free `ubuntu-latest` runners and parallelise the 14 training cells (7 profiles × 2 stereo modes) and 21 benchmark cells (7 profiles × 3 modes) as matrix jobs, then consolidate everything into a single analysis report and push it to the orphan `results` branch.
+
+| Workflow | Trigger | Wall-clock |
+|----------|---------|-----------|
+| [ci.yml](.github/workflows/ci.yml) | push / PR | ~5–10 min (compile, tests, validation, smoke training) |
+| [sweep-dev.yml](.github/workflows/sweep-dev.yml) | manual dispatch + nightly cron | **30–45 min** (dev hyperparams) |
+| [sweep-paper.yml](.github/workflows/sweep-paper.yml) | manual dispatch only | **4–5 h** (paper hyperparams) |
+
+**How to run a sweep**
+1. On GitHub: open the **Actions** tab → pick `Sweep (dev)` or `Sweep (paper)` → click **Run workflow**.
+2. Optionally narrow the run via the `profiles` input (e.g. `custom2,custom3`) and toggle `publish_results` (default: on for nightly, on for manual).
+3. Watch the matrix jobs progress — close your laptop if you like, you get an email when the workflow finishes.
+
+**Pipeline shape** (both `sweep-dev` and `sweep-paper`):
+```
+setup ─► train  (matrix: 7 profiles × 2 stereo = 14 parallel jobs)
+        └─► bench  (matrix: 7 profiles × 3 modes = 21 parallel jobs)
+                └─► aggregate
+                        ├─ run analysis/sweep_report.py
+                        ├─ post summary_table.csv into the workflow summary
+                        ├─ upload sweep-<mode>-consolidated artefact
+                        └─ commit + push to orphan `results` branch via scripts/version_artifacts.ps1
+                           (tagged results-<utc>-<mode>-<sha>)
+```
+
+**Retrieving results locally**
+```bash
+git fetch origin results
+git checkout results
+# Each run lives in its own tag-named directory at the branch root, e.g.:
+ls results-20260522-093000-dev-abc1234/
+# Includes: RUN_MANIFEST.json, all qtable_final_*.csv, learned_*.ttl, benchmark_results/, analysis/out/
+```
+
+You can also download the same content as a single zip from the workflow run page (artefact `sweep-dev-consolidated` / `sweep-paper-consolidated`, retention 30 / 90 days respectively).
+
+**Cost note:** On a public repository, GitHub Actions minutes on `ubuntu-latest` are free and unlimited. On a private repo the free tier (~2,000 Linux-min/month) is exhausted in a single paper run — keep the repo public for the duration of training or use self-hosted runners.
 
 ### Analysis
 
