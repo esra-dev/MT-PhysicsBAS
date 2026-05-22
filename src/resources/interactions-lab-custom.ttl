@@ -7,7 +7,7 @@
 @prefix htv:    <http://www.w3.org/2011/http#> .
 @prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
 
-<urn:interactions_lab_custom> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
+<urn:mt-esra:interactions-lab-custom> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
 
     td:title "The lab of the Interactions team – Custom Simulation" ;
     td:hasSecurityConfiguration [ a wotsec:NoSecurityScheme ] ;

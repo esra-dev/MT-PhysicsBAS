@@ -16,7 +16,7 @@
 # Level / Light / Blinds / Radiator / Temp + Sunshine + EnergyCost.
 # ===========================================================================
 
-<urn:interactions_lab_custom2> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
+<urn:mt-esra:interactions-lab-custom2> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
 
     td:title "The lab of the Interactions team – Custom2 4-Zone Simulation" ;
     td:hasSecurityConfiguration [ a wotsec:NoSecurityScheme ] ;
