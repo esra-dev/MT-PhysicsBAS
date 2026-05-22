@@ -251,17 +251,150 @@ def plot_fire_density(out_dir: Path, density: dict, plt):
         plt.close(fig)
 
 
+# ---------------------------------------------------------------------------
+# Multi-seed aggregation (research extension: bootstrap 95% CIs across seeds).
+#
+# run_full_project_parallel.ps1 -Seeds 1,2,3,4,5 produces a sibling directory
+# benchmark/results_seed<N> per seed. This function discovers them, summarises
+# each (profile, mode) cell per seed, then aggregates with a non-parametric
+# bootstrap to get mean ± 95% CI. No assumption of normality (seed counts as
+# low as 3 are fine with bootstrap).
+# ---------------------------------------------------------------------------
+
+_METRIC_KEYS = ("goal_rate", "avg_steps", "avg_dev", "avg_energy", "avg_wasted")
+
+
+def find_seed_roots(parent: Path) -> list[tuple[int, Path]]:
+    """Return [(seed, dir), ...] for benchmark/results_seed<N> siblings."""
+    parent = Path(parent)
+    if not parent.is_dir():
+        return []
+    out: list[tuple[int, Path]] = []
+    pat = re.compile(r"^results_seed(\d+)$")
+    for p in sorted(parent.iterdir()):
+        if not p.is_dir():
+            continue
+        m = pat.match(p.name)
+        if m:
+            out.append((int(m.group(1)), p))
+    return out
+
+
+def _bootstrap_ci(values: list[float], iters: int = 10000,
+                  alpha: float = 0.05) -> tuple[float, float, float]:
+    """Return (mean, ci_lo, ci_hi). Uses numpy if available, else stdlib."""
+    if not values:
+        return (float("nan"), float("nan"), float("nan"))
+    mean = sum(values) / len(values)
+    if len(values) == 1:
+        return (mean, mean, mean)
+    try:
+        import numpy as np  # type: ignore
+        rng = np.random.default_rng(0xC1)  # deterministic CIs
+        arr = np.asarray(values, dtype=float)
+        boots = rng.choice(arr, size=(iters, arr.size), replace=True).mean(axis=1)
+        lo = float(np.quantile(boots, alpha / 2))
+        hi = float(np.quantile(boots, 1 - alpha / 2))
+        return (mean, lo, hi)
+    except Exception:
+        # Stdlib fallback (slower for large iters).
+        import random
+        random.seed(0xC1)
+        n = len(values)
+        boots = [sum(random.choice(values) for _ in range(n)) / n
+                 for _ in range(iters)]
+        boots.sort()
+        lo_idx = max(0, int((alpha / 2) * iters))
+        hi_idx = min(iters - 1, int((1 - alpha / 2) * iters))
+        return (mean, boots[lo_idx], boots[hi_idx])
+
+
+def aggregate_seeds(seed_roots: list[tuple[int, Path]],
+                    out_dir: Path,
+                    iters: int = 10000) -> int:
+    """Write summary_table_ci.csv with per-(profile,mode) mean+CI across seeds."""
+    # per_seed[(profile, mode)][metric] -> list of values across seeds
+    per_seed: dict = defaultdict(lambda: defaultdict(list))
+    seed_count: dict = defaultdict(int)
+    for seed, root in seed_roots:
+        for prof, mode, cell_dir in find_cells(root):
+            bench_csv = cell_dir / f"benchmark_results_{mode}.csv"
+            summ = summarise_benchmark(bench_csv)
+            if not summ:
+                continue
+            seed_count[(prof, mode)] += 1
+            for k in _METRIC_KEYS:
+                if k in summ:
+                    per_seed[(prof, mode)][k].append(float(summ[k]))
+
+    rows = []
+    for (prof, mode), metrics in sorted(per_seed.items()):
+        row = {
+            "profile": prof,
+            "mode": mode,
+            "n_seeds": seed_count[(prof, mode)],
+        }
+        for k in _METRIC_KEYS:
+            vals = metrics.get(k, [])
+            mean, lo, hi = _bootstrap_ci(vals, iters=iters)
+            row[f"{k}_mean"]  = mean
+            row[f"{k}_ci_lo"] = lo
+            row[f"{k}_ci_hi"] = hi
+        rows.append(row)
+
+    out_path = out_dir / "summary_table_ci.csv"
+    if not rows:
+        out_path.write_text("", encoding="utf-8")
+        return 0
+    cols = list(rows[0].keys())
+    with out_path.open("w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+    return len(rows)
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default="benchmark/results",
                         help="sweep results root (default: benchmark/results)")
     parser.add_argument("--out", default="analysis/out",
                         help="report output directory (default: analysis/out)")
+    parser.add_argument("--seeds-mode", action="store_true",
+                        help="aggregate across sibling results_seed<N>/ dirs "
+                             "with bootstrap 95%% CIs (written to "
+                             "summary_table_ci.csv). Also runs the standard "
+                             "single-root report on the first seed found.")
+    parser.add_argument("--ci-bootstrap-iters", type=int, default=10000,
+                        help="bootstrap iterations for CIs (default 10000)")
     args = parser.parse_args(argv)
 
-    root = Path(args.root)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Multi-seed aggregation (additive) ─────────────────────────────
+    if args.seeds_mode:
+        parent = Path(args.root).parent if Path(args.root).name == "results" \
+                 else Path(args.root)
+        seed_roots = find_seed_roots(parent)
+        if not seed_roots:
+            print(f"sweep_report: --seeds-mode but no results_seed* under "
+                  f"{parent.resolve()}", file=sys.stderr)
+        else:
+            n = aggregate_seeds(seed_roots, out_dir,
+                                iters=args.ci_bootstrap_iters)
+            print(f"sweep_report: aggregated {len(seed_roots)} seed(s) "
+                  f"-> {n} (profile, mode) rows with 95% CIs "
+                  f"({args.ci_bootstrap_iters} bootstrap iters)")
+            print(f"sweep_report: summary_table_ci.csv written to {out_dir.resolve()}")
+        # Run the per-cell report against the first seed for sanity charts.
+        if seed_roots:
+            root = seed_roots[0][1]
+        else:
+            root = Path(args.root)
+    else:
+        root = Path(args.root)
 
     summary_rows = []
     matrix: dict = defaultdict(dict)
