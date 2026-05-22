@@ -1,0 +1,668 @@
+%%=============================================================
+%%  Master-Thesis status report — meeting handout
+%%  Author : Esra D.
+%%  Date   : 22 May 2026
+%%  Style  : IEEE conference (final paper format)
+%%=============================================================
+\documentclass[conference]{IEEEtran}
+
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{url}
+
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  framesep=3pt,
+  xleftmargin=4pt,
+  keepspaces=true
+}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Stereotype-Guided Q-Learning for Smart-Building \\Illuminance Control: \\Thesis Status Report
+\\ \large (Working document --- supervisor meeting, 22~May~2026)}
+
+\author{\IEEEauthorblockN{Esra D.}
+\IEEEauthorblockA{M.Sc.\ Thesis project --- MT-Esra\\
+JaCaMo-based Multi-Agent System\\
+Submission deadline: 30 June 2026}}
+
+\maketitle
+
+\begin{abstract}
+This report summarises the current state of my Master's thesis project
+\emph{MT-Esra}, a JaCaMo multi-agent system that investigates whether
+\emph{stereotype-guided Q-learning initialisation}---using BRICK + Elementary
+Ontology knowledge encoded as soft Q-table priors---yields measurably better
+control of a simulated multi-zone lighting environment than (i)~a purely
+ontology-driven rule-based agent and (ii)~a standard tabular Q-learner with
+zero-initialised Q-tables. The report covers the project's architecture
+(agents, environment artifacts, ontology), the experimental protocol over
+seven simulator profiles (one ``clean'' lab and six labs that each inject a
+single systematic ontology gap, $W1\ldots W6$), the benchmark results
+obtained so far, the conclusions drawn from those results, the three research
+extensions I have implemented in the last week
+(multi-seed pipeline with bootstrap confidence intervals,
+Potential-Based Reward Shaping, and adaptive trust calibration of the
+stereotype priors), and a six-week plan that ends with the 10-page
+IEEE-format conference paper which is the contractual final deliverable.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Multi-agent systems, JaCaMo, reinforcement learning, Q-learning,
+stereotypes, knowledge graphs, BRICK, smart buildings, Web of Things.
+\end{IEEEkeywords}
+
+%=============================================================
+\section{Project Overview and Motivation}
+\label{sec:overview}
+
+\subsection{Research Question}
+Pure reinforcement learning agents need many interaction samples to converge
+because they start with no prior over the environment. Pure rule-based
+agents start with strong domain knowledge but cannot recover when that
+knowledge is incomplete or wrong. The thesis asks one question:
+
+\begin{quote}
+\emph{Given an explicit, machine-readable building ontology
+(BRICK + Elementary), can we use it to pre-shape a Q-learner's value
+function so that the agent converges faster and acts more safely
+\textbf{without} losing the ability to recover when the ontology is
+incomplete or wrong?}
+\end{quote}
+
+The contribution we target is a \emph{quantitative} answer: under which
+ontology-gap conditions stereotype-guided initialisation helps, hurts, or
+is neutral, and a small set of mechanisms (PBRS, adaptive trust) that
+\emph{bound} the worst-case damage when the ontology is wrong.
+
+\subsection{Why JaCaMo / multi-agent}
+The lighting controller is naturally a hybrid agent: it must reason
+symbolically about zones, actuators and topology (a job for AgentSpeak +
+SPARQL), and it must learn quantitative trade-offs from data (a job for a
+Q-learning artifact). JaCaMo's clean separation between Jason
+\emph{agents} and CArtAgO \emph{artifacts} lets us put both in one program
+without forcing either side to compromise: the agent code stays declarative
+and ontology-driven, while the learning logic lives in plain Java where
+linear algebra is convenient.
+
+\subsection{Why a smart-building lighting testbed}
+Smart buildings are an ideal stress test for ``ontology helps RL'' claims:
+\begin{itemize}
+  \item The domain has a widely-adopted ontology (BRICK) plus a process
+        ontology (Elementary) that can express \emph{stereotypes}
+        of components (e.g.\ ``a blind \emph{mediates} sunshine onto a
+        zone'') \cite{cecconi2023}.
+  \item State and action spaces are small enough for tabular Q-learning
+        to be a sound baseline (no neural-network confounders).
+  \item Real failure modes (hidden cross-zone bleed, power caps,
+        thermal coupling, dynamic topology) are easy to model in
+        Node-RED and map naturally onto six well-defined ontology
+        gaps $W1\ldots W6$.
+\end{itemize}
+
+%=============================================================
+\section{System Architecture}
+\label{sec:arch}
+
+Figure~\ref{fig:arch} (drawn during the meeting) shows the runtime stack.
+At a glance:
+
+\begin{verbatim}
++-----------------------------------------+
+|  Jason agents (AgentSpeak)              |
+|  - illuminance_controller_agent.asl     |  rule-based
+|  - illuminance_controller_agent_ql.asl  |  Q-learning (train)
+|  - illuminance_controller_agent_bench   |  benchmark driver
+|  - lab_profiles.asl                     |  profile registry
++--------------------+--------------------+
+                     |  CArtAgO operations
++--------------------v--------------------+
+|  Environment artifacts (Java)           |
+|  LabEnvironment   - WoT/HTTP I/O        |
+|  OntologyArtifact - SPARQL on KG        |
+|  QLearner         - tabular Q-learning  |
+|  StereotypeReasoner - prior penalties   |
+|  StereotypeLearner  - online effects    |
+|  BenchmarkLogger  - per-step metrics    |
++--------------------+--------------------+
+                     |  HTTP (Thing Description)
++--------------------v--------------------+
+|  Node-RED simulator (ports 1881..1888)  |
+|  one flow per lab profile               |
++-----------------------------------------+
+\end{verbatim}
+
+\subsection{Agents (Jason)}
+\begin{itemize}
+  \item \textbf{Rule-based agent} --- discovers zones and actuators
+        dynamically via SPARQL over the BRICK + Elementary KG; no
+        component name is hard-coded. It is the symbolic baseline.
+  \item \textbf{Q-learning agent} --- the same skeleton as the
+        rule-based agent for state reading and action dispatch, but
+        delegates action choice to \texttt{QLearner.getActionFromState}.
+        A single belief, \verb|use_stereotypes(true|false)|, toggles
+        prior-guided initialisation.
+  \item \textbf{Benchmark agent} --- runs a fixed scenario set, in one
+        of three modes (\verb|rule_based|, \verb|ql_false|, \verb|ql_true|),
+        and per step calls \verb|BenchmarkLogger.recordStepDetailRich(...)|
+        which also runs the $W1\ldots W6$ weakness classifier against
+        the ontology's prediction.
+  \item \textbf{Lab profile registry} --- \verb|lab_profiles.asl| is the
+        single source of truth: TD path, ontology files, scenarios path,
+        simulator port, illuminance discretisation bounds, zone targets,
+        sunshine probability, weakness flags, Q-table suffix, training
+        budget. Switching labs is one line.
+\end{itemize}
+
+\subsection{Environment Artifacts (Java/CArtAgO)}
+\begin{itemize}
+  \item \texttt{LabEnvironment} --- parses a W3C Web-of-Things Thing
+        Description (TTL) and dispatches HTTP actions to Node-RED.
+        State is read via REST.
+  \item \texttt{OntologyArtifact} --- Apache Jena SPARQL endpoint over
+        \verb|lab-ontology.ttl| + \verb|wot-mappings.ttl|. Provides
+        dynamic zone discovery, quantity discovery and ``best-action''
+        queries used by the rule-based agent.
+  \item \texttt{StereotypeReasoner} --- plain Java; computes
+        \emph{initial Q-table penalties} per (state, action, zone)
+        from Cecconi et al.'s component stereotypes
+        \cite{cecconi2023}. Hard penalty $-100$ for redundant actions,
+        soft penalty $-100\cdot(1-p_{\text{sat}})$ for IV (instrumental
+        variable) mismatch, plus cross-zone overshoot and shared-actuator
+        conflict penalties.
+  \item \texttt{QLearner} --- decomposed tabular Q-learning
+        \(Q_z[s][a]\), one table per zone. Update is standard
+        $\epsilon$-greedy with $\alpha=0.1,\gamma=0.9$, $\epsilon$ decays
+        $0.3 \to 0.01$. \emph{Per-zone reward} is computed inside
+        \verb|computeZoneReward| (per-step cost $-1$, gap-progress
+        $\times 40$, terminal bonus $+200$, regression penalty $-200$,
+        no-effect $-10$, stagnation $-5$). Reward is clipped at
+        $\pm 50$ since 2026-05-21 (Phase~A fix).
+  \item \texttt{StereotypeLearner} --- observes
+        $(s,a,s')$ triples online and uses Welford's algorithm to keep
+        per-effect running mean and variance. Effects above a
+        Z-score threshold are emitted as Turtle to
+        \verb|learned_stereotypes_*.ttl| (gap discovery output).
+  \item \texttt{BenchmarkLogger} --- per-scenario summary
+        \verb|benchmark_results_<mode>.csv| (goal rate, steps,
+        deviation, energy, $W1$--$W6$ counters) and per-step
+        \verb|bench_step_log_<mode>.csv|. Phase~B added the
+        \verb|StuckFired| column for the anti-stuck guard.
+\end{itemize}
+
+\subsection{State / action spaces}
+The state vector is read directly from \verb|wot-mappings.ttl|; for the
+four-zone lab it has 13 slots
+$\bigl[\,Z_{1..4}\text{Level},
+       Z_{1..4}\text{Light},
+       Z_{1..4}\text{Blinds},
+       \text{Spotlight},
+       \text{Sunshine}\,\bigr]$.
+Continuous lux is discretised to four ranks ($0\!=\!<\!75$,
+$1\!=\!75\text{--}200$, $2\!=\!200\text{--}400$, $3\!=\!\geq 400$).
+There are 21 actions: \verb|DO_NOTHING|, \verb|ON/OFF| per
+\verb|Z<n>Light|, and \verb|UP/DOWN| per \verb|Z<n>Blinds|.
+
+%=============================================================
+\section{Experimental Protocol}
+\label{sec:protocol}
+
+\subsection{Lab profiles}
+
+\begin{table}[h]
+\caption{Simulator profiles. Each ``customN'' lab injects exactly one
+systematic ontology gap; \texttt{custom8} is the clean lab where the
+ontology is correct.}
+\label{tab:profiles}
+\centering
+\footnotesize
+\begin{tabular}{@{}llp{4.5cm}@{}}
+\toprule
+Profile & Gap & Description \\
+\midrule
+\texttt{custom8} & ---  & Clean 4-zone lab; ontology is correct.\\
+\texttt{custom2} & $W1$ & Missing-stereotype: corridor light bleeds $+30$ lux to all zones (unmodelled).\\
+\texttt{custom3} & $W2$ & Inversion: \texttt{Blind\_Z2} effect flips sign when \texttt{Sunshine}~$\geq 500$ lux.\\
+\texttt{custom4} & $W3$ & Dynamics: per-lamp ramp + hysteresis (no immediate effect).\\
+\texttt{custom5} & $W4$ & Shared resource: 7-unit power cap silently drops lowest-priority lamp.\\
+\texttt{custom6} & $W5$ & Dynamic topology: \texttt{Partition23} toggles every 5 ticks.\\
+\texttt{custom7} & $W6$ & Multi-objective heat: every ON lamp raises zone temperature by $+0.1\,^{\circ}\!$C per tick.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Modes under test}
+For each profile we run three agent modes:
+\begin{itemize}
+  \item \verb|rule_based| --- pure symbolic baseline,
+  \item \verb|ql_false| --- standard Q-learning, zero-init,
+  \item \verb|ql_true|  --- stereotype-guided Q-learning.
+\end{itemize}
+The QL modes are first trained
+(\verb|num_episodes=2500| for the ``paper'' profile, $50$ for ``dev'')
+against a separate \verb|train_scenarios_<profile>.json| set,
+then benchmarked against \emph{held-out} \verb|scenarios_<profile>.json|
+(28 scenarios) with $\epsilon=0$ (purely greedy).
+
+\subsection{Pipeline orchestration}
+The full pipeline is driven by two PowerShell scripts:
+\begin{itemize}
+  \item \verb|run_full_project.ps1| --- sequential reference driver
+        (start simulators, preflight, train, benchmark, analysis).
+  \item \verb|run_full_project_parallel.ps1| --- worktree-clone
+        based parallel driver. Each profile/stereo-mode pair is
+        trained in its own clone via
+        \verb|Start-Process -EncodedCommand|; each profile/bench-mode
+        pair is benchmarked via \verb|Start-Job|.
+\end{itemize}
+The runtime configuration lives in \verb|config/run_config.json|
+(profiles \verb|dev|/\verb|paper|, port map, suffix map, learning block).
+
+%=============================================================
+\section{Results So Far}
+\label{sec:results}
+
+The current full benchmark sweep over \verb|custom2|--\verb|custom8|
+ran on 21~May 2026 (archive
+\verb|benchmark/results.archive_2026-05-21_2207_v1|). The numbers below are
+from the clean lab \verb|custom8| (28 scenarios $\times$ 2 runs $= 56$
+benchmark episodes), where the ontology is correct and stereotypes
+\emph{should} therefore help.
+
+\begin{table}[h]
+\caption{Benchmark on clean lab \texttt{custom8} (current state).
+Goal rate is the fraction of scenarios in which all zone targets were
+reached within the 20-step budget. Lower is better for the other columns.}
+\label{tab:custom8}
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Mode & Goal rate & Avg steps & Avg deviation & Avg energy\\
+\midrule
+\texttt{rule\_based} & \textbf{0.464} & 14.5 & 42.8  & 50.5 \\
+\texttt{ql\_false}   & 0.071          & 19.2 & 56.3  & 64.4 \\
+\texttt{ql\_true}    & 0.018          & 19.8 & 99.1  & 28.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{What the results say honestly}
+
+Three observations dominate:
+
+\paragraph{1. The symbolic baseline is still the strongest single agent
+on the clean lab.} \texttt{rule\_based} reaches the goal in 46\% of
+scenarios in 14.5 steps; the Q-learners reach it in 7\% / 2\% in 19+
+steps. The cause is structural, not a tuning issue: a 20-step horizon
+on a 13-dimensional state space with 21 actions is genuinely small for
+tabular Q-learning to converge to a near-optimal greedy policy in
+2500 training episodes when the training distribution does not perfectly
+cover the test distribution.
+
+\paragraph{2. \texttt{ql\_true} currently loses to \texttt{ql\_false} on
+the clean lab.} This is the inversion of the hypothesis and is the
+single most important open issue. Diagnosis: the soft priors are
+\emph{always} applied during greedy selection (they do not decay to
+zero), and on the clean lab the prior's sunshine-conditioned penalty on
+blind actions appears to discourage exploration of action combinations
+that the zero-init Q-learner does try. The Phase~A fix (reward clipping
+to $\pm 50$, prior decay floor $0.1$, prior scale $\times 5$, seeded
+RNG XOR) corrected reward saturation but did not, by itself, recover
+the expected ordering.
+
+\paragraph{3. Energy efficiency does break for \texttt{ql\_true}.}
+\texttt{ql\_true} spends \emph{half} the energy of \texttt{ql\_false}
+(28.5 vs.\ 64.4) and a comparable fraction of \texttt{rule\_based}.
+Even with a lower goal rate, the stereotype prior is clearly
+suppressing the ``turn everything on'' attractor of the zero-init
+Q-learner. Energy-efficient failure is a meaningful intermediate
+result for the paper.
+
+\subsection{Weakness fires}
+The benchmark CSV also reports the $W1\ldots W6$ classifier counts.
+On \verb|custom8| (clean lab) we still see large \verb|W3| (delayed
+effect) counts in both QL modes because the rank-discretisation step
+sometimes lags one tick behind the actuator flip; this is a known
+artefact of the discrete state representation and is not informative.
+The interesting weakness columns ($W1,W2,W4,W5,W6$) are zero on the
+clean lab, which is exactly what the classifier should report.
+
+%=============================================================
+\section{Interpretation and Research Findings}
+\label{sec:findings}
+
+What can already be claimed for the paper:
+
+\begin{enumerate}
+  \item \textbf{An ontology-driven symbolic baseline is competitive
+        with tabular Q-learning on small-horizon multi-zone lighting
+        control.} Across all seven labs, \texttt{rule\_based} is
+        within range of (and on \texttt{custom8} clearly above) both
+        Q-learning variants on goal rate. This is itself a publishable
+        observation, because it counters the implicit assumption in
+        much of the smart-building RL literature that learning is
+        automatically better than rule-based control.
+
+  \item \textbf{Stereotype priors materially change the action
+        distribution.} \texttt{ql\_true} uses roughly half the energy
+        of \texttt{ql\_false} on \texttt{custom8} and the same trend
+        holds on the weakness labs. The prior is doing its job
+        suppressing useless actions; the issue is that it is also
+        suppressing exploration of useful action combinations on the
+        clean lab.
+
+  \item \textbf{The Cecconi et al.\ stereotype formalism is
+        operationalisable end-to-end.} I have shown that the
+        \emph{Mediates}, \emph{Causes}, \emph{IV} primitives can be
+        compiled from a BRICK + Elementary KG into per-zone Q-table
+        initial values via SPARQL, used at runtime to mask actions,
+        and updated online via \texttt{StereotypeLearner}. That
+        pipeline did not exist in the literature before this thesis.
+
+  \item \textbf{The six weakness labs are a reusable
+        ontology-stress benchmark.} Each lab pins exactly one of
+        $W1\ldots W6$ and the simulator flows are reproducible; the
+        thesis ships them as a benchmark suite.
+\end{enumerate}
+
+What is still open:
+
+\begin{itemize}
+  \item The expected ordering \verb|ql_true| $>$ \verb|ql_false|
+        on the clean lab does not hold yet in numbers. The
+        extensions described in
+        Section~\ref{sec:extensions} are designed to fix this.
+  \item No confidence intervals: a single-seed sweep cannot
+        distinguish ``\texttt{ql\_true} is genuinely worse'' from
+        ``the seed was unlucky''. Section~\ref{sec:extensions} fixes
+        this too.
+\end{itemize}
+
+%=============================================================
+\section{Implemented Research Extensions}
+\label{sec:extensions}
+
+In the last week I implemented three extensions, all opt-in and all
+preserving the existing default behaviour. The Java code builds clean
+(\verb|./gradlew compileJava|); the Python and PowerShell parts
+parse-check clean.
+
+\subsection{(E1) Multi-seed pipeline with bootstrap CIs}
+\label{sec:ext-seeds}
+
+\paragraph{Motivation.} A single training run is one sample from a
+high-variance distribution. Any claim like ``\texttt{ql\_true} is
+better than \texttt{ql\_false}'' is meaningless without an interval.
+
+\paragraph{Implementation.}
+\begin{itemize}
+  \item \verb|QLearner.java| has a new \verb|RUN_SEED| system property
+        (\verb|-Prun.seed=N|). At configuration time
+        $$
+        \texttt{baseSeed} \leftarrow \texttt{baseSeed}\;\oplus\;\text{mix64}(N),
+        $$
+        where mix64 is the SplitMix64 finalizer (so small $N$ values
+        spread across all 64 bits).
+  \item \verb|run_full_project.ps1| has a new \verb|-RunSeed| parameter
+        that forwards as \verb|-Prun.seed=N|.
+  \item \verb|run_full_project_parallel.ps1| has a new \verb|-Seeds 1,2,3,4,5|
+        parameter. Phases D--G (train + benchmark + per-clone cleanup)
+        are wrapped in a per-seed loop; each seed's
+        \verb|benchmark/results| is archived to
+        \verb|benchmark/results_seed<N>/| and the clone is wiped clean
+        between seeds.
+  \item \verb|analysis/sweep_report.py| has \verb|--seeds-mode| that
+        detects \verb|results_seed*/| siblings, computes
+        non-parametric 95\% bootstrap CIs (numpy with
+        \verb|default_rng(0xC1)|, stdlib fallback) over
+        \verb|goal_rate|, \verb|avg_steps|, \verb|avg_dev|,
+        \verb|avg_energy|, \verb|avg_wasted|, and writes
+        \verb|summary_table_ci.csv| with mean and CI bounds per
+        (profile, mode) cell.
+\end{itemize}
+\paragraph{Result.} Every numerical claim in the paper will be
+reported as \emph{mean $\pm$ 95\% CI over 5 seeds}.
+
+\subsection{(E2) Potential-Based Reward Shaping (PBRS)}
+\label{sec:ext-pbrs}
+
+\paragraph{Motivation.} The sparse $+200$ terminal reward on a 20-step
+horizon means a single transition with a non-zero gap delta is the
+only training signal in 90\% of steps. PBRS adds a dense \emph{shaping}
+signal that is provably policy-invariant
+\cite{ng1999policy}: it changes how fast the agent learns, not what
+the optimal policy is.
+
+\paragraph{Implementation.}
+A new system property \verb|reward.shaping=pbrs| activates the
+shaping term inside the per-zone loop of
+\verb|QLearner.calculateQ|:
+\begin{eqnarray*}
+\Phi_z(s)  &=& -|\text{level}_z(s) - \text{target}_z|,\\
+F(s,a,s')  &=& \gamma\,\Phi_z(s') - \Phi_z(s),\\
+r'         &=& r_{\text{clipped}} + F(s,a,s')/N_{\text{zones}}.
+\end{eqnarray*}
+The factor $1/N_{\text{zones}}$ keeps the per-zone update on the same
+scale as the clipped per-zone reward; the policy-invariance proof of
+Ng--Harada--Russell still holds for any positive scaling.
+
+\paragraph{Expected effect.} Faster convergence on \emph{all} labs;
+no change to the policy that an infinitely-trained agent would
+converge to. This is the ``smallest code change with the strongest
+theoretical guarantee'' --- the change is roughly 20 lines.
+
+\subsection{(E3) Adaptive trust calibration of stereotype priors}
+\label{sec:ext-trust}
+
+\paragraph{Motivation.} The fundamental honest objection to E1+E2 is:
+\emph{``what if the ontology is wrong?''} The current Phase~A code
+uses a fixed linear decay (\verb|stereo.priorDecayEpisodes=10000|
+with floor 0.1) that applies the same trust schedule whether the
+ontology is correct (\texttt{custom8}) or wrong ($W1\ldots W6$).
+That is unsatisfying because it cannot exploit the information that
+\texttt{custom8} \emph{should} keep trusting the prior.
+
+\paragraph{Implementation.}
+Activated by \verb|stereo.adaptiveTrust=true|. For every observed
+transition I ask the \texttt{StereotypeReasoner}:
+\emph{``would you have predicted the sign of the observed zone-level
+$\Delta$ correctly?''} I maintain a per-action running calibration
+$$
+c_a = \frac{\#\text{slots where pred.\ sign matched observed sign}}
+            {\#\text{slots where pred.\ sign was non-zero}},
+$$
+stored as cumulative \verb|actionCalSum[a]| and \verb|actionCalN[a]|.
+After at least \verb|stereo.adaptiveTrust.minSamples| (default 50)
+observations, the prior used in \verb|greedyAction| becomes
+$$
+\text{effectivePrior}(a) =
+   \text{priorWeight}\cdot p_a \cdot
+   \max\bigl(\text{floor},\;c_a\bigr),
+$$
+where the floor (default 0.1) prevents complete collapse and the
+multiplier is 1.0 when there are not yet 50 observations.
+
+\paragraph{Expected effect.}
+On the clean lab (\texttt{custom8}), $c_a \to 1$ and the prior keeps
+its full weight throughout training. On a weakness lab (e.g.\
+\texttt{custom2}), the $W1$-affected actions accumulate
+\emph{prediction mismatch} and $c_a$ collapses toward the floor,
+recovering the \texttt{ql\_false} baseline. This addresses the
+\emph{exact} symmetric failure mode of the current code.
+
+\subsection{Why these three together}
+E1 (seeds) gives every claim a CI; E2 (PBRS) gives faster, provably
+policy-equivalent learning; E3 (adaptive trust) gives a graceful
+fallback when the ontology is wrong. Together they let the paper make
+a falsifiable, two-sided claim: \emph{stereotypes never hurt and help
+when correct}, with $95$\% CIs.
+
+%=============================================================
+\section{Plan for the Remaining Six Weeks}
+\label{sec:plan}
+
+\subsection{Week 1 (23--29 May): validate the extensions empirically}
+
+\begin{enumerate}
+  \item Smoke test the multi-seed driver:
+        \begin{lstlisting}[language=PowerShell]
+.\run_full_project_parallel.ps1 `
+   -RunMode dev -Seeds 1,2 -MaxParallel 2 -Fresh
+        \end{lstlisting}
+        Confirm \verb|benchmark/results_seed1|,
+        \verb|results_seed2|, and \verb|analysis/out/summary_table_ci.csv|.
+  \item Single-profile \verb|custom8| dev sweep with PBRS on, baseline
+        off; check the learning curve shifts left (faster
+        convergence).
+  \item Single-profile \verb|custom2| dev sweep with adaptive trust
+        on; check that \verb|ql_true| recovers toward \verb|ql_false|
+        on the $W1$-affected actions.
+\end{enumerate}
+
+\subsection{Week 2 (30~May--5~Jun): paper-quality multi-seed sweep}
+Launch the 5-seed paper-mode sweep over all seven profiles:
+\begin{lstlisting}[language=PowerShell]
+.\run_full_project_parallel.ps1 `
+   -RunMode paper -Seeds 1,2,3,4,5 -MaxParallel 3
+\end{lstlisting}
+Estimated wall-clock: 5 seeds $\times \sim 50$~h $/$ 3 parallel
+$\approx$ 4 calendar days. The output is the headline number for the
+paper.
+
+\subsection{Week 3 (6--12~Jun): ablations}
+Three controlled ablations, each one extension turned off in turn:
+\begin{itemize}
+  \item \verb|reward.shaping=none| with E1+E3 (does PBRS matter?),
+  \item \verb|stereo.adaptiveTrust=false| with E1+E2 (does adaptive
+        trust matter on \texttt{custom2}--\texttt{custom7}?),
+  \item \verb|stereo.priorScale=0.0| with E1+E2+E3 (sanity check:
+        with no prior at all, does \texttt{ql\_true} collapse onto
+        \texttt{ql\_false}?).
+\end{itemize}
+
+\subsection{Week 4 (13--19~Jun): write paper sections 1--4}
+Sections \emph{Introduction}, \emph{Background and Related Work}
+(Cecconi 2023, BRICK, JaCaMo, classical RL shaping references),
+\emph{System}, \emph{Experimental Protocol}. Reuse text from this
+report and from \verb|README.md|. Target $\approx 5$ pages of the
+$10$-page budget.
+
+\subsection{Week 5 (20--26~Jun): write paper sections 5--8 + figures}
+\emph{Results}, \emph{Discussion}, \emph{Limitations and Threats to
+Validity}, \emph{Conclusion}. All figures regenerated from the
+seeds-mode output: bootstrap-CI error bars on every bar chart,
+per-weakness heatmap, learning curves with confidence bands.
+Target the remaining $\approx 5$ pages.
+
+\subsection{Week 6 (27--30~Jun): polish, anonymous review pass, submit}
+Internal review pass with supervisor, IEEE checklist
+(PDF/A, copyright, references, figure resolution), final submission
+on 30~June.
+
+\subsection{Risk register and mitigations}
+\begin{itemize}
+  \item \emph{Risk:} the paper-mode 5-seed sweep does not finish in
+        Week~2. \emph{Mitigation:} reduce to 3 seeds (still
+        statistically usable) or to 4 weakness labs (\texttt{custom2},
+        \texttt{custom4}, \texttt{custom5}, \texttt{custom7} + clean).
+  \item \emph{Risk:} adaptive trust fails to recover \texttt{ql\_false}
+        baseline on weakness labs. \emph{Mitigation:} the floor and
+        minSamples are config knobs; if neither value works, fall back
+        to the simpler linear schedule already in place and report
+        that result honestly.
+  \item \emph{Risk:} parallel driver deadlocks under contention.
+        \emph{Mitigation:} the sequential
+        \verb|run_full_project.ps1| is a drop-in fallback;
+        slower but verified.
+\end{itemize}
+
+%=============================================================
+\section{Discussion Points for the Meeting}
+\label{sec:meeting}
+
+I would like the supervisor's input on three questions:
+
+\begin{enumerate}
+  \item \textbf{Honesty about the current ordering.} The paper will
+        report that \texttt{ql\_true} currently loses to
+        \texttt{ql\_false} on the clean lab and that E1--E3 are
+        designed to fix that. Should we frame the paper as
+        ``stereotypes help when calibrated'' (positive framing) or
+        as ``a recipe for safe use of ontology priors in RL''
+        (defensive framing)?
+  \item \textbf{Scope of the weakness benchmark.} Six gap labs may be
+        too much for 10 pages. Acceptable to reduce to four
+        representative labs in the paper while keeping all seven in
+        the thesis appendix?
+  \item \textbf{Comparison to non-tabular baselines.} A reviewer will
+        ask why not DQN. My answer: tabular avoids
+        function-approximation confounds and the state space is
+        small enough that tabular is the correct method here.
+        Do you agree this is enough?
+\end{enumerate}
+
+%=============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+The system, the experimental protocol, and the analysis pipeline are
+fully in place. The remaining six weeks are dedicated to running the
+multi-seed paper sweep, three controlled ablations, and writing the
+10-page IEEE conference paper. The three extensions (E1 seeds + CIs,
+E2 PBRS, E3 adaptive trust) directly target the two open issues
+identified by the current single-seed sweep: lack of confidence
+intervals and the inverted clean-lab ordering. All extensions are
+implemented, build clean, and ship as opt-in flags in
+\verb|config/run_config.json| so the existing experiments remain
+exactly reproducible.
+
+%=============================================================
+\begin{thebibliography}{9}
+
+\bibitem{cecconi2023}
+F.~Cecconi \emph{et al.}, ``Reasoning about Physical Processes in
+Buildings through Component Stereotypes,'' in \emph{Proc.\ CPS-IoT
+Week 2023}, 2023.
+
+\bibitem{ng1999policy}
+A.~Y.~Ng, D.~Harada, and S.~Russell, ``Policy invariance under reward
+transformations: Theory and application to reward shaping,'' in
+\emph{Proc.\ ICML}, 1999, pp.\ 278--287.
+
+\bibitem{brick}
+B.~Balaji \emph{et al.}, ``Brick: Towards a unified metadata schema
+for buildings,'' in \emph{Proc.\ ACM BuildSys}, 2016.
+
+\bibitem{jacamo}
+O.~Boissier, R.~H. Bordini, J.~F. H\"ubner, A.~Ricci, and A.~Santi,
+``Multi-agent oriented programming with JaCaMo,'' \emph{Science of
+Computer Programming}, vol.~78, no.~6, pp.\ 747--761, 2013.
+
+\bibitem{wot}
+W3C, ``Web of Things (WoT) Thing Description 1.1,'' W3C
+Recommendation, 2023. [Online]. Available:
+\url{https://www.w3.org/TR/wot-thing-description11/}
+
+\end{thebibliography}
+
+\end{document}
