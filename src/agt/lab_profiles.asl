@@ -167,6 +167,26 @@ lab_profile("custom7",
             qtable_suffix("_custom7"),
             training_params(10000, 0.9990)).
 
+//   custom8 → W7 IV-coupling demonstration lab.
+//   PURE clean dynamics (no hidden weakness) with scenarios that cover
+//   all 4 sunshine ranks uniformly. Stereotype priors (which encode
+//   Mediates(blind, sunshine)) should beat the non-stereotype baseline
+//   by learning sunshine-conditioned action selection. sunshine_prob 0.50
+//   widens the distribution so rank-0 / rank-3 cases dominate equally.
+lab_profile("custom8",
+            td("classpath:interactions-lab-custom2.ttl"),
+            ont(["lab-ontology.ttl", "lab-ontology-custom2.ttl", "wot-mappings-custom2.ttl"]),
+            scenarios("benchmark/scenarios_custom8.json"),
+            train_scenarios("benchmark/train_scenarios_custom8.json"),
+            sim_port(1888),
+            light_bounds([75, 200, 400]),
+            sunshine_bounds([50, 150, 500]),
+            zone_targets([target(1,3), target(2,2), target(3,3), target(4,2)]),
+            sunshine_prob(0.50),
+            weakness_flags([]),
+            qtable_suffix("_custom8"),
+            training_params(10000, 0.9990)).
+
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.
  * Each accessor unifies its single output argument with the

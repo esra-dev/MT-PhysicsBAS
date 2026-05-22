@@ -46,7 +46,7 @@ use_stereotypes(true).
 // Goal zone_goal/1 is derived at startup from zone_targets/N in the active profile.
 
 // Training parameters
-num_episodes(2500).
+num_episodes(50).
 max_steps_per_episode(20).
 action_delay_ms(65).      // delay between actions during training (ms) — must exceed 200 ms simulator tick
 exec_delay_ms(65).        // delay between actions during execution (ms)
@@ -90,6 +90,13 @@ exec_max_steps(20).
         +active_profile(OverrideProfile);
         .print("[RuntimeOverride] active_profile: ", OldP, " -> ", OverrideProfile)
     }.
+// Failure handler: if tools.jia.system_prop is unavailable (e.g. ClassLoader
+// race during parallel builds), log a warning and continue.  The active_profile
+// belief will reflect whatever was pre-patched into lab_profiles.asl by the
+// run script, so training still uses the correct per-profile configuration.
+@apply_runtime_overrides_ql_fail
+-!apply_runtime_overrides_ql <-
+    .print("[RuntimeOverride] WARNING: tools.jia.system_prop failed; active_profile unchanged (using pre-patched lab_profiles.asl value).").
 
 // Build zone_goal/1 belief as a list of target ranks (sorted by zone idx).
 @derive_zone_goal_done
@@ -117,7 +124,8 @@ exec_max_steps(20).
  * @start — Initialise artifacts, print mode, begin training
  * ============================================================ */
 @start
-+!start : use_stereotypes(UseStereotypes)
++!start : active_profile(ActiveP)
+        & use_stereotypes(UseStereotypes)
         & lab_td(TdUrl)
         & zone_goal(Goal)
         & sunshine_satisfaction_prob(SunProb)
@@ -126,13 +134,21 @@ exec_max_steps(20).
 
     .print("==========================================================");
     .print("   ILLUMINANCE CONTROLLER AGENT - Q-LEARNING");
-    .print("   Stereotype-guided init: ", UseStereotypes);
-    .print("   Goal: ", Goal);
+    .print("   Profile:  ", ActiveP);
+    .print("   Stereo:   ", UseStereotypes);
+    .print("   Goal:     ", Goal);
     .print("==========================================================");
 
     // Create the LabEnvironment artifact
     makeArtifact("lab", "tools.LabEnvironment", [TdUrl], LabId);
     +lab_artifact(LabId);
+    // Fail-fast lab reachability probe: if the simulator HTTP endpoint is
+    // unreachable the very first readLabStatus would block silently. Doing
+    // an explicit probe here gives the user a clear, immediate diagnostic
+    // in the MAS Console instead of an apparent freeze after the banner.
+    .print("[probe] Checking simulator HTTP reachability ...");
+    readLabStatus(_PZL, _PSR, _PSK, _PSV)[artifact_id(LabId)];
+    .print("[probe] Simulator reachable — proceeding.");
     // Pre-compute scenario count for the training cycle
     if (train_scenarios_file(ScenariosFile)) {
         getScenarioIds(ScenariosFile, ScIds)[artifact_id(LabId)];
@@ -174,7 +190,6 @@ exec_max_steps(20).
     .concat(IB2, ".csv", InitFile);
     saveQTable(InitFile)[artifact_id(QlId)];
     .print("[QL] Initial Q-table saved to ", InitFile);
-
     !train(0).
 
 /* ============================================================
@@ -211,10 +226,16 @@ exec_max_steps(20).
     // Decay epsilon after each episode
     decayEpsilon[artifact_id(QlId)];
 
-    // Progress log every 50 episodes
+    // Adaptive progress: every episode for short runs (≤100 eps), every 10 otherwise.
+    // GoalReached comes from the isTerminal/endEpisode calls above.
+    Pct = ((N + 1) * 100) / MaxEpisodes;
+    if (MaxEpisodes <= 100 | ((N + 1) mod 10) == 0) {
+        .print("[Training] ep ", N + 1, "/", MaxEpisodes, " (", Pct, "%) goal=", GoalReached)
+    };
+    // Full QLearner status every 50 episodes
     if (((N + 1) mod 50) == 0) {
         getStatus(Status)[artifact_id(QlId)];
-        .print("[Training] Episode ", N + 1, "/", MaxEpisodes, " | ", Status)
+        .print("[Training] >> ep ", N + 1, "/", MaxEpisodes, " | ", Status)
     };
 
     // Early stopping: if Q-table has converged stop training before MaxEpisodes
@@ -366,21 +387,57 @@ exec_max_steps(20).
 +!execute_policy(Step) : exec_max_steps(MaxExecSteps) & Step >= MaxExecSteps <-
     ?qlearner_artifact(QlId);
     getStatus(Status)[artifact_id(QlId)];
-    .print("[Execute] Max steps reached (", MaxExecSteps, "). Final status: ", Status).
+    .print("[Execute] Max steps reached (", MaxExecSteps, "). Final status: ", Status);
+    .print("[QL] All done — stopping MAS.");
+    .stopMAS.
 
 /* ============================================================
  * Failure handling
  * ============================================================ */
+-!start[error(Err), error_msg(Msg)] <-
+    .print("ERROR -!start: ", Err, " - ", Msg).
+
 -!start <-
     .print("ERROR: Failed to start. Check that the simulator is running and");
     .print("       the Thing Description URL is accessible.").
 
+// Bounded retry with delay — a tight retry loop here was triggering a clean
+// JVM shutdown in stereo=false runs after a few seconds of recursive intention
+// fan-out. We cap retries per-N and wait between attempts so transient HTTP
+// failures recover but a real failure aborts the training (rather than
+// silently exiting with no artifacts).
+-!train(N)[error(Err), error_msg(Msg)] <-
+    .print("[train-fail] -!train(", N, "): ", Err, " - ", Msg, " — retrying in 1s");
+    .wait(1000);
+    !retry_train(N, 1).
+
 -!train(N) <-
-    .print("WARNING: Training step failed. Retrying.");
+    .print("[train-fail] WARNING: Training step failed at N=", N, " — retrying in 1s");
+    .wait(1000);
+    !retry_train(N, 1).
+
+@retry_train_ok
++!retry_train(N, Attempt) : Attempt <= 3 <-
+    .print("[train-fail] retry attempt ", Attempt, "/3 at N=", N);
     !train(N).
+@retry_train_giveup
++!retry_train(N, Attempt) <-
+    .print("[train-fail] giving up after ", Attempt - 1, " retries at N=", N, " — aborting training");
+    .fail.
+-!retry_train(N, Attempt)[error(Err), error_msg(Msg)] <-
+    .print("[train-fail] retry(", N, ",", Attempt, ") failed: ", Err, " - ", Msg, " — next attempt in 1s");
+    .wait(1000);
+    NextAttempt = Attempt + 1;
+    !retry_train(N, NextAttempt).
+
+-!run_episode(EpN, Step)[error(Err), error_msg(Msg)] <-
+    .print("WARNING -!run_episode(", EpN, ",", Step, "): ", Err, " - ", Msg).
 
 -!run_episode(EpN, Step) <-
     .print("WARNING: Episode step ", Step, " failed.").
+
+-!do_step(EpN, Step, _, _, _, _, _)[error(Err), error_msg(Msg)] <-
+    .print("WARNING -!do_step(ep=", EpN, " step=", Step, "): ", Err, " - ", Msg).
 
 -!do_step(EpN, Step, _, _, _, _, _) <-
     .print("WARNING: do_step(", Step, ") failed - skipping step.").

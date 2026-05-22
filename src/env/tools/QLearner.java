@@ -1,5 +1,6 @@
 package tools;
 
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -55,6 +56,78 @@ public class QLearner extends Artifact {
     private double epsilonDecay = 0.995;
     private final double epsilonMin   = 0.01;
 
+    // Per-step reward clip (override with -Dreward.clip=...)
+    private static final double REWARD_CLIP = parseDoubleProp("reward.clip", 50.0);
+    // Multiplier applied to stereotype priors during greedy selection
+    // (override with -Dstereo.priorScale=...).
+    private static final double STEREO_PRIOR_SCALE = parseDoubleProp("stereo.priorScale", 5.0);
+    // Total episodes used to decay the stereotype prior weight to its floor.
+    private static final int    PRIOR_DECAY_EPISODES = parseIntProp("stereo.priorDecayEpisodes", 2500);
+    // Floor for the prior weight at the end of decay.
+    private static final double PRIOR_DECAY_FLOOR    = parseDoubleProp("stereo.priorDecayFloor", 0.1);
+
+    // -----------------------------------------------------------------------
+    // Reward shaping (Ng, Harada & Russell 1999 — Potential-Based Reward
+    // Shaping). When reward.shaping=pbrs, every per-zone Bellman update
+    // receives an extra term F_z = gamma * Phi_z(s') - Phi_z(s) with
+    //   Phi_z(s) = -|level_z(s) - target_z|
+    // This shaping is *policy-invariant* (PBRS theorem): the converged
+    // optimal policy is identical with and without shaping, so it cannot
+    // bias asymptotic performance — only the convergence path. Use this
+    // as the safe knob to test whether stereotype-driven potentials can
+    // accelerate learning without risking the W1-W6 "wrong prior" failure.
+    private static final String  REWARD_SHAPING        = System.getProperty("reward.shaping", "none");
+    private static final boolean REWARD_SHAPING_PBRS   = "pbrs".equalsIgnoreCase(REWARD_SHAPING);
+
+    // -----------------------------------------------------------------------
+    // Adaptive trust on the stereotype prior. When stereo.adaptiveTrust=true,
+    // we maintain a per-action calibration score in [0,1] computed online as
+    // the fraction of zone-level slots where the ontology-predicted sign of
+    // the change agreed with the observed sign. After at least
+    // stereo.adaptiveTrust.minSamples observations of an action, the
+    // calibration is used as a multiplier on that action's prior (clamped
+    // below at stereo.adaptiveTrust.floor). Actions whose ontology
+    // prediction is consistently wrong (W1-W6) get their prior down-weighted
+    // automatically; actions whose prediction is correct keep their boost.
+    private static final boolean ADAPTIVE_TRUST               = Boolean.parseBoolean(System.getProperty("stereo.adaptiveTrust", "false"));
+    private static final int     ADAPTIVE_TRUST_MIN_SAMPLES   = parseIntProp   ("stereo.adaptiveTrust.minSamples", 50);
+    private static final double  ADAPTIVE_TRUST_FLOOR         = parseDoubleProp("stereo.adaptiveTrust.floor",      0.1);
+
+    // Per-run seed override (XORed into the deterministic base seed). Lets
+    // the orchestrator run N independent replicas with -Prun.seed=1..N to
+    // build confidence intervals across seeds.
+    private static final long    RUN_SEED                     = parseLongProp("run.seed", 0L);
+
+    private static double parseDoubleProp(String key, double dflt) {
+        try {
+            String v = System.getProperty(key);
+            return (v == null || v.isEmpty()) ? dflt : Double.parseDouble(v);
+        } catch (Exception e) { return dflt; }
+    }
+    private static int parseIntProp(String key, int dflt) {
+        try {
+            String v = System.getProperty(key);
+            return (v == null || v.isEmpty()) ? dflt : Integer.parseInt(v);
+        } catch (Exception e) { return dflt; }
+    }
+    private static long parseLongProp(String key, long dflt) {
+        try {
+            String v = System.getProperty(key);
+            return (v == null || v.isEmpty()) ? dflt : Long.parseLong(v);
+        } catch (Exception e) { return dflt; }
+    }
+    /** SplitMix64 finalizer — spreads a small seed across all 64 bits so
+     *  XOR-mixing tiny run.seed values (1..N) still flips most bits of the
+     *  base seed and yields well-separated PRNG streams. */
+    private static long mix64(long z) {
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        return z ^ (z >>> 31);
+    }
+
+    // Current episode number — updated by beginEpisode/endEpisode for prior decay.
+    private int currentEpisodeNum = 0;
+
     // -----------------------------------------------------------------------
     // State / action dimensions (data-driven from StereotypeReasoner slot registry)
     // -----------------------------------------------------------------------
@@ -85,6 +158,13 @@ public class QLearner extends Artifact {
     private StereotypeReasoner reasoner;
     // Action metadata from reasoner (indexed by action index)
     private StereotypeReasoner.ActionInfo[] actionInfos;
+
+    // Adaptive-trust calibration accumulators (only used when ADAPTIVE_TRUST=true).
+    // actionCalSum[a] / actionCalN[a] is the running mean fraction of zone-level
+    // slots where the ontology's predicted sign matched the observed sign for
+    // action a. Allocated in configureQLearner once nActions is known.
+    private double[] actionCalSum;
+    private long[]   actionCalN;
 
     // Convergence metrics
     private List<double[]> episodeMetrics = new ArrayList<>();
@@ -135,7 +215,13 @@ public class QLearner extends Artifact {
         for (int i = 0; i < goal.length; i++) this.goal[i] = toInt(goal[i]);
         this.useStereotypes = useStereotypes;
         // Deterministic-by-default; bench/training agents may override via setSeed().
-        this.rng            = new Random(42L);
+        // Seed mixes stereo flag so stereotype-on / stereotype-off runs explore
+        // different action sequences (prior fix: identical FirstGoalEpisode bug).
+        // RUN_SEED (sysprop -Drun.seed=N) is XORed in so independent replicas
+        // for confidence-interval analysis explore different trajectories.
+        long baseSeed = 42L ^ (useStereotypes ? 0x5A5A5A5A5A5A5A5AL : 0xA5A5A5A5A5A5A5A5L);
+        if (RUN_SEED != 0L) baseSeed ^= mix64(RUN_SEED);
+        this.rng            = new Random(baseSeed);
 
         // Convert Object[] to String[]
         String[] paths = new String[ontologyPaths.length];
@@ -146,6 +232,15 @@ public class QLearner extends Artifact {
         // Always instantiate StereotypeReasoner for structural discovery
         // (action list, WoT mappings). Only init penalties and masking are mode-gated.
         reasoner = new StereotypeReasoner(paths, sunshineSatisfactionProb);
+        if (reasoner.isDegraded()) {
+            LOGGER.warning("============================================================");
+            LOGGER.warning("  StereotypeReasoner is in DEGRADED mode: state-slot registry");
+            LOGGER.warning("  could not be loaded from the ontology. Falling back to the");
+            LOGGER.warning("  legacy 8-slot layout. Stereotype-guided Q-init may not match");
+            LOGGER.warning("  the simulator topology — results should be treated as");
+            LOGGER.warning("  diagnostic, not as a valid stereotype-init comparison.");
+            LOGGER.warning("============================================================");
+        }
         nActions = reasoner.getNumActions();
         actionInfos = reasoner.getAllActions();
 
@@ -166,6 +261,8 @@ public class QLearner extends Artifact {
         int numZones = this.goal.length;
         qTables = new double[numZones][nStates][nActions];
         visitCounts = new long[nStates][nActions];
+        actionCalSum = new double[nActions];
+        actionCalN   = new long[nActions];
 
         if (useStereotypes) {
             initWithStereotypes();
@@ -183,6 +280,16 @@ public class QLearner extends Artifact {
                   + " zoneLevel=" + Arrays.toString(zoneLevelIndices)
                   + " sunshine=" + sunshineIndex);
         LOGGER.info("  α=" + alpha + " γ=" + gamma + " ε=" + epsilon);
+        LOGGER.info("  Reward: clip=" + REWARD_CLIP
+                  + " shaping=" + REWARD_SHAPING
+                  + " priorScale=" + STEREO_PRIOR_SCALE
+                  + " priorDecayEps=" + PRIOR_DECAY_EPISODES
+                  + " priorDecayFloor=" + PRIOR_DECAY_FLOOR
+                  + " adaptiveTrust=" + ADAPTIVE_TRUST
+                  + (ADAPTIVE_TRUST
+                        ? " (minSamples=" + ADAPTIVE_TRUST_MIN_SAMPLES + " floor=" + ADAPTIVE_TRUST_FLOOR + ")"
+                        : "")
+                  + " runSeed=" + RUN_SEED);
     }
 
     /**
@@ -270,17 +377,41 @@ public class QLearner extends Artifact {
         int sIdx  = stateVecToIndex(stateVec);
         int sNext = stateVecToIndex(nextStateVec);
 
-        // Decomposed per-zone Bellman updates
+        // Decomposed per-zone Bellman updates.
+        // Each per-zone reward is clipped to [-REWARD_CLIP, +REWARD_CLIP] and
+        // divided by the number of zones so the *total* reward fed into the
+        // Q-update stays within the same per-step range regardless of zone count.
         double[] rewards = new double[goal.length];
         boolean anyZoneWastedByPenalty = false;
         double maxAbsDelta = 0.0;
+        double zoneNorm = 1.0 / Math.max(1, goal.length);
         for (int z = 0; z < goal.length; z++) {
             RewardResult rr = computeZoneReward(z, stateVec, action, nextStateVec);
-            rewards[z] = rr.reward;
+            double rClipped = Math.max(-REWARD_CLIP, Math.min(REWARD_CLIP, rr.reward));
+            double rForQ    = rClipped * zoneNorm;
+            // Potential-Based Reward Shaping (Ng/Harada/Russell 1999).
+            // F = gamma * Phi(s') - Phi(s),  Phi_z(s) = -|level_z(s) - target_z|.
+            // Policy-invariant: the optimal Q* under r + F equals Q* under r
+            // plus the static term Phi(s), so the greedy policy is identical.
+            // Only the convergence path changes; safe to enable everywhere.
+            if (REWARD_SHAPING_PBRS
+                    && z < zoneLevelIndices.length
+                    && zoneLevelIndices[z] >= 0
+                    && zoneLevelIndices[z] < stateVec.length) {
+                int slot = zoneLevelIndices[z];
+                int prevLevel = toInt(stateVec[slot]);
+                int nextLevel = toInt(nextStateVec[slot]);
+                int target    = goal[z];
+                double phiPrev = -Math.abs(prevLevel - target);
+                double phiNext = -Math.abs(nextLevel - target);
+                double F = gamma * phiNext - phiPrev;
+                rForQ += F * zoneNorm;
+            }
+            rewards[z] = rClipped;
             if (rr.wastedByPenalty) anyZoneWastedByPenalty = true;
             double maxNextQz = maxQ(qTables[z], sNext);
             double oldQz = qTables[z][sIdx][action];
-            double newQz = oldQz + alpha * (rewards[z] + gamma * maxNextQz - oldQz);
+            double newQz = oldQz + alpha * (rForQ + gamma * maxNextQz - oldQz);
             qTables[z][sIdx][action] = newQz;
             double absDelta = Math.abs(newQz - oldQz);
             if (absDelta > maxAbsDelta) maxAbsDelta = absDelta;
@@ -304,6 +435,27 @@ public class QLearner extends Artifact {
 
         // Feed action outcome to IV effectiveness tracker (learns ivMinRank at runtime)
         reasoner.recordActionOutcome(action, prevSvArr, nextSvArr);
+
+        // Adaptive trust: compare per-action ontology-predicted Δ sign against
+        // observed Δ sign on zone-level slots. Used by greedyAction to scale
+        // each action's prior down if the ontology is systematically wrong.
+        if (ADAPTIVE_TRUST && useStereotypes && actionCalSum != null) {
+            int[] pred = reasoner.getActionPrediction(prevSvArr, action);
+            int matched = 0, considered = 0;
+            for (int z = 0; z < zoneLevelIndices.length; z++) {
+                int slot = zoneLevelIndices[z];
+                if (slot < 0 || slot >= pred.length) continue;
+                int predSign   = Integer.signum(pred[slot]);
+                if (predSign == 0) continue; // action makes no claim on this zone
+                int actualSign = Integer.signum(nextSvArr[slot] - prevSvArr[slot]);
+                considered++;
+                if (predSign == actualSign) matched++;
+            }
+            if (considered > 0) {
+                actionCalSum[action] += (double) matched / considered;
+                actionCalN[action]   += 1;
+            }
+        }
 
         LOGGER.fine("calculateQ: s=" + sIdx + " a=" + action +
                     " rZ1=" + String.format("%.1f", (goal.length > 0 ? rewards[0] : 0.0)) +
@@ -333,6 +485,67 @@ public class QLearner extends Artifact {
             LOGGER.fine("getActionFromState: EXPLOIT → action=" + chosen);
         }
         action.set(chosen);
+    }
+
+    /**
+     * Anti-stuck variant of {@link #getActionFromState}. When the bench agent
+     * detects that the last 3 observed state vectors were identical (i.e. the
+     * policy has stalled on a single action whose effect has no visible result
+     * — e.g. flipping an already-saturated actuator), it calls this op with
+     * the recent action ids to exclude. Logic:
+     *   - If recentActions is empty, behaves exactly like greedy getActionFromState.
+     *   - Otherwise computes argmax over applicable \ recentActions (and over
+     *     DO_NOTHING, which is also excluded when stuck). Ties broken by random
+     *     pick. stuckFired is true iff a recentActions exclusion actually took
+     *     effect.
+     */
+    @OPERATION
+    public void getActionFromStateAntiStuck(Object[] stateVec,
+                                            Object[] recentActions,
+                                            OpFeedbackParam<Integer> action,
+                                            OpFeedbackParam<Boolean> stuckFired) {
+        int sIdx = stateVecToIndex(stateVec);
+        int[] applicable = computeApplicableActions(stateVec);
+
+        // Build the exclusion set from recentActions + DO_NOTHING action ids.
+        // DO_NOTHING actions have wotActionType == null.
+        boolean[] excluded = new boolean[nActions];
+        boolean anyExclude = false;
+        if (recentActions != null) {
+            for (Object o : recentActions) {
+                int a = toInt(o);
+                if (a >= 0 && a < nActions) { excluded[a] = true; anyExclude = true; }
+            }
+        }
+        if (anyExclude) {
+            for (int a = 0; a < nActions; a++) {
+                if (actionInfos[a].wotActionType == null) excluded[a] = true;
+            }
+        }
+
+        // Filter applicable down to non-excluded actions.
+        int[] filtered = applicable;
+        if (anyExclude) {
+            int n = 0;
+            int[] buf = new int[applicable.length];
+            for (int a : applicable) if (!excluded[a]) buf[n++] = a;
+            if (n > 0) {
+                filtered = new int[n];
+                System.arraycopy(buf, 0, filtered, 0, n);
+            } else {
+                // All applicable actions were excluded — fall back to full set
+                // and do NOT signal stuckFired (we couldn't actually act).
+                anyExclude = false;
+            }
+        }
+
+        int chosen = greedyAction(sIdx, filtered);
+        action.set(chosen);
+        stuckFired.set(anyExclude);
+        if (anyExclude) {
+            LOGGER.info("getActionFromStateAntiStuck: STUCK fired → chose action=" + chosen
+                      + " (excluded " + java.util.Arrays.toString(recentActions) + ")");
+        }
     }
 
     /**
@@ -731,6 +944,7 @@ public class QLearner extends Artifact {
         episodeWastedByNoEffect = 0;
         currentEpisodeStartState = -1;
         episodeMaxBellmanDelta = 0.0;
+        currentEpisodeNum++;
     }
 
     /**
@@ -749,6 +963,7 @@ public class QLearner extends Artifact {
         episodeWastedByNoEffect = 0;
         currentEpisodeStartState = stateVecToIndex(startStateVec);
         episodeMaxBellmanDelta = 0.0;
+        currentEpisodeNum++;
     }
 
     /**
@@ -828,16 +1043,31 @@ public class QLearner extends Artifact {
         saveQTableToFile(filename, actionNames, true, null);
         String base = filename.replace(".csv", "");
         for (int z = 0; z < qTables.length; z++) {
-            saveQTableToFile(base + "_zone" + (z + 1) + ".csv", actionNames, false, qTables[z]);
+            try {
+                saveQTableToFile(base + "_zone" + (z + 1) + ".csv", actionNames, false, qTables[z]);
+            } catch (Throwable t) {
+                LOGGER.log(java.util.logging.Level.SEVERE,
+                    "saveQTable: zone " + (z + 1) + " threw: " + t.getClass().getName()
+                    + " - " + t.getMessage(), t);
+            }
         }
     }
 
     private void saveQTableToFile(String filename, String[] actionNames,
                                   boolean combined, double[][] singleTable) {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.print("StateIndex");
-            for (String a : actionNames) pw.print("," + a);
-            pw.println();
+        // Use a large BufferedWriter and a reused StringBuilder row buffer.
+        // Avoid String.format / Formatter per cell (28M+ allocations across
+        // the 5 init CSVs); use Locale-stable manual rounding to 2 decimals.
+        // This keeps allocation pressure low enough that the JVM does not
+        // spend most of its time in GC and never gets killed by the
+        // surrounding launcher / IDE process supervisor.
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename), 1 << 20);
+             PrintWriter pw = new PrintWriter(bw)) {
+            StringBuilder row = new StringBuilder(512);
+            row.append("StateIndex");
+            for (String a : actionNames) { row.append(',').append(a); }
+            pw.println(row);
+            long rowsWritten = 0;
             for (int s = 0; s < nStates; s++) {
                 boolean anyNonZero = false;
                 for (int a = 0; a < nActions; a++) {
@@ -845,17 +1075,38 @@ public class QLearner extends Artifact {
                     if (v != 0.0) { anyNonZero = true; break; }
                 }
                 if (!anyNonZero) continue;
-                pw.print(s);
+                row.setLength(0);
+                row.append(s);
                 for (int a = 0; a < nActions; a++) {
                     double v = combined ? combinedQ(s, a) : singleTable[s][a];
-                    pw.print("," + String.format("%.2f", v));
+                    row.append(',');
+                    appendRounded2(row, v);
                 }
-                pw.println();
+                pw.println(row);
+                rowsWritten++;
             }
-            LOGGER.info("saveQTable: written to " + filename);
+            LOGGER.info("saveQTable: written to " + filename + " (" + rowsWritten + " rows)");
         } catch (IOException e) {
-            LOGGER.warning("saveQTable: failed to write " + filename + " — " + e.getMessage());
+            LOGGER.warning("saveQTable: failed to write " + filename + " - " + e.getMessage());
+        } catch (Throwable t) {
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                "saveQTable: unexpected error writing " + filename
+                + " (type=" + t.getClass().getName() + ", msg=" + t.getMessage() + ")", t);
         }
+    }
+
+    /** Append v rounded to 2 decimals (HALF_UP) to sb, no Locale dependency. */
+    private static void appendRounded2(StringBuilder sb, double v) {
+        if (Double.isNaN(v)) { sb.append("NaN"); return; }
+        if (Double.isInfinite(v)) { sb.append(v > 0 ? "Infinity" : "-Infinity"); return; }
+        // Round half-up to 2 decimals.
+        long scaled = (long) Math.floor(Math.abs(v) * 100.0 + 0.5);
+        if (v < 0 && scaled != 0) sb.append('-');
+        sb.append(scaled / 100);
+        sb.append('.');
+        long frac = scaled % 100;
+        if (frac < 10) sb.append('0');
+        sb.append(frac);
     }
 
     /**
@@ -1104,9 +1355,13 @@ public class QLearner extends Artifact {
             if (gapChange < 0) wasted = true; // regression component fired
         }
 
-        // Terminal: zone reached target
-        if (nextLevel == target) {
+        // Terminal: once-only bonus on transition INTO target (prevents
+        // +200/step compounding that saturated reward at +5970).
+        if (prevLevel != target && nextLevel == target) {
             r += 200.0;
+        } else if (nextLevel == target) {
+            // Small holding reward while staying at target — bounded by clip.
+            r += 5.0;
         }
 
         // Lost-goal penalty: was at target, now moved away
@@ -1196,37 +1451,57 @@ public class QLearner extends Artifact {
     private int greedyAction(int stateIdx, int[] applicable) {
         // Retrieve priors only in soft-prior stereotype mode
         double[] priors = null;
+        double   priorWeight = 0.0;
         if (useStereotypes && !maskStrict) {
             // Decode state vector from index (needed for priors)
             int[] sv = decodeState(stateIdx);
             priors = reasoner.getActionPriors(sv);
+            // Linearly decay the prior weight from STEREO_PRIOR_SCALE down to
+            // STEREO_PRIOR_SCALE * PRIOR_DECAY_FLOOR over PRIOR_DECAY_EPISODES
+            // so stereotypes shape early exploration but learning dominates
+            // late. During benchmark (currentEpisodeNum frozen at last value)
+            // priorWeight stays at the floor.
+            double frac = PRIOR_DECAY_EPISODES <= 0 ? 1.0
+                        : Math.min(1.0, (double) currentEpisodeNum / PRIOR_DECAY_EPISODES);
+            double w = 1.0 - frac * (1.0 - PRIOR_DECAY_FLOOR);
+            priorWeight = STEREO_PRIOR_SCALE * w;
         }
 
-        int    best  = applicable[0];
-        double bestQ = combinedQ(stateIdx, applicable[0])
-                     + (priors != null ? priors[applicable[0]] : 0.0);
+        // Collect top-Q actions (tie-break random among ties) so a single
+        // numerically-equal Q row doesn't pin the policy on the first index.
+        double bestQ = Double.NEGATIVE_INFINITY;
+        int[] tieBuf = new int[applicable.length];
+        int   tieN   = 0;
         for (int a : applicable) {
-            double q = combinedQ(stateIdx, a) + (priors != null ? priors[a] : 0.0);
-            if (q > bestQ) {
+            double effectivePrior = 0.0;
+            if (priors != null) {
+                double calMul = 1.0;
+                if (ADAPTIVE_TRUST && actionCalN != null
+                        && a < actionCalN.length
+                        && actionCalN[a] >= ADAPTIVE_TRUST_MIN_SAMPLES) {
+                    double cal = actionCalSum[a] / actionCalN[a];
+                    calMul = Math.max(ADAPTIVE_TRUST_FLOOR, cal);
+                }
+                effectivePrior = priorWeight * priors[a] * calMul;
+            }
+            double q = combinedQ(stateIdx, a) + effectivePrior;
+            if (q > bestQ + 1e-9) {
                 bestQ = q;
-                best  = a;
+                tieN  = 0;
+                tieBuf[tieN++] = a;
+            } else if (Math.abs(q - bestQ) <= 1e-9) {
+                tieBuf[tieN++] = a;
             }
         }
-        return best;
+        if (tieN <= 1) return tieBuf[0];
+        return tieBuf[rng.nextInt(tieN)];
     }
 
-    private static int[] toIntArray(Object[] arr) {
-        int[] result = new int[arr.length];
-        for (int i = 0; i < arr.length; i++) result[i] = toInt(arr[i]);
-        return result;
-    }
+    // ---- primitive coercion helpers (delegate to Converters) -------------
 
-    private static int toInt(Object o) {
-        if (o instanceof Number) return ((Number) o).intValue();
-        return Integer.parseInt(String.valueOf(o));
-    }
+    private static int[] toIntArray(Object[] arr) { return Converters.toIntArray(arr); }
 
-    private static int clamp(int v, int lo, int hi) {
-        return Math.max(lo, Math.min(hi, v));
-    }
+    private static int toInt(Object o) { return Converters.toInt(o); }
+
+    private static int clamp(int v, int lo, int hi) { return Converters.clamp(v, lo, hi); }
 }

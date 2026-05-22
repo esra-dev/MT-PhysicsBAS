@@ -226,17 +226,9 @@ public class StereotypeLearner extends Artifact {
     // Helpers
     // -----------------------------------------------------------------------
 
-    private static int toInt(Object o) {
-        if (o instanceof Number) return ((Number) o).intValue();
-        if (o instanceof Boolean) return ((Boolean) o) ? 1 : 0;
-        return Integer.parseInt(String.valueOf(o));
-    }
+    private static int toInt(Object o) { return Converters.toInt(o); }
 
-    private static boolean toBoolean(Object o) {
-        if (o instanceof Boolean) return (Boolean) o;
-        if (o instanceof Number)  return ((Number) o).intValue() != 0;
-        return Boolean.parseBoolean(String.valueOf(o));
-    }
+    private static boolean toBoolean(Object o) { return Converters.toBoolean(o); }
 
     private static String escapeTurtle(String s) {
         if (s == null) return "";

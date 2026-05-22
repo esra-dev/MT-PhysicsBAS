@@ -79,6 +79,12 @@ exec_delay_ms(65).
         +bench_mode(OverrideMode);
         .print("[RuntimeOverride] bench_mode: ", OldM, " -> ", OverrideMode)
     }.
+// Failure handler: if tools.jia.system_prop is unavailable, log and continue.
+// active_profile and bench_mode will reflect whatever was pre-patched by the
+// run script into lab_profiles.asl and illuminance_controller_agent_bench.asl.
+@apply_runtime_overrides_fail
+-!apply_runtime_overrides <-
+    .print("[RuntimeOverride] WARNING: tools.jia.system_prop failed; active_profile/bench_mode unchanged (using pre-patched values).").
 
 @assert_zone_targets_done
 +!assert_zone_targets([]) <- true.
@@ -236,7 +242,8 @@ exec_delay_ms(65).
     .print("");
     .print("==========================================================");
     .print("   Benchmark complete. Results saved to: ", OutFile);
-    .print("==========================================================").
+    .print("==========================================================");
+    .stopMAS.
 
 /* ============================================================
  * Scenario catalogue — loaded dynamically from the active profile's
@@ -277,6 +284,11 @@ exec_delay_ms(65).
     .concat(StateStr0, " file=", StateStr1);
     .concat(StateStr1, File, StateStr);
     beginScenario(ScenId, RunId, Mode, StateStr)[artifact_id(LogId)];
+    // Reset anti-stuck ring buffers per scenario so stagnation detection
+    // does not leak across scenario boundaries.
+    .abolish(recent_states(_));
+    .abolish(recent_actions(_));
+    .abolish(bench_stuck_fired(_));
     .print("[Bench] Scenario ", ScenId, " Run ", RunId, " | file=", File);
     !run_scenario_step(ScenId, RunId, 0);
     !run_scenario_list(Rest, RunId).
@@ -321,10 +333,11 @@ exec_delay_ms(65).
                    SKs2, SVs2, CrossZone)[artifact_id(LogId)];
         // Detailed step log — reconstruct action label
         !get_last_action_label(Mode, ActionLabel);
-        recordStepDetailRich(Step, ZoneLevels, ZoneLevels2, Targets,
-                             ActionLabel, false, CrossZone,
-                             Temps, SKs2, SVs2,
-                             SunshineRank)[artifact_id(LogId)];
+        !get_stuck_fired(StuckFired);
+        recordStepDetailRichV2(Step, ZoneLevels, ZoneLevels2, Targets,
+                               ActionLabel, false, CrossZone,
+                               Temps, SKs2, SVs2,
+                               SunshineRank, StuckFired)[artifact_id(LogId)];
         // Per-step weakness fingerprinting (QL modes only — needs reasoner).
         !fingerprint_weakness(Mode, ZoneLevels, SunshineRank, SKs, SVs,
                               ZoneLevels2, SKs2, SVs2);
@@ -537,16 +550,76 @@ exec_delay_ms(65).
     ?qlearner_artifact(QlId);
     ?lab_artifact(LabId);
     encodeState(ZoneLevels, SunshineRank, SKs, SVs, StateVec)[artifact_id(QlId)];
-    getActionFromState(StateVec, false, Action)[artifact_id(QlId)];
+    // ---- anti-stuck ring buffer -----------------------------------------
+    // Track last 3 state vectors and last 2 dispatched actions. When all 3
+    // recent states are equal, exclude the recent actions on the next call
+    // so the policy can break out of a stagnation plateau.
+    !get_recent_states(RecentStates);
+    !get_recent_actions(RecentActions);
+    !is_stuck3(StateVec, RecentStates, IsStuck);
+    if (IsStuck) {
+        getActionFromStateAntiStuck(StateVec, RecentActions, Action, StuckFired)[artifact_id(QlId)]
+    } else {
+        getActionFromState(StateVec, false, Action)[artifact_id(QlId)];
+        StuckFired = false
+    };
+    .abolish(bench_stuck_fired(_));
+    +bench_stuck_fired(StuckFired);
+    !push_recent_state(StateVec);
+    !push_recent_action(Action);
     actionToWoT(Action, WotType, WotValue)[artifact_id(QlId)];
     // Track last dispatched action for cross-zone interference check
     notifyActionDispatched(Action)[artifact_id(QlId)];
     if (WotType \== "none") {
         invokeAction(WotType, WotValue)[artifact_id(LabId)];
-        .print("[Bench QL] action=", Action, " wot=", WotType, "=", WotValue)
+        .print("[Bench QL] action=", Action, " wot=", WotType, "=", WotValue,
+               " stuck=", StuckFired)
     } else {
-        .print("[Bench QL] action=", Action, " (do-nothing)")
+        .print("[Bench QL] action=", Action, " (do-nothing) stuck=", StuckFired)
     }.
+
+/* ---------- anti-stuck helpers ----------------------------------------- */
+@get_recent_states_have
++!get_recent_states(L) : recent_states(L) <- true.
+@get_recent_states_init
++!get_recent_states([]) <- true.
+
+@get_recent_actions_have
++!get_recent_actions(L) : recent_actions(L) <- true.
+@get_recent_actions_init
++!get_recent_actions([]) <- true.
+
+// stuck = at least 2 prior states recorded AND both equal current state
+@is_stuck3_yes
++!is_stuck3(Sv, [Sv, Sv | _], true) <- true.
+@is_stuck3_no
++!is_stuck3(_, _, false) <- true.
+
+@push_recent_state
++!push_recent_state(Sv) <-
+    !get_recent_states(L0);
+    !take_first2(L0, L1);
+    .abolish(recent_states(_));
+    +recent_states([Sv | L1]).
+
+@push_recent_action
++!push_recent_action(A) <-
+    !get_recent_actions(L0);
+    !take_first2(L0, L1);
+    .abolish(recent_actions(_));
+    +recent_actions([A | L1]).
+
+@take_first2_empty
++!take_first2([], []) <- true.
+@take_first2_one
++!take_first2([X], [X]) <- true.
+@take_first2_two
++!take_first2([X, Y | _], [X, Y]) <- true.
+
+@get_stuck_fired_have
++!get_stuck_fired(F) : bench_stuck_fired(F) <- true.
+@get_stuck_fired_init
++!get_stuck_fired(false) <- true.
 
 /* ============================================================
  * Per-step weakness fingerprinting

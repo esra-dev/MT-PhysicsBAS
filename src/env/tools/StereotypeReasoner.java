@@ -142,6 +142,14 @@ public class StereotypeReasoner {
     private double sunshineSatisfactionProb;
     private int numActions;
 
+    /**
+     * True if the state-slot registry could not be loaded from the ontology
+     * and the reasoner is operating on the legacy hard-coded fallback layout.
+     * In this mode stereotype-guided initialisation is still functional but
+     * may not reflect the simulator topology — callers should log a banner.
+     */
+    private boolean degraded = false;
+
     // Maps WoT action URI -> set of 0-based zone indices
     private Map<String, Set<Integer>> wotActionToZones;
     // Maps WoT state URI -> state vector bit index
@@ -338,12 +346,15 @@ public class StereotypeReasoner {
                 }
             }
         } catch (Exception e) {
-            LOGGER.severe("StereotypeReasoner: failed to load state slot registry: " + e.getMessage());
+            LOGGER.warning("StereotypeReasoner: failed to load state slot registry: " + e.getMessage()
+                         + " — entering degraded mode (legacy 8-slot fallback).");
+            this.degraded = true;
         }
 
         if (svToDomain.isEmpty()) {
             LOGGER.warning("StereotypeReasoner: state slot registry is empty! "
                          + "Falling back to legacy 8-slot layout [4,4,2,2,2,2,2,4].");
+            this.degraded = true;
             domainSizes      = new int[]{4, 4, 2, 2, 2, 2, 2, 4};
             zoneLevelIndices = new int[]{0, 1};
             sunshineIndex    = 7;
@@ -544,6 +555,16 @@ public class StereotypeReasoner {
     /** Total number of actions (dynamically discovered from ontology + DO_NOTHING). */
     public int getNumActions() {
         return numActions;
+    }
+
+    /**
+     * True when the state-slot registry could not be loaded from the ontology
+     * and the reasoner is operating on the legacy 8-slot fallback layout.
+     * Callers (e.g. {@code QLearner.configureQLearner}) should warn the user
+     * because stereotype-guided init may no longer match the simulator topology.
+     */
+    public boolean isDegraded() {
+        return degraded;
     }
 
     /** Get action metadata by index. */

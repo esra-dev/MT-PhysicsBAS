@@ -363,13 +363,13 @@ public class OntologyArtifact extends Artifact {
      *      sunshineRank >= ws:ivMinRank stored on the mechanism (default 1 if absent).
      *   3. Java filter — current state: look up ws:hasWoTStateSemanticType in the
      *      stateMap built from the parallel stateKeys/stateValues arrays returned by
-     *      LabEnvironment.readZoneState. Skip if already active.
+     *      LabEnvironment.readLabStatus. Skip if already active.
      *   4. Return first passing candidate including the WoT action URI.
      *
      * @param zoneUri       Full URI of the zone.
      * @param dvUri         URI of the target process variable (from discoverZoneQuantity).
      * @param sunshineRank  Current sunshine rank (0–3).
-     * @param stateKeys     WoT status property URIs (from readZoneState).
+     * @param stateKeys     WoT status property URIs (from readLabStatus).
      * @param stateValues   Corresponding boolean values (parallel to stateKeys).
      * @param componentId   Output: local name of selected component, or "none".
      * @param mechanism     Output: mechanism rdfs:label.
@@ -440,7 +440,7 @@ public class OntologyArtifact extends Artifact {
      * @param zoneUri       Full URI of the zone.
      * @param dvUri         URI of the target process variable.
      * @param sunshineRank  Current sunshine rank (logged only).
-     * @param stateKeys     WoT status property URIs (from readZoneState).
+     * @param stateKeys     WoT status property URIs (from readLabStatus).
      * @param stateValues   Corresponding boolean values (parallel to stateKeys).
      * @param componentId   Output: local name of selected component, or "none".
      * @param mechanism     Output: mechanism rdfs:label.
@@ -559,7 +559,7 @@ public class OntologyArtifact extends Artifact {
 
     /**
      * Build a Boolean lookup map from the parallel stateKeys / stateValues arrays
-     * returned by LabEnvironment.readZoneState.
+     * returned by LabEnvironment.readLabStatus.
      * Key: WoT status property URI (e.g. "http://example.org/was#Z1Light")
      * Value: current boolean state (true = on/up, false = off/down)
      */
@@ -759,8 +759,5 @@ public class OntologyArtifact extends Artifact {
         safe.set(false);
     }
 
-    private static int toInt(Object o) {
-        if (o instanceof Number) return ((Number) o).intValue();
-        return Integer.parseInt(String.valueOf(o));
-    }
+    private static int toInt(Object o) { return Converters.toInt(o); }
 }

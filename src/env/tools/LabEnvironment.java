@@ -13,12 +13,6 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hc.client5.http.impl.DefaultConnectionKeepAliveStrategy;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
-import org.apache.hc.core5.http.impl.DefaultConnectionReuseStrategy;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
@@ -73,12 +67,6 @@ public class LabEnvironment extends Artifact {
         // effect without an explicit configureHttp call from ASL.
         applyHttpSystemProperties();
         try {
-            CloseableHttpClient httpClient = HttpClients.custom()
-                .setConnectionManager(new PoolingHttpClientConnectionManager())
-                .setConnectionReuseStrategy(DefaultConnectionReuseStrategy.INSTANCE)
-                .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
-                .build();
-
             // Resolve classpath: URIs so local TD files bundled in src/resources/
             // can be referenced as "classpath:interactions-lab-custom.ttl".
             if (tdUrl.startsWith("classpath:")) {
@@ -106,7 +94,11 @@ public class LabEnvironment extends Artifact {
             }
 
         } catch (IOException e) {
+            // Fail fast: leaving `td` / `validator` null would only surface as an
+            // opaque NullPointerException on the first @OPERATION call. Signal
+            // the failure through CArtAgO so the agent can handle it cleanly.
             LOGGER.severe("Failed to initialize LabEnvironment: " + e.getMessage());
+            failed("td_load_failed", tdUrl, e.getMessage());
         }
     }
 
@@ -748,71 +740,6 @@ public class LabEnvironment extends Artifact {
     }
 
     /**
-     * Read the current state for a single zone.
-     *
-     * @deprecated Use {@link #readLabStatus} instead to collect all zones in one HTTP call.
-     *
-     * @param zoneIndex       Zone index (1 or 2).
-     * @param level           Output: illuminance rank for the zone.
-     * @param sunshineRank    Output: sunshine rank.
-     * @param boolStateKeys   Output: WoT status URI strings.
-     * @param boolStateValues Output: corresponding boolean values.
-     */
-    @Deprecated
-    @OPERATION
-    public void readZoneState(int zoneIndex,
-                              OpFeedbackParam<Integer> level,
-                              OpFeedbackParam<Integer> sunshineRank,
-                              OpFeedbackParam<Object[]> boolStateKeys,
-                              OpFeedbackParam<Object[]> boolStateValues) {
-
-        Optional<PropertyAffordance> p =
-                this.td.getFirstPropertyBySemanticType("https://example.org/was#Status");
-
-        if (p.isPresent()) {
-            Optional<Form> f = p.get().getFirstFormForOperationType(TD.readProperty);
-            DataSchema ds = p.get().getDataSchema();
-
-            if (f.isPresent()) {
-                TDHttpRequest request = new TDHttpRequest(f.get(), TD.readProperty);
-                try {
-                    TDHttpResponse response = request.execute();
-                    Map<String, Object> status =
-                            response.getPayloadAsObject((ObjectSchema) ds);
-
-                    String base = "http://example.org/was#Z" + zoneIndex;
-                    level.set(discretize(
-                            (Double) status.get(base + "Level"), lightBounds));
-                    sunshineRank.set(discretize(
-                            (Double) status.get("http://example.org/was#Sunshine"),
-                            sunshineBounds));
-
-                    // Collect all boolean entries so OntologyArtifact can look up
-                    // each actuator's current state by its WoT state semantic type URI.
-                    java.util.List<String>  keys = new java.util.ArrayList<>();
-                    java.util.List<Boolean> vals = new java.util.ArrayList<>();
-                    for (Map.Entry<String, Object> entry : status.entrySet()) {
-                        if (entry.getValue() instanceof Boolean) {
-                            keys.add(entry.getKey());
-                            vals.add((Boolean) entry.getValue());
-                        }
-                    }
-                    boolStateKeys.set(keys.toArray());
-                    boolStateValues.set(vals.toArray());
-
-                    LOGGER.info("readZoneState(Z" + zoneIndex + "): level=" +
-                            level.get() + " sunshine=" + sunshineRank.get() +
-                            " boolStates=" + keys);
-
-                } catch (IOException e) {
-                    LOGGER.severe("readZoneState Z" + zoneIndex +
-                                  " failed: " + e.getMessage());
-                }
-            }
-        }
-    }
-
-    /**
      * Helper method to perform a boolean action on the lab.
      * Gets the property name from the Thing Description schema.
      */
@@ -850,41 +777,12 @@ public class LabEnvironment extends Artifact {
         }
     }
 
-    private double[] toDoubleArray(Object[] arr) {
-        double[] d = new double[arr.length];
-        for (int i = 0; i < arr.length; i++) d[i] = ((Number) arr[i]).doubleValue();
-        return d;
-    }
-
-    private static double toDouble(Object o) {
-        if (o instanceof Number) return ((Number) o).doubleValue();
-        return Double.parseDouble(String.valueOf(o));
-    }
-
-    private static boolean toBoolean(Object o) {
-        if (o instanceof Boolean) return (Boolean) o;
-        if (o instanceof Number)  return ((Number) o).intValue() != 0;
-        return Boolean.parseBoolean(String.valueOf(o));
-    }
+    private double[] toDoubleArray(Object[] arr) { return Converters.toDoubleArray(arr); }
 
     private int discretize(double value, double[] bounds) {
         if (value < bounds[0]) return 0;
         if (value < bounds[1]) return 1;
         if (value < bounds[2]) return 2;
         return 3;
-    }
-
-    /**
-     * Maps lux values to light levels using configured bounds.
-     */
-    private int discretizeLightLevel(Double value) {
-        return discretize(value, lightBounds);
-    }
-
-    /**
-     * Maps sunshine values to levels using configured bounds.
-     */
-    private int discretizeSunshine(Double value) {
-        return discretize(value, sunshineBounds);
     }
 }

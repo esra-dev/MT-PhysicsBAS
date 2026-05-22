@@ -269,6 +269,7 @@ public class BenchmarkLogger extends Artifact {
         String[]  actuatorKeys   = new String[0];
         boolean[] actuatorVals   = new boolean[0];
         int       sunshineRank   = -1;
+        boolean   stuckFired     = false; // anti-stuck guard triggered this step
     }
 
     private final List<StepLogRecord> stepLog = new ArrayList<>();
@@ -323,6 +324,30 @@ public class BenchmarkLogger extends Artifact {
                                      Object[] actuatorKeys,
                                      Object[] actuatorVals,
                                      int      sunshineRank) {
+        recordStepDetailRichV2(step, zoneLevelsBefore, zonelevelsAfter, targets,
+                               actionLabel, wasMasked, crossZoneInterference,
+                               temperatures, actuatorKeys, actuatorVals,
+                               sunshineRank, false);
+    }
+
+    /**
+     * Variant of {@link #recordStepDetailRich} that also captures the anti-stuck
+     * guard firing flag. New bench agents call this op so the per-step CSV
+     * records whether the policy fell back to a non-greedy choice.
+     */
+    @OPERATION
+    public void recordStepDetailRichV2(int      step,
+                                       Object[] zoneLevelsBefore,
+                                       Object[] zonelevelsAfter,
+                                       Object[] targets,
+                                       String   actionLabel,
+                                       boolean  wasMasked,
+                                       boolean  crossZoneInterference,
+                                       Object[] temperatures,
+                                       Object[] actuatorKeys,
+                                       Object[] actuatorVals,
+                                       int      sunshineRank,
+                                       boolean  stuckFired) {
         StepLogRecord r = new StepLogRecord();
         r.scenarioId           = currentScenarioId;
         r.runId                = currentRunId;
@@ -337,6 +362,7 @@ public class BenchmarkLogger extends Artifact {
         r.actuatorKeys         = toStringArr(actuatorKeys);
         r.actuatorVals         = toBoolArr(actuatorVals);
         r.sunshineRank         = sunshineRank;
+        r.stuckFired           = stuckFired;
         stepLog.add(r);
     }
 
@@ -360,7 +386,7 @@ public class BenchmarkLogger extends Artifact {
                      + "Z1After,Z2After,Z3After,Z4After,"
                      + "WasMasked,CrossZoneInterference,"
                      + "Z1Temp,Z2Temp,Z3Temp,Z4Temp,"
-                     + "SunshineRank,ActuatorState");
+                     + "SunshineRank,ActuatorState,StuckFired");
             for (StepLogRecord r : stepLog) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(r.scenarioId).append(',').append(r.runId).append(',').append(r.step).append(',');
@@ -387,6 +413,7 @@ public class BenchmarkLogger extends Artifact {
                 if (r.sunshineRank >= 0) sb.append(r.sunshineRank);
                 sb.append(',');
                 sb.append(buildActuatorString(r.actuatorKeys, r.actuatorVals));
+                sb.append(',').append(r.stuckFired ? 1 : 0);
                 pw.println(sb.toString());
             }
             LOGGER.info("BenchmarkLogger.saveStepLog: written " + stepLog.size()
@@ -469,39 +496,13 @@ public class BenchmarkLogger extends Artifact {
     // Private helpers
     // -----------------------------------------------------------------------
 
-    private static int[] toIntArr(Object[] arr) {
-        int[] result = new int[arr.length];
-        for (int i = 0; i < arr.length; i++) result[i] = toInt(arr[i]);
-        return result;
-    }
+    private static int[] toIntArr(Object[] arr) { return Converters.toIntArray(arr); }
 
-    private static double[] toDoubleArr(Object[] arr) {
-        if (arr == null) return new double[0];
-        double[] result = new double[arr.length];
-        for (int i = 0; i < arr.length; i++) {
-            Object o = arr[i];
-            if (o instanceof Number) result[i] = ((Number) o).doubleValue();
-            else {
-                try { result[i] = Double.parseDouble(String.valueOf(o)); }
-                catch (NumberFormatException e) { result[i] = Double.NaN; }
-            }
-        }
-        return result;
-    }
+    private static double[] toDoubleArr(Object[] arr) { return Converters.toDoubleArray(arr); }
 
-    private static String[] toStringArr(Object[] arr) {
-        if (arr == null) return new String[0];
-        String[] result = new String[arr.length];
-        for (int i = 0; i < arr.length; i++) result[i] = String.valueOf(arr[i]);
-        return result;
-    }
+    private static String[] toStringArr(Object[] arr) { return Converters.toStringArray(arr); }
 
-    private static boolean[] toBoolArr(Object[] arr) {
-        if (arr == null) return new boolean[0];
-        boolean[] result = new boolean[arr.length];
-        for (int i = 0; i < arr.length; i++) result[i] = toBoolean(arr[i]);
-        return result;
-    }
+    private static boolean[] toBoolArr(Object[] arr) { return Converters.toBooleanArray(arr); }
 
     /**
      * Count the number of actuator state reversals between two snapshots.
@@ -526,16 +527,9 @@ public class BenchmarkLogger extends Artifact {
         return reversals;
     }
 
-    private static int toInt(Object o) {
-        if (o instanceof Number) return ((Number) o).intValue();
-        return Integer.parseInt(String.valueOf(o));
-    }
+    private static int toInt(Object o) { return Converters.toInt(o); }
 
-    private static boolean toBoolean(Object o) {
-        if (o instanceof Boolean) return (Boolean) o;
-        if (o instanceof Number)  return ((Number) o).intValue() != 0;
-        return Boolean.parseBoolean(String.valueOf(o));
-    }
+    private static boolean toBoolean(Object o) { return Converters.toBoolean(o); }
 
     // -----------------------------------------------------------------------
     // Rich JSONL trace (Phase F)

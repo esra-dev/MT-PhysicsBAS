@@ -56,4 +56,9 @@ class SystemPropTest {
                 out
         }));
     }
+
+    @Test
+    void exposesJasonInternalActionClassName() throws Exception {
+        assertEquals(system_prop.class, Class.forName("tools.jia.system_prop"));
+    }
 }
