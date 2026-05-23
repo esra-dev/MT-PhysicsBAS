@@ -31,8 +31,24 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+      - name: Show wrapper info
+        run: |
+          set -x
+          java -version
+          ls -la gradle/wrapper/
+          head -5 gradlew
+          cat gradle/wrapper/gradle-wrapper.properties
       - name: Compile
-        run: ./gradlew --no-daemon classes
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace --info classes 2>&1 | tee gradle-classes.log
+      - name: Dump compile log on failure
+        if: failure()
+        run: |
+          echo '## Compile failure (last 200 lines)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 200 gradle-classes.log >> "$GITHUB_STEP_SUMMARY" || echo '(no log)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
       - name: Run unit tests
         run: ./gradlew --no-daemon test
       - name: Upload test report
@@ -62,7 +78,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Validate Turtle resources
-        run: ./gradlew --no-daemon validateTurtle
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace --info validateTurtle 2>&1 | tee gradle-ttl.log
+      - name: Dump validateTurtle log on failure
+        if: failure()
+        run: |
+          echo '## validateTurtle failure (last 200 lines)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 200 gradle-ttl.log >> "$GITHUB_STEP_SUMMARY" || echo '(no log)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
       - name: Validate scenario JSON files
         run: |
           node -e "
