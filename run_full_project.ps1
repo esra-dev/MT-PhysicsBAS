@@ -492,10 +492,16 @@ try {
             continue
         }
         New-Item -ItemType Directory -Force -Path $userDir | Out-Null
-        $proc = Start-Process `
-            -FilePath $NodeRedCmd `
-            -ArgumentList "--userDir `"$userDir`" --port $($sim.Port) `"$flowAbs`"" `
-            -PassThru -WindowStyle Hidden
+        $spArgs = @{
+            FilePath     = $NodeRedCmd
+            ArgumentList = "--userDir `"$userDir`" --port $($sim.Port) `"$flowAbs`""
+            PassThru     = $true
+        }
+        # -WindowStyle is Windows-only; PowerShell Core on Linux/macOS does not support it.
+        if ($IsWindows -or ($null -eq $IsWindows -and $env:OS -eq 'Windows_NT')) {
+            $spArgs.WindowStyle = 'Hidden'
+        }
+        $proc = Start-Process @spArgs
         $SimProcs[$sim.Port] = $proc
         Write-Info "Launched $($sim.Profile)  port=$($sim.Port)  PID=$($proc.Id)"
     }

@@ -109,17 +109,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
+          set +e
           tmp=$(mktemp -d)
-          cp gradle-ttl.log "$tmp/validate-resources-ttl.log" || echo '(no log captured)' > "$tmp/validate-resources-ttl.log"
+          if [ -f gradle-ttl.log ]; then cp gradle-ttl.log "$tmp/validate-resources-ttl.log"; else echo '(no log captured)' > "$tmp/validate-resources-ttl.log"; fi
           cd "$tmp"
           git init -q -b ci-debug-validate
           git config user.email ci@github
           git config user.name ci
           git add -A
-          git commit -q -m "validate-resources ttl log run #${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA}"
+          git commit -q -m "validate-resources log #${GITHUB_RUN_NUMBER}" || true
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push -f origin ci-debug-validate
+          git push -f origin ci-debug-validate || true
       - name: Validate scenario JSON files
         run: |
           node -e "
@@ -130,7 +130,9 @@ jobs:
             for (const f of files) {
               const p = path.join(dir, f);
               try {
-                const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+                let txt = fs.readFileSync(p, 'utf8');
+                if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1); // strip UTF-8 BOM
+                const data = JSON.parse(txt);
                 if (!Array.isArray(data)) throw new Error('top-level is not an array');
                 console.log(' OK  ', f, '(', data.length, 'entries)');
               } catch (e) {
