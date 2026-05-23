@@ -600,13 +600,19 @@ try {
                 Write-Info "Gradle output -> $cellLogFile"
                 $gArgs     = @("taskQl", "-Pprofile=$profile") + $HttpArgs + @("--console=plain")
                 $gradleExe = $GradleExe
-                $gProc = Start-Process -FilePath $gradleExe `
-                    -ArgumentList $gArgs `
-                    -WorkingDirectory $ScriptRoot `
-                    -RedirectStandardOutput $cellLogFile `
-                    -RedirectStandardError  $cellErrFile `
-                    -WindowStyle Hidden `
-                    -PassThru
+                # -WindowStyle is Windows-only; PowerShell Core on Linux/macOS does not support it.
+                $gpArgs = @{
+                    FilePath               = $gradleExe
+                    ArgumentList           = $gArgs
+                    WorkingDirectory       = $ScriptRoot
+                    RedirectStandardOutput = $cellLogFile
+                    RedirectStandardError  = $cellErrFile
+                    PassThru               = $true
+                }
+                if ($IsWindows -or ($null -eq $IsWindows -and $env:OS -eq 'Windows_NT')) {
+                    $gpArgs.WindowStyle = 'Hidden'
+                }
+                $gProc = Start-Process @gpArgs
                 # Helper: read any new [Training] / key lines from $cellLogFile and
                 # echo them via Write-Info (appears in the parallel progress log).
                 $tailPos = 0L
