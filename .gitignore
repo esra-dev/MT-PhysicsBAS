@@ -11,6 +11,9 @@ build/
 hs_err_pid*
 replay_pid*
 
+# Keep Gradle wrapper jar — required to run ./gradlew on CI
+!gradle/wrapper/gradle-wrapper.jar
+
 # Logs and runtime dumps
 *.log
 logs/
