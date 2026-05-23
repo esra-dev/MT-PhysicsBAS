@@ -62,7 +62,7 @@ jobs:
           git config user.email ci@github
           git config user.name ci
           git add -A
-          git commit -q -m "build-test classes log run #${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA}"
+          git commit -q -m "build-test log #${GITHUB_RUN_NUMBER}"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push -f origin ci-debug-logs
       - name: Run unit tests
@@ -104,6 +104,22 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           tail -n 200 gradle-ttl.log >> "$GITHUB_STEP_SUMMARY" || echo '(no log)' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish validateTurtle log to ci-debug-validate branch
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          tmp=$(mktemp -d)
+          cp gradle-ttl.log "$tmp/validate-resources-ttl.log" || echo '(no log captured)' > "$tmp/validate-resources-ttl.log"
+          cd "$tmp"
+          git init -q -b ci-debug-validate
+          git config user.email ci@github
+          git config user.name ci
+          git add -A
+          git commit -q -m "validate-resources ttl log run #${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push -f origin ci-debug-validate
       - name: Validate scenario JSON files
         run: |
           node -e "
@@ -190,6 +206,24 @@ jobs:
             -OnlyStereo false `
             -SkipBenchmark `
             -SkipPreflight
+      - name: Publish smoke logs to ci-debug-smoke branch
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          tmp=$(mktemp -d)
+          cp run_full_project.log "$tmp/smoke-run_full_project.log" 2>/dev/null || echo '(no run_full_project.log)' > "$tmp/smoke-run_full_project.log"
+          mkdir -p "$tmp/log"
+          cp -r log/* "$tmp/log/" 2>/dev/null || echo '(no log dir)' > "$tmp/log/EMPTY"
+          cd "$tmp"
+          git init -q -b ci-debug-smoke
+          git config user.email ci@github
+          git config user.name ci
+          git add -A
+          git commit -q -m "smoke logs run #${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA}" || true
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push -f origin ci-debug-smoke || true
       - name: Upload smoke artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -204,4 +238,5 @@ jobs:
             run_full_project.log
           if-no-files-found: warn
           retention-days: 7
+
 
