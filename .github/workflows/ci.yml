@@ -8,7 +8,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-test:
@@ -31,40 +31,8 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Show wrapper info
-        run: |
-          set -x
-          java -version
-          ls -la gradle/wrapper/
-          head -5 gradlew
-          cat gradle/wrapper/gradle-wrapper.properties
       - name: Compile
-        run: |
-          set -o pipefail
-          ./gradlew --no-daemon --stacktrace --info classes 2>&1 | tee gradle-classes.log
-      - name: Dump compile log on failure
-        if: failure()
-        run: |
-          echo '## Compile failure (last 200 lines)' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          tail -n 200 gradle-classes.log >> "$GITHUB_STEP_SUMMARY" || echo '(no log)' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - name: Publish compile log to ci-debug-logs branch
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          tmp=$(mktemp -d)
-          cp gradle-classes.log "$tmp/build-test-classes.log" || echo '(no log captured)' > "$tmp/build-test-classes.log"
-          cd "$tmp"
-          git init -q -b ci-debug-logs
-          git config user.email ci@github
-          git config user.name ci
-          git add -A
-          git commit -q -m "build-test log #${GITHUB_RUN_NUMBER}"
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push -f origin ci-debug-logs
+        run: ./gradlew --no-daemon classes
       - name: Run unit tests
         run: ./gradlew --no-daemon test
       - name: Upload test report
@@ -94,32 +62,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Validate Turtle resources
-        run: |
-          set -o pipefail
-          ./gradlew --no-daemon --stacktrace --info validateTurtle 2>&1 | tee gradle-ttl.log
-      - name: Dump validateTurtle log on failure
-        if: failure()
-        run: |
-          echo '## validateTurtle failure (last 200 lines)' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          tail -n 200 gradle-ttl.log >> "$GITHUB_STEP_SUMMARY" || echo '(no log)' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - name: Publish validateTurtle log to ci-debug-validate branch
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set +e
-          tmp=$(mktemp -d)
-          if [ -f gradle-ttl.log ]; then cp gradle-ttl.log "$tmp/validate-resources-ttl.log"; else echo '(no log captured)' > "$tmp/validate-resources-ttl.log"; fi
-          cd "$tmp"
-          git init -q -b ci-debug-validate
-          git config user.email ci@github
-          git config user.name ci
-          git add -A
-          git commit -q -m "validate-resources log #${GITHUB_RUN_NUMBER}" || true
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push -f origin ci-debug-validate || true
+        run: ./gradlew --no-daemon validateTurtle
       - name: Validate scenario JSON files
         run: |
           node -e "
@@ -208,24 +151,6 @@ jobs:
             -OnlyStereo false `
             -SkipBenchmark `
             -SkipPreflight
-      - name: Publish smoke logs to ci-debug-smoke branch
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set +e
-          tmp=$(mktemp -d)
-          cp run_full_project.log "$tmp/smoke-run_full_project.log" 2>/dev/null || echo '(no run_full_project.log)' > "$tmp/smoke-run_full_project.log"
-          mkdir -p "$tmp/log"
-          cp -r log/* "$tmp/log/" 2>/dev/null || echo '(no log dir)' > "$tmp/log/EMPTY"
-          cd "$tmp"
-          git init -q -b ci-debug-smoke
-          git config user.email ci@github
-          git config user.name ci
-          git add -A
-          git commit -q -m "smoke logs run #${GITHUB_RUN_NUMBER} sha ${GITHUB_SHA}" || true
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push -f origin ci-debug-smoke || true
       - name: Upload smoke artifacts
         if: always()
         uses: actions/upload-artifact@v4
