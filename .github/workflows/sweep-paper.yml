@@ -1,4 +1,4 @@
-name: Sweep (paper)
+﻿name: Sweep (paper)
 
 # Full end-to-end pipeline using paper-mode hyperparameters (2500 episodes,
 # 5 benchmark runs, slower tick). Same DAG as sweep-dev.yml but each
@@ -45,7 +45,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '21'
           cache: gradle
       - name: Make gradlew executable
         run: chmod +x ./gradlew
@@ -85,7 +85,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '21'
           cache: gradle
       - name: Set up Node 20
         uses: actions/setup-node@v4
@@ -150,7 +150,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '21'
           cache: gradle
       - name: Set up Node 20
         uses: actions/setup-node@v4
@@ -239,9 +239,9 @@ jobs:
           for d in _artifacts/bench/*/; do
             cp -rn "$d"./* . 2>/dev/null || true
           done
-          echo "── root-level CSVs ──"
+          echo "â”€â”€ root-level CSVs â”€â”€"
           ls -1 *.csv *.json *.ttl 2>/dev/null | head -40 || true
-          echo "── benchmark/results layout ──"
+          echo "â”€â”€ benchmark/results layout â”€â”€"
           find benchmark/results -maxdepth 3 -type d 2>/dev/null | sort | head -50 || true
       - name: Run sweep analysis
         run: python analysis/sweep_report.py --root benchmark/results --out analysis/out
@@ -249,7 +249,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "# Sweep (paper) — summary"
+            echo "# Sweep (paper) â€” summary"
             echo ""
             echo "**Profiles:** \`${{ env.PROFILES }}\`"
             echo "**Mode:** \`${{ env.RUN_MODE }}\`"

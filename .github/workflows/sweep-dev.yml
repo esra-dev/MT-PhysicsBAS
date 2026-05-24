@@ -1,4 +1,4 @@
-name: Sweep (dev)
+﻿name: Sweep (dev)
 
 # Full end-to-end pipeline (training + benchmark + analysis) using the
 # dev-mode hyperparameters from config/run_config.json. Parallelised over
@@ -37,9 +37,9 @@ env:
   PROFILES: ${{ github.event.inputs.profiles || 'custom2,custom3,custom4,custom5,custom6,custom7,custom8' }}
 
 jobs:
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # setup: compile once, share build/ + Gradle cache with all matrix cells.
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   setup:
     name: Compile & cache
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '21'
           cache: gradle
       - name: Make gradlew executable
         run: chmod +x ./gradlew
@@ -75,11 +75,11 @@ jobs:
           json=$(echo "$profs" | tr ',' '\n' | jq -R . | jq -sc .)
           echo "json=$json" >> "$GITHUB_OUTPUT"
 
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # train: one matrix cell per (profile, stereo). 14 jobs in dev defaults.
   # Each cell runs the sequential orchestrator with -OnlyProfiles + -OnlyStereo
   # so only its assigned simulator starts.
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   train:
     name: train ${{ matrix.profile }} stereo=${{ matrix.stereo }}
     needs: setup
@@ -95,7 +95,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '21'
           cache: gradle
       - name: Set up Node 20
         uses: actions/setup-node@v4
@@ -144,11 +144,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # bench: one matrix cell per (profile, mode). 21 jobs in dev defaults.
   # Each cell pulls back BOTH stereo training artefacts for its profile
   # so the QL benchmark can load the appropriate Q-table.
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   bench:
     name: bench ${{ matrix.profile }} mode=${{ matrix.mode }}
     needs: [setup, train]
@@ -164,7 +164,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '21'
           cache: gradle
       - name: Set up Node 20
         uses: actions/setup-node@v4
@@ -217,11 +217,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # aggregate: download everything, reconstruct directory layout, run the
   # Python analysis report, and commit consolidated outputs to the orphan
   # 'results' branch via the existing scripts/version_artifacts.ps1.
-  # ────────────────────────────────────────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   aggregate:
     name: Aggregate & publish
     needs: bench
@@ -261,9 +261,9 @@ jobs:
           for d in _artifacts/bench/*/; do
             cp -rn "$d"./* . 2>/dev/null || true
           done
-          echo "── root-level CSVs ──"
+          echo "â”€â”€ root-level CSVs â”€â”€"
           ls -1 *.csv *.json *.ttl 2>/dev/null | head -40 || true
-          echo "── benchmark/results layout ──"
+          echo "â”€â”€ benchmark/results layout â”€â”€"
           find benchmark/results -maxdepth 3 -type d 2>/dev/null | sort | head -50 || true
       - name: Run sweep analysis
         run: python analysis/sweep_report.py --root benchmark/results --out analysis/out
@@ -271,7 +271,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "# Sweep (dev) — summary"
+            echo "# Sweep (dev) â€” summary"
             echo ""
             echo "**Profiles:** \`${{ env.PROFILES }}\`"
             echo "**Mode:** \`${{ env.RUN_MODE }}\`"
