@@ -75,8 +75,8 @@
     "stereo_prior_scale": 5.0,
     "stereo_prior_decay_episodes": 10000,
     "stereo_prior_decay_floor": 0.1,
-    "reward_shaping": "none",
-    "adaptive_trust": false,
+    "reward_shaping": "pbrs",
+    "adaptive_trust": true,
     "adaptive_trust_min_samples": 50,
     "adaptive_trust_floor": 0.1
   },

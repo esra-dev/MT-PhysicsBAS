@@ -355,6 +355,226 @@ def aggregate_seeds(seed_roots: list[tuple[int, Path]],
     return len(rows)
 
 
+# ---------------------------------------------------------------------------
+# Paired statistical tests across seeds (research extension; pre-registered).
+#
+# For each profile x metric and each compared mode pair (typically
+# ql_true vs ql_false and ql_true vs rule_based), pair the per-seed values
+# by seed id and report:
+#   - paired bootstrap mean-difference 95% CI and two-sided p-value
+#   - Wilcoxon signed-rank two-sided p-value (scipy if available)
+#   - Cliff's delta effect size
+#   - Benjamini-Hochberg q-values across the (profile x metric x pair) family
+# Output: paired_tests.csv under out_dir.
+# ---------------------------------------------------------------------------
+
+_PAIRED_COMPARISONS = (
+    ("ql_true", "ql_false"),
+    ("ql_true", "rule_based"),
+    ("ql_false", "rule_based"),
+)
+
+
+def _collect_per_seed_values(
+    seed_roots: list[tuple[int, Path]]
+) -> dict:
+    """Return per_metric[(profile, mode)] = {seed: value}."""
+    out: dict = defaultdict(lambda: defaultdict(dict))
+    for seed, root in seed_roots:
+        for prof, mode, cell_dir in find_cells(root):
+            bench_csv = cell_dir / f"benchmark_results_{mode}.csv"
+            summ = summarise_benchmark(bench_csv)
+            if not summ:
+                continue
+            for k in _METRIC_KEYS:
+                if k in summ:
+                    out[k][(prof, mode)][seed] = float(summ[k])
+    return out
+
+
+def _paired_bootstrap_diff(a: list[float], b: list[float],
+                           iters: int = 10000) -> tuple[float, float, float, float]:
+    """Return (mean_diff, ci_lo, ci_hi, p_two_sided) for the paired mean
+    of (a - b). Pair-wise resampling with a deterministic RNG."""
+    if len(a) != len(b) or len(a) < 2:
+        return (float("nan"),) * 4  # type: ignore
+    diffs = [ai - bi for ai, bi in zip(a, b)]
+    mean = sum(diffs) / len(diffs)
+    try:
+        import numpy as np  # type: ignore
+        rng = np.random.default_rng(0xC1)
+        d = np.asarray(diffs, dtype=float)
+        n = d.size
+        idx = rng.integers(0, n, size=(iters, n))
+        boots = d[idx].mean(axis=1)
+        lo = float(np.quantile(boots, 0.025))
+        hi = float(np.quantile(boots, 0.975))
+        # Two-sided bootstrap p-value: fraction of resamples whose sign
+        # disagrees with the observed mean, doubled.
+        if mean >= 0:
+            p_one = float((boots <= 0).mean())
+        else:
+            p_one = float((boots >= 0).mean())
+        p = min(1.0, 2.0 * p_one)
+        return (mean, lo, hi, p)
+    except Exception:
+        import random
+        random.seed(0xC1)
+        n = len(diffs)
+        boots = []
+        for _ in range(iters):
+            s = 0.0
+            for _ in range(n):
+                s += diffs[random.randrange(n)]
+            boots.append(s / n)
+        boots.sort()
+        lo = boots[max(0, int(0.025 * iters))]
+        hi = boots[min(iters - 1, int(0.975 * iters))]
+        if mean >= 0:
+            p_one = sum(1 for x in boots if x <= 0) / iters
+        else:
+            p_one = sum(1 for x in boots if x >= 0) / iters
+        return (mean, lo, hi, min(1.0, 2.0 * p_one))
+
+
+def _wilcoxon_p(a: list[float], b: list[float]) -> float:
+    if len(a) != len(b) or len(a) < 2:
+        return float("nan")
+    try:
+        from scipy.stats import wilcoxon  # type: ignore
+        diffs = [ai - bi for ai, bi in zip(a, b)]
+        if all(d == 0 for d in diffs):
+            return 1.0
+        # zero_method="wilcox" drops zeros (standard); "two-sided" is default.
+        res = wilcoxon(diffs, zero_method="wilcox", alternative="two-sided")
+        return float(res.pvalue)
+    except Exception:
+        return float("nan")
+
+
+def _cliffs_delta(a: list[float], b: list[float]) -> float:
+    """Cliff's delta = (#a>b - #a<b) / (|a|*|b|). Range [-1, 1]."""
+    if not a or not b:
+        return float("nan")
+    gt = lt = 0
+    for x in a:
+        for y in b:
+            if x > y:
+                gt += 1
+            elif x < y:
+                lt += 1
+    return (gt - lt) / (len(a) * len(b))
+
+
+def _bh_qvalues(pvalues: list[float]) -> list[float]:
+    """Benjamini-Hochberg adjusted q-values; NaNs preserved."""
+    indexed = [(i, p) for i, p in enumerate(pvalues) if not (p != p)]
+    if not indexed:
+        return [float("nan")] * len(pvalues)
+    indexed.sort(key=lambda t: t[1])
+    m = len(indexed)
+    q = [float("nan")] * len(pvalues)
+    prev = 1.0
+    # Iterate from largest p to smallest to enforce monotonicity.
+    for rank in range(m, 0, -1):
+        i, p = indexed[rank - 1]
+        adj = p * m / rank
+        prev = min(prev, adj)
+        q[i] = min(1.0, prev)
+    return q
+
+
+def paired_tests(seed_roots: list[tuple[int, Path]],
+                 out_dir: Path,
+                 iters: int = 10000) -> int:
+    """Write paired_tests.csv with per (profile, metric, mode_a vs mode_b) rows."""
+    per_metric = _collect_per_seed_values(seed_roots)
+    rows: list[dict] = []
+    pvals: list[float] = []
+    for metric, by_cell in per_metric.items():
+        # gather profiles present
+        profiles = sorted({prof for (prof, _mode) in by_cell.keys()})
+        for prof in profiles:
+            for mode_a, mode_b in _PAIRED_COMPARISONS:
+                ka, kb = (prof, mode_a), (prof, mode_b)
+                if ka not in by_cell or kb not in by_cell:
+                    continue
+                seeds_common = sorted(set(by_cell[ka]) & set(by_cell[kb]))
+                if len(seeds_common) < 2:
+                    continue
+                a = [by_cell[ka][s] for s in seeds_common]
+                b = [by_cell[kb][s] for s in seeds_common]
+                mean_d, lo, hi, p_boot = _paired_bootstrap_diff(a, b, iters=iters)
+                p_wil = _wilcoxon_p(a, b)
+                delta = _cliffs_delta(a, b)
+                rows.append({
+                    "profile": prof,
+                    "metric": metric,
+                    "mode_a": mode_a,
+                    "mode_b": mode_b,
+                    "n_paired": len(seeds_common),
+                    "mean_diff": mean_d,
+                    "ci_lo": lo,
+                    "ci_hi": hi,
+                    "p_bootstrap": p_boot,
+                    "p_wilcoxon": p_wil,
+                    "cliffs_delta": delta,
+                })
+                pvals.append(p_boot if p_boot == p_boot else float("nan"))
+    # Multiple-comparisons correction (BH) over the bootstrap p-values family.
+    qvals = _bh_qvalues(pvals)
+    for r, q in zip(rows, qvals):
+        r["q_bootstrap_bh"] = q
+
+    out_path = out_dir / "paired_tests.csv"
+    if not rows:
+        out_path.write_text("", encoding="utf-8")
+        return 0
+    cols = list(rows[0].keys())
+    with out_path.open("w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols)
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+    return len(rows)
+
+
+def write_latex_table(summary_csv: Path, out_tex: Path) -> bool:
+    """Render summary_table_ci.csv as a minimal LaTeX tabular for \\input{}."""
+    if not summary_csv.is_file():
+        return False
+    rows = list(csv.DictReader(summary_csv.open(encoding="utf-8")))
+    if not rows:
+        return False
+    metric_cols = [c for c in rows[0].keys() if c.endswith("_mean")]
+    lines = [
+        "% Auto-generated by analysis/sweep_report.py. Do not edit by hand.",
+        "\\begin{tabular}{ll" + "r" * len(metric_cols) + "}",
+        "\\toprule",
+        "Profile & Mode & "
+        + " & ".join(c.removesuffix("_mean").replace("_", "\\_") for c in metric_cols)
+        + " \\\\",
+        "\\midrule",
+    ]
+    for r in rows:
+        cells = [r["profile"], r["mode"].replace("_", "\\_")]
+        for c in metric_cols:
+            base = c.removesuffix("_mean")
+            mean = r.get(c, "")
+            lo = r.get(f"{base}_ci_lo", "")
+            hi = r.get(f"{base}_ci_hi", "")
+            try:
+                cells.append(
+                    f"${float(mean):.3f}_{{[{float(lo):.3f},{float(hi):.3f}]}}$"
+                )
+            except (TypeError, ValueError):
+                cells.append("--")
+        lines.append(" & ".join(cells) + " \\\\")
+    lines += ["\\bottomrule", "\\end{tabular}"]
+    out_tex.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default="benchmark/results",
@@ -388,6 +608,14 @@ def main(argv: list[str]) -> int:
                   f"-> {n} (profile, mode) rows with 95% CIs "
                   f"({args.ci_bootstrap_iters} bootstrap iters)")
             print(f"sweep_report: summary_table_ci.csv written to {out_dir.resolve()}")
+            n_pairs = paired_tests(seed_roots, out_dir,
+                                   iters=args.ci_bootstrap_iters)
+            print(f"sweep_report: wrote {n_pairs} paired-test rows "
+                  f"to paired_tests.csv")
+            if write_latex_table(out_dir / "summary_table_ci.csv",
+                                 out_dir / "summary_table_ci.tex"):
+                print("sweep_report: summary_table_ci.tex written "
+                      "(\\input{}-ready)")
         # Run the per-cell report against the first seed for sanity charts.
         if seed_roots:
             root = seed_roots[0][1]
