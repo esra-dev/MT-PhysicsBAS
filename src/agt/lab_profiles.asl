@@ -174,7 +174,7 @@ lab_profile("custom7",
 //   by learning sunshine-conditioned action selection. sunshine_prob 0.50
 //   widens the distribution so rank-0 / rank-3 cases dominate equally.
 lab_profile("custom8",
-            td("classpath:interactions-lab-custom2.ttl"),
+            td("classpath:interactions-lab-custom8.ttl"),
             ont(["lab-ontology.ttl", "lab-ontology-custom2.ttl", "wot-mappings-custom2.ttl"]),
             scenarios("benchmark/scenarios_custom8.json"),
             train_scenarios("benchmark/train_scenarios_custom8.json"),
