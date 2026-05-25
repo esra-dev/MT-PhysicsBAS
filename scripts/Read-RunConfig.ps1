@@ -92,6 +92,7 @@ return [pscustomobject]@{
     qtable_suffix_map   = $cfg.qtable_suffix_map
     expected_state_vec_dim = $cfg.expected_state_vec_dim
     http_client       = $cfg.http_client
+    learning          = $cfg.learning
     dry_run           = [bool]$cfg.dry_run
     raw               = $cfg
 }
