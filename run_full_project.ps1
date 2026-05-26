@@ -653,6 +653,15 @@ try {
                 }
                 $heartbeatEverySec = 60
                 $watchdogNoGrowthSec = 1200
+                # If the training log has all completion markers (final Q-table,
+                # metrics, "Training complete after"...) but the JaCaMo JVM is
+                # still alive, the workload is logically done. JaCaMo/Jason can
+                # hang in its post-execution event loop and never reach
+                # System.exit. Treat this as success after a shorter idle window
+                # so we don't waste 20 minutes per cell waiting for a graceful
+                # JVM shutdown that will never come.
+                $postCompleteIdleSec = 180
+                $completedGracefully = $false
                 $lastHeartbeat = Get-Date
                 $lastLogGrowth = Get-Date
                 $lastLogLength = if (Test-Path $cellLogFile) {
@@ -682,7 +691,22 @@ try {
                         $lastHeartbeat = $now
                     }
 
-                    if ((New-TimeSpan -Start $lastLogGrowth -End $now).TotalSeconds -ge $watchdogNoGrowthSec) {
+                    $idleNow = (New-TimeSpan -Start $lastLogGrowth -End $now).TotalSeconds
+                    if ($idleNow -ge $postCompleteIdleSec) {
+                        if (Test-TrainingCompletionMarkers -LogPath $cellLogFile -ExpectedEpisodes ([int]$P.num_episodes)) {
+                            $idleInt = [int]$idleNow
+                            Write-Warn "Training markers complete but JVM still alive after ${idleInt}s idle (profile=$profile stereo=$stereo); terminating JaCaMo and continuing."
+                            try {
+                                if (-not $gProc.HasExited) {
+                                    Stop-Process -Id $gProc.Id -Force -ErrorAction Stop
+                                }
+                            } catch { }
+                            $completedGracefully = $true
+                            break
+                        }
+                    }
+
+                    if ($idleNow -ge $watchdogNoGrowthSec) {
                         try {
                             if (-not $gProc.HasExited) {
                                 Stop-Process -Id $gProc.Id -Force -ErrorAction Stop
@@ -718,7 +742,12 @@ try {
                 }
                 if ($gExitCode -ne 0) {
                     $logLooksComplete = Test-TrainingCompletionMarkers -LogPath $cellLogFile -ExpectedEpisodes ([int]$P.num_episodes)
-                    if (($gExitCode -eq -999) -and $logLooksComplete) {
+                    if ($completedGracefully -and $logLooksComplete) {
+                        Write-Warn "taskQl JVM was force-killed after completion markers (profile=$profile stereo=$stereo); treating as success."
+                        $elapsed = [int](New-TimeSpan -Start $cellStart -End (Get-Date)).TotalMinutes
+                        Write-OK "Done in ${elapsed} min  profile=$profile  stereo=$stereo"
+                        $gExitCode = 0
+                    } elseif (($gExitCode -eq -999) -and $logLooksComplete) {
                         Write-Warn "taskQl exit code unavailable (profile=$profile stereo=$stereo); completion markers found in log, continuing."
                         $elapsed = [int](New-TimeSpan -Start $cellStart -End (Get-Date)).TotalMinutes
                         Write-OK "Done in ${elapsed} min  profile=$profile  stereo=$stereo"
