@@ -66,7 +66,7 @@ $candidatePatterns = @(
     "bench_step_log_*.csv"
 )
 
-$stageDir = Join-Path $env:TEMP "mt-esra-results-$tagName"
+$stageDir = Join-Path ([System.IO.Path]::GetTempPath()) "mt-esra-results-$tagName"
 if (Test-Path $stageDir) { Remove-Item -Recurse -Force $stageDir }
 New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
 
@@ -78,7 +78,7 @@ foreach ($pat in $candidatePatterns) {
     }
 }
 # Also pull benchmark/results subtree (per-cell archived artifacts).
-$benchResults = Join-Path $repoRoot "benchmark\results"
+$benchResults = Join-Path $repoRoot "benchmark" "results"
 if (Test-Path $benchResults) {
     Copy-Item -Path $benchResults -Destination (Join-Path $stageDir "benchmark_results") -Recurse -Force
     $copied += "benchmark/results/**"
@@ -106,7 +106,7 @@ if ($copied.Count -eq 0) {
 }
 
 # Set up worktree on the results branch.
-$worktreePath = Join-Path $env:TEMP "mt-esra-results-wt-$tagName"
+$worktreePath = Join-Path ([System.IO.Path]::GetTempPath()) "mt-esra-results-wt-$tagName"
 if (Test-Path $worktreePath) { Remove-Item -Recurse -Force $worktreePath }
 
 $branchExists = (& git ls-remote --exit-code --heads origin $ResultsBranch 2>$null)
