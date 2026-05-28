@@ -228,6 +228,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Free disk space on runner
+        shell: bash
+        run: |
+          set -eu
+          echo "Disk before cleanup:"; df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL /usr/local/.ghcup \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          echo "Disk after cleanup:"; df -h /
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
