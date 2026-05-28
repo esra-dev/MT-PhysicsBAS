@@ -98,7 +98,21 @@ jobs:
         run: chmod +x ./gradlew
       - name: Compile classes
         if: env.DRY_RUN != 'true'
-        run: ./gradlew --no-daemon classes
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::compile attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          exit $rc
       - name: Upload compiled build + patched config
         if: env.DRY_RUN != 'true'
         uses: actions/upload-artifact@v4
@@ -173,16 +187,30 @@ jobs:
         run: chmod +x ./gradlew
       - name: Show active learning config (sanity)
         run: jq '.learning' config/run_config.json
-      - name: Run training cell
+      - name: Run training cell (with early-failure retry)
         shell: pwsh
         run: |
-          ./run_full_project.ps1 `
-            -RunMode ${{ env.RUN_MODE }} `
-            -OnlyProfiles ${{ matrix.profile }} `
-            -OnlyStereo ${{ matrix.stereo }} `
-            -RunSeed ${{ matrix.seed }} `
-            -SkipBenchmark `
-            -SkipPreflight
+          $ok = $false
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $start = Get-Date
+            ./run_full_project.ps1 `
+              -RunMode ${{ env.RUN_MODE }} `
+              -OnlyProfiles ${{ matrix.profile }} `
+              -OnlyStereo ${{ matrix.stereo }} `
+              -RunSeed ${{ matrix.seed }} `
+              -SkipBenchmark `
+              -SkipPreflight
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) { $ok = $true; break }
+            $elapsedMin = ((Get-Date) - $start).TotalMinutes
+            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
+              Write-Host "::error::training cell failed after $([math]::Round($elapsedMin,1)) min on attempt $attempt (rc=$rc) - not retrying"
+              break
+            }
+            Write-Host "::warning::training cell failed early ($([math]::Round($elapsedMin,1)) min) on attempt $attempt (rc=$rc); retrying once"
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) { exit 1 }
       - name: Upload training artefacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -250,16 +278,30 @@ jobs:
           path: .
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Run benchmark cell
+      - name: Run benchmark cell (with early-failure retry)
         shell: pwsh
         run: |
-          ./run_full_project.ps1 `
-            -RunMode ${{ env.RUN_MODE }} `
-            -OnlyProfiles ${{ matrix.profile }} `
-            -OnlyModes ${{ matrix.mode }} `
-            -RunSeed ${{ matrix.seed }} `
-            -SkipTraining `
-            -SkipPreflight
+          $ok = $false
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $start = Get-Date
+            ./run_full_project.ps1 `
+              -RunMode ${{ env.RUN_MODE }} `
+              -OnlyProfiles ${{ matrix.profile }} `
+              -OnlyModes ${{ matrix.mode }} `
+              -RunSeed ${{ matrix.seed }} `
+              -SkipTraining `
+              -SkipPreflight
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) { $ok = $true; break }
+            $elapsedMin = ((Get-Date) - $start).TotalMinutes
+            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
+              Write-Host "::error::benchmark cell failed after $([math]::Round($elapsedMin,1)) min on attempt $attempt (rc=$rc) - not retrying"
+              break
+            }
+            Write-Host "::warning::benchmark cell failed early ($([math]::Round($elapsedMin,1)) min) on attempt $attempt (rc=$rc); retrying once"
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) { exit 1 }
       - name: Upload benchmark artefacts
         if: always()
         uses: actions/upload-artifact@v4

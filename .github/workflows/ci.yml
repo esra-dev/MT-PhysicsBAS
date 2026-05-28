@@ -32,7 +32,21 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Compile
-        run: ./gradlew --no-daemon classes
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::compile attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          exit $rc
       - name: Run unit tests
         run: ./gradlew --no-daemon test
       - name: Upload test report
