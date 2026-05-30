@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "profile": "custom8",
+  "stereotype": "true",
+  "run_mode": "dev",
+  "timestamp": "2026-05-30T03:18:27.3250498+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_true_custom8.csv",
+    "qtable_initial_stereotypes_true_custom8.csv",
+    "metrics_stereotypes_true_custom8.csv",
+    "iv_stats_stereotypes_true_custom8.json",
+    "coverage_stereotypes_true_custom8.csv",
+    "first_goal_stereotypes_true_custom8.csv",
+    "learned_stereotypes_true_custom8.ttl"
+  ]
+}
