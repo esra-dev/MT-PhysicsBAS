@@ -149,6 +149,9 @@ if ($RunConfig -and $RunConfig.learning) {
     if ($ln.stereo_prior_scale          -ne $null) { $HttpArgs += "-Pstereo.priorScale=$($ln.stereo_prior_scale)" }
     if ($ln.stereo_prior_decay_episodes -ne $null) { $HttpArgs += "-Pstereo.priorDecayEpisodes=$($ln.stereo_prior_decay_episodes)" }
     if ($ln.stereo_prior_decay_floor    -ne $null) { $HttpArgs += "-Pstereo.priorDecayFloor=$($ln.stereo_prior_decay_floor)" }
+    # Audit Step 3b S3b-4: per-action prior magnitudes (redundant / IV-unsat).
+    if ($ln.stereo_prior_redundant      -ne $null) { $HttpArgs += "-Pstereo.priorRedundant=$($ln.stereo_prior_redundant)" }
+    if ($ln.stereo_prior_iv_unsat       -ne $null) { $HttpArgs += "-Pstereo.priorIVUnsat=$($ln.stereo_prior_iv_unsat)" }
     # Research extensions: PBRS reward shaping + adaptive stereotype trust.
     if ($ln.reward_shaping              -ne $null) { $HttpArgs += "-Preward.shaping=$($ln.reward_shaping)" }
     if ($ln.adaptive_trust              -ne $null) { $HttpArgs += "-Pstereo.adaptiveTrust=$($ln.adaptive_trust)" }

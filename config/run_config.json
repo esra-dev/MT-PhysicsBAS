@@ -72,9 +72,11 @@
   },
   "learning": {
     "reward_clip": 50.0,
-    "stereo_prior_scale": 5.0,
+    "stereo_prior_scale": 1.0,
     "stereo_prior_decay_episodes": 10000,
-    "stereo_prior_decay_floor": 0.1,
+    "stereo_prior_decay_floor": 0.0,
+    "stereo_prior_redundant": 1.0,
+    "stereo_prior_iv_unsat": 5.0,
     "reward_shaping": "pbrs",
     "adaptive_trust": true,
     "adaptive_trust_min_samples": 50,

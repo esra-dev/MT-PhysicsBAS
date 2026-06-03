@@ -36,7 +36,7 @@
                       ]
                   ],
         "outputs":  1,
-        "func":  "// 4-zone defaults Ã¢â‚¬â€ matches Custom2 TD shape.\r\n[\u0027Z1Level\u0027,\u0027Z2Level\u0027,\u0027Z3Level\u0027,\u0027Z4Level\u0027].forEach(function(k){ flow.set(k, 75); });\r\n[\u0027Z1Light\u0027,\u0027Z2Light\u0027,\u0027Z3Light\u0027,\u0027Z4Light\u0027,\r\n \u0027Z1Blinds\u0027,\u0027Z2Blinds\u0027,\u0027Z3Blinds\u0027,\u0027Z4Blinds\u0027,\r\n \u0027Spotlight\u0027,\u0027SpotlightCD\u0027,\u0027CorridorLight\u0027,\r\n \u0027Z1Radiator\u0027,\u0027Z2Radiator\u0027,\u0027Z3Radiator\u0027,\u0027Z4Radiator\u0027].forEach(function(k){ flow.set(k, false); });\r\n[\u0027Z1Temp\u0027,\u0027Z2Temp\u0027,\u0027Z3Temp\u0027,\u0027Z4Temp\u0027].forEach(function(k){ flow.set(k, 21.0); });\r\nflow.set(\u0027Sunshine\u0027, 150);\r\nflow.set(\u0027SunshinePinned\u0027, false);\r\nflow.set(\u0027TotalEnergyCost\u0027, 0);\r\nflow.set(\u0027EnergyCost\u0027, 0);\r\nflow.set(\u0027Hour\u0027, 0);\r\nflow.set(\u0027WeaknessFired\u0027, false);\r\nreturn msg;",
+        "func":  "// 4-zone defaults Ã¢â‚¬â€ matches Custom3 TD shape.\r\n[\u0027Z1Level\u0027,\u0027Z2Level\u0027,\u0027Z3Level\u0027,\u0027Z4Level\u0027].forEach(function(k){ flow.set(k, 75); });\r\n[\u0027Z1Light\u0027,\u0027Z2Light\u0027,\u0027Z3Light\u0027,\u0027Z4Light\u0027,\r\n \u0027Z1Blinds\u0027,\u0027Z2Blinds\u0027,\u0027Z3Blinds\u0027,\u0027Z4Blinds\u0027,\r\n \u0027Spotlight\u0027,\u0027SpotlightCD\u0027,\u0027CorridorLight\u0027,\r\n \u0027Z1Radiator\u0027,\u0027Z2Radiator\u0027,\u0027Z3Radiator\u0027,\u0027Z4Radiator\u0027].forEach(function(k){ flow.set(k, false); });\r\n[\u0027Z1Temp\u0027,\u0027Z2Temp\u0027,\u0027Z3Temp\u0027,\u0027Z4Temp\u0027].forEach(function(k){ flow.set(k, 21.0); });\r\nflow.set(\u0027Sunshine\u0027, 150);\r\nflow.set(\u0027SunshinePinned\u0027, false);\r\nflow.set(\u0027TotalEnergyCost\u0027, 0);\r\nflow.set(\u0027EnergyCost\u0027, 0);\r\nflow.set(\u0027Hour\u0027, 0);\r\nflow.set(\u0027WeaknessFired\u0027, false);\r\nreturn msg;",
         "noerr":  0,
         "name":  "Initialization",
         "y":  240,
@@ -143,7 +143,7 @@
         "id":  "custom3_inject_repeat",
         "y":  520,
         "onceDelay":  "1",
-        "repeat":  "0.2",
+        "repeat":  "0.05",
         "crontab":  "",
         "once":  true,
         "payload":  "",
