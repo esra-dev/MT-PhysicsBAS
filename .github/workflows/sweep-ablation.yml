@@ -28,7 +28,7 @@ on:
       profiles:
         description: "Comma-separated profiles (default: all 7)"
         required: false
-        default: "custom2,custom3,custom4,custom5,custom6,custom7,custom8"
+        default: "custom2,custom3,custom4,custom5,custom6,custom7,custom8,custom9"
       seeds:
         description: "Comma-separated RNG seeds (default: 1,2,3)"
         required: false
@@ -50,7 +50,7 @@ concurrency:
 env:
   RUN_MODE: paper
   ABLATION: ${{ github.event.inputs.ablation }}
-  PROFILES: ${{ github.event.inputs.profiles || 'custom2,custom3,custom4,custom5,custom6,custom7,custom8' }}
+  PROFILES: ${{ github.event.inputs.profiles || 'custom2,custom3,custom4,custom5,custom6,custom7,custom8,custom9' }}
   SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3' }}
   DRY_RUN:  ${{ github.event.inputs.dry_run  || 'false' }}
 

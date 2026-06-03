@@ -16,7 +16,7 @@ on:
       profiles:
         description: "Comma-separated profiles (default: all 7)"
         required: false
-        default: "custom2,custom3,custom4,custom5,custom6,custom7,custom8"
+        default: "custom2,custom3,custom4,custom5,custom6,custom7,custom8,custom9"
       publish_results:
         description: "Push consolidated results to 'results' branch"
         type: boolean
@@ -34,7 +34,7 @@ concurrency:
 
 env:
   RUN_MODE: dev
-  PROFILES: ${{ github.event.inputs.profiles || 'custom2,custom3,custom4,custom5,custom6,custom7,custom8' }}
+  PROFILES: ${{ github.event.inputs.profiles || 'custom2,custom3,custom4,custom5,custom6,custom7,custom8,custom9' }}
 
 jobs:
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
