@@ -1,6 +1,21 @@
 """
 midterm_results.py — Slide 7 figures + ablation table.
 
+⚠️  SLIDE-ONLY SNAPSHOT, NOT FOR THESIS FIGURES (Audit Step 6 S6-8).
+
+    This script is the May-22 midterm slide deck snapshot. It reads
+    single-seed CSVs from the project root (legacy layout) and renders three
+    quick-look panels. Use it ONLY to regenerate the midterm slides.
+
+    For thesis figures use:
+      * `analysis/learning_curves.py` — multi-seed reward curves with CIs
+      * `analysis/sweep_report.py --seeds-mode` — paired tests, BH q-values,
+        bootstrap CIs, summary_table_ci.csv, paired_tests.csv
+      * `analysis/sweep_report.py --first-goal-root …` — H2 table (S6-3)
+
+    Outputs are routed to `analysis/out/slides/` so they cannot overwrite
+    thesis artefacts in `analysis/out/`.
+
 Three panels, all driven by artefacts already on disk:
   Panel 1: training reward curve (2-zone lab)            -> panel1_reward_curve.png
   Panel 2: bench goal-rate bar chart (3 modes, 2-zone)   -> panel2_goal_rate.png
@@ -13,7 +28,7 @@ Inputs:
   Panel 2 :  benchmark_results_<rule_based|ql_false|ql_true>.csv  (project root)
   Panel 3 :  benchmark/results/<profile>/<mode>/trace_bench_<mode>.jsonl
 
-Outputs go under analysis/out/.
+Outputs go under analysis/out/slides/.
 """
 
 from __future__ import annotations
@@ -27,9 +42,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT  = ROOT / "analysis" / "out"
+# Audit Step 6 S6-8: midterm slide artefacts must never overwrite thesis
+# figures rendered into analysis/out/ by sweep_report.py / learning_curves.py.
+OUT  = ROOT / "analysis" / "out" / "slides"
 OUT.mkdir(parents=True, exist_ok=True)
 
+# Audit Step 6 §5.1: W6 has no canonical fingerprint tag in trace_bench JSONL
+# (see analysis/sweep_report.py WEAKNESSES and dashboard/src/lib/weakness.js).
+# Midterm slide retained the duplicate w6_unmodelled label for visual parity
+# with the slide deck — it counts the same rows as w1_unmodelled. Do NOT use
+# this heatmap for thesis reporting.
 WEAK  = ["w1_unmodelled", "w2_inversion", "w3_delayed",
          "w4_dropped",    "w5_topology",  "w6_unmodelled"]
 PROFS = ["custom2", "custom3", "custom4", "custom5", "custom6", "custom7"]

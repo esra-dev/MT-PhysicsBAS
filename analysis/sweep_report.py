@@ -31,13 +31,17 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+# Canonical fingerprint tags emitted by QLearner.classifyWeaknesses() and
+# logged into trace_bench_*.jsonl. W6 has no fingerprint tag in the JSONL — the
+# README (§Note on W6) and dashboard/src/lib/weakness.js confirm that W6 is
+# detected post-hoc from BenchmarkLogger.UnmodelledZoneEffect + ComfortDeviation,
+# not from a `w6_*` member of `weaknessFired`. Audit Step 6 §5.1 / S6-6.
 WEAKNESSES = [
     "w1_unmodelled",
     "w2_inversion",
     "w3_delayed",
     "w4_dropped",
     "w5_topology",
-    "w6_unmodelled",  # heat — best-effort heuristic
 ]
 
 
@@ -282,12 +286,17 @@ def find_seed_roots(parent: Path) -> list[tuple[int, Path]]:
 
 def _bootstrap_ci(values: list[float], iters: int = 10000,
                   alpha: float = 0.05) -> tuple[float, float, float]:
-    """Return (mean, ci_lo, ci_hi). Uses numpy if available, else stdlib."""
+    """Return (mean, ci_lo, ci_hi). Uses numpy if available, else stdlib.
+
+    Audit Step 6 S6-5: when n < 2, the bootstrap is undefined; return NaN CIs
+    rather than a zero-width (mean, mean, mean) tuple, which would silently
+    print as "mean ± 0" in summary_table_ci.csv if an ablation seed crashes.
+    """
     if not values:
         return (float("nan"), float("nan"), float("nan"))
     mean = sum(values) / len(values)
-    if len(values) == 1:
-        return (mean, mean, mean)
+    if len(values) < 2:
+        return (mean, float("nan"), float("nan"))
     try:
         import numpy as np  # type: ignore
         rng = np.random.default_rng(0xC1)  # deterministic CIs
@@ -368,11 +377,19 @@ def aggregate_seeds(seed_roots: list[tuple[int, Path]],
 # Output: paired_tests.csv under out_dir.
 # ---------------------------------------------------------------------------
 
-_PAIRED_COMPARISONS = (
+# Pre-reg §2 step 5 locks the BH family at 7 profiles × 5 metrics × 2 mode-pairs
+# = 70 tests per analysis. The first two pairs are *confirmatory* (gate H1, H3,
+# H4). The third pair (ql_false vs rule_based) is *exploratory* per pre-reg §5
+# and must be BH-corrected within its own family so it does not inflate m for
+# the confirmatory tests. Audit Step 6 S6-1 / §5.3.
+_CONFIRMATORY_PAIRS = (
     ("ql_true", "ql_false"),
     ("ql_true", "rule_based"),
+)
+_EXPLORATORY_PAIRS = (
     ("ql_false", "rule_based"),
 )
+_PAIRED_COMPARISONS = _CONFIRMATORY_PAIRS + _EXPLORATORY_PAIRS
 
 
 def _collect_per_seed_values(
@@ -393,11 +410,23 @@ def _collect_per_seed_values(
 
 
 def _paired_bootstrap_diff(a: list[float], b: list[float],
-                           iters: int = 10000) -> tuple[float, float, float, float]:
-    """Return (mean_diff, ci_lo, ci_hi, p_two_sided) for the paired mean
-    of (a - b). Pair-wise resampling with a deterministic RNG."""
+                           iters: int = 10000
+                           ) -> tuple[float, float, float, float, float, float]:
+    """Return (mean_diff, ci_lo, ci_hi, p_two_sided, p_one_sided_pos,
+    p_one_sided_neg) for the paired mean of (a - b). Pair-wise resampling
+    with a deterministic RNG seed (pre-reg §2 step 1 uses 0xC1).
+
+    * p_two_sided  — convention used since the May-22 sweep: doubled-tail
+      anchored on the observed mean's sign.
+    * p_one_sided_pos — P(boots ≤ 0); evidence *against* H_A: μ_diff > 0
+      (used for pre-reg H1: "ql_true ≥ ql_false on clean lab" — small value
+      supports H_A). Audit Step 6 S6-2.
+    * p_one_sided_neg — P(boots ≥ 0); evidence *against* H_A: μ_diff < 0
+      (quantifies how strongly mode_a is worse than mode_b — answers Open
+      Question 4).
+    """
     if len(a) != len(b) or len(a) < 2:
-        return (float("nan"),) * 4  # type: ignore
+        return (float("nan"),) * 6  # type: ignore
     diffs = [ai - bi for ai, bi in zip(a, b)]
     mean = sum(diffs) / len(diffs)
     try:
@@ -409,14 +438,13 @@ def _paired_bootstrap_diff(a: list[float], b: list[float],
         boots = d[idx].mean(axis=1)
         lo = float(np.quantile(boots, 0.025))
         hi = float(np.quantile(boots, 0.975))
-        # Two-sided bootstrap p-value: fraction of resamples whose sign
-        # disagrees with the observed mean, doubled.
-        if mean >= 0:
-            p_one = float((boots <= 0).mean())
-        else:
-            p_one = float((boots >= 0).mean())
-        p = min(1.0, 2.0 * p_one)
-        return (mean, lo, hi, p)
+        p_one_pos = float((boots <= 0).mean())
+        p_one_neg = float((boots >= 0).mean())
+        # Two-sided: anchored on observed sign (legacy convention; documented
+        # in pre-reg §6 deviation S6-2).
+        p_one_anchor = p_one_pos if mean >= 0 else p_one_neg
+        p = min(1.0, 2.0 * p_one_anchor)
+        return (mean, lo, hi, p, p_one_pos, p_one_neg)
     except Exception:
         import random
         random.seed(0xC1)
@@ -430,11 +458,10 @@ def _paired_bootstrap_diff(a: list[float], b: list[float],
         boots.sort()
         lo = boots[max(0, int(0.025 * iters))]
         hi = boots[min(iters - 1, int(0.975 * iters))]
-        if mean >= 0:
-            p_one = sum(1 for x in boots if x <= 0) / iters
-        else:
-            p_one = sum(1 for x in boots if x >= 0) / iters
-        return (mean, lo, hi, min(1.0, 2.0 * p_one))
+        p_one_pos = sum(1 for x in boots if x <= 0) / iters
+        p_one_neg = sum(1 for x in boots if x >= 0) / iters
+        p_one_anchor = p_one_pos if mean >= 0 else p_one_neg
+        return (mean, lo, hi, min(1.0, 2.0 * p_one_anchor), p_one_pos, p_one_neg)
 
 
 def _wilcoxon_p(a: list[float], b: list[float]) -> float:
@@ -487,12 +514,29 @@ def _bh_qvalues(pvalues: list[float]) -> list[float]:
 def paired_tests(seed_roots: list[tuple[int, Path]],
                  out_dir: Path,
                  iters: int = 10000) -> int:
-    """Write paired_tests.csv with per (profile, metric, mode_a vs mode_b) rows."""
+    """Write paired_tests.csv with per (profile, metric, mode_a vs mode_b) rows.
+
+    Audit Step 6 S6-1: rows carry a ``family`` column (``confirmatory`` /
+    ``exploratory``). BH q-values are computed **independently per family** so
+    the confirmatory denominator matches pre-reg §2 (7 profiles × 5 metrics
+    × 2 mode-pairs = 70) and the exploratory pair (ql_false vs rule_based)
+    cannot inflate m for the confirmatory tests.
+    Audit Step 6 S6-2: ``p_bootstrap_one_sided_positive`` and
+    ``p_bootstrap_one_sided_negative`` are reported alongside the legacy
+    two-sided ``p_bootstrap`` so pre-reg §3 (H1/H2 one-sided) can be tested
+    directly without re-resampling.
+    """
     per_metric = _collect_per_seed_values(seed_roots)
+
+    def _family_of(mode_a: str, mode_b: str) -> str:
+        return ("confirmatory"
+                if (mode_a, mode_b) in _CONFIRMATORY_PAIRS
+                else "exploratory")
+
     rows: list[dict] = []
-    pvals: list[float] = []
+    # Per-family p-value buckets keyed by row index so BH stays vector-aligned.
+    family_pvals: dict = defaultdict(list)
     for metric, by_cell in per_metric.items():
-        # gather profiles present
         profiles = sorted({prof for (prof, _mode) in by_cell.keys()})
         for prof in profiles:
             for mode_a, mode_b in _PAIRED_COMPARISONS:
@@ -504,27 +548,45 @@ def paired_tests(seed_roots: list[tuple[int, Path]],
                     continue
                 a = [by_cell[ka][s] for s in seeds_common]
                 b = [by_cell[kb][s] for s in seeds_common]
-                mean_d, lo, hi, p_boot = _paired_bootstrap_diff(a, b, iters=iters)
+                (mean_d, lo, hi, p_boot,
+                 p_one_pos, p_one_neg) = _paired_bootstrap_diff(
+                    a, b, iters=iters)
                 p_wil = _wilcoxon_p(a, b)
                 delta = _cliffs_delta(a, b)
+                family = _family_of(mode_a, mode_b)
+                row_idx = len(rows)
                 rows.append({
                     "profile": prof,
                     "metric": metric,
                     "mode_a": mode_a,
                     "mode_b": mode_b,
+                    "family": family,
                     "n_paired": len(seeds_common),
+                    "seeds_paired": ";".join(str(s) for s in seeds_common),
                     "mean_diff": mean_d,
                     "ci_lo": lo,
                     "ci_hi": hi,
                     "p_bootstrap": p_boot,
+                    "p_bootstrap_one_sided_positive": p_one_pos,
+                    "p_bootstrap_one_sided_negative": p_one_neg,
                     "p_wilcoxon": p_wil,
                     "cliffs_delta": delta,
                 })
-                pvals.append(p_boot if p_boot == p_boot else float("nan"))
-    # Multiple-comparisons correction (BH) over the bootstrap p-values family.
-    qvals = _bh_qvalues(pvals)
-    for r, q in zip(rows, qvals):
-        r["q_bootstrap_bh"] = q
+                family_pvals[family].append((row_idx, p_boot))
+
+    # BH per family (pre-reg §2 step 5: family size 70 for confirmatory).
+    for rows_in_family in family_pvals.values():
+        if not rows_in_family:
+            continue
+        idxs = [i for i, _ in rows_in_family]
+        ps = [p for _, p in rows_in_family]
+        qs = _bh_qvalues(ps)
+        for i, q in zip(idxs, qs):
+            rows[i]["q_bootstrap_bh"] = q
+            rows[i]["bh_family_m"] = len(idxs)
+    for r in rows:
+        r.setdefault("q_bootstrap_bh", float("nan"))
+        r.setdefault("bh_family_m", 0)
 
     out_path = out_dir / "paired_tests.csv"
     if not rows:
@@ -537,6 +599,163 @@ def paired_tests(seed_roots: list[tuple[int, Path]],
         for r in rows:
             w.writerow(r)
     return len(rows)
+
+
+# ── H2 (episodes-to-first-goal, PBRS on vs off) — Audit Step 6 S6-3 ──
+def _read_first_goal_mean(path: Path) -> float | None:
+    """Mean of FirstGoalEpisode column in a first_goal_stereotypes_*.csv.
+
+    The file has header `StartStateIndex,FirstGoalEpisode` and may carry
+    trailing `# ...` comment lines (see QLearner.java L1282+). Returns the
+    arithmetic mean across all data rows, or None when the file is missing
+    / empty / unreadable.
+    """
+    if not path.is_file():
+        return None
+    vals: list[float] = []
+    try:
+        with path.open(encoding="utf-8") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                idx = (row.get("StartStateIndex") or "").strip()
+                if not idx or idx.startswith("#"):
+                    continue
+                v = (row.get("FirstGoalEpisode") or "").strip()
+                if not v:
+                    continue
+                try:
+                    vals.append(float(v))
+                except ValueError:
+                    continue
+    except OSError:
+        return None
+    if not vals:
+        return None
+    return sum(vals) / len(vals)
+
+
+def _collect_first_goal_by_cell(seed_roots: list[tuple[int, Path]],
+                                stereo: bool) -> dict:
+    """Return {profile: {seed: mean_first_goal_episode}}.
+
+    Reads `<seed_root>/<profile>/ql_<stereo>/first_goal_stereotypes_<stereo>_<profile>.csv`.
+    """
+    stag = "true" if stereo else "false"
+    mode = f"ql_{stag}"
+    out: dict = defaultdict(dict)
+    for seed, root in seed_roots:
+        if not root.is_dir():
+            continue
+        for prof_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+            prof = prof_dir.name
+            csv_path = prof_dir / mode / f"first_goal_stereotypes_{stag}_{prof}.csv"
+            mean = _read_first_goal_mean(csv_path)
+            if mean is not None:
+                out[prof][seed] = mean
+    return out
+
+
+def aggregate_first_goal(seed_roots: list[tuple[int, Path]],
+                         ablation_roots: list[tuple[int, Path]] | None,
+                         out_dir: Path,
+                         iters: int = 10000) -> int:
+    """Write first_goal_table.csv + first_goal_wilcoxon.csv for H2 (S6-3).
+
+    Pairing semantics: PBRS-on is read from ``seed_roots`` (the main sweep),
+    PBRS-off from ``ablation_roots`` (typically a sibling
+    ``results_ablation_a_seed<N>/`` tree produced by a PBRS-off run). Cells are
+    joined by (profile, seed); the per-cell scalar is the **mean
+    FirstGoalEpisode** across start states. Wilcoxon and BH (across profiles)
+    are computed only when ablation_roots is provided; otherwise the table
+    still records PBRS-on means with bootstrap CIs.
+    """
+    on = _collect_first_goal_by_cell(seed_roots, stereo=True)
+    off: dict = {}
+    if ablation_roots:
+        # Pre-reg H2: PBRS-off ablation. Try ql_true first (still stereotyped
+        # for state-abstraction parity), fall back to ql_false if absent.
+        off = _collect_first_goal_by_cell(ablation_roots, stereo=True)
+        if not any(off.values()):
+            off = _collect_first_goal_by_cell(ablation_roots, stereo=False)
+
+    profiles = sorted(set(on.keys()) | set(off.keys()))
+    table_rows: list[dict] = []
+    for prof in profiles:
+        on_vals = [on.get(prof, {}).get(s) for s in sorted(on.get(prof, {}).keys())]
+        off_vals = [off.get(prof, {}).get(s) for s in sorted(off.get(prof, {}).keys())]
+        on_vals = [v for v in on_vals if v is not None]
+        off_vals = [v for v in off_vals if v is not None]
+        for label, vals in (("pbrs_on", on_vals), ("pbrs_off", off_vals)):
+            if not vals:
+                continue
+            mean, lo, hi = _bootstrap_ci(vals, iters=iters)
+            table_rows.append({
+                "profile": prof,
+                "condition": label,
+                "n_seeds": len(vals),
+                "mean_first_goal": mean,
+                "ci_lo": lo,
+                "ci_hi": hi,
+            })
+
+    table_path = out_dir / "first_goal_table.csv"
+    if table_rows:
+        cols = list(table_rows[0].keys())
+        with table_path.open("w", encoding="utf-8", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=cols)
+            w.writeheader()
+            for r in table_rows:
+                w.writerow(r)
+    else:
+        table_path.write_text("", encoding="utf-8")
+
+    # Paired Wilcoxon per profile (BH across profiles).
+    wilc_path = out_dir / "first_goal_wilcoxon.csv"
+    if not ablation_roots:
+        wilc_path.write_text("", encoding="utf-8")
+        return len(table_rows)
+
+    wrows: list[dict] = []
+    ps: list[float] = []
+    for prof in profiles:
+        seeds_common = sorted(set(on.get(prof, {}).keys())
+                              & set(off.get(prof, {}).keys()))
+        if len(seeds_common) < 2:
+            continue
+        a = [on[prof][s] for s in seeds_common]
+        b = [off[prof][s] for s in seeds_common]
+        (mean_d, lo, hi, p_boot,
+         p_one_pos, p_one_neg) = _paired_bootstrap_diff(a, b, iters=iters)
+        p_wil = _wilcoxon_p(a, b)
+        delta = _cliffs_delta(a, b)
+        wrows.append({
+            "profile": prof,
+            "n_paired": len(seeds_common),
+            "seeds_paired": ";".join(str(s) for s in seeds_common),
+            "mean_diff_on_minus_off": mean_d,
+            "ci_lo": lo,
+            "ci_hi": hi,
+            "p_bootstrap": p_boot,
+            "p_bootstrap_one_sided_negative": p_one_neg,
+            "p_wilcoxon": p_wil,
+            "cliffs_delta": delta,
+        })
+        ps.append(p_wil)
+
+    if wrows:
+        qs = _bh_qvalues(ps)
+        for r, q in zip(wrows, qs):
+            r["q_wilcoxon_bh"] = q
+            r["bh_family_m"] = len(qs)
+        cols = list(wrows[0].keys())
+        with wilc_path.open("w", encoding="utf-8", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=cols)
+            w.writeheader()
+            for r in wrows:
+                w.writerow(r)
+    else:
+        wilc_path.write_text("", encoding="utf-8")
+    return len(table_rows)
 
 
 def write_latex_table(summary_csv: Path, out_tex: Path) -> bool:
@@ -575,6 +794,56 @@ def write_latex_table(summary_csv: Path, out_tex: Path) -> bool:
     return True
 
 
+def write_paired_latex_table(paired_csv: Path, out_tex: Path) -> bool:
+    """Render paired_tests.csv as a LaTeX tabular with BH q-values (S6-7).
+
+    Columns: Profile, Metric, A vs B, family, n, mean diff [CI], p_boot,
+    q_BH. Only emits the confirmatory family by default to keep the table
+    paper-sized.
+    """
+    if not paired_csv.is_file():
+        return False
+    rows = list(csv.DictReader(paired_csv.open(encoding="utf-8")))
+    rows = [r for r in rows if r.get("family") == "confirmatory"]
+    if not rows:
+        return False
+    lines = [
+        "% Auto-generated by analysis/sweep_report.py. Do not edit by hand.",
+        "\\begin{tabular}{lllrlrr}",
+        "\\toprule",
+        "Profile & Metric & A vs B & n & mean diff [95\\% CI] & p & q (BH) \\\\",
+        "\\midrule",
+    ]
+    for r in rows:
+        try:
+            mean_d = float(r["mean_diff"])
+            lo = float(r["ci_lo"])
+            hi = float(r["ci_hi"])
+            cell = f"${mean_d:.3f}_{{[{lo:.3f},{hi:.3f}]}}$"
+        except (TypeError, ValueError, KeyError):
+            cell = "--"
+        try:
+            p = f"{float(r['p_bootstrap']):.4f}"
+        except (TypeError, ValueError, KeyError):
+            p = "--"
+        try:
+            q = f"{float(r['q_bootstrap_bh']):.4f}"
+        except (TypeError, ValueError, KeyError):
+            q = "--"
+        lines.append(
+            " & ".join([
+                r["profile"],
+                r["metric"].replace("_", "\\_"),
+                f"{r['mode_a'].replace('_', '\\_')} vs {r['mode_b'].replace('_', '\\_')}",
+                r["n_paired"],
+                cell, p, q,
+            ]) + " \\\\"
+        )
+    lines += ["\\bottomrule", "\\end{tabular}"]
+    out_tex.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default="benchmark/results",
@@ -588,9 +857,23 @@ def main(argv: list[str]) -> int:
                              "single-root report on the first seed found.")
     parser.add_argument("--ci-bootstrap-iters", type=int, default=10000,
                         help="bootstrap iterations for CIs (default 10000)")
+    parser.add_argument("--family-tag", default=None,
+                        help="Audit Step 6 S6-4: route outputs to "
+                             "<out>/<family-tag>/ so main vs ablation_a/b/c "
+                             "stat artefacts never overwrite each other. "
+                             "Convention: 'main', 'ablation_a' (PBRS off), "
+                             "'ablation_b' (no stereotypes), 'ablation_c' "
+                             "(random Q-init).")
+    parser.add_argument("--first-goal-root", default=None,
+                        help="Audit Step 6 S6-3: parent dir containing "
+                             "results_seed<N>/ for the PBRS-off ablation. "
+                             "When set, first_goal_table.csv and "
+                             "first_goal_wilcoxon.csv (H2) are written.")
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out)
+    if args.family_tag:
+        out_dir = out_dir / args.family_tag
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Multi-seed aggregation (additive) ─────────────────────────────
@@ -612,10 +895,29 @@ def main(argv: list[str]) -> int:
                                    iters=args.ci_bootstrap_iters)
             print(f"sweep_report: wrote {n_pairs} paired-test rows "
                   f"to paired_tests.csv")
+            # Audit Step 6 S6-3: H2 episodes-to-first-goal aggregation.
+            ablation_roots: list[tuple[int, Path]] = []
+            if args.first_goal_root:
+                ab_parent = Path(args.first_goal_root)
+                ablation_roots = find_seed_roots(ab_parent)
+                if not ablation_roots:
+                    print(f"sweep_report: --first-goal-root {ab_parent} "
+                          f"contains no results_seed*/ — H2 wilcoxon skipped",
+                          file=sys.stderr)
+            n_fg = aggregate_first_goal(seed_roots,
+                                        ablation_roots or None,
+                                        out_dir,
+                                        iters=args.ci_bootstrap_iters)
+            print(f"sweep_report: wrote {n_fg} first-goal table rows "
+                  f"(H2; ablation_roots={len(ablation_roots)})")
             if write_latex_table(out_dir / "summary_table_ci.csv",
                                  out_dir / "summary_table_ci.tex"):
                 print("sweep_report: summary_table_ci.tex written "
                       "(\\input{}-ready)")
+            if write_paired_latex_table(out_dir / "paired_tests.csv",
+                                        out_dir / "paired_tests.tex"):
+                print("sweep_report: paired_tests.tex written "
+                      "(\\input{}-ready, q-values included)")
         # Run the per-cell report against the first seed for sanity charts.
         if seed_roots:
             root = seed_roots[0][1]

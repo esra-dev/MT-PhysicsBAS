@@ -27,8 +27,10 @@ from analysis import sweep_report as sr  # noqa: E402  (path-tweak above)
 # ---------------------------------------------------------------------------
 
 def test_bootstrap_ci_single_value_is_degenerate():
+    # Audit Step 6 S6-5: n<2 → NaN CI, not zero-width.
     mean, lo, hi = sr._bootstrap_ci([7.5], iters=500)
-    assert mean == lo == hi == 7.5
+    assert mean == 7.5
+    assert math.isnan(lo) and math.isnan(hi)
 
 
 def test_bootstrap_ci_constant_series_has_zero_width():
@@ -52,17 +54,21 @@ def test_bootstrap_ci_brackets_true_mean():
 def test_paired_bootstrap_diff_detects_clear_effect():
     a = [10.0, 11.0, 9.0, 12.0, 10.5]
     b = [1.0, 2.0, 0.5, 3.0, 1.5]
-    mean_d, lo, hi, p = sr._paired_bootstrap_diff(a, b, iters=2000)
+    # Audit Step 6 S6-2: 6-tuple return (mean_d, lo, hi, p2, p1_pos, p1_neg).
+    mean_d, lo, hi, p, p_pos, p_neg = sr._paired_bootstrap_diff(a, b, iters=2000)
     assert mean_d > 5.0
     assert lo > 0  # CI excludes zero -> significant
     assert hi > lo
     assert p < 0.05
+    # mean_d > 0 → evidence against H_A:μ>0 should be small.
+    assert p_pos < 0.05
+    assert p_neg > 0.5
 
 
 def test_paired_bootstrap_diff_no_effect_keeps_p_large():
     a = [1.0, 2.0, 3.0, 4.0, 5.0]
     b = [1.1, 1.9, 3.05, 3.95, 5.05]
-    mean_d, lo, hi, p = sr._paired_bootstrap_diff(a, b, iters=2000)
+    mean_d, lo, hi, p, _p_pos, _p_neg = sr._paired_bootstrap_diff(a, b, iters=2000)
     assert abs(mean_d) < 0.1
     assert lo <= 0 <= hi   # CI straddles zero
     assert p > 0.3

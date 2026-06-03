@@ -139,15 +139,15 @@ def _smooth(values: list[float], window: int = 25) -> list[float]:
     try:
         import numpy as np  # type: ignore
         arr = np.asarray(values, dtype=float)
-        kern = np.ones(window) / window
         # Same-length moving average with edge handling via cumulative sums.
         c = np.cumsum(np.insert(arr, 0, 0.0))
-        denom = np.minimum(np.arange(1, arr.size + 1), window)
-        smoothed = (c[window:] - c[:-window]) if arr.size >= window else arr.cumsum() / denom
         if arr.size >= window:
+            smoothed = c[window:] - c[:-window]
             head = arr[: window - 1].cumsum() / np.arange(1, window)
             tail = smoothed / window
             return np.concatenate([head, tail]).tolist()
+        # Audit Step 6 \u00a75.2: denom only meaningful on this short-input branch.
+        denom = np.minimum(np.arange(1, arr.size + 1), window)
         return (arr.cumsum() / denom).tolist()
     except ImportError:
         out = []
