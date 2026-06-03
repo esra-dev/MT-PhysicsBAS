@@ -48,8 +48,13 @@ use_stereotypes(true).
 // Training parameters
 num_episodes(50).
 max_steps_per_episode(20).
-action_delay_ms(65).      // delay between actions during training (ms) — must exceed 200 ms simulator tick
-exec_delay_ms(65).        // delay between actions during execution (ms)
+// S4-5 (audit-step-4): raised from 65 ms to 250 ms to exceed the Node-RED
+// simulator's 200 ms tick. Previously the value contradicted its own
+// comment and could return pre-tick state from readLabStatus, biasing
+// the Q-update credit assignment toward the prior (rather than the
+// post-action) state. 250 ms = one full tick + safety margin.
+action_delay_ms(250).     // delay between actions during training (ms) — must exceed 200 ms simulator tick
+exec_delay_ms(250).       // delay between actions during execution (ms)
 
 exec_max_steps(20).
 
@@ -174,6 +179,10 @@ exec_max_steps(20).
     !profile_training_params(NumEps, EpDecay);
     -+num_episodes(NumEps);
     setEpsilonDecay(EpDecay)[artifact_id(QlId)];
+    // S2-3 (audit Step 2): couple stereotype prior decay to the training
+    // budget so the prior shape is identical across 50-ep sanity runs and
+    // 10k-ep production runs. Honours -Dstereo.priorDecayEpisodes override.
+    setTrainingBudgetEpisodes(NumEps)[artifact_id(QlId)];
     .print("[Profile] Training params: num_episodes=", NumEps, " epsilonDecay=", EpDecay);
     // Create the StereotypeLearner artifact and seed it with action metadata.
     makeArtifact("learner", "tools.StereotypeLearner", [], LId);

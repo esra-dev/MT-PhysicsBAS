@@ -1,6 +1,19 @@
 // Illuminance Controller Agent — Ontology-Driven Dynamic Control
 // MT-Esra Project
 //
+// ============================================================
+// ⚠️  INTERACTIVE DEMO ONLY — NOT USED BY THE BENCHMARK OR PAPER
+//     EXPERIMENTS. Edits here do NOT affect H1/H3 results.
+//
+//     Bench rule_based mode is implemented inside
+//       illuminance_controller_agent_bench.asl  (@dispatch_rule_based,
+//       rb_process_first_off_target, rb_increase, rb_decrease).
+//     QL train + execute is in
+//       illuminance_controller_agent_ql.asl.
+//     This file is loaded only by task.jcm  (./gradlew task) for
+//     manual / pedagogical demos.
+// ============================================================
+//
 // All zone discovery, goal mapping, and actuator dispatch are resolved at
 // runtime from the BRICK + Elementary Ontology knowledge graph.
 // No component names, zone names, or WoT action URIs are hardcoded here.

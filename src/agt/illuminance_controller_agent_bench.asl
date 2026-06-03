@@ -28,7 +28,20 @@ bench_mode("ql_true").
 
 bench_runs(2).
 exec_max_steps(20).
-exec_delay_ms(65).
+// S4-5 (audit-step-4): raised from 65 ms to 250 ms so the post-invokeAction
+// readLabStatus observes the state AFTER the Node-RED simulator's 200 ms
+// tick has propagated through compute_levels. Previously 65 ms < 200 ms
+// could return pre-tick state and bias training credit assignment.
+exec_delay_ms(250).
+
+// S4-1 (audit-step-4): gate the bench-only anti-stuck rescue path. When
+// false, the bench evaluates the TRAINED greedy policy as-is (no runtime
+// argmax replacement). This is the conservative reading of H1: "did the
+// prior produce a better greedy policy?" Set to true ONLY to reproduce
+// the legacy (pre-2026-06-03) behaviour where the bench wraps stuck states
+// with getActionFromStateAntiStuck — that path is not present during
+// training, so it makes the benched policy != the trained policy.
+bench_anti_stuck(false).
 
 // Lab-specific configuration (TD, ontology paths, zone targets, rank bounds,
 // sunshine probability, scenario files) is resolved at startup from the
@@ -99,10 +112,15 @@ exec_delay_ms(65).
 @bench_start
 +!bench_start
     : bench_mode(Mode) & lab_td(TdUrl) & bench_runs(TotalRuns)
-    & light_rank_bounds(LightBounds) & sunshine_rank_bounds(SunshineBounds) <-
+    & light_rank_bounds(LightBounds) & sunshine_rank_bounds(SunshineBounds)
+    & active_profile(ActiveP) & bench_anti_stuck(AntiStuck) <-
     .print("==========================================================");
     .print("   BENCHMARK AGENT — Execution-Phase Comparison");
     .print("   Mode: ", Mode, "  |  Runs per scenario: ", TotalRuns);
+    // S4-6 (audit-step-4): make the resolved active_profile and anti-stuck
+    // flag visible in the MAS console so a silent runtime-override fallback
+    // (see @apply_runtime_overrides_fail) is caught immediately.
+    .print("   active_profile=", ActiveP, "  bench_anti_stuck=", AntiStuck);
     .print("==========================================================");
     makeArtifact("lab", "tools.LabEnvironment", [TdUrl], LabId);
     +lab_artifact(LabId);
@@ -554,10 +572,18 @@ exec_delay_ms(65).
     // Track last 3 state vectors and last 2 dispatched actions. When all 3
     // recent states are equal, exclude the recent actions on the next call
     // so the policy can break out of a stagnation plateau.
+    // S4-1 (audit-step-4): the anti-stuck rescue is bench-only; the training
+    // loop in illuminance_controller_agent_ql.asl#@do_step has no equivalent
+    // ring buffer. Wrapping the trained policy with a runtime argmax
+    // replacement makes the benched policy != the trained policy and
+    // contaminates the H1/H3 comparison. The bench_anti_stuck/1 belief
+    // gates this path: default false (conservative H1 reading). Set to
+    // true ONLY to reproduce legacy behaviour.
+    ?bench_anti_stuck(AntiStuckEnabled);
     !get_recent_states(RecentStates);
     !get_recent_actions(RecentActions);
     !is_stuck3(StateVec, RecentStates, IsStuck);
-    if (IsStuck) {
+    if (AntiStuckEnabled & IsStuck) {
         getActionFromStateAntiStuck(StateVec, RecentActions, Action, StuckFired)[artifact_id(QlId)]
     } else {
         getActionFromState(StateVec, false, Action)[artifact_id(QlId)];
