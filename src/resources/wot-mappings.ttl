@@ -38,9 +38,9 @@ ws:stateSlotRole a owl:DatatypeProperty ;
     rdfs:comment "Role of this slot in the state vector. One of: 'zone_level', 'boolean_actuator', 'sunshine'." ;
     rdfs:range xsd:string .
 
-ws:zoneIndex a owl:DatatypeProperty ;
-    rdfs:label "1-based zone index for zone_level slots" ;
-    rdfs:range xsd:integer .
+# NOTE: ws:zoneIndex is declared canonically in lab-ontology.ttl (Audit Step 1
+# finding KG-8 — the duplicate declaration that previously lived here has
+# been removed; the property is still used by the slot registry below).
 
 
 # ===========================================================================

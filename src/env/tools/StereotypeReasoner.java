@@ -54,6 +54,8 @@ public class StereotypeReasoner {
         public Set<Integer> affectedZones; // 0-based zone indices this action affects
         public boolean hasIV;          // true if mechanism has independent variable
         public int ivStateVecIndex;    // which state vec element is the IV (e.g. IDX_SUNSHINE)
+        public int ivMinRank = 1;      // KG-9: minimum IV rank at which Mediates effect is meaningful
+                                       //       (ws:ivMinRank in the ontology; defaults to 1 when absent)
         public String label;           // human-readable label
 
         public ActionInfo() {
@@ -93,7 +95,7 @@ public class StereotypeReasoner {
      * target DV (illuminance). Each row is one action (ON or OFF).
      */
     private static final String ACTUATOR_DISCOVERY_QUERY = PREFIXES +
-        "SELECT ?comp ?zone ?zoneIdx ?dvLabel ?iv " +
+        "SELECT ?comp ?zone ?zoneIdx ?dvLabel ?iv ?ivMinRank " +
         "       ?wotActionType ?wotStateType ?actionValue\n" +
         "WHERE {\n" +
         "  ?comp  brick:isLocatedIn             ?zone .\n" +
@@ -110,6 +112,7 @@ public class StereotypeReasoner {
         "  OPTIONAL {\n" +
         "    ?mech elem:hasIndependentVariable ?iv .\n" +
         "  }\n" +
+        "  OPTIONAL { ?mech ws:ivMinRank ?ivMinRank . }\n" +
         "  OPTIONAL { ?comp ws:hasWoTActionSemanticType ?wotActionType . }\n" +
         "  OPTIONAL { ?comp ws:hasWoTStateSemanticType  ?wotStateType . }\n" +
         "}\n" +
@@ -163,10 +166,63 @@ public class StereotypeReasoner {
     // Once enough samples are collected, compute the minimum effective rank.
     private int[][] ivTrialCount;     // [numActions][4]
     private int[][] ivSuccessCount;   // [numActions][4]
-    /** Minimum number of trials at a given IV rank before we trust the data. */
-    private static final int IV_MIN_SAMPLES = 10;
-    /** An action is considered effective if success rate exceeds this threshold. */
-    private static final double IV_EFFECTIVENESS_THRESHOLD = 0.1;
+    /**
+     * Minimum number of trials at a given IV rank before we trust the data.
+     * Override with -Dstereo.ivMinSamples=N.
+     * Audit Step 2 §S2-6: kept at 10 — sample budget at sun rank 1 on custom8
+     * is ~50 trials over the full training horizon (50% sun-saturation × 10k
+     * episodes × ~1 blind activation/episode), so 10 is a defensible floor.
+     */
+    private static final int IV_MIN_SAMPLES =
+        Integer.parseInt(System.getProperty("stereo.ivMinSamples", "10"));
+    /**
+     * An action is considered effective if success rate exceeds this threshold.
+     * Override with -Dstereo.ivEffectivenessThreshold=...
+     * Audit Step 2 §S2-6: default lowered from 0.10 → 0.05 because custom8's
+     * rank-discretisation (boundary gap 75 lux at the [75,200,400] bounds)
+     * makes a true single-step rank crossing structurally rare at sun rank 1.
+     * The proper fix is a lux-Δ criterion (requires plumbing raw lux through
+     * recordActionOutcome); the lower threshold is the minimally-invasive
+     * approximation. Set to 0.10 to restore the original (overly strict) gate.
+     */
+    private static final double IV_EFFECTIVENESS_THRESHOLD =
+        Double.parseDouble(System.getProperty("stereo.ivEffectivenessThreshold", "0.05"));
+
+    /**
+     * Magnitude of the soft prior applied to actions that are redundant in
+     * the current state (actuator already in target state).
+     * Override with -Dstereo.priorRedundant=...  (default 1.0 → returned as -1.0).
+     * Audit Step 3b §S3b-4: default lowered from 5.0 → 1.0 so the magnitude
+     * is comparable to the per-step combinedQ Bellman swing (~5) and a
+     * handful of positive samples can out-vote it. Combined with
+     * STEREO_PRIOR_SCALE=1.0 the bench-time bias on a redundant action is
+     * -1.0 instead of the historical -25.
+     */
+    private static final double PRIOR_REDUNDANT_MAG =
+        Double.parseDouble(System.getProperty("stereo.priorRedundant", "1.0"));
+    /**
+     * Magnitude of the soft prior applied to activation actions whose IV is
+     * not satisfied (e.g. blind ON at sun rank 0).
+     * Override with -Dstereo.priorIVUnsat=...  (default 5.0 → returned as -5.0).
+     * Audit Step 3b §S3b-4: default lowered from 25.0 → 5.0 (10% of
+     * REWARD_CLIP); bench-time bias on an IV-unsat action becomes -5.0 instead
+     * of the historical -125.
+     */
+    private static final double PRIOR_IV_UNSAT_MAG =
+        Double.parseDouble(System.getProperty("stereo.priorIVUnsat", "5.0"));
+    /**
+     * Multiplicative scale applied to ALL ontology-driven Q-init penalties
+     * computed in {@link #getInitPenaltyForZone}. Override with
+     * -Dstereo.initPenaltyScale=... (default 0.5).
+     * Audit Step 2 §S2-5: original code returned penalties up to -250 per cell
+     * stacked, which required ~80 cell visits to escape — but mean visits per
+     * (s,a) on custom8 is ~9. Softening by 2× brings the worst-case well to
+     * -125 (and the most common -100 redundancy to -50), which the Bellman
+     * target ±12.5 per zone can reasonably overcome under the training budget.
+     * Set to 1.0 to restore the original magnitudes (used by H5 ablations).
+     */
+    private static final double INIT_PENALTY_SCALE =
+        Double.parseDouble(System.getProperty("stereo.initPenaltyScale", "0.5"));
 
     // -----------------------------------------------------------------------
     // Ontology loading — injectable for testability (#11 DI refactor)
@@ -409,6 +465,9 @@ public class StereotypeReasoner {
                 int zoneIdx = qs.getLiteral("zoneIdx").getInt() - 1; // convert to 0-based
                 boolean actionValue = qs.getLiteral("actionValue").getBoolean();
                 boolean hasIV = qs.contains("iv") && qs.get("iv") != null;
+                int ivMinRank = (qs.contains("ivMinRank") && qs.get("ivMinRank") != null)
+                        ? qs.getLiteral("ivMinRank").getInt()
+                        : 1; // KG-9 default per Audit Step 1
 
                 if (wotAction == null) continue;
 
@@ -421,6 +480,7 @@ public class StereotypeReasoner {
                     ai.wotStateType = wotState;
                     ai.hasIV = actionValue && hasIV; // IV only matters for activation
                     ai.ivStateVecIndex = (actionValue && hasIV) ? sunshineIndex : -1;
+                    ai.ivMinRank = (actionValue && hasIV) ? ivMinRank : 1;
                     ai.expectedBitValue = actionValue ? 1 : 0;
                     String fragment = wotAction.substring(wotAction.lastIndexOf('#') + 1);
                     ai.label = fragment + "=" + (actionValue ? "ON" : "OFF");
@@ -429,7 +489,8 @@ public class StereotypeReasoner {
                 ai.affectedZones.add(zoneIdx);
 
                 LOGGER.fine("  Discovered: " + wotAction + " value=" + actionValue
-                          + " zone=" + zoneIdx + " hasIV=" + hasIV);
+                          + " zone=" + zoneIdx + " hasIV=" + hasIV
+                          + " ivMinRank=" + ivMinRank);
             }
         }
 
@@ -472,6 +533,19 @@ public class StereotypeReasoner {
             LOGGER.info("  Action " + ai.actionIndex + ": " + ai.label
                       + " zones=" + ai.affectedZones
                       + " svBit=" + ai.stateVecBitIndex + " hasIV=" + ai.hasIV);
+        }
+
+        // S2-1 (audit Step 2): fail loud if SPARQL discovery yielded zero
+        // actuator actions (numActions==1 means only the implicit DO_NOTHING
+        // exists). Previously this silently produced a degenerate policy where
+        // the agent could only no-op for the entire training run. The TTL is
+        // almost certainly missing ws:hasWoTActionSemanticType /
+        // elem:hasComponentAction / ws:actionValue triples.
+        if (numActions <= 1) {
+            throw new IllegalStateException(
+                "StereotypeReasoner.discoverActuators: 0 actuator actions found in ontology."
+              + " Check ws:hasWoTActionSemanticType / elem:hasComponentAction / ws:actionValue"
+              + " triples in the lab + wot-mappings TTL files.");
         }
     }
 
@@ -646,11 +720,19 @@ public class StereotypeReasoner {
 
     /**
      * Does the independent variable meet the minimum rank for this action?
-     * 
-     * Uses runtime-learned effectiveness data when enough samples have been
-     * collected (>= IV_MIN_SAMPLES). Until then, allows exploration (returns true)
-     * so the agent can gather data about IV effects. This replaces the static
-     * ws:ivMinRank property that was previously hardcoded in the ontology.
+     *
+     * Audit Step 1 finding KG-2 ("Mediates declared but discarded"): the
+     * consumer must derive the per-state sign of a Mediates mechanism from
+     * the current IV rank, NOT from an unconditional elem:increases triple.
+     *
+     * Design choice (Option B): the run-time action mask uses ONLY the
+     * learned IV-effectiveness statistics. The static {@code ws:ivMinRank}
+     * triple is still loaded into {@code ai.ivMinRank} and consumed by
+     * {@link #getInitPenaltyForZone(int[], int, int, int[])} as the cold-start
+     * Q-init prior, but it does NOT gate the mask here. This makes the static
+     * triple a falsifiable hypothesis: the agent is free to explore at every
+     * IV rank and {@link #getLearnedIVMinRank(int)} is therefore measured
+     * end-to-end from observation, not pre-decided by the ontology.
      */
     public boolean isIVSatisfied(int[] stateVec, int actionIdx) {
         ActionInfo ai = actions[actionIdx];
@@ -663,7 +745,9 @@ public class StereotypeReasoner {
                                  / ivTrialCount[actionIdx][ivRank];
             return effectiveness >= IV_EFFECTIVENESS_THRESHOLD;
         }
-        // Not enough data yet — allow exploration
+        // Not enough learned data yet — allow exploration so the agent can
+        // collect samples at every IV rank and the learned threshold can
+        // converge without being seeded by the static prior.
         return true;
     }
 
@@ -712,6 +796,10 @@ public class StereotypeReasoner {
      * Get the currently learned IV minimum rank for a given action.
      * Scans upward from rank 0; returns the first rank where effectiveness
      * exceeds the threshold, or 0 if no data yet.
+     *
+     * Diagnostic only — not invoked by QLearner during action selection.
+     * Read by {@link #saveIVStats} and trace plumbing so post-hoc analysis
+     * can compare ontology-declared ws:ivMinRank against the empirical value.
      */
     public int getLearnedIVMinRank(int actionIdx) {
         ActionInfo ai = actions[actionIdx];
@@ -774,10 +862,15 @@ public class StereotypeReasoner {
                 priors[i] = 0.0; // DO_NOTHING: neutral
                 continue;
             }
+            // S2-2 (audit Step 2): the two branches are mutually exclusive by
+            // construction — a redundant action's actuator is already in the
+            // target state, so the IV-unsatisfied check on the same action
+            // would never fire. The if/else-if ordering is therefore safe and
+            // intentional (redundancy wins over IV gating).
             if (isRedundant(stateVec, i)) {
-                priors[i] = -5.0; // soft-discouraged: redundant
+                priors[i] = -PRIOR_REDUNDANT_MAG; // soft-discouraged: redundant
             } else if (ai.wotValue && !isIVSatisfied(stateVec, i)) {
-                priors[i] = -25.0; // soft-discouraged: IV not satisfied
+                priors[i] = -PRIOR_IV_UNSAT_MAG;  // soft-discouraged: IV not satisfied
             } else {
                 priors[i] = 0.0;
             }
@@ -790,7 +883,9 @@ public class StereotypeReasoner {
      *
      * Rules derived from ontology:
      *   1. Redundancy (hard -100): action targets bit already in target state
-     *   2. IV soft penalty: -100 * (1 - sunshineSatisfactionProb) for blind-open when IV needed
+     *   2. IV gate (Mediates): state-dependent -100 when stateVec[IV] < ai.ivMinRank
+     *      (Audit Step 1 KG-2 — derive the sign of a Mediates mechanism from
+     *      the current IV rank, not from an unconditional Causes shortcut).
      *   3. Cross-zone overshoot: if zone k is at/above goal and action spills to k
      *   4. Shared actuator conflict: multi-zone actuator ON when zone already at/above goal
      *
@@ -806,17 +901,28 @@ public class StereotypeReasoner {
         // Rule 1: Redundancy — hard penalty (action is a no-op)
         if (ai.stateVecBitIndex >= 0) {
             if (stateVec[ai.stateVecBitIndex] == ai.expectedBitValue) {
-                return -100.0; // Absolute worst — wasted action
+                return -100.0 * INIT_PENALTY_SCALE; // Absolute worst — wasted action
             }
         }
 
-        // Rule 2: IV constraint — soft penalty (sunshine not in state index)
-        // Only for activation actions with an IV requirement
-        if (ai.hasIV && ai.wotValue) {
-            penalty += -100.0 * (1.0 - sunshineSatisfactionProb);
+        // Rule 2: IV gate (Mediates) — state-dependent hard penalty.
+        // Only fires for activation actions whose mechanism has an IV AND whose
+        // current IV rank is below the declared Mediates threshold (ws:ivMinRank).
+        // When the IV is sufficient, the penalty is zero — the action is then
+        // physically capable of changing the DV, exactly as Ramanathan & Mayer
+        // §3.2 prescribes for a Mediates mechanism.
+        if (ai.hasIV && ai.wotValue && ai.ivStateVecIndex >= 0) {
+            int ivRank = stateVec[ai.ivStateVecIndex];
+            if (ivRank < ai.ivMinRank) {
+                penalty += -100.0;
+            }
         }
 
-        // Rule 3: Cross-zone overshoot penalty
+        // Rule 3: Cross-zone overshoot penalty.
+        // Note (audit Step 2): on custom8 the crossZoneEffects set is empty
+        // because the lab TTL declares no brick:feeds arcs between zones —
+        // each luminaire is single-zone. This rule is therefore dead-on for
+        // custom8 but kept for labs where shared luminaires exist (custom2/3).
         for (CrossZoneEffect cz : crossZoneEffects) {
             if (cz.actionIndex == actionIdx && cz.targetZoneIdx == zoneIdx) {
                 // This action spills into our zone from another zone
@@ -836,7 +942,11 @@ public class StereotypeReasoner {
             }
         }
 
-        return penalty;
+        // S2-5 (audit Step 2): apply global softening scale. The raw magnitudes
+        // above are kept for clarity; INIT_PENALTY_SCALE (default 0.5) divides
+        // all penalty wells so the per-zone Bellman target ±12.5 can reasonably
+        // overcome them within the custom8 training budget.
+        return penalty * INIT_PENALTY_SCALE;
     }
 
     // -----------------------------------------------------------------------

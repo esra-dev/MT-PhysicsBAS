@@ -28,9 +28,11 @@ sosa:observes  owl:equivalentProperty elem:observes .
 # ===========================================================================
 
 # Rank-transition thresholds for a process variable's discretisation.
-# Stored here so lux breakpoints can be updated without recompiling Java:
-#   rankBound_1: raw sensor value at which rank 0 ends and rank 1 begins
-#   rankBound_2: rank 1 -> 2,  rankBound_3: rank 2 -> 3
+# Read by OntologyArtifact.getDiscretizationBounds and consumed by
+# LabEnvironment for sensor→rank mapping. The values below are the
+# CONTRACTUAL discretisation that bench scenarios assume; runtime
+# calibration is documented but does NOT overwrite these triples
+# (Audit Step 1, finding KG-4).
 ws:rankBound_1 a owl:DatatypeProperty ;
     rdfs:label "Discretisation threshold rank 0->1" ;
     rdfs:comment "Raw sensor value above which rank transitions from 0 to 1 for this process variable." ;
@@ -43,6 +45,28 @@ ws:rankBound_2 a owl:DatatypeProperty ;
 ws:rankBound_3 a owl:DatatypeProperty ;
     rdfs:label "Discretisation threshold rank 2->3" ;
     rdfs:range xsd:decimal .
+
+# Minimum independent-variable rank at which a Mediates mechanism's effect
+# becomes meaningful. Attached to elem:PhysicalMechanism individuals that
+# declare an elem:hasIndependentVariable. The QLearner consumer
+# (StereotypeReasoner) uses this to gate the Q-init penalty for activation
+# actions whose mechanism is currently "starved" of its IV — implementing
+# Ramanathan & Mayer §3.2 Mediates semantics rather than the Causes
+# shortcut. Default (when triple absent) is 1.
+ws:ivMinRank a owl:DatatypeProperty ;
+    rdfs:label "Minimum effective IV rank" ;
+    rdfs:comment "Minimum value of the independent variable's discretised rank at which the mechanism's manipulated variable can produce a non-negligible change in the dependent variable." ;
+    rdfs:range xsd:integer .
+
+# Convenience shortcut for the Causes pattern (Ramanathan & Mayer §3.1):
+# a mechanism whose manipulated variable has a directly-signed effect on
+# its dependent variable, with NO intermediating independent variable.
+# Mediates mechanisms (MV gates IV→DV) MUST NOT use elem:increases — they
+# are correctly expressed via the IV+MV+DV chain alone; the consumer
+# derives the per-state sign from the current IV rank vs ws:ivMinRank.
+elem:increases a owl:ObjectProperty ;
+    rdfs:label "increases (Causes shortcut)" ;
+    rdfs:comment "Shortcut declaring an unconditional positive sign of the mechanism's MV→DV effect. Only valid on Causes mechanisms (no elem:hasIndependentVariable). For Mediates mechanisms, omit this triple and let the consumer derive the sign from the IV rank." .
 
 # Integer index (1-based) used to sort zones deterministically in SPARQL (ORDER BY ws:zoneIndex).
 ws:zoneIndex a owl:DatatypeProperty ;
@@ -92,13 +116,18 @@ ws:pm_daylight_ingress a owl:NamedIndividual, elem:PhysicalMechanism ;
     rdfs:comment """
         Raising the blinds allows outdoor sunlight (lux) to pass through
         the window aperture, thereby increasing indoor illuminance.
-        The outdoor illuminance is an uncontrolled independent variable;
-        the blind position (up/down) is the manipulated variable.
+        Mediates mechanism (Ramanathan & Mayer §3.2): the outdoor
+        illuminance is the independent variable (IV) and the blind
+        position (up/down) is the manipulated variable (MV) that gates
+        the IV→DV transfer. The effect direction is therefore
+        STATE-DEPENDENT (positive only when sunshine rank ≥ ws:ivMinRank);
+        consequently elem:increases is intentionally NOT asserted here
+        — the consumer derives the sign per-state from the IV rank.
     """ ;
     elem:hasIndependentVariable ws:outdoorIlluminance ;
     elem:hasManipulatedVariable ws:blindApertureRatio ;
     elem:hasDependentVariable   elem:luminiscence ;
-    elem:increases              elem:luminiscence ;
+    ws:ivMinRank                1 ;
     elem:affectedUpstreamVariable ws:blind_light_contribution .
 
 # --- 1.3  pm_room_luminance_accumulation mechanism ---------------------------
@@ -176,13 +205,19 @@ ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Sensed indoor illuminance signal" ;
     elem:dealsWithStuff  elem:photons ;
     elem:hasProcessPosition elem:outlet ;
-    elem:hasQuantity     qudtqk:Illuminance .
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "100"^^xsd:decimal ;
+    ws:rankBound_3       "300"^^xsd:decimal .
 
 ws:sensedOutdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
     rdfs:label "Sensed outdoor illuminance signal" ;
     elem:dealsWithStuff  elem:photons ;
     elem:hasProcessPosition elem:outlet ;
-    elem:hasQuantity     qudtqk:Illuminance .
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "200"^^xsd:decimal ;
+    ws:rankBound_3       "600"^^xsd:decimal .
 
 # Room illuminance process variables
 
@@ -952,35 +987,14 @@ lab:Radiator_Z2 elem:hasComponentAction ws:SetZ2Radiator_ON, ws:SetZ2Radiator_OF
 
 
 # ===========================================================================
-# A6.  RESPONSE DYNAMICS  (declarative model of W3 ramp/delay weakness)
+# A6.  RESPONSE DYNAMICS  (intentionally removed — Audit Step 1 / KG-5)
 # ---------------------------------------------------------------------------
-# The base ontology assumes nominal physics: an actuator's effect manifests in
-# the same simulator tick that the command is dispatched.  This is the
-# elem:InstantaneousResponse dynamic.  W3-class labs (custom4) override this
-# with elem:DelayedResponse to model a multi-tick ramp/residual.  These
-# triples are read by tools.OntologyArtifact to build per-component priors and
-# by the bench agent to differentiate "command dropped" (W4) from "command
-# accepted but slow to take effect" (W3).
+# The previous block declared elem:ResponseDynamic / InstantaneousResponse /
+# DelayedResponse / elem:hasResponseDynamic and tagged three stereotypes as
+# Instantaneous. No Java consumer ever read elem:hasResponseDynamic, and no
+# customN.ttl ever overrode it with DelayedResponse, so the entire block was
+# dead code (Audit Step 1 finding KG-5). Removed to keep the ontology
+# truthful to what the consumer actually uses. If a W3-class lab needs to
+# express a delayed actuator response in the future, reintroduce the block
+# AND wire a SPARQL reader into StereotypeReasoner in the same change.
 # ===========================================================================
-
-elem:ResponseDynamic a owl:Class ;
-    rdfs:label "Response dynamic" ;
-    rdfs:comment "Temporal profile of an actuator's effect after a command." .
-
-elem:InstantaneousResponse a owl:NamedIndividual, elem:ResponseDynamic ;
-    rdfs:label "Instantaneous response" ;
-    rdfs:comment "Effect is realised within one simulator tick of the command." .
-
-elem:DelayedResponse a owl:NamedIndividual, elem:ResponseDynamic ;
-    rdfs:label "Delayed response" ;
-    rdfs:comment "Effect is realised over several ticks (ramp-up / residual after release)." .
-
-elem:hasResponseDynamic a owl:ObjectProperty ;
-    rdfs:label "has response dynamic" ;
-    rdfs:domain elem:Stereotype ;
-    rdfs:range  elem:ResponseDynamic .
-
-# Default declaration: all base-ontology actuators are instantaneous.
-ws:LampIncandescentStereotype elem:hasResponseDynamic elem:InstantaneousResponse .
-ws:BlindStereotype            elem:hasResponseDynamic elem:InstantaneousResponse .
-ws:SpotlightStereotype        elem:hasResponseDynamic elem:InstantaneousResponse .

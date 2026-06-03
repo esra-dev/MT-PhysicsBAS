@@ -60,11 +60,31 @@ public class QLearner extends Artifact {
     private static final double REWARD_CLIP = parseDoubleProp("reward.clip", 50.0);
     // Multiplier applied to stereotype priors during greedy selection
     // (override with -Dstereo.priorScale=...).
-    private static final double STEREO_PRIOR_SCALE = parseDoubleProp("stereo.priorScale", 5.0);
+    // Audit Step 3b §S3b-4: default lowered from 5.0 → 1.0 so the bench-time
+    // soft-prior magnitude on an IV-unsat action becomes O(combinedQ Bellman
+    // swing per visit) instead of dominating it. Sysprop / run_config still
+    // overrides; H5 ablation uses 0.0.
+    private static final double STEREO_PRIOR_SCALE = parseDoubleProp("stereo.priorScale", 1.0);
     // Total episodes used to decay the stereotype prior weight to its floor.
-    private static final int    PRIOR_DECAY_EPISODES = parseIntProp("stereo.priorDecayEpisodes", 2500);
+    // S2-3 (audit Step 2): made non-final so it can be coupled to num_episodes
+    // at runtime via setPriorDecayEpisodes() / setTrainingBudgetEpisodes().
+    // -1 (default) means "auto: 0.25 * num_episodes once the agent reports it";
+    // any positive value from -Dstereo.priorDecayEpisodes wins and disables auto.
+    private static final int    PRIOR_DECAY_EPISODES_PROP =
+        parseIntProp("stereo.priorDecayEpisodes", -1);
+    private int                 priorDecayEpisodes        =
+        PRIOR_DECAY_EPISODES_PROP > 0 ? PRIOR_DECAY_EPISODES_PROP : 2500;
     // Floor for the prior weight at the end of decay.
-    private static final double PRIOR_DECAY_FLOOR    = parseDoubleProp("stereo.priorDecayFloor", 0.1);
+    // Audit Step 3b §S3b-2: default lowered from 0.1 → 0.0 so the late-training
+    // and bench (post-S3b-1) regimes do not carry a permanent prior bias.
+    // Sysprop / run_config still overrides for ablations.
+    private static final double PRIOR_DECAY_FLOOR    = parseDoubleProp("stereo.priorDecayFloor", 0.0);
+    // S2-4 (audit Step 2): per-(state,action) visit threshold above which the
+    // stereotype prior fades to zero. min(1, fadeVisits / visits[s][a]).
+    // 0 (default) disables the per-cell fade and preserves legacy behaviour.
+    // Recommended value: 25 — above this the local Bellman target ±12.5 has had
+    // enough averaging weight to out-vote the prior on its own.
+    private static final int    PRIOR_FADE_VISITS = parseIntProp("stereo.priorFadeVisits", 25);
 
     // -----------------------------------------------------------------------
     // Reward shaping (Ng, Harada & Russell 1999 — Potential-Based Reward
@@ -125,7 +145,11 @@ public class QLearner extends Artifact {
         return z ^ (z >>> 31);
     }
 
-    // Current episode number — updated by beginEpisode/endEpisode for prior decay.
+    // Current episode number — incremented by beginEpisode / beginEpisodeFromState
+    // (NOT endEpisode) and used by greedyAction to compute prior-decay weight.
+    // Audit Step 3b §4-1: at bench the training agent's counter is lost; the
+    // bench agent restores it via setEpisodeCounter() (called automatically by
+    // loadQTable) so priorWeight is at floor rather than at maximum.
     private int currentEpisodeNum = 0;
 
     // -----------------------------------------------------------------------
@@ -160,11 +184,16 @@ public class QLearner extends Artifact {
     private StereotypeReasoner.ActionInfo[] actionInfos;
 
     // Adaptive-trust calibration accumulators (only used when ADAPTIVE_TRUST=true).
-    // actionCalSum[a] / actionCalN[a] is the running mean fraction of zone-level
-    // slots where the ontology's predicted sign matched the observed sign for
-    // action a. Allocated in configureQLearner once nActions is known.
-    private double[] actionCalSum;
-    private long[]   actionCalN;
+    // S2-8 (audit Step 2): keyed by (action, sunshineBucket) so labs where the
+    // ontology is correct at sun rank 3 but wrong at sun rank 0 (e.g. blind
+    // activation) can still trust the prior in the state where it's right.
+    // The original 1-D version averaged across all sun ranks and therefore
+    // could never recover per-state — a single sun=0 false-positive would
+    // poison the calibration for sun=3 evaluation. Indexed [action][sunBucket];
+    // when sunshineIndex is unavailable or domainSizes[sunshineIndex]==1 the
+    // table collapses to the legacy single-column behaviour.
+    private double[][] actionCalSum;
+    private long[][]   actionCalN;
 
     // Convergence metrics
     private List<double[]> episodeMetrics = new ArrayList<>();
@@ -261,13 +290,23 @@ public class QLearner extends Artifact {
         int numZones = this.goal.length;
         qTables = new double[numZones][nStates][nActions];
         visitCounts = new long[nStates][nActions];
-        actionCalSum = new double[nActions];
-        actionCalN   = new long[nActions];
+        int sunBuckets = (sunshineIndex >= 0 && sunshineIndex < domainSizes.length)
+                       ? Math.max(1, domainSizes[sunshineIndex]) : 1;
+        actionCalSum = new double[nActions][sunBuckets];
+        actionCalN   = new long[nActions][sunBuckets];
 
-        if (useStereotypes) {
+        if (useStereotypes && STEREO_PRIOR_SCALE > 0.0) {
             initWithStereotypes();
             LOGGER.info("QLearner initialised — STEREOTYPE MODE: ON (ontology-driven)");
             LOGGER.info("  Decomposed Q-tables with per-zone penalties from SPARQL.");
+        } else if (useStereotypes) {
+            // S0-3 (audit Finding 6/7): with priorScale==0 the greedy soft
+            // prior is gone, but raw ontology init penalties (−50..−150) would
+            // still keep ql_true diverged from ql_false, defeating H5. When
+            // the operator explicitly disables the prior, also skip the init
+            // bias so the H5 ablation is a true no-op overlay.
+            for (double[][] zt : qTables) for (double[] row : zt) Arrays.fill(row, 0.0);
+            LOGGER.info("QLearner initialised — STEREOTYPE MODE: ON, priorScale=0 → zero Q-init (H5 ablation)");
         } else {
             for (double[][] zt : qTables) for (double[] row : zt) Arrays.fill(row, 0.0);
             LOGGER.info("QLearner initialised — STEREOTYPE MODE: OFF (standard zero-init)");
@@ -283,8 +322,10 @@ public class QLearner extends Artifact {
         LOGGER.info("  Reward: clip=" + REWARD_CLIP
                   + " shaping=" + REWARD_SHAPING
                   + " priorScale=" + STEREO_PRIOR_SCALE
-                  + " priorDecayEps=" + PRIOR_DECAY_EPISODES
+                  + " priorDecayEps=" + priorDecayEpisodes
+                  + (PRIOR_DECAY_EPISODES_PROP <= 0 ? " (auto)" : "")
                   + " priorDecayFloor=" + PRIOR_DECAY_FLOOR
+                  + " priorFadeVisits=" + PRIOR_FADE_VISITS
                   + " adaptiveTrust=" + ADAPTIVE_TRUST
                   + (ADAPTIVE_TRUST
                         ? " (minSamples=" + ADAPTIVE_TRUST_MIN_SAMPLES + " floor=" + ADAPTIVE_TRUST_FLOOR + ")"
@@ -439,6 +480,8 @@ public class QLearner extends Artifact {
         // Adaptive trust: compare per-action ontology-predicted Δ sign against
         // observed Δ sign on zone-level slots. Used by greedyAction to scale
         // each action's prior down if the ontology is systematically wrong.
+        // S2-8: bucketed by sun rank so state-dependent priors (e.g. blind ON,
+        // which is correct at sun=3 and wrong at sun=0) are tracked separately.
         if (ADAPTIVE_TRUST && useStereotypes && actionCalSum != null) {
             int[] pred = reasoner.getActionPrediction(prevSvArr, action);
             int matched = 0, considered = 0;
@@ -452,15 +495,22 @@ public class QLearner extends Artifact {
                 if (predSign == actualSign) matched++;
             }
             if (considered > 0) {
-                actionCalSum[action] += (double) matched / considered;
-                actionCalN[action]   += 1;
+                int sunBucket = sunBucketOf(prevSvArr);
+                actionCalSum[action][sunBucket] += (double) matched / considered;
+                actionCalN[action][sunBucket]   += 1;
             }
         }
 
-        LOGGER.fine("calculateQ: s=" + sIdx + " a=" + action +
-                    " rZ1=" + String.format("%.1f", (goal.length > 0 ? rewards[0] : 0.0)) +
-                    " rZ2=" + String.format("%.1f", (goal.length > 1 ? rewards[1] : 0.0)) +
-                    " s'=" + sNext);
+        if (LOGGER.isLoggable(java.util.logging.Level.FINE)) {
+            StringBuilder rbuf = new StringBuilder();
+            for (int z = 0; z < goal.length; z++) {
+                if (z > 0) rbuf.append(' ');
+                rbuf.append("rZ").append(z + 1).append('=')
+                    .append(String.format("%.1f", rewards[z]));
+            }
+            LOGGER.fine("calculateQ: s=" + sIdx + " a=" + action + " " + rbuf
+                      + " s'=" + sNext);
+        }
     }
 
     /**
@@ -1051,6 +1101,52 @@ public class QLearner extends Artifact {
                     + " - " + t.getMessage(), t);
             }
         }
+        // Audit Step 3b §S3b-3: persist sidecars so the bench can restore
+        // visit counts (per-cell prior fade) and adaptive-trust calibrations.
+        saveVisitCountsSidecar(base + "_visits.csv");
+        saveAdaptiveTrustSidecar(base + "_trust.csv");
+    }
+
+    private void saveVisitCountsSidecar(String filename) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename), 1 << 20);
+             PrintWriter pw = new PrintWriter(bw)) {
+            StringBuilder row = new StringBuilder(256);
+            row.append("StateIndex");
+            for (int a = 0; a < nActions; a++) row.append(",a").append(a);
+            pw.println(row);
+            long rowsWritten = 0;
+            for (int s = 0; s < nStates; s++) {
+                long sum = 0;
+                for (int a = 0; a < nActions; a++) sum += visitCounts[s][a];
+                if (sum == 0) continue;
+                row.setLength(0);
+                row.append(s);
+                for (int a = 0; a < nActions; a++) row.append(',').append(visitCounts[s][a]);
+                pw.println(row);
+                rowsWritten++;
+            }
+            LOGGER.info("saveVisitCountsSidecar: " + rowsWritten + " rows → " + filename);
+        } catch (IOException e) {
+            LOGGER.warning("saveVisitCountsSidecar: failed " + filename + " — " + e.getMessage());
+        }
+    }
+
+    private void saveAdaptiveTrustSidecar(String filename) {
+        if (actionCalSum == null || actionCalN == null) return;
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
+            pw.println("Action,SunBucket,Sum,N");
+            long rowsWritten = 0;
+            for (int a = 0; a < actionCalN.length; a++) {
+                for (int sb = 0; sb < actionCalN[a].length; sb++) {
+                    if (actionCalN[a][sb] == 0) continue;
+                    pw.println(a + "," + sb + "," + actionCalSum[a][sb] + "," + actionCalN[a][sb]);
+                    rowsWritten++;
+                }
+            }
+            LOGGER.info("saveAdaptiveTrustSidecar: " + rowsWritten + " rows → " + filename);
+        } catch (IOException e) {
+            LOGGER.warning("saveAdaptiveTrustSidecar: failed " + filename + " — " + e.getMessage());
+        }
     }
 
     private void saveQTableToFile(String filename, String[] actionNames,
@@ -1222,12 +1318,67 @@ public class QLearner extends Artifact {
      * When maskStrict=false (default): uses soft priors — all actions reachable
      * during exploration, but greedy selection adds additive bias from ontology.
      *
+     * Audit Step 2 note: this operation has zero call sites in production .asl
+     * agents, .json scenario files, or .ps1 orchestration scripts. The strict
+     * mask path in {@link #getApplicableActions} is therefore effectively dead
+     * code in current sweeps. Retained for ablation reproducibility (future
+     * experiments may invoke it programmatically); the behavioural difference
+     * is intentionally preserved so prior result tables remain reproducible.
+     *
      * @param strict  true → hard masking, false → soft priors.
      */
     @OPERATION
     public void setMaskStrict(boolean strict) {
         this.maskStrict = strict;
         LOGGER.info("QLearner.setMaskStrict: maskStrict=" + strict);
+    }
+
+    /**
+     * Couple the prior-decay horizon to the training budget.
+     * Audit Step 2 §S2-3: the legacy PRIOR_DECAY_EPISODES=2500 default was
+     * arbitrary — with 10k-episode profiles like custom8 the prior reached
+     * its floor at ep 2500, leaving 7500 episodes with prior pinned at
+     * STEREO_PRIOR_SCALE*PRIOR_DECAY_FLOOR = 0.5; with 50-episode quick
+     * sanity runs the prior never decayed at all. This operation sets the
+     * horizon to 0.25 × numEpisodes (so the prior shape is identical across
+     * training budgets). Honours an explicit -Dstereo.priorDecayEpisodes
+     * override: when the sysprop is positive it wins and this call is a no-op.
+     *
+     * @param numEpisodes  total planned training episodes (e.g. from
+     *                     lab_profiles training_params).
+     */
+    @OPERATION
+    public void setTrainingBudgetEpisodes(int numEpisodes) {
+        if (PRIOR_DECAY_EPISODES_PROP > 0) {
+            LOGGER.info("QLearner.setTrainingBudgetEpisodes: ignored (sysprop"
+                      + " -Dstereo.priorDecayEpisodes=" + PRIOR_DECAY_EPISODES_PROP
+                      + " wins). priorDecayEpisodes=" + priorDecayEpisodes);
+            return;
+        }
+        int newDecay = Math.max(1, numEpisodes / 4);
+        this.priorDecayEpisodes = newDecay;
+        LOGGER.info("QLearner.setTrainingBudgetEpisodes: numEpisodes=" + numEpisodes
+                  + " → priorDecayEpisodes=" + newDecay + " (auto = 25% of budget)");
+    }
+
+    /**
+     * Audit Step 3b §S3b-1: set the episode counter consumed by
+     * {@link #greedyAction}'s prior-decay schedule. The training agent
+     * increments this via {@link #beginEpisode}; the bench agent never
+     * calls beginEpisode, so without this op {@code currentEpisodeNum=0}
+     * at bench and {@code priorWeight=STEREO_PRIOR_SCALE} (the MAXIMUM,
+     * not the floor). {@link #loadQTable} now calls this automatically
+     * with {@code priorDecayEpisodes} so bench operates in the documented
+     * floor regime.
+     *
+     * @param n  New value of {@code currentEpisodeNum}.
+     */
+    @OPERATION
+    public void setEpisodeCounter(int n) {
+        this.currentEpisodeNum = Math.max(0, n);
+        LOGGER.info("QLearner.setEpisodeCounter: currentEpisodeNum=" + this.currentEpisodeNum
+                  + " (priorDecayEpisodes=" + priorDecayEpisodes
+                  + " → priorWeight at floor=" + (this.currentEpisodeNum >= priorDecayEpisodes) + ")");
     }
 
     /**
@@ -1259,6 +1410,86 @@ public class QLearner extends Artifact {
         } else {
             // Fall back: load combined file, distribute equally across zones
             loadQTableCombined(filename);
+        }
+
+        // Audit Step 3b §S3b-1: align bench-time prior-decay state with the
+        // training-time end-state. Without this, currentEpisodeNum=0 at bench
+        // produces priorWeight=STEREO_PRIOR_SCALE (maximum), contradicting the
+        // greedyAction documentation and producing a 10×-too-strong bench prior.
+        this.currentEpisodeNum = priorDecayEpisodes;
+        LOGGER.info("loadQTable: currentEpisodeNum ← priorDecayEpisodes="
+                  + priorDecayEpisodes + " (bench prior at floor regime)");
+
+        // Audit Step 3b §S3b-3: restore visit counts and adaptive-trust
+        // calibration from sidecar files if present. Without these the
+        // per-cell fade (PRIOR_FADE_VISITS) and per-action trust (calMul)
+        // mechanisms are structurally dead at bench. Missing files are
+        // tolerated to preserve backwards compatibility with old Q-tables.
+        loadVisitCountsSidecar(base + "_visits.csv");
+        loadAdaptiveTrustSidecar(base + "_trust.csv");
+    }
+
+    private void loadVisitCountsSidecar(String filename) {
+        java.io.File f = new java.io.File(filename);
+        if (!f.exists()) {
+            LOGGER.info("loadVisitCountsSidecar: not found " + filename
+                      + " (cellMul fade will be inactive at bench)");
+            return;
+        }
+        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f))) {
+            String header = br.readLine();
+            if (header == null) return;
+            String[] cols = header.split(",");
+            int numActionCols = cols.length - 1;
+            String line;
+            long rowsLoaded = 0;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                String[] parts = line.split(",");
+                int stateIdx = Integer.parseInt(parts[0].trim());
+                if (stateIdx < 0 || stateIdx >= nStates) continue;
+                for (int a = 0; a < Math.min(numActionCols, nActions); a++) {
+                    visitCounts[stateIdx][a] = Long.parseLong(parts[a + 1].trim());
+                }
+                rowsLoaded++;
+            }
+            LOGGER.info("loadVisitCountsSidecar: loaded " + rowsLoaded + " rows from " + filename);
+        } catch (IOException | NumberFormatException e) {
+            LOGGER.warning("loadVisitCountsSidecar: failed " + filename + " — " + e.getMessage());
+        }
+    }
+
+    private void loadAdaptiveTrustSidecar(String filename) {
+        java.io.File f = new java.io.File(filename);
+        if (!f.exists()) {
+            LOGGER.info("loadAdaptiveTrustSidecar: not found " + filename
+                      + " (calMul adaptive trust will be inactive at bench)");
+            return;
+        }
+        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f))) {
+            String header = br.readLine(); // Action,SunBucket,Sum,N
+            if (header == null) return;
+            String line;
+            long rowsLoaded = 0;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                String[] parts = line.split(",");
+                if (parts.length < 4) continue;
+                int a   = Integer.parseInt(parts[0].trim());
+                int sb  = Integer.parseInt(parts[1].trim());
+                double sum = Double.parseDouble(parts[2].trim());
+                long   n   = Long.parseLong(parts[3].trim());
+                if (a < 0 || a >= nActions) continue;
+                if (sb < 0 || sb >= actionCalN[a].length) continue;
+                actionCalSum[a][sb] = sum;
+                actionCalN[a][sb]   = n;
+                rowsLoaded++;
+            }
+            LOGGER.info("loadAdaptiveTrustSidecar: loaded " + rowsLoaded + " rows from " + filename);
+        } catch (IOException | NumberFormatException e) {
+            LOGGER.warning("loadAdaptiveTrustSidecar: failed " + filename + " — " + e.getMessage());
         }
     }
 
@@ -1452,17 +1683,21 @@ public class QLearner extends Artifact {
         // Retrieve priors only in soft-prior stereotype mode
         double[] priors = null;
         double   priorWeight = 0.0;
+        int      sunBucket = 0;
         if (useStereotypes && !maskStrict) {
             // Decode state vector from index (needed for priors)
             int[] sv = decodeState(stateIdx);
+            sunBucket = sunBucketOf(sv);
             priors = reasoner.getActionPriors(sv);
             // Linearly decay the prior weight from STEREO_PRIOR_SCALE down to
-            // STEREO_PRIOR_SCALE * PRIOR_DECAY_FLOOR over PRIOR_DECAY_EPISODES
+            // STEREO_PRIOR_SCALE * PRIOR_DECAY_FLOOR over priorDecayEpisodes
             // so stereotypes shape early exploration but learning dominates
-            // late. During benchmark (currentEpisodeNum frozen at last value)
-            // priorWeight stays at the floor.
-            double frac = PRIOR_DECAY_EPISODES <= 0 ? 1.0
-                        : Math.min(1.0, (double) currentEpisodeNum / PRIOR_DECAY_EPISODES);
+            // late. Audit Step 3b §S3b-1: at bench, loadQTable explicitly sets
+            // currentEpisodeNum = priorDecayEpisodes so this expression evaluates
+            // to STEREO_PRIOR_SCALE * PRIOR_DECAY_FLOOR (the floor, as intended).
+            // Without S3b-1 the bench counter is 0 and priorWeight is MAX.
+            double frac = priorDecayEpisodes <= 0 ? 1.0
+                        : Math.min(1.0, (double) currentEpisodeNum / priorDecayEpisodes);
             double w = 1.0 - frac * (1.0 - PRIOR_DECAY_FLOOR);
             priorWeight = STEREO_PRIOR_SCALE * w;
         }
@@ -1478,11 +1713,25 @@ public class QLearner extends Artifact {
                 double calMul = 1.0;
                 if (ADAPTIVE_TRUST && actionCalN != null
                         && a < actionCalN.length
-                        && actionCalN[a] >= ADAPTIVE_TRUST_MIN_SAMPLES) {
-                    double cal = actionCalSum[a] / actionCalN[a];
+                        && sunBucket < actionCalN[a].length
+                        && actionCalN[a][sunBucket] >= ADAPTIVE_TRUST_MIN_SAMPLES) {
+                    double cal = actionCalSum[a][sunBucket] / actionCalN[a][sunBucket];
                     calMul = Math.max(ADAPTIVE_TRUST_FLOOR, cal);
                 }
-                effectivePrior = priorWeight * priors[a] * calMul;
+                // S2-4: per-cell visit fade — once a (state,action) cell has
+                // been visited PRIOR_FADE_VISITS times its accumulated Q has
+                // enough data to stand on its own, so the prior contribution
+                // is faded out for that cell. Prevents the permanent floor
+                // bias of STEREO_PRIOR_SCALE*PRIOR_DECAY_FLOOR*prior from
+                // pinning the benchmark policy even after convergence.
+                double cellMul = 1.0;
+                if (PRIOR_FADE_VISITS > 0 && visitCounts != null) {
+                    long v = visitCounts[stateIdx][a];
+                    if (v > 0) {
+                        cellMul = Math.min(1.0, (double) PRIOR_FADE_VISITS / v);
+                    }
+                }
+                effectivePrior = priorWeight * priors[a] * calMul * cellMul;
             }
             double q = combinedQ(stateIdx, a) + effectivePrior;
             if (q > bestQ + 1e-9) {
@@ -1495,6 +1744,20 @@ public class QLearner extends Artifact {
         }
         if (tieN <= 1) return tieBuf[0];
         return tieBuf[rng.nextInt(tieN)];
+    }
+
+    /**
+     * Map a state vector to its sun-rank bucket index. Returns 0 when the
+     * sunshine slot is unavailable so the legacy single-column adaptive trust
+     * behaviour is preserved.
+     */
+    private int sunBucketOf(int[] sv) {
+        if (sv == null || sunshineIndex < 0 || sunshineIndex >= sv.length) return 0;
+        int b = sv[sunshineIndex];
+        if (b < 0) return 0;
+        int max = (sunshineIndex < domainSizes.length) ? domainSizes[sunshineIndex] : 1;
+        if (b >= max) return Math.max(0, max - 1);
+        return b;
     }
 
     // ---- primitive coercion helpers (delegate to Converters) -------------

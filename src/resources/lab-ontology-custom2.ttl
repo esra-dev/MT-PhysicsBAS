@@ -170,6 +170,20 @@ lab:Outside  brick:feeds  lab:Blind_Z4 .
 
 
 # ---------------------------------------------------------------------------
+# Shared-luminaire → light-sensor bleed arcs (Audit Step 1 finding KG-7)
+# Spotlight is wired to Z1+Z2 (north row) and SpotlightCD to Z3+Z4 (south).
+# Declaring these feeds lets the cross-zone SPARQL discover the bleed and
+# emit a soft penalty so the QLearner doesn't double-count the shared
+# spotlight's effect on each zone's table.
+# ---------------------------------------------------------------------------
+
+lab:Spotlight    brick:feeds  lab:LightSensor_Z1 .
+lab:Spotlight    brick:feeds  lab:LightSensor_Z2 .
+lab:SpotlightCD  brick:feeds  lab:LightSensor_Z3 .
+lab:SpotlightCD  brick:feeds  lab:LightSensor_Z4 .
+
+
+# ---------------------------------------------------------------------------
 # 4x4 illuminance bleed matrix
 #   Each task light & blind feeds ALL four light sensors (full coupling).
 #   Base file already declared the 8 arcs for the {Z1,Z2}x{Z1,Z2} sub-block.

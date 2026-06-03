@@ -234,6 +234,19 @@ task runFullSweep(dependsOn: 'classes') {
                     classpath   = sourceSets.main.runtimeClasspath
                     systemProperty 'active.profile', profile
                     systemProperty 'bench.mode',     mode
+                    // S0-4 (audit Finding 5): Project.javaexec(closure) is NOT
+                    // a registered task, so the tasks.withType(JavaExec)
+                    // configureEach block above does not apply. Re-forward
+                    // every _httpKeys entry here so run.seed, stereo.priorScale
+                    // and all learning hyperparams actually reach the
+                    // benchmark JVM (and thus QLearner's tie-break RNG and
+                    // any benchmark-time learning props read at class-load).
+                    _httpKeys.each { key ->
+                        def val = project.findProperty(key)
+                        if (val != null && val.toString() != '') {
+                            systemProperty key, val.toString()
+                        }
+                    }
                 }
 
                 // Archive output artefacts (whichever exist for this mode).
