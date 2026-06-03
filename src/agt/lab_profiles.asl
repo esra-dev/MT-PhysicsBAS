@@ -187,6 +187,32 @@ lab_profile("custom8",
             qtable_suffix("_custom8"),
             training_params(10000, 0.9990)).
 
+//   custom9 → CLEAN lab with sun-DEPENDENT optimum (audit Step 5, S5-3).
+//   Forked from custom8 but Spotlight & SpotlightCD are DISABLED in the
+//   simulator's compute_levels block. This forces the agent to harvest
+//   lux via task lights (always available, cost=1) or blinds (sun-
+//   conditioned, cost~0). At sun=rank3 the cheap optimum uses blinds-open;
+//   at sun=rank0 the only feasible policy is task-lights-on. Therefore
+//   the Mediates(blind, sunshine) stereotype prior is *constructive*
+//   here (unlike custom8 where the prior has no positive lever — see
+//   audit-step-1b §3 and audit-step-5 §4 #4). custom9 is the lab on
+//   which H1 (priors help on clean dynamics) is mechanically testable.
+//   Reachability proof must be re-run before this profile enters the
+//   sweep (mirror Step 1b for custom8).
+lab_profile("custom9",
+            td("classpath:interactions-lab-custom9.ttl"),
+            ont(["lab-ontology.ttl", "lab-ontology-custom2.ttl", "wot-mappings-custom2.ttl"]),
+            scenarios("benchmark/scenarios_custom9.json"),
+            train_scenarios("benchmark/train_scenarios_custom9.json"),
+            sim_port(1889),
+            light_bounds([75, 200, 400]),
+            sunshine_bounds([50, 150, 500]),
+            zone_targets([target(1,3), target(2,2), target(3,3), target(4,2)]),
+            sunshine_prob(0.50),
+            weakness_flags([]),
+            qtable_suffix("_custom9"),
+            training_params(10000, 0.9990)).
+
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.
  * Each accessor unifies its single output argument with the
