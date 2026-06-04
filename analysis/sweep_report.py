@@ -834,7 +834,7 @@ def write_paired_latex_table(paired_csv: Path, out_tex: Path) -> bool:
             " & ".join([
                 r["profile"],
                 r["metric"].replace("_", "\\_"),
-                f"{r['mode_a'].replace('_', '\\_')} vs {r['mode_b'].replace('_', '\\_')}",
+                r['mode_a'].replace('_', '\\_') + " vs " + r['mode_b'].replace('_', '\\_'),
                 r["n_paired"],
                 cell, p, q,
             ]) + " \\\\"
