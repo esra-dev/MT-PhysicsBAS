@@ -830,11 +830,13 @@ def write_paired_latex_table(paired_csv: Path, out_tex: Path) -> bool:
             q = f"{float(r['q_bootstrap_bh']):.4f}"
         except (TypeError, ValueError, KeyError):
             q = "--"
+        mode_a = r["mode_a"].replace("_", "\\_")
+        mode_b = r["mode_b"].replace("_", "\\_")
         lines.append(
             " & ".join([
                 r["profile"],
                 r["metric"].replace("_", "\\_"),
-                r['mode_a'].replace('_', '\\_') + " vs " + r['mode_b'].replace('_', '\\_'),
+                f"{mode_a} vs {mode_b}",
                 r["n_paired"],
                 cell, p, q,
             ]) + " \\\\"
