@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Phase 1  — Applies timing/episode parameters to ASL files and simulator flows
-    Phase 2  — Starts all 6 weakness-lab Node-RED simulators (ports 1882–1887)
+    Phase 2  — Starts all weakness-lab Node-RED simulators (ports 1882–1889)
     Phase 3  — Trains Q-learning for every profile × 2 stereotype modes
     Phase 4  — Runs the full benchmark sweep (all profiles × all modes)
     Phase 5  — Runs the sweep analysis report
@@ -166,7 +166,7 @@ if ($RunSeed -ne 0) {
 # ─── Project layout ───────────────────────────────────────────────────────────
 # Profiles to train/benchmark (4-zone weakness labs only).
 $TrainProfiles = @(
-    "custom2", "custom3", "custom4", "custom5", "custom6", "custom7", "custom8"
+    "custom2", "custom3", "custom4", "custom5", "custom6", "custom7", "custom8", "custom9"
 )
 
 # Apply -OnlyProfiles filter (parallel orchestrator passes one profile per clone).
@@ -222,6 +222,7 @@ $ProfileQtableSuffix = @{
     custom6 = "_custom6"
     custom7 = "_custom7"
     custom8 = "_custom8"
+    custom9 = "_custom9"
 }
 
 # Simulator map: each entry is a profile → (port, flow file) binding
@@ -233,6 +234,7 @@ $Simulators = @(
     [pscustomobject]@{ Profile="custom6"; Port=1886; Flow="simulator_flow_custom6.json" }
     [pscustomobject]@{ Profile="custom7"; Port=1887; Flow="simulator_flow_custom7.json" }
     [pscustomobject]@{ Profile="custom8"; Port=1888; Flow="simulator_flow_custom8.json" }
+    [pscustomobject]@{ Profile="custom9"; Port=1889; Flow="simulator_flow_custom9.json" }
 )
 
 # ASL file paths (relative; resolved via Set-Location above)

@@ -134,7 +134,7 @@ if (-not $ClonesRoot) {
 }
 
 # ─── Project layout (must match run_full_project.ps1) ─────────────────────────
-$Profiles = @("custom2","custom3","custom4","custom5","custom6","custom7","custom8")
+$Profiles = @("custom2","custom3","custom4","custom5","custom6","custom7","custom8","custom9")
 $BenchModes = "rule_based,ql_false,ql_true"
 $StereoModes = @("true","false")
 
@@ -146,6 +146,7 @@ $Simulators = @(
     [pscustomobject]@{ Profile="custom6"; Port=1886; Flow="simulator_flow_custom6.json" }
     [pscustomobject]@{ Profile="custom7"; Port=1887; Flow="simulator_flow_custom7.json" }
     [pscustomobject]@{ Profile="custom8"; Port=1888; Flow="simulator_flow_custom8.json" }
+    [pscustomobject]@{ Profile="custom9"; Port=1889; Flow="simulator_flow_custom9.json" }
 )
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
