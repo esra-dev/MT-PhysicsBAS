@@ -208,17 +208,85 @@ jobs:
           key: npm-noderered-${{ runner.os }}-v4
       - name: Install Node-RED
         run: npm install -g --unsafe-perm node-red@4
-      - name: Download compiled build
+      - name: Download compiled build (attempt 1)
+        id: dl_build_1
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: build-classes
           path: build
-      - name: Download stereo=true training artefacts (matching seed)
+      - name: Wait before retrying compiled build download
+        if: steps.dl_build_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download build-classes failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download compiled build (attempt 2)
+        id: dl_build_2
+        if: steps.dl_build_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Download compiled build (attempt 3)
+        if: steps.dl_build_1.outcome == 'failure' && steps.dl_build_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+
+      - name: Download stereo=true training artefacts (attempt 1)
+        id: dl_train_true_1
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: train-${{ matrix.profile }}-stereo-true-seed-${{ matrix.seed }}
           path: .
-      - name: Download stereo=false training artefacts (matching seed)
+      - name: Wait before retrying stereo=true artefact download
+        if: steps.dl_train_true_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download train-stereo=true failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download stereo=true training artefacts (attempt 2)
+        id: dl_train_true_2
+        if: steps.dl_train_true_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-true-seed-${{ matrix.seed }}
+          path: .
+      - name: Download stereo=true training artefacts (attempt 3)
+        if: steps.dl_train_true_1.outcome == 'failure' && steps.dl_train_true_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-true-seed-${{ matrix.seed }}
+          path: .
+
+      - name: Download stereo=false training artefacts (attempt 1)
+        id: dl_train_false_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-false-seed-${{ matrix.seed }}
+          path: .
+      - name: Wait before retrying stereo=false artefact download
+        if: steps.dl_train_false_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download train-stereo=false failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download stereo=false training artefacts (attempt 2)
+        id: dl_train_false_2
+        if: steps.dl_train_false_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-false-seed-${{ matrix.seed }}
+          path: .
+      - name: Download stereo=false training artefacts (attempt 3)
+        if: steps.dl_train_false_1.outcome == 'failure' && steps.dl_train_false_2.outcome == 'failure'
         uses: actions/download-artifact@v4
         with:
           name: train-${{ matrix.profile }}-stereo-false-seed-${{ matrix.seed }}
@@ -289,12 +357,57 @@ jobs:
           python-version: '3.11'
       - name: Install analysis deps
         run: pip install numpy scipy matplotlib
-      - name: Download all training artefacts
+      - name: Download all training artefacts (attempt 1)
+        id: dl_all_train_1
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: train-*
           path: _artifacts/train
-      - name: Download all benchmark artefacts
+      - name: Wait before retrying training artefact download
+        if: steps.dl_all_train_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download train-* failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download all training artefacts (attempt 2)
+        id: dl_all_train_2
+        if: steps.dl_all_train_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: train-*
+          path: _artifacts/train
+      - name: Download all training artefacts (attempt 3)
+        if: steps.dl_all_train_1.outcome == 'failure' && steps.dl_all_train_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: train-*
+          path: _artifacts/train
+
+      - name: Download all benchmark artefacts (attempt 1)
+        id: dl_all_bench_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          path: _artifacts/bench
+      - name: Wait before retrying benchmark artefact download
+        if: steps.dl_all_bench_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download bench-* failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download all benchmark artefacts (attempt 2)
+        id: dl_all_bench_2
+        if: steps.dl_all_bench_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          path: _artifacts/bench
+      - name: Download all benchmark artefacts (attempt 3)
+        if: steps.dl_all_bench_1.outcome == 'failure' && steps.dl_all_bench_2.outcome == 'failure'
         uses: actions/download-artifact@v4
         with:
           pattern: bench-*
@@ -332,6 +445,13 @@ jobs:
             echo "[$sd]"
             find "$sd" -maxdepth 3 -type d | sort | head -20
           done
+      - name: Clean up downloaded artifacts to free disk space
+        shell: bash
+        run: |
+          set -eu
+          echo "Disk before cleanup:"; df -h /
+          rm -rf _artifacts/ || true
+          echo "Disk after cleanup:"; df -h /
       - name: Stage seed-1 results at canonical path (for legacy charts)
         shell: bash
         run: |
@@ -357,6 +477,19 @@ jobs:
             --root . \
             --out analysis/out \
             || echo "learning_curves.py: non-fatal failure (will revisit)"
+      - name: Aggressive cleanup before git operations
+        shell: bash
+        run: |
+          set -eu
+          echo "Disk before aggressive cleanup:"; df -h /
+          # Remove large intermediate benchmark/results dirs (keep _seed dirs which have per-seed outputs)
+          rm -rf benchmark/results || true
+          rm -rf log/ || true
+          rm -rf run_full_project.log || true
+          rm -rf .gradle/ || true
+          rm -rf build/ || true
+          sudo docker system prune -f >/dev/null 2>&1 || true
+          echo "Disk after aggressive cleanup:"; df -h /
       - name: Generate job summary
         shell: bash
         run: |
@@ -403,8 +536,22 @@ jobs:
             iv_stats_*.json
             benchmark_results_*.csv
           retention-days: 90
+      - name: Final disk space check before version_artifacts
+        shell: bash
+        run: |
+          AVAIL=$(df / | tail -1 | awk '{print $4}')
+          AVAIL_GB=$((AVAIL / 1024 / 1024))
+          echo "Disk available: ${AVAIL_GB} GB (raw: ${AVAIL} KB)"
+          echo "Inodes available:"; df -i /
+          # Require at least 5 GB free for safe git worktree operations
+          if [ "$AVAIL_GB" -lt 5 ]; then
+            echo "::warning::Only ${AVAIL_GB} GB disk free; skipping publish to results branch (need >= 5 GB)"
+            echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
+          else
+            echo "SKIP_PUBLISH=0" >> "$GITHUB_ENV"
+          fi
       - name: Publish to 'results' branch
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.publish_results == 'true' }}
+        if: ${{ env.SKIP_PUBLISH == '0' && (github.event_name == 'schedule' || github.event.inputs.publish_results == 'true') }}
         shell: pwsh
         env:
           GIT_AUTHOR_NAME: github-actions[bot]
@@ -418,4 +565,10 @@ jobs:
             -RunMode ${{ env.RUN_MODE }} `
             -Profiles "${{ env.PROFILES }}" `
             -Modes "rule_based,ql_false,ql_true" `
+            -OverwriteResultsBranch `
             -PublishResults
+      - name: Skip publish warning
+        if: ${{ env.SKIP_PUBLISH == '1' }}
+        shell: bash
+        run: |
+          echo "::notice::Results publish skipped due to low disk space. Analysis outputs are in analysis/out/ and consolidated artifacts are uploaded to Actions artifacts."

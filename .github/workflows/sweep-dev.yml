@@ -306,9 +306,27 @@ jobs:
           echo "â”€â”€ root-level CSVs â”€â”€"
           ls -1 *.csv *.json *.ttl 2>/dev/null | head -40 || true
           echo "â”€â”€ benchmark/results layout â”€â”€"
-          find benchmark/results -maxdepth 3 -type d 2>/dev/null | sort | head -50 || true
-      - name: Run sweep analysis
+          find benchmark/results -maxdepth 3 -type d 2>/dev/null | sort | head -50 || true      - name: Clean up downloaded artifacts to free disk space
+        shell: bash
+        run: |
+          set -eu
+          echo "Disk before cleanup:"; df -h /
+          rm -rf _artifacts/ || true
+          echo "Disk after cleanup:"; df -h /      - name: Run sweep analysis
         run: python analysis/sweep_report.py --root benchmark/results --out analysis/out
+      - name: Aggressive cleanup before publish
+        shell: bash
+        run: |
+          set -eu
+          echo "Disk before aggressive cleanup:"; df -h /
+          # Remove large intermediate benchmark/results dirs  
+          rm -rf benchmark/results || true
+          rm -rf log/ || true
+          rm -rf run_full_project.log || true
+          rm -rf .gradle/ || true
+          rm -rf build/ || true
+          sudo docker system prune -f >/dev/null 2>&1 || true
+          echo "Disk after aggressive cleanup:"; df -h /
       - name: Generate job summary
         shell: bash
         run: |
@@ -341,8 +359,22 @@ jobs:
             iv_stats_*.json
             benchmark_results_*.csv
           retention-days: 30
+      - name: Final disk space check before publish
+        shell: bash
+        run: |
+          AVAIL=$(df / | tail -1 | awk '{print $4}')
+          AVAIL_GB=$((AVAIL / 1024 / 1024))
+          echo "Disk available: ${AVAIL_GB} GB (raw: ${AVAIL} KB)"
+          echo "Inodes available:"; df -i /
+          # Require at least 2 GB free for safe git worktree operations
+          if [ "$AVAIL_GB" -lt 2 ]; then
+            echo "::warning::Only ${AVAIL_GB} GB disk free; skipping publish to results branch (need >= 2 GB)"
+            echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
+          else
+            echo "SKIP_PUBLISH=0" >> "$GITHUB_ENV"
+          fi
       - name: Publish to 'results' branch
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.publish_results == 'true' }}
+        if: ${{ env.SKIP_PUBLISH == '0' && (github.event_name == 'schedule' || github.event.inputs.publish_results == 'true') }}
         shell: pwsh
         env:
           GIT_AUTHOR_NAME: github-actions[bot]
@@ -356,4 +388,10 @@ jobs:
             -RunMode ${{ env.RUN_MODE }} `
             -Profiles "${{ env.PROFILES }}" `
             -Modes "rule_based,ql_false,ql_true" `
+            -OverwriteResultsBranch `
             -PublishResults
+      - name: Skip publish warning
+        if: ${{ env.SKIP_PUBLISH == '1' }}
+        shell: bash
+        run: |
+          echo "::notice::Results publish skipped due to low disk space. Analysis outputs are in analysis/out/ and consolidated artifacts are uploaded to Actions artifacts."

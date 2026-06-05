@@ -29,6 +29,11 @@
 .PARAMETER ResultsBranch
     Override branch name (default: results).
 
+.PARAMETER OverwriteResultsBranch
+    Publish by recreating the results branch as a fresh orphan snapshot.
+    This avoids checking out the full historical results branch and is
+    recommended for CI runners with limited disk space.
+
 .EXAMPLE
     .\scripts\version_artifacts.ps1 -RunMode dev -Profiles "custom2,custom3" -Modes "ql_true"
 #>
@@ -38,7 +43,8 @@ param(
     [Parameter(Mandatory=$true)] [string]$Profiles,
     [string]$Modes = "rule_based,ql_false,ql_true",
     [switch]$PublishResults,
-    [string]$ResultsBranch = "results"
+    [string]$ResultsBranch = "results",
+    [switch]$OverwriteResultsBranch
 )
 
 $ErrorActionPreference = "Stop"
@@ -109,16 +115,26 @@ if ($copied.Count -eq 0) {
 $worktreePath = Join-Path ([System.IO.Path]::GetTempPath()) "mt-esra-results-wt-$tagName"
 if (Test-Path $worktreePath) { Remove-Item -Recurse -Force $worktreePath }
 
-$branchExists = (& git ls-remote --exit-code --heads origin $ResultsBranch 2>$null)
-if ($LASTEXITCODE -eq 0) {
-    & git fetch origin "${ResultsBranch}:${ResultsBranch}" 2>$null
-} else {
-    # Local-only branch handling.
-    $localExists = (& git rev-parse --verify "refs/heads/$ResultsBranch" 2>$null)
+if (-not $OverwriteResultsBranch) {
+    $branchExists = (& git ls-remote --exit-code --heads origin $ResultsBranch 2>$null)
+    if ($LASTEXITCODE -eq 0) {
+        & git fetch origin "${ResultsBranch}:${ResultsBranch}" 2>$null
+    } else {
+        # Local-only branch handling.
+        $localExists = (& git rev-parse --verify "refs/heads/$ResultsBranch" 2>$null)
+    }
 }
 
 try {
-    if (& git rev-parse --verify "refs/heads/$ResultsBranch" 2>$null) {
+    if ($OverwriteResultsBranch) {
+        Write-Host "version_artifacts: using overwrite mode for '$ResultsBranch' (CI-safe)" -ForegroundColor Yellow
+        & git worktree add --detach $worktreePath HEAD
+        Push-Location $worktreePath
+        & git checkout --orphan $ResultsBranch
+        & git rm -rf . 2>$null | Out-Null
+        Pop-Location
+    }
+    elseif (& git rev-parse --verify "refs/heads/$ResultsBranch" 2>$null) {
         & git worktree add $worktreePath $ResultsBranch
     } else {
         # Create orphan branch.
@@ -145,7 +161,11 @@ try {
     }
 
     if ($PublishResults) {
-        & git push -u origin $ResultsBranch
+        if ($OverwriteResultsBranch) {
+            & git push -u --force origin $ResultsBranch
+        } else {
+            & git push -u origin $ResultsBranch
+        }
         if ($LASTEXITCODE -ne 0) { throw "Push to origin/$ResultsBranch failed." }
         Write-Host "Pushed origin/$ResultsBranch." -ForegroundColor Green
     }
