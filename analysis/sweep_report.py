@@ -216,13 +216,19 @@ def plot_learning_curves(out_dir: Path, curves: dict, plt):
         if not modes:
             continue
         fig, ax = plt.subplots(figsize=(7, 4))
+        plotted = 0
         for mode, (eps, rew) in sorted(modes.items()):
             if eps:
                 ax.plot(eps, rew, label=mode, linewidth=1.2)
+                plotted += 1
         ax.set_xlabel("episode")
         ax.set_ylabel("reward (z1+z2)")
         ax.set_title(f"Learning curve — {prof}")
-        ax.legend()
+        # Only draw a legend when at least one labelled curve exists; calling
+        # ax.legend() with no labelled artists emits a UserWarning that the
+        # run_full_project.ps1 Phase 5 wrapper escalates to a fatal error.
+        if plotted:
+            ax.legend()
         ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(out_dir / f"learning_curve_{prof}.png", dpi=150)
@@ -638,20 +644,28 @@ def _collect_first_goal_by_cell(seed_roots: list[tuple[int, Path]],
                                 stereo: bool) -> dict:
     """Return {profile: {seed: mean_first_goal_episode}}.
 
-    Reads `<seed_root>/<profile>/ql_<stereo>/first_goal_stereotypes_<stereo>_<profile>.csv`.
+    The first-goal CSV is a *training* artefact, archived by
+    ``run_full_project.ps1`` under ``<profile>/training_stereo_<stereo>/`` (the
+    ``ql_<stereo>/`` dirs hold *benchmark* artefacts and never contain
+    ``first_goal_*``). Earlier revisions read ``ql_<stereo>/`` and so silently
+    produced empty first_goal tables; we read ``training_stereo_<stereo>/``
+    first and fall back to the legacy ``ql_<stereo>/`` path for old trees.
     """
     stag = "true" if stereo else "false"
-    mode = f"ql_{stag}"
+    candidates = (f"training_stereo_{stag}", f"ql_{stag}")
     out: dict = defaultdict(dict)
     for seed, root in seed_roots:
         if not root.is_dir():
             continue
         for prof_dir in sorted(p for p in root.iterdir() if p.is_dir()):
             prof = prof_dir.name
-            csv_path = prof_dir / mode / f"first_goal_stereotypes_{stag}_{prof}.csv"
-            mean = _read_first_goal_mean(csv_path)
-            if mean is not None:
-                out[prof][seed] = mean
+            for mode in candidates:
+                csv_path = (prof_dir / mode
+                            / f"first_goal_stereotypes_{stag}_{prof}.csv")
+                mean = _read_first_goal_mean(csv_path)
+                if mean is not None:
+                    out[prof][seed] = mean
+                    break
     return out
 
 
@@ -756,6 +770,261 @@ def aggregate_first_goal(seed_roots: list[tuple[int, Path]],
     else:
         wilc_path.write_text("", encoding="utf-8")
     return len(table_rows)
+
+
+# ---------------------------------------------------------------------------
+# Learning-speed analysis (PRIMARY outcome; pre-reg revision after Sweep 17).
+#
+# The thesis claim is that stereotype-informed Q-learning *learns faster /
+# more efficiently*, not that it reaches a higher final plateau. Sweep 17
+# measured only the final benchmark goal_rate and so could not see a speed
+# advantage. These functions read the per-episode TRAINING metrics
+# (metrics_stereotypes_<stereo>_<profile>.csv) and derive three speed metrics
+# per (profile, seed, stereo):
+#   * auc_goal              — normalised area under the per-episode goal curve
+#                             (= fraction of training episodes that reached
+#                             goal). Higher ⇒ solved earlier and more often.
+#   * episodes_to_threshold — first episode at which the trailing rolling goal
+#                             rate reaches THRESHOLD. Lower ⇒ faster. Right-
+#                             censored at the training horizon when never hit.
+#   * mean_first_goal       — mean FirstGoalEpisode across start states (reuses
+#                             the first-goal CSV). Lower ⇒ faster.
+# The stereotype effect is the *paired* (stereo=True − stereo=False) contrast
+# within the same seed, reusing the same bootstrap / Wilcoxon / Cliff's-delta /
+# BH machinery as paired_tests(). This is the comparison the empty
+# first_goal_wilcoxon.csv was supposed to carry but could not, because it was
+# wired to a non-existent PBRS-off ablation tree.
+_LEARNING_SPEED_DIRECTION = {
+    "auc_goal": "higher_better",
+    "auc_reward": "higher_better",
+    "episodes_to_threshold": "lower_better",
+    "mean_first_goal": "lower_better",
+}
+
+
+def _load_episode_metrics(path: Path) -> tuple[list[float], list[float]]:
+    """Return (goals, rewards) ordered by Episode from a training metrics CSV.
+
+    goals[i]   = GoalReached (0.0/1.0) for the i-th episode.
+    rewards[i] = RewardZ1 + RewardZ2 for the i-th episode.
+    Returns ([], []) when the file is missing/empty/unreadable.
+    """
+    if not path.is_file():
+        return [], []
+    rows: list[tuple[int, float, float]] = []
+    try:
+        with path.open(encoding="utf-8", newline="") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                ep_s = (row.get("Episode") or "").strip()
+                if not ep_s or ep_s.startswith("#"):
+                    continue
+                try:
+                    ep = int(float(ep_s))
+                    goal = float((row.get("GoalReached") or "0").strip() or 0.0)
+                    rz1 = float((row.get("RewardZ1") or "0").strip() or 0.0)
+                    rz2 = float((row.get("RewardZ2") or "0").strip() or 0.0)
+                except ValueError:
+                    continue
+                rows.append((ep, goal, rz1 + rz2))
+    except OSError:
+        return [], []
+    if not rows:
+        return [], []
+    rows.sort(key=lambda t: t[0])
+    goals = [g for _, g, _ in rows]
+    rewards = [r for _, _, r in rows]
+    return goals, rewards
+
+
+def _auc_normalised(series: list[float]) -> float:
+    """Trapezoidal area under ``series`` vs episode index, normalised to [min,
+    max] episode span so the value is the *mean height* of the curve and is
+    comparable across runs of different length. For a 0/1 goal series this
+    equals the fraction of episodes solved; the trapezoidal form is used so
+    reward curves (continuous) are handled identically."""
+    n = len(series)
+    if n == 0:
+        return float("nan")
+    if n == 1:
+        return float(series[0])
+    area = 0.0
+    for i in range(n - 1):
+        area += 0.5 * (series[i] + series[i + 1])
+    return area / (n - 1)
+
+
+def _episodes_to_threshold(goals: list[float], window: int,
+                           thresh: float) -> tuple[float, bool]:
+    """First episode index (0-based) at which the trailing rolling mean of
+    ``goals`` over ``window`` episodes is ≥ ``thresh``. Returns
+    (episode, censored). When the threshold is never reached the value is
+    right-censored at ``len(goals)`` and ``censored=True``."""
+    n = len(goals)
+    if n == 0:
+        return float("nan"), True
+    w = max(1, min(window, n))
+    run = 0.0
+    for i in range(n):
+        run += goals[i]
+        if i >= w:
+            run -= goals[i - w]
+        denom = float(min(i + 1, w))
+        if i + 1 >= w and (run / denom) >= thresh:
+            return float(i), False
+    return float(n), True
+
+
+def _collect_learning_speed_by_cell(seed_roots: list[tuple[int, Path]],
+                                    stereo: bool,
+                                    window: int,
+                                    thresh: float) -> dict:
+    """Return {profile: {seed: {metric: value}}} for one stereotype arm.
+
+    Reads ``<seed_root>/<profile>/training_stereo_<stereo>/`` (training
+    artefacts), falling back to the legacy ``ql_<stereo>/`` layout.
+    """
+    stag = "true" if stereo else "false"
+    candidates = (f"training_stereo_{stag}", f"ql_{stag}")
+    out: dict = defaultdict(dict)
+    for seed, root in seed_roots:
+        if not root.is_dir():
+            continue
+        for prof_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+            prof = prof_dir.name
+            metrics = None
+            fg_dir = None
+            for mode in candidates:
+                cand = (prof_dir / mode
+                        / f"metrics_stereotypes_{stag}_{prof}.csv")
+                if cand.is_file():
+                    metrics = cand
+                    fg_dir = prof_dir / mode
+                    break
+            if metrics is None:
+                continue
+            goals, rewards = _load_episode_metrics(metrics)
+            if not goals:
+                continue
+            ep_thr, _censored = _episodes_to_threshold(goals, window, thresh)
+            cell: dict = {
+                "auc_goal": _auc_normalised(goals),
+                "auc_reward": _auc_normalised(rewards),
+                "episodes_to_threshold": ep_thr,
+            }
+            fg_path = (fg_dir
+                       / f"first_goal_stereotypes_{stag}_{prof}.csv")
+            fg_mean = _read_first_goal_mean(fg_path)
+            if fg_mean is not None:
+                cell["mean_first_goal"] = fg_mean
+            out[prof][seed] = cell
+    return out
+
+
+def learning_speed_tests(seed_roots: list[tuple[int, Path]],
+                         out_dir: Path,
+                         iters: int = 10000,
+                         window: int = 100,
+                         thresh: float = 0.5) -> int:
+    """Write learning_speed_table.csv + learning_speed_tests.csv.
+
+    PRIMARY outcome: the paired (stereo=True − stereo=False) contrast per
+    profile for each learning-speed metric, using the same paired bootstrap,
+    Wilcoxon, Cliff's-delta and BH machinery as paired_tests(). A
+    ``direction`` column and a ``p_one_sided_favorable`` column make the
+    directional hypothesis (faster learning under stereotypes) testable
+    without re-resampling: for higher-is-better metrics the favourable tail is
+    P(boots ≤ 0); for lower-is-better metrics it is P(boots ≥ 0).
+    """
+    on = _collect_learning_speed_by_cell(seed_roots, True, window, thresh)
+    off = _collect_learning_speed_by_cell(seed_roots, False, window, thresh)
+    metrics = list(_LEARNING_SPEED_DIRECTION.keys())
+    profiles = sorted(set(on.keys()) | set(off.keys()))
+
+    # Per-condition descriptive table (mean + bootstrap CI across seeds).
+    table_rows: list[dict] = []
+    for prof in profiles:
+        for label, data in (("ql_true", on), ("ql_false", off)):
+            cells = data.get(prof, {})
+            for metric in metrics:
+                vals = [c[metric] for c in cells.values() if metric in c]
+                if not vals:
+                    continue
+                mean, lo, hi = _bootstrap_ci(vals, iters=iters)
+                table_rows.append({
+                    "profile": prof,
+                    "condition": label,
+                    "metric": metric,
+                    "direction": _LEARNING_SPEED_DIRECTION[metric],
+                    "n_seeds": len(vals),
+                    "mean": mean,
+                    "ci_lo": lo,
+                    "ci_hi": hi,
+                })
+    table_path = out_dir / "learning_speed_table.csv"
+    if table_rows:
+        cols = list(table_rows[0].keys())
+        with table_path.open("w", encoding="utf-8", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=cols)
+            w.writeheader()
+            for r in table_rows:
+                w.writerow(r)
+    else:
+        table_path.write_text("", encoding="utf-8")
+
+    # Paired stereotype contrast (ql_true − ql_false), BH across the family.
+    rows: list[dict] = []
+    ps: list[float] = []
+    for prof in profiles:
+        for metric in metrics:
+            on_cells = on.get(prof, {})
+            off_cells = off.get(prof, {})
+            seeds_common = sorted(
+                {s for s, c in on_cells.items() if metric in c}
+                & {s for s, c in off_cells.items() if metric in c})
+            if len(seeds_common) < 2:
+                continue
+            a = [on_cells[s][metric] for s in seeds_common]   # stereo on
+            b = [off_cells[s][metric] for s in seeds_common]  # stereo off
+            (mean_d, lo, hi, p_boot,
+             p_one_pos, p_one_neg) = _paired_bootstrap_diff(a, b, iters=iters)
+            p_wil = _wilcoxon_p(a, b)
+            delta = _cliffs_delta(a, b)
+            direction = _LEARNING_SPEED_DIRECTION[metric]
+            # Favourable tail: higher_better ⇒ H_A μ_diff>0 ⇒ evidence against
+            # is P(boots≤0)=p_one_pos; lower_better ⇒ H_A μ_diff<0 ⇒ p_one_neg.
+            p_fav = p_one_pos if direction == "higher_better" else p_one_neg
+            rows.append({
+                "profile": prof,
+                "metric": metric,
+                "direction": direction,
+                "n_paired": len(seeds_common),
+                "seeds_paired": ";".join(str(s) for s in seeds_common),
+                "mean_diff_true_minus_false": mean_d,
+                "ci_lo": lo,
+                "ci_hi": hi,
+                "p_bootstrap": p_boot,
+                "p_one_sided_favorable": p_fav,
+                "p_wilcoxon": p_wil,
+                "cliffs_delta": delta,
+            })
+            ps.append(p_boot)
+
+    tests_path = out_dir / "learning_speed_tests.csv"
+    if rows:
+        qs = _bh_qvalues(ps)
+        for r, q in zip(rows, qs):
+            r["q_bootstrap_bh"] = q
+            r["bh_family_m"] = len(qs)
+        cols = list(rows[0].keys())
+        with tests_path.open("w", encoding="utf-8", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=cols)
+            w.writeheader()
+            for r in rows:
+                w.writerow(r)
+    else:
+        tests_path.write_text("", encoding="utf-8")
+    return len(rows)
 
 
 def write_latex_table(summary_csv: Path, out_tex: Path) -> bool:
@@ -871,6 +1140,14 @@ def main(argv: list[str]) -> int:
                              "results_seed<N>/ for the PBRS-off ablation. "
                              "When set, first_goal_table.csv and "
                              "first_goal_wilcoxon.csv (H2) are written.")
+    parser.add_argument("--speed-window", type=int, default=100,
+                        help="rolling window (episodes) for the "
+                             "episodes-to-threshold learning-speed metric "
+                             "(default 100)")
+    parser.add_argument("--speed-threshold", type=float, default=0.5,
+                        help="rolling goal-rate threshold defining 'learned' "
+                             "for the episodes-to-threshold metric "
+                             "(default 0.5)")
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out)
@@ -912,6 +1189,16 @@ def main(argv: list[str]) -> int:
                                         iters=args.ci_bootstrap_iters)
             print(f"sweep_report: wrote {n_fg} first-goal table rows "
                   f"(H2; ablation_roots={len(ablation_roots)})")
+            # PRIMARY outcome: learning-speed stereotype contrast
+            # (ql_true vs ql_false), paired per seed across the same tree.
+            n_ls = learning_speed_tests(seed_roots, out_dir,
+                                        iters=args.ci_bootstrap_iters,
+                                        window=args.speed_window,
+                                        thresh=args.speed_threshold)
+            print(f"sweep_report: wrote {n_ls} learning-speed test rows "
+                  f"to learning_speed_tests.csv "
+                  f"(window={args.speed_window}, "
+                  f"threshold={args.speed_threshold})")
             if write_latex_table(out_dir / "summary_table_ci.csv",
                                  out_dir / "summary_table_ci.tex"):
                 print("sweep_report: summary_table_ci.tex written "

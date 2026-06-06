@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "./run_config.schema.json",
   "description": "Centralised runtime configuration for run_full_project.ps1 and run_full_project_parallel.ps1. RunMode selects one of the named profiles below.",
   "profiles": {
@@ -15,7 +15,7 @@
     },
     "paper": {
       "tick": "0.2",
-      "num_episodes": 2500,
+      "num_episodes": 10000,
       "max_steps_per_episode": 20,
       "action_delay_ms": 250,
       "exec_delay_ms_ql": 500,
@@ -25,7 +25,7 @@
       "exec_delay_ms_bench": 250
     }
   },
-  "profiles_to_run": ["custom2", "custom3", "custom4", "custom5", "custom6", "custom7", "custom8"],
+  "profiles_to_run": ["custom9", "custom3", "custom5"],
   "stereo_modes": ["true", "false"],
   "bench_modes": ["rule_based", "ql_false", "ql_true"],
   "simulator_port_map": {
@@ -35,7 +35,8 @@
     "custom5": 1885,
     "custom6": 1886,
     "custom7": 1887,
-    "custom8": 1888
+    "custom8": 1888,
+    "custom9": 1889
   },
   "simulator_flow_map": {
     "custom2": "simulator_flow_custom2.json",
@@ -44,7 +45,8 @@
     "custom5": "simulator_flow_custom5.json",
     "custom6": "simulator_flow_custom6.json",
     "custom7": "simulator_flow_custom7.json",
-    "custom8": "simulator_flow_custom8.json"
+    "custom8": "simulator_flow_custom8.json",
+    "custom9": "simulator_flow_custom9.json"
   },
   "qtable_suffix_map": {
     "custom2": "_custom2",
@@ -53,7 +55,8 @@
     "custom5": "_custom5",
     "custom6": "_custom6",
     "custom7": "_custom7",
-    "custom8": "_custom8"
+    "custom8": "_custom8",
+    "custom9": "_custom9"
   },
   "expected_state_vec_dim": {
     "custom2": 13,
@@ -62,7 +65,8 @@
     "custom5": 13,
     "custom6": 13,
     "custom7": 13,
-    "custom8": 13
+    "custom8": 13,
+    "custom9": 13
   },
   "http_client": {
     "connect_timeout_ms": 2000,
@@ -71,12 +75,13 @@
     "backoff_base_ms": 200
   },
   "learning": {
-    "reward_clip": 50.0,
+    "reward_clip": 200.0,
     "stereo_prior_scale": 1.0,
     "stereo_prior_decay_episodes": 10000,
     "stereo_prior_decay_floor": 0.0,
     "stereo_prior_redundant": 1.0,
     "stereo_prior_iv_unsat": 5.0,
+    "stereo_init_bonus": 15.0,
     "reward_shaping": "pbrs",
     "adaptive_trust": true,
     "adaptive_trust_min_samples": 50,

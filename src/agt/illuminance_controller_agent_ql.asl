@@ -53,8 +53,8 @@ max_steps_per_episode(20).
 // comment and could return pre-tick state from readLabStatus, biasing
 // the Q-update credit assignment toward the prior (rather than the
 // post-action) state. 250 ms = one full tick + safety margin.
-action_delay_ms(250).     // delay between actions during training (ms) — must exceed 200 ms simulator tick
-exec_delay_ms(250).       // delay between actions during execution (ms)
+action_delay_ms(65).     // delay between actions during training (ms) — must exceed 200 ms simulator tick
+exec_delay_ms(65).       // delay between actions during execution (ms)
 
 exec_max_steps(20).
 

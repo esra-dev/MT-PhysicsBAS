@@ -32,7 +32,7 @@ exec_max_steps(20).
 // readLabStatus observes the state AFTER the Node-RED simulator's 200 ms
 // tick has propagated through compute_levels. Previously 65 ms < 200 ms
 // could return pre-tick state and bias training credit assignment.
-exec_delay_ms(250).
+exec_delay_ms(65).
 
 // S4-1 (audit-step-4): gate the bench-only anti-stuck rescue path. When
 // false, the bench evaluates the TRAINED greedy policy as-is (no runtime

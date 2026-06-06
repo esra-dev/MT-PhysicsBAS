@@ -426,6 +426,12 @@ public class QLearner extends Artifact {
         boolean anyZoneWastedByPenalty = false;
         double maxAbsDelta = 0.0;
         double zoneNorm = 1.0 / Math.max(1, goal.length);
+        // VDN joint bootstrap target (audit Step-3a R-1): all zones must commit
+        // to ONE shared action, so the per-zone independent max_a Q_z[s'][a]
+        // over-estimates the achievable next value. Use the single action that
+        // maximises the SUM of zone Q-values at s' (the joint greedy action),
+        // and evaluate every zone's bootstrap at that same action.
+        int aStarNext = jointArgmaxAction(sNext);
         for (int z = 0; z < goal.length; z++) {
             RewardResult rr = computeZoneReward(z, stateVec, action, nextStateVec);
             double rClipped = Math.max(-REWARD_CLIP, Math.min(REWARD_CLIP, rr.reward));
@@ -450,7 +456,7 @@ public class QLearner extends Artifact {
             }
             rewards[z] = rClipped;
             if (rr.wastedByPenalty) anyZoneWastedByPenalty = true;
-            double maxNextQz = maxQ(qTables[z], sNext);
+            double maxNextQz = qTables[z][sNext][aStarNext];
             double oldQz = qTables[z][sIdx][action];
             double newQz = oldQz + alpha * (rForQ + gamma * maxNextQz - oldQz);
             qTables[z][sIdx][action] = newQz;
@@ -1644,20 +1650,29 @@ public class QLearner extends Artifact {
         return out;
     }
 
-    /** Maximum Q-value over all actions for a given table and state index. */
-    private double maxQ(double[][] table, int stateIdx) {
-        double max = Double.NEGATIVE_INFINITY;
-        for (int a = 0; a < nActions; a++) {
-            if (table[stateIdx][a] > max) max = table[stateIdx][a];
-        }
-        return max;
-    }
-
     /** Combined Q-value (sum over all zones) for action selection. */
     private double combinedQ(int stateIdx, int action) {
         double sum = 0.0;
         for (double[][] zt : qTables) sum += zt[stateIdx][action];
         return sum;
+    }
+
+    /**
+     * Joint greedy action at a state: argmax_a over the SUM of per-zone
+     * Q-values (VDN value decomposition). Used as the bootstrap target in
+     * {@link #calculateQ} so all zones share one next-action, matching the
+     * single shared action the policy must actually take. Iterates all
+     * nActions (parity with the legacy per-zone max). Ties broken
+     * by lowest action index for determinism.
+     */
+    private int jointArgmaxAction(int stateIdx) {
+        int best = 0;
+        double bestVal = Double.NEGATIVE_INFINITY;
+        for (int a = 0; a < nActions; a++) {
+            double v = combinedQ(stateIdx, a);
+            if (v > bestVal) { bestVal = v; best = a; }
+        }
+        return best;
     }
 
     /**

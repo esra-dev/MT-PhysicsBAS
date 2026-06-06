@@ -224,6 +224,29 @@ public class StereotypeReasoner {
     private static final double INIT_PENALTY_SCALE =
         Double.parseDouble(System.getProperty("stereo.initPenaltyScale", "0.5"));
 
+    /**
+     * Magnitude (per rank of remaining gap) of the CONSTRUCTIVE optimistic
+     * Q-init applied to stereotype-favoured goal actions in
+     * {@link #getInitPenaltyForZone}. Override with -Dstereo.initBonus=...
+     * (default 15.0). Scaled by {@link #INIT_PENALTY_SCALE} like the penalty
+     * wells so the two are comparable.
+     *
+     * Rationale (research Phase C): the legacy ontology prior is *penalty-only*
+     * — every stereotype surface can only push the agent AWAY from an action,
+     * never toward one. That makes the stereotype a pure suppressor: it can
+     * lower energy by switching things off but cannot accelerate goal-reaching.
+     * This positive term gives a Mediates(DV, IV) activation a small optimistic
+     * head-start exactly when the ontology says it should help (IV satisfied,
+     * zone below target). It is policy-invariant in the limit — optimistic
+     * initialisation only re-orders early exploration; the converged greedy
+     * policy is unchanged — and it remains recoverable on a wrong-prior lab
+     * (e.g. custom3's sun-flip) because one corrective transition under the
+     * +/-200 reward scale outweighs the bounded init.
+     */
+    private static final double INIT_BONUS_MAG =
+        Double.parseDouble(System.getProperty("stereo.initBonus", "15.0"));
+
+
     // -----------------------------------------------------------------------
     // Ontology loading — injectable for testability (#11 DI refactor)
     // -----------------------------------------------------------------------
@@ -939,6 +962,27 @@ public class StereotypeReasoner {
             int zoneLevelIdx = zoneLevelIndices[zoneIdx];
             if (stateVec[zoneLevelIdx] >= goal[zoneIdx]) {
                 penalty += -75.0; // Strong discouragement when zone is already at goal
+            }
+        }
+
+        // Rule 5 (research Phase C): CONSTRUCTIVE optimistic init.
+        // When no discouragement well fired for this (state, action, zone) and
+        // the ontology positively endorses the action — it is an activation
+        // that affects this zone, the zone is still below target, and (for a
+        // Mediates mechanism) its IV is satisfied — give a small POSITIVE
+        // head-start proportional to the remaining rank gap. This converts the
+        // stereotype from a pure suppressor into a guide: it can now point the
+        // agent TOWARD the blind-open / task-light-on action exactly where the
+        // ontology says it harvests light, which is the whole point of the
+        // constructive (custom9) lab. Bounded and recoverable (see INIT_BONUS_MAG).
+        if (penalty == 0.0 && ai.wotValue && ai.affectedZones.contains(zoneIdx)) {
+            int zoneLevelIdx = zoneLevelIndices[zoneIdx];
+            int gap = goal[zoneIdx] - stateVec[zoneLevelIdx];
+            boolean ivOk = !ai.hasIV
+                    || ai.ivStateVecIndex < 0
+                    || stateVec[ai.ivStateVecIndex] >= ai.ivMinRank;
+            if (gap > 0 && ivOk) {
+                return INIT_BONUS_MAG * gap * INIT_PENALTY_SCALE;
             }
         }
 

@@ -58,6 +58,17 @@ Each hypothesis names: (a) the population it applies to, (b) the metric, (c) the
 - Pre-registered prediction: 95 % CI of the paired difference is **non-negative**, i.e. lower bound ≥ 0.
 - Falsified if: CI strictly below zero (i.e. `ql_true` is significantly worse).
 - This is the headline ordering the project is built to recover.
+- **Amendment 2026-06-06 (Sweep-17 honest negative → re-specification; see §6.6).** Sweep 17
+  (GitHub Actions run `27008592029`) **falsified H1 on `custom8`** as originally framed
+  (`ql_true − ql_false` CI strictly negative; [docs/sweep17_followup_analysis.md](sweep17_followup_analysis.md) §3.2).
+  Root cause: `custom8`'s optimum is sun-invariant so the `Mediates(blind, sunshine)` prior has
+  **no positive lever** there (audit Step-1b §3), under-training (2500 episodes ≈ 2 visits/cell),
+  and the metric (terminal `goal_rate`) measures asymptote, not learning *speed* — which is the
+  actual thesis claim. **H1 is re-specified in §6.6:** headline lab → **`custom9`** (reachability
+  proven, [sweep17_followup_analysis.md](sweep17_followup_analysis.md) §9), primary metric →
+  **learning speed** (AUC of the goal-rate learning curve + episodes-to-threshold), confirmatory
+  lab set reduced to `{custom9, custom3, custom5}`. The original `custom8` / `goal_rate` result is
+  retained as a frozen, honestly-reported negative.
 
 ### H2 — E2 PBRS speeds up learning
 
@@ -355,6 +366,89 @@ of this document and are recorded here so the paper can cite them as registered.
 `q_bootstrap_bh`, `bh_family_m`) and the BH q-value column is now per-family;
 any previously cited `q_bootstrap_bh` value computed across the union of
 confirmatory + exploratory pairs must be recomputed.
+
+---
+
+### 6.6 Registered deviations (post-hoc, Sweep-17 honest negative → re-specification, 2026-06-06)
+
+Sweep 17 (GitHub Actions run `27008592029`, 5 seeds, full benchmark) **falsified H1 and H3
+on terminal `goal_rate`** ([docs/sweep17_followup_analysis.md](sweep17_followup_analysis.md) §3).
+That negative is **kept and reported honestly**; the deviations below re-specify the
+confirmatory design so the *actual* thesis claim — that ontology priors make the agent learn
+**faster / more sample-efficiently**, not necessarily reach a higher asymptote — is the thing
+that gets tested. All changes were applied with `gradlew compileJava` + `gradlew test` green
+and a full dev-mode smoke (train both arms + benchmark all 3 modes on `custom9`, BUILD
+SUCCESSFUL). Implementation log: `/memories/session/plan.md`.
+
+- **SW17-1 — Primary metric changed from terminal `goal_rate` to learning speed.**
+  The confirmatory primary metric is now **learning speed**, operationalised as
+  (a) **AUC** of the per-episode goal-rate (and reward) learning curve — normalised mean
+  curve height, higher = better — and (b) **episodes-to-threshold** (first episode at which
+  a rolling-window goal rate crosses a threshold; right-censored; lower = better).
+  Implemented in `analysis/sweep_report.py::learning_speed_tests()` → `learning_speed_table.csv`
+  (per-condition mean + bootstrap CI) and `learning_speed_tests.csv` (paired `ql_true − ql_false`,
+  direction-aware one-sided favorable p, BH q). CLI: `--speed-window` (default 100),
+  `--speed-threshold` (default 0.5). Terminal `goal_rate` is retained as a **secondary** metric.
+  *Rationale:* the falsified H1 measured asymptote; the thesis claims efficiency. A prior that
+  bends the early learning curve upward but converges to the same asymptote is a *confirmation*
+  of the thesis and a *miss* under the old metric.
+
+- **SW17-2 — Headline lab changed `custom8` → `custom9`; confirmatory lab set reduced to
+  `{custom9, custom3, custom5}`.** `custom8`'s optimum is sun-invariant, so the
+  `Mediates(blind, sunshine)` prior has no positive lever there (audit Step-1b §3) — it cannot
+  test H1 even in principle. `custom9` gives the prior a genuine constructive lever
+  (blinds-open is part of a strictly cheaper optimum at high sun) and its target is **reachable
+  at every sunshine rank** (proof: [sweep17_followup_analysis.md](sweep17_followup_analysis.md) §9).
+  The lab set is deliberately **reduced** (train more episodes on fewer, more-informative labs
+  rather than under-train on many): `custom9` (headline, constructive prior), `custom3`,
+  `custom5` (parity controls — the two labs that were parity, not harm, in Sweep 17).
+  `custom2`/`custom4`/`custom6`/`custom7`/`custom8` move to **exploratory**.
+
+- **SW17-3 — Training budget raised `2500 → 10000` episodes (provisional).** At 2500 episodes
+  the tabular learner averaged ≈ 2 visits/state-cell — far below convergence, confounding any
+  "priors don't help" reading with "nobody converged." `config/run_config.json` `paper.num_episodes
+  = 10000`. The exact budget is provisional pending an episode-calibration probe (deferred,
+  flagged exploratory until run).
+
+- **SW17-4 — `reward_clip` raised `50 → 200`.** With the goal bonus and PBRS potential, a clip
+  at 50 saturated the useful reward range and flattened the learning signal the priors are
+  meant to sharpen. `config/run_config.json` `learning.reward_clip = 200`.
+
+- **SW17-5 — VDN joint Bellman target (per-zone bootstrap).** `QLearner.calculateQ` now
+  bootstraps each zone's Q toward `qTables[z][sNext][a*]` where `a* = jointArgmaxAction(sNext)`
+  (argmax of the summed combined-Q), instead of a per-zone independent max. This is a value-
+  decomposition (VDN) joint target consistent with the decomposed-reward design (audit Step-3a R-1)
+  and removes a per-zone over-estimation bias that added noise to the early curve.
+  File: `src/env/tools/QLearner.java`.
+
+- **SW17-6 — Constructive optimistic initialisation for the blind prior (Rule 5).**
+  `StereotypeReasoner.getInitPenaltyForZone` previously emitted **only penalties** (it could
+  discourage wrong actions but never *encourage* the right one). New Rule 5 emits a **positive
+  optimistic init** for `(blinds-open, zone-below-target, IV-satisfied)`:
+  `INIT_BONUS_MAG · gap · INIT_PENALTY_SCALE` with `INIT_BONUS_MAG = stereo.initBonus` (default
+  15.0, in `config/run_config.json` as `stereo_init_bonus`). This gives the `custom9` prior a
+  constructive lever to bend the early curve, which is exactly what the learning-speed metric
+  measures. Files: `src/env/tools/StereotypeReasoner.java`, `config/run_config.json`,
+  `run_full_project.ps1` (forwards `-Pstereo.initBonus`), `build.gradle` (`_httpKeys`).
+
+- **SW17-7 — Latent property-forwarding bug fixed in `build.gradle`.** `stereo.priorRedundant`
+  and `stereo.priorIVUnsat` were appended as `-P` flags by `run_full_project.ps1` but were
+  **absent from `_httpKeys`**, so they never reached the JVM (silently used compiled defaults).
+  Added `'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus'` to `_httpKeys`.
+  Any pre-2026-06-06 sweep that intended to vary those two knobs did not actually do so.
+
+- **SW17-8 — `first_goal` aggregator read the wrong directory (H2 unblock prerequisite).**
+  `sweep_report.py::_collect_first_goal_by_cell` read `ql_<stereo>/`, but the
+  `first_goal_stereotypes_*` CSV lives under `training_stereo_<stereo>/`. Fixed to read the
+  training dir first (fallback to `ql_`). This is why `first_goal_table.csv` came back empty in
+  Sweep 17; with the fix it populates from real `custom9` data. (H2 still additionally requires
+  the PBRS-off Ablation-A arm per D6-4.)
+
+**Impact on prior results.** The Sweep-17 `goal_rate` numbers stand as a reported negative.
+All confirmatory inference from 2026-06-06 onward uses the learning-speed primary metric on the
+reduced `{custom9, custom3, custom5}` set; the new sweep must be run after these code/config
+changes. The decision table in §4 still applies, now keyed on the learning-speed outcome rather
+than terminal `goal_rate`.
 
 ---
 

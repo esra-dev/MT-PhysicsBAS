@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       profiles:
-        description: "Comma-separated profiles (default: all 8 incl. custom9)"
+        description: "Comma-separated profiles (default: reduced confirmatory set custom9,custom3,custom5 — see pre_registration §6.6 SW17-2)"
         required: false
-        default: "custom2,custom3,custom4,custom5,custom6,custom7,custom8,custom9"
+        default: "custom9,custom3,custom5"
       seeds:
         description: "Comma-separated RNG seeds (default: 1,2,3,4,5)"
         required: false
@@ -35,7 +35,7 @@ concurrency:
 
 env:
   RUN_MODE: paper
-  PROFILES: ${{ github.event.inputs.profiles || 'custom2,custom3,custom4,custom5,custom6,custom7,custom8,custom9' }}
+  PROFILES: ${{ github.event.inputs.profiles || 'custom9,custom3,custom5' }}
   SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5' }}
 
 jobs:

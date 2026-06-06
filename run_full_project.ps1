@@ -152,6 +152,8 @@ if ($RunConfig -and $RunConfig.learning) {
     # Audit Step 3b S3b-4: per-action prior magnitudes (redundant / IV-unsat).
     if ($ln.stereo_prior_redundant      -ne $null) { $HttpArgs += "-Pstereo.priorRedundant=$($ln.stereo_prior_redundant)" }
     if ($ln.stereo_prior_iv_unsat       -ne $null) { $HttpArgs += "-Pstereo.priorIVUnsat=$($ln.stereo_prior_iv_unsat)" }
+    # Research Phase C: constructive optimistic Q-init bonus (H5 ablation sets 0.0).
+    if ($ln.stereo_init_bonus           -ne $null) { $HttpArgs += "-Pstereo.initBonus=$($ln.stereo_init_bonus)" }
     # Research extensions: PBRS reward shaping + adaptive stereotype trust.
     if ($ln.reward_shaping              -ne $null) { $HttpArgs += "-Preward.shaping=$($ln.reward_shaping)" }
     if ($ln.adaptive_trust              -ne $null) { $HttpArgs += "-Pstereo.adaptiveTrust=$($ln.adaptive_trust)" }
