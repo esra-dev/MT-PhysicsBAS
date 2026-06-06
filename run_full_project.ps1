@@ -16,7 +16,7 @@
 .PARAMETER RunMode
     "dev"   — recommended safe config: tick=0.1s, 400 episodes, 20 steps, 115ms delays, 2 runs
               Expected total wall-clock: ~6–8 h (training dominates)
-    "paper" — paper-quality:            tick=0.2s, 2500 episodes, 30 steps, 250ms delays, 5 runs
+    "paper" — paper-quality:            tick=0.05s, 10000 episodes, 20 steps, 65ms delays, 5 runs
               Expected total wall-clock: ~50–60 h
 
 .PARAMETER SkipTraining
@@ -98,15 +98,15 @@ $Configs = @{
         exec_delay_ms_bench   = 65
     }
     paper = @{
-        tick                  = "0.2"
-        num_episodes          = 2500
-        max_steps_per_episode = 30
-        action_delay_ms       = 250
-        exec_delay_ms_ql      = 500
-        exec_max_steps_ql     = 30
+        tick                  = "0.05"   # same as dev; correctness req: action_delay > tick*1000
+        num_episodes          = 10000
+        max_steps_per_episode = 20
+        action_delay_ms       = 65       # must be > tick*1000 + jitter buffer
+        exec_delay_ms_ql      = 100
+        exec_max_steps_ql     = 20
         bench_runs            = 5
-        exec_max_steps_bench  = 30
-        exec_delay_ms_bench   = 250
+        exec_max_steps_bench  = 20
+        exec_delay_ms_bench   = 100
     }
 }
 

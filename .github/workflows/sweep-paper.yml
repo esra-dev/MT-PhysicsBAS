@@ -1,8 +1,8 @@
 ﻿name: Sweep (paper)
 
-# Full end-to-end pipeline using paper-mode hyperparameters (2500 episodes,
-# 5 benchmark runs, slower tick). Same DAG as sweep-dev.yml but each
-# training cell takes ~3-4 h; total wall-clock ~4-5 h when 14 training
+# Full end-to-end pipeline using paper-mode hyperparameters (10000 episodes,
+# 5 benchmark runs, dev-speed tick=0.05s). Same DAG as sweep-dev.yml but each
+# training cell takes ~4.5-5 h; total wall-clock ~5 h when 30 training
 # cells run concurrently. Manual trigger only by default; optional weekly
 # schedule is commented out below.
 
@@ -101,7 +101,7 @@ jobs:
     name: train ${{ matrix.profile }} stereo=${{ matrix.stereo }} seed=${{ matrix.seed }}
     needs: setup
     runs-on: ubuntu-latest
-    timeout-minutes: 330    # 5.5 h hard cap per paper-mode training cell
+    timeout-minutes: 355    # ~6 h cap; dev-speed tick (0.05s) fits 10k eps ~4.3h/cell
     strategy:
       fail-fast: false
       matrix:

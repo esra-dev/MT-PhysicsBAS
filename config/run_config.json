@@ -14,15 +14,15 @@
       "exec_delay_ms_bench": 65
     },
     "paper": {
-      "tick": "0.2",
+      "tick": "0.05",
       "num_episodes": 10000,
       "max_steps_per_episode": 20,
-      "action_delay_ms": 250,
-      "exec_delay_ms_ql": 500,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
       "exec_max_steps_ql": 20,
       "bench_runs": 5,
       "exec_max_steps_bench": 20,
-      "exec_delay_ms_bench": 250
+      "exec_delay_ms_bench": 100
     }
   },
   "profiles_to_run": ["custom9", "custom3", "custom5"],
