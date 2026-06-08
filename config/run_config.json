@@ -1,6 +1,6 @@
 ﻿{
   "$schema": "./run_config.schema.json",
-  "description": "Centralised runtime configuration for run_full_project.ps1 and run_full_project_parallel.ps1. RunMode selects one of the named profiles below.",
+  "description": "Centralised runtime configuration for run_full_project.ps1 and run_full_project_parallel.ps1. RunMode selects one of the named profiles below. paper_h40/paper_h60 are the custom9 horizon-ablation profiles (max_steps 40/60); their num_episodes (5000/3300) is scaled inversely with horizon so each training cell stays within the ~4.3h wall-clock of the paper profile (10000x20 == 5000x40 == 3300x60 step-units) and under the GitHub Actions 6h job cap. The flat custom9 training curve plateaus well before episode ~1000, so 3300-5000 episodes is ample to detect whether a longer horizon enables convergence.",
   "profiles": {
     "dev": {
       "tick": "0.05",
@@ -22,6 +22,28 @@
       "exec_max_steps_ql": 20,
       "bench_runs": 5,
       "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100
+    },
+    "paper_h40": {
+      "tick": "0.05",
+      "num_episodes": 5000,
+      "max_steps_per_episode": 40,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 40,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 40,
+      "exec_delay_ms_bench": 100
+    },
+    "paper_h60": {
+      "tick": "0.05",
+      "num_episodes": 3300,
+      "max_steps_per_episode": 60,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 60,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 60,
       "exec_delay_ms_bench": 100
     }
   },

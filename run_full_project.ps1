@@ -108,8 +108,32 @@ $Configs = @{
         exec_max_steps_bench  = 20
         exec_delay_ms_bench   = 100
     }
+    # custom9 horizon-ablation profiles (fallback copies of config/run_config.json).
+    # num_episodes scaled inversely with horizon so each cell ~= paper wall-clock
+    # (10000*20 == 5000*40 == 3300*60 step-units) and fits the GitHub 6h job cap.
+    paper_h40 = @{
+        tick                  = "0.05"
+        num_episodes          = 5000
+        max_steps_per_episode = 40
+        action_delay_ms       = 65
+        exec_delay_ms_ql      = 100
+        exec_max_steps_ql     = 40
+        bench_runs            = 5
+        exec_max_steps_bench  = 40
+        exec_delay_ms_bench   = 100
+    }
+    paper_h60 = @{
+        tick                  = "0.05"
+        num_episodes          = 3300
+        max_steps_per_episode = 60
+        action_delay_ms       = 65
+        exec_delay_ms_ql      = 100
+        exec_max_steps_ql     = 60
+        bench_runs            = 5
+        exec_max_steps_bench  = 60
+        exec_delay_ms_bench   = 100
+    }
 }
-
 # ─── Externalised configuration (Phase 12 #1) ─────────────────────────────
 # Prefer config/run_config.json when present; fall back to the inline
 # $Configs hashtable above so legacy/offline runs still work.

@@ -450,6 +450,62 @@ reduced `{custom9, custom3, custom5}` set; the new sweep must be run after these
 changes. The decision table in §4 still applies, now keyed on the learning-speed outcome rather
 than terminal `goal_rate`.
 
+### 6.7 Sweep-18 realised verdicts + learning-speed metric amendment (2026-06-XX)
+
+Sweep-18 (CI run `27073252484`, fixes commit `7a3d64c`, timing commit `9b2bc9b`; n=5 seeds,
+`{custom9, custom3, custom5}`, 10000 episodes, paper profile) is the first sweep run after all
+SW17 code/config changes. Full analysis: `docs/sweep18_results_analysis.md`. Registered outcomes:
+
+- **SW18-1 — `episodes_to_threshold` is right-censored at the horizon for every arm; AUC is
+  hereby the single pre-declared PRIMARY learning-speed statistic.** At the registered absolute
+  threshold (`--speed-threshold 0.5`, trailing window 100) the training goal-rate never reaches
+  0.5 in any cell (it plateaus ≈0.15–0.21), so `episodes_to_threshold` censors at 10000 for both
+  arms and its paired `mean_diff` is a degenerate 0.0 — which must **not** be read as a null/tie.
+  The threshold is deliberately **not** retuned to the observed plateau (that would be HARKing).
+  Instead: (a) `analysis/sweep_report.py` now emits a `metric_tier` column (`auc_goal`=`primary`,
+  `auc_reward`/`mean_first_goal`=`secondary`, `episodes_to_threshold`=`secondary_censored`) and a
+  `censored_frac` column on `learning_speed_tests.csv`; (b) `auc_goal` (normalised mean goal-rate
+  over the curve) carries the confirmatory directional claim; (c) `episodes_to_threshold` is
+  reported only with its censoring fraction. This is a reporting/clarity amendment, not a change
+  of hypothesis.
+
+- **SW18-2 — H1 (stereotype prior improves benchmark goal-rate), paired `ql_true − ql_false`,
+  BH-corrected (m=30):** `custom3` Δ +0.199 (q=0.0016, δ=0.76) ✓; `custom5` Δ +0.074 (q<0.001,
+  δ=1.0) ✓; **`custom9` Δ +0.007 (q=0.81) — null** (headline lab). Stereotypes help on the two
+  smaller labs but not on the registered headline lab `custom9`.
+
+- **SW18-3 — Learning speed `auc_goal` (`true − false`), BH (m=12):** `custom3` +0.066 (q=0.041,
+  favourable); `custom5` +0.051 (q<0.001, favourable); **`custom9` −0.042 (δ=−0.6, unfavourable).**
+  The primary speed metric mirrors H1: faster early learning under the prior on custom3/custom5,
+  *slower* on custom9.
+
+- **SW18-4 — Energy efficiency (`true − false`) favours `ql_true` on all three labs** (δ=−1.0,
+  q<0.001, −34…−84 units). This is the most robust and consistent stereotype benefit.
+
+- **SW18-5 — `mean_first_goal` is *higher* (slower to first goal) under the prior on every lab**
+  (custom3 +688 q≈0; custom9 +226 q=0.032). Attributed to the optimistic-init exploration cost of
+  Rule-5 constructive initialisation (SW17-6): the agent explores more before its first success.
+
+- **SW18-6 — custom9 base learner does not converge (under-training hypothesis refuted).**
+  Per-2000-episode goal counts are flat across all five windows (`stereo_false` ≈21%,
+  `stereo_true` ≈15%), so the SW17-3 "raise budget to 10000" lever did not unlock convergence.
+  The `custom9` null is therefore confounded between *"the prior does not help"* and *"the task is
+  not solvable in 20 steps by the tabular learner"*. Two **exploratory** follow-ups are registered
+  (not confirmatory; results will be labelled exploratory):
+  - **SW18-A — Horizon ablation on `custom9`** at `max_steps_per_episode ∈ {40, 60}` via new
+    `paper_h40`/`paper_h60` profiles (`config/run_config.json`; `num_episodes` scaled to 5000/3300
+    so each cell stays within the 6h CI cap). Resolves the convergence confound.
+  - **SW18-B — n=10 confirmatory replication** of the n=5 contrasts above (seeds 6–10 added) to
+    tighten CIs on the custom9 null and the custom3/custom5 positives. Same profiles/metrics; no
+    new hypotheses.
+
+**Impact on prior results.** SW18-2..5 are the registered confirmatory readout of the re-specified
+H1/learning-speed design (§6.6). The thesis claim "stereotype-informed Q-learning learns faster
+and more efficiently" holds on `custom3`/`custom5` (speed + energy) and on energy universally, but
+is **not** supported for learning speed/goal-rate on the registered headline lab `custom9`; the
+SW18-A horizon ablation is required before the custom9 null can be attributed to the prior rather
+than to learner capacity.
+
 ---
 
 *Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*

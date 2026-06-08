@@ -801,6 +801,23 @@ _LEARNING_SPEED_DIRECTION = {
     "mean_first_goal": "lower_better",
 }
 
+# Pre-declared metric tier (Sweep-18 amendment; see pre_registration §6.6).
+# auc_goal is the PRIMARY learning-speed metric: it is bounded, never
+# censored, and equals the fraction of training episodes solved. The absolute
+# episodes_to_threshold metric is retained but demoted to secondary because
+# its fixed goal-rate threshold can be right-censored at the horizon for every
+# arm (as happened in Sweep-18, where the training goal-rate plateaus below
+# the threshold); a ``censored_frac`` column flags this so a degenerate run is
+# never misread as a statistical tie. The threshold is deliberately NOT tuned
+# post-hoc to the observed plateau (that would be HARKing); instead censoring
+# is reported honestly and AUC carries the directional claim.
+_LEARNING_SPEED_TIER = {
+    "auc_goal": "primary",
+    "auc_reward": "secondary",
+    "episodes_to_threshold": "secondary_censored",
+    "mean_first_goal": "secondary",
+}
+
 
 def _load_episode_metrics(path: Path) -> tuple[list[float], list[float]]:
     """Return (goals, rewards) ordered by Episode from a training metrics CSV.
@@ -906,11 +923,14 @@ def _collect_learning_speed_by_cell(seed_roots: list[tuple[int, Path]],
             goals, rewards = _load_episode_metrics(metrics)
             if not goals:
                 continue
-            ep_thr, _censored = _episodes_to_threshold(goals, window, thresh)
+            ep_thr, censored = _episodes_to_threshold(goals, window, thresh)
             cell: dict = {
                 "auc_goal": _auc_normalised(goals),
                 "auc_reward": _auc_normalised(rewards),
                 "episodes_to_threshold": ep_thr,
+                # Not a scored metric; carried alongside so the paired test can
+                # report what fraction of cells were right-censored.
+                "_episodes_to_threshold_censored": 1.0 if censored else 0.0,
             }
             fg_path = (fg_dir
                        / f"first_goal_stereotypes_{stag}_{prof}.csv")
@@ -955,6 +975,7 @@ def learning_speed_tests(seed_roots: list[tuple[int, Path]],
                     "profile": prof,
                     "condition": label,
                     "metric": metric,
+                    "metric_tier": _LEARNING_SPEED_TIER[metric],
                     "direction": _LEARNING_SPEED_DIRECTION[metric],
                     "n_seeds": len(vals),
                     "mean": mean,
@@ -994,10 +1015,25 @@ def learning_speed_tests(seed_roots: list[tuple[int, Path]],
             # Favourable tail: higher_better ⇒ H_A μ_diff>0 ⇒ evidence against
             # is P(boots≤0)=p_one_pos; lower_better ⇒ H_A μ_diff<0 ⇒ p_one_neg.
             p_fav = p_one_pos if direction == "higher_better" else p_one_neg
+            # Censoring fraction: only meaningful for episodes_to_threshold.
+            # Counts (arm,seed) cells right-censored at the horizon over the
+            # paired seeds; a high value means the contrast is degenerate and
+            # must NOT be read as a tie (see _LEARNING_SPEED_TIER).
+            if metric == "episodes_to_threshold":
+                cens = [on_cells[s].get("_episodes_to_threshold_censored", 0.0)
+                        for s in seeds_common]
+                cens += [off_cells[s].get("_episodes_to_threshold_censored", 0.0)
+                         for s in seeds_common]
+                censored_frac: object = (sum(cens) / len(cens)
+                                         if cens else "")
+            else:
+                censored_frac = ""
             rows.append({
                 "profile": prof,
                 "metric": metric,
+                "metric_tier": _LEARNING_SPEED_TIER[metric],
                 "direction": direction,
+                "censored_frac": censored_frac,
                 "n_paired": len(seeds_common),
                 "seeds_paired": ";".join(str(s) for s in seeds_common),
                 "mean_diff_true_minus_false": mean_d,

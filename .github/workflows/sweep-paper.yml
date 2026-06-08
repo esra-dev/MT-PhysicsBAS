@@ -14,9 +14,13 @@ on:
         required: false
         default: "custom9,custom3,custom5"
       seeds:
-        description: "Comma-separated RNG seeds (default: 1,2,3,4,5)"
+        description: "Comma-separated RNG seeds (default 1,2,3,4,5; use 1,2,3,4,5,6,7,8,9,10 for the n=10 confirmatory replication — see pre_registration §6.6 SW18)"
         required: false
         default: "1,2,3,4,5"
+      run_mode:
+        description: "run_config.json profile: paper (10k×20) | paper_h40 (5k×40) | paper_h60 (3.3k×60). Use paper_h40/paper_h60 with profiles=custom9 for the horizon ablation."
+        required: false
+        default: "paper"
       publish_results:
         description: "Push consolidated results to 'results' branch"
         type: boolean
@@ -34,7 +38,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RUN_MODE: paper
+  RUN_MODE: ${{ github.event.inputs.run_mode || 'paper' }}
   PROFILES: ${{ github.event.inputs.profiles || 'custom9,custom3,custom5' }}
   SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5' }}
 
