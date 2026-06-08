@@ -99,7 +99,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60")]
     [string]$RunMode = "dev",
 
     [ValidateRange(1,6)]
