@@ -1,0 +1,70 @@
+[
+  {
+    "comment": "lab3 COMPLEX held-out benchmark (16 scenarios, 4 per sun rank). Lab2 + cross-zone spill + a shared Spotlight (Causes, +150 BOTH zones). Targets Z1=bright(3) AND Z2=bright(3). Physics: Z1 = 25 + (Z1Light?400) + (Z2Light?50) + (Z1Blinds?0.50*Sun) + (Z2Blinds?0.25*Sun) + (Spotlight?150); Z2 symmetric. Lamp ALWAYS reaches rank3 so every scenario is solvable. Spotlight (+150) is NEVER sufficient alone (needs >=300) so the optimum never uses it -> agent must learn to AVOID the redundant actuator. At sun=900 opening BOTH blinds gives 25+450+225=700 in each zone at ZERO energy = the cheap optimum. Sun in {0,100,400,900} via bounds [50,200,600].",
+    "id": 1, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0,
+    "description": "sun=0, all off -> both lamps on (blinds/spotlight cannot reach rank3 at sun0)"
+  },
+  {
+    "id": 2, "Z1Level": 475, "Z2Level": 475, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0,
+    "description": "sun=0, both at target via lamps -> hold"
+  },
+  {
+    "id": 3, "Z1Level": 75,  "Z2Level": 425, "Z1Light": false, "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0,
+    "description": "sun=0, Z1 rank1 (only Z2Light spill +50), Z2 at target -> turn Z1 lamp on"
+  },
+  {
+    "id": 4, "Z1Level": 625, "Z2Level": 625, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "Sunshine": 0,
+    "description": "sun=0, both bright but spotlight ALSO on -> turn spotlight off (redundant energy)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 1 (sun=100) ===",
+    "id": 5, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "sun=1, all off -> both lamps on"
+  },
+  {
+    "id": 6, "Z1Level": 475, "Z2Level": 475, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "sun=1, both at target -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 425, "Z2Level": 75,  "Z1Light": true,  "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "sun=1, Z1 at target, Z2 rank1 -> turn Z2 lamp on"
+  },
+  {
+    "id": 8, "Z1Level": 175, "Z2Level": 175, "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "Sunshine": 100,
+    "description": "sun=1, spotlight-only rank2 (175) -> insufficient: turn both lamps on (spotlight is redundant once lamps on)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 2 (sun=400) ===",
+    "id": 9, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400,
+    "description": "sun=2, all off -> both lamps on (blind only +200 -> 225 rank2, insufficient)"
+  },
+  {
+    "id": 10, "Z1Level": 475, "Z2Level": 475, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400,
+    "description": "sun=2, both at target -> hold"
+  },
+  {
+    "id": 11, "Z1Level": 75,  "Z2Level": 425, "Z1Light": false, "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400,
+    "description": "sun=2, Z1 rank1, Z2 at target -> turn Z1 lamp on"
+  },
+  {
+    "id": 12, "Z1Level": 625, "Z2Level": 625, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "Sunshine": 400,
+    "description": "sun=2, both bright but spotlight on -> turn spotlight off (redundant energy)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 3 (sun=900) — both blinds open = 700/zone at ZERO energy ===",
+    "id": 13, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 900,
+    "description": "sun=3, all off -> OPEN both blinds (700 each, zero energy) is the cheap optimum"
+  },
+  {
+    "id": 14, "Z1Level": 475, "Z2Level": 475, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 900,
+    "description": "sun=3, both bright via lamps (energy-costly) -> switch to blinds to save energy"
+  },
+  {
+    "id": 15, "Z1Level": 75,  "Z2Level": 425, "Z1Light": false, "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 900,
+    "description": "sun=3, Z1 rank1, Z2 lamp on -> open both blinds (reaches Z1 and lets Z2 drop its lamp)"
+  },
+  {
+    "id": 16, "Z1Level": 700, "Z2Level": 700, "Z1Light": false, "Z2Light": false, "Z1Blinds": true,  "Z2Blinds": true,  "Spotlight": false, "Sunshine": 900,
+    "description": "sun=3, both at target via blinds only -> hold (already zero-energy optimum)"
+  }
+]

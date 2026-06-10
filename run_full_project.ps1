@@ -38,7 +38,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1")]
     [string]$RunMode = "dev",
 
     # Optional comma-separated subset of profiles to train and benchmark.
@@ -133,6 +133,20 @@ $Configs = @{
         exec_max_steps_bench  = 60
         exec_delay_ms_bench   = 100
     }
+    # Phase 1 clean-lab KG-acceleration mode (lab1/lab2/lab3). 3000 episodes is
+    # ample for all three small state spaces (8/1024/2048) to converge AND
+    # plateau under their per-profile epsilon decays, ~3x faster than paper.
+    phase1 = @{
+        tick                  = "0.05"
+        num_episodes          = 3000
+        max_steps_per_episode = 20
+        action_delay_ms       = 65
+        exec_delay_ms_ql      = 100
+        exec_max_steps_ql     = 20
+        bench_runs            = 5
+        exec_max_steps_bench  = 20
+        exec_delay_ms_bench   = 100
+    }
 }
 # ─── Externalised configuration (Phase 12 #1) ─────────────────────────────
 # Prefer config/run_config.json when present; fall back to the inline
@@ -190,9 +204,9 @@ if ($RunSeed -ne 0) {
 }
 
 # ─── Project layout ───────────────────────────────────────────────────────────
-# Profiles to train/benchmark (4-zone weakness labs only).
+# Profiles to train/benchmark. Phase 1 clean ladder: lab1/lab2/lab3 only.
 $TrainProfiles = @(
-    "custom2", "custom3", "custom4", "custom5", "custom6", "custom7", "custom8", "custom9"
+    "lab1", "lab2", "lab3"
 )
 
 # Apply -OnlyProfiles filter (parallel orchestrator passes one profile per clone).
@@ -249,18 +263,17 @@ $ProfileQtableSuffix = @{
     custom7 = "_custom7"
     custom8 = "_custom8"
     custom9 = "_custom9"
+    custom9s = "_custom9s"
+    lab1 = "_lab1"
+    lab2 = "_lab2"
+    lab3 = "_lab3"
 }
 
 # Simulator map: each entry is a profile → (port, flow file) binding
 $Simulators = @(
-    [pscustomobject]@{ Profile="custom2"; Port=1882; Flow="simulator_flow_custom2.json" }
-    [pscustomobject]@{ Profile="custom3"; Port=1883; Flow="simulator_flow_custom3.json" }
-    [pscustomobject]@{ Profile="custom4"; Port=1884; Flow="simulator_flow_custom4.json" }
-    [pscustomobject]@{ Profile="custom5"; Port=1885; Flow="simulator_flow_custom5.json" }
-    [pscustomobject]@{ Profile="custom6"; Port=1886; Flow="simulator_flow_custom6.json" }
-    [pscustomobject]@{ Profile="custom7"; Port=1887; Flow="simulator_flow_custom7.json" }
-    [pscustomobject]@{ Profile="custom8"; Port=1888; Flow="simulator_flow_custom8.json" }
-    [pscustomobject]@{ Profile="custom9"; Port=1889; Flow="simulator_flow_custom9.json" }
+    [pscustomobject]@{ Profile="lab1"; Port=1892; Flow="simulator_flow_lab1.json" }
+    [pscustomobject]@{ Profile="lab2"; Port=1893; Flow="simulator_flow_lab2.json" }
+    [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
 )
 
 # ASL file paths (relative; resolved via Set-Location above)

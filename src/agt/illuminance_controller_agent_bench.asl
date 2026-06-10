@@ -659,6 +659,23 @@ bench_anti_stuck(false).
 @fingerprint_weakness_skip_rule_based
 +!fingerprint_weakness("rule_based", _, _, _, _, _, _, _) <- true.
 
+// Phase-1 clean-lab early-out. When the active profile declares NO weaknesses
+// (weakness_flags([]) — true for lab1/lab2/lab3), there is nothing to
+// fingerprint, so skip the six per-step QLearner round-trips (encodeState×2,
+// classifyWeaknesses, getPredictedDelta, getApplicableActions, getLastQDelta)
+// and the recordRichStep weakness trace entirely. This is a pure performance
+// guard: the Phase-1 headline metrics (WastedSteps / ActuatorCyclingCount /
+// CrossZone / energy / goal) are produced earlier by recordStep and
+// recordStepDetailRichV2 (run_scenario_step), not here. Phase-2 weakness labs
+// carry non-empty flags, so their context fails this guard and falls through
+// to @fingerprint_weakness_ql below — that plan is preserved untouched.
+@fingerprint_weakness_clean_lab
++!fingerprint_weakness(Mode, _, _, _, _, _, _, _)
+    : (Mode == "ql_true" | Mode == "ql_false")
+    & active_profile(P)
+    & lab_profile(P, _, _, _, _, _, _, _, _, _, weakness_flags([]), _, _) <-
+    true.
+
 @fingerprint_weakness_ql
 +!fingerprint_weakness(Mode, ZoneLevels, SunshineRank, SKs, SVs,
                        ZoneLevels2, SKs2, SVs2)

@@ -1,0 +1,35 @@
+[
+  {
+    "comment": "lab1 TRIVIAL held-out benchmark (8 scenarios, 2 per sun rank). Single zone, single Causes lamp. Target Z1=bright(rank3, >=300). Physics: Z1Level = 25 + 0.10*Sunshine + (Z1Light?400:0). The lamp is the ONLY way to reach rank3 (sun alone maxes at 25+90=115 at sun=900), so the unique optimum in every scenario is Z1Light=on. 'bright' starts test that the agent does NOT redundantly toggle an already-correct lamp. Sun in {0,100,400,900} via bounds [50,200,600] (sun is a context distractor only — it is NOT in the lab1 state vector).",
+    "id": 1, "Z1Level": 25,  "Z1Light": false, "Sunshine": 0,
+    "description": "sun=0, dark, lamp off -> must turn lamp on"
+  },
+  {
+    "id": 2, "Z1Level": 425, "Z1Light": true,  "Sunshine": 0,
+    "description": "sun=0, at target, lamp on -> hold (no redundant toggle)"
+  },
+  {
+    "id": 3, "Z1Level": 35,  "Z1Light": false, "Sunshine": 100,
+    "description": "sun=1, dark, lamp off -> must turn lamp on"
+  },
+  {
+    "id": 4, "Z1Level": 435, "Z1Light": true,  "Sunshine": 100,
+    "description": "sun=1, at target, lamp on -> hold"
+  },
+  {
+    "id": 5, "Z1Level": 65,  "Z1Light": false, "Sunshine": 400,
+    "description": "sun=2, dark, lamp off -> must turn lamp on"
+  },
+  {
+    "id": 6, "Z1Level": 465, "Z1Light": true,  "Sunshine": 400,
+    "description": "sun=2, at target, lamp on -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 115, "Z1Light": false, "Sunshine": 900,
+    "description": "sun=3, rank2 from sun alone (115), lamp off -> must turn lamp on for rank3"
+  },
+  {
+    "id": 8, "Z1Level": 515, "Z1Light": true,  "Sunshine": 900,
+    "description": "sun=3, at target, lamp on -> hold"
+  }
+]

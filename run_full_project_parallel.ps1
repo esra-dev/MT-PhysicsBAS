@@ -99,7 +99,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1")]
     [string]$RunMode = "dev",
 
     [ValidateRange(1,6)]
@@ -134,19 +134,14 @@ if (-not $ClonesRoot) {
 }
 
 # ─── Project layout (must match run_full_project.ps1) ─────────────────────────
-$Profiles = @("custom2","custom3","custom4","custom5","custom6","custom7","custom8","custom9")
+$Profiles = @("lab1","lab2","lab3")
 $BenchModes = "rule_based,ql_false,ql_true"
 $StereoModes = @("true","false")
 
 $Simulators = @(
-    [pscustomobject]@{ Profile="custom2"; Port=1882; Flow="simulator_flow_custom2.json" }
-    [pscustomobject]@{ Profile="custom3"; Port=1883; Flow="simulator_flow_custom3.json" }
-    [pscustomobject]@{ Profile="custom4"; Port=1884; Flow="simulator_flow_custom4.json" }
-    [pscustomobject]@{ Profile="custom5"; Port=1885; Flow="simulator_flow_custom5.json" }
-    [pscustomobject]@{ Profile="custom6"; Port=1886; Flow="simulator_flow_custom6.json" }
-    [pscustomobject]@{ Profile="custom7"; Port=1887; Flow="simulator_flow_custom7.json" }
-    [pscustomobject]@{ Profile="custom8"; Port=1888; Flow="simulator_flow_custom8.json" }
-    [pscustomobject]@{ Profile="custom9"; Port=1889; Flow="simulator_flow_custom9.json" }
+    [pscustomobject]@{ Profile="lab1"; Port=1892; Flow="simulator_flow_lab1.json" }
+    [pscustomobject]@{ Profile="lab2"; Port=1893; Flow="simulator_flow_lab2.json" }
+    [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
 )
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
@@ -253,6 +248,9 @@ function Sync-CloneFromOrchestrator {
         (Join-Path $ScriptRoot ".node-red-custom6"),
         (Join-Path $ScriptRoot ".node-red-custom7"),
         (Join-Path $ScriptRoot ".node-red-custom8"),
+        (Join-Path $ScriptRoot ".node-red-lab1"),
+        (Join-Path $ScriptRoot ".node-red-lab2"),
+        (Join-Path $ScriptRoot ".node-red-lab3"),
         (Join-Path $ScriptRoot "dashboard\node_modules")
     )
     # Files at root that are training/benchmark artefacts of previous runs;

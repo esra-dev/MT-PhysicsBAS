@@ -1,0 +1,27 @@
+[
+  {
+    "comment": "lab1 TRAINING scenarios (6 of 8) held-in set for QL training. Held-OUT (test-only): 5, 8. Full sun coverage (ranks 0..3) so the lamp lever is in-distribution. Target Z1=bright(rank3).",
+    "id": 1, "Z1Level": 25,  "Z1Light": false, "Sunshine": 0,
+    "description": "sun=0, dark, lamp off -> must turn lamp on"
+  },
+  {
+    "id": 2, "Z1Level": 425, "Z1Light": true,  "Sunshine": 0,
+    "description": "sun=0, at target, lamp on -> hold"
+  },
+  {
+    "id": 3, "Z1Level": 35,  "Z1Light": false, "Sunshine": 100,
+    "description": "sun=1, dark, lamp off -> must turn lamp on"
+  },
+  {
+    "id": 4, "Z1Level": 435, "Z1Light": true,  "Sunshine": 100,
+    "description": "sun=1, at target, lamp on -> hold"
+  },
+  {
+    "id": 6, "Z1Level": 465, "Z1Light": true,  "Sunshine": 400,
+    "description": "sun=2, at target, lamp on -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 115, "Z1Light": false, "Sunshine": 900,
+    "description": "sun=3, rank2 from sun alone, lamp off -> must turn lamp on for rank3"
+  }
+]

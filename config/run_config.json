@@ -1,6 +1,6 @@
 ﻿{
   "$schema": "./run_config.schema.json",
-  "description": "Centralised runtime configuration for run_full_project.ps1 and run_full_project_parallel.ps1. RunMode selects one of the named profiles below. paper_h40/paper_h60 are the custom9 horizon-ablation profiles (max_steps 40/60); their num_episodes (5000/3300) is scaled inversely with horizon so each training cell stays within the ~4.3h wall-clock of the paper profile (10000x20 == 5000x40 == 3300x60 step-units) and under the GitHub Actions 6h job cap. The flat custom9 training curve plateaus well before episode ~1000, so 3300-5000 episodes is ample to detect whether a longer horizon enables convergence.",
+  "description": "Centralised runtime configuration for run_full_project.ps1 and run_full_project_parallel.ps1. RunMode selects one of the named profiles below. paper_h40/paper_h60 are the custom9 horizon-ablation profiles (max_steps 40/60); their num_episodes (5000/3300) is scaled inversely with horizon so each training cell stays within the ~4.3h wall-clock of the paper profile (10000x20 == 5000x40 == 3300x60 step-units) and under the GitHub Actions 6h job cap. The flat custom9 training curve plateaus well before episode ~1000, so 3300-5000 episodes is ample to detect whether a longer horizon enables convergence. phase1 is the clean-lab KG-acceleration mode (lab1/lab2/lab3): num_episodes 3000 is ample for all three small state spaces (8/1024/2048) to converge AND plateau under their per-profile epsilon decays (0.9920/0.9960/0.9970), while running ~3x faster per cell than paper.",
   "profiles": {
     "dev": {
       "tick": "0.05",
@@ -45,9 +45,20 @@
       "bench_runs": 5,
       "exec_max_steps_bench": 60,
       "exec_delay_ms_bench": 100
+    },
+    "phase1": {
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100
     }
   },
-  "profiles_to_run": ["custom9", "custom3", "custom5"],
+  "profiles_to_run": ["lab1", "lab2", "lab3"],
   "stereo_modes": ["true", "false"],
   "bench_modes": ["rule_based", "ql_false", "ql_true"],
   "simulator_port_map": {
@@ -58,7 +69,11 @@
     "custom6": 1886,
     "custom7": 1887,
     "custom8": 1888,
-    "custom9": 1889
+    "custom9": 1889,
+    "custom9s": 1891,
+    "lab1": 1892,
+    "lab2": 1893,
+    "lab3": 1894
   },
   "simulator_flow_map": {
     "custom2": "simulator_flow_custom2.json",
@@ -68,7 +83,11 @@
     "custom6": "simulator_flow_custom6.json",
     "custom7": "simulator_flow_custom7.json",
     "custom8": "simulator_flow_custom8.json",
-    "custom9": "simulator_flow_custom9.json"
+    "custom9": "simulator_flow_custom9.json",
+    "custom9s": "simulator_flow_custom9s.json",
+    "lab1": "simulator_flow_lab1.json",
+    "lab2": "simulator_flow_lab2.json",
+    "lab3": "simulator_flow_lab3.json"
   },
   "qtable_suffix_map": {
     "custom2": "_custom2",
@@ -78,7 +97,11 @@
     "custom6": "_custom6",
     "custom7": "_custom7",
     "custom8": "_custom8",
-    "custom9": "_custom9"
+    "custom9": "_custom9",
+    "custom9s": "_custom9s",
+    "lab1": "_lab1",
+    "lab2": "_lab2",
+    "lab3": "_lab3"
   },
   "expected_state_vec_dim": {
     "custom2": 13,
@@ -88,7 +111,11 @@
     "custom6": 13,
     "custom7": 13,
     "custom8": 13,
-    "custom9": 13
+    "custom9": 13,
+    "custom9s": 8,
+    "lab1": 2,
+    "lab2": 7,
+    "lab3": 8
   },
   "http_client": {
     "connect_timeout_ms": 2000,

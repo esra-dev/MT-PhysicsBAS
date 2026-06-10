@@ -72,13 +72,29 @@ def summarise_benchmark(csv_path: Path) -> dict:
         return {}
     n = len(rows)
     goals = sum(1 for r in rows if r.get("GoalReached") == "1")
+
+    def _col(row: dict, name: str) -> float:
+        # ActuatorCyclingCount is absent from pre-May-22 benchmark CSVs;
+        # treat a missing/blank cell as zero so old trees still summarise.
+        return float((row.get(name) or 0) or 0)
+
+    avg_wasted = sum(_col(r, "WastedSteps") for r in rows) / n
+    avg_cycling = sum(_col(r, "ActuatorCyclingCount") for r in rows) / n
     return {
         "scenarios": n,
         "goal_rate": goals / n,
         "avg_steps": sum(float(r["Steps"]) for r in rows) / n,
         "avg_dev": sum(float(r["CumIlluminanceDeviation"]) for r in rows) / n,
         "avg_energy": sum(float(r["TotalEnergyCost"]) for r in rows) / n,
-        "avg_wasted": sum(float(r["WastedSteps"]) for r in rows) / n,
+        "avg_wasted": avg_wasted,
+        # "Redundant actions avoided" (advisor-requested primary efficiency
+        # metric). avg_cycling counts actuator toggles that revert a recent
+        # change (ActuatorCyclingCount); avg_redundant folds in no-effect
+        # WastedSteps. Lower ⇒ more redundant actions avoided; the stereotype
+        # benefit is the ql_true − ql_false reduction surfaced in
+        # paired_tests.csv / summary_table_ci.csv.
+        "avg_cycling": avg_cycling,
+        "avg_redundant": avg_wasted + avg_cycling,
     }
 
 
@@ -271,7 +287,13 @@ def plot_fire_density(out_dir: Path, density: dict, plt):
 # low as 3 are fine with bootstrap).
 # ---------------------------------------------------------------------------
 
-_METRIC_KEYS = ("goal_rate", "avg_steps", "avg_dev", "avg_energy", "avg_wasted")
+# Metrics carried through the multi-seed CI aggregation and paired tests.
+# The trailing two (avg_cycling, avg_redundant) are the advisor-requested
+# "Redundant actions avoided" family (Phase-1 clean-lab amendment); they are
+# additive, so older 5-metric trees still aggregate and the paired-test BH
+# family size (recorded per row as bh_family_m) self-adjusts.
+_METRIC_KEYS = ("goal_rate", "avg_steps", "avg_dev", "avg_energy",
+                "avg_wasted", "avg_cycling", "avg_redundant")
 
 
 def find_seed_roots(parent: Path) -> list[tuple[int, Path]]:

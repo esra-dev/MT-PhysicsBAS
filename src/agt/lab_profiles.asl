@@ -29,7 +29,7 @@
 /* ============================================================
  * Active profile selector — change this single line to switch labs.
  * ============================================================ */
-active_profile("custom2").
+active_profile("lab1").
 
 /* ============================================================
  * Registered profiles
@@ -213,6 +213,94 @@ lab_profile("custom9",
             qtable_suffix("_custom9"),
             training_params(10000, 0.9990)).
 
+//   custom9s → SIMPLE 2-zone CONSTRUCTIVE sibling of custom9 (blind <-> sun).
+//   Exploratory simple-lab track (see docs/simple_labs_design.md §3). Reduces
+//   custom9 to 2 zones so the base learner CONVERGES in ~1000 episodes, making
+//   the stereotype prior's faster-learning benefit measurable (the 4-zone
+//   custom9 plateaus at goal-rate 0.11–0.21 even at 10k episodes). Same 8-slot
+//   2-zone schema as the default `custom` lab (ont = lab-ontology + wot-mappings),
+//   so the WoT contract is unchanged; only the simulator (port 1891) differs.
+//   The `Spotlight` actuator is repurposed by the simulator as a shared
+//   CorridorLight (+150 lux both zones). Doubles as the testbed for the
+//   ws:ivMinRank=3 gate fix (see docs/custom9_rediagnosis.md).
+//   NOTE: training_params episodes (1000) are OVERRIDDEN per run-mode by the
+//   orchestrator (run_full_project.ps1 patches training_params with run_config
+//   num_episodes); the 1000 is the design target for a focused convergence run.
+lab_profile("custom9s",
+            td("classpath:interactions-lab-custom9s.ttl"),
+            ont(["lab-ontology.ttl", "wot-mappings.ttl"]),
+            scenarios("benchmark/scenarios_custom9s.json"),
+            train_scenarios("benchmark/train_scenarios_custom9s.json"),
+            sim_port(1891),
+            light_bounds([75, 200, 400]),
+            sunshine_bounds([50, 150, 500]),
+            zone_targets([target(1,3), target(2,2)]),
+            sunshine_prob(0.50),
+            weakness_flags([]),
+            qtable_suffix("_custom9s"),
+            training_params(1000, 0.9920)).
+// ── Phase 1 CLEAN LADDER (Knowledge-Guided Acceleration) ────────────────────
+//   lab1/lab2/lab3 are STRICTLY-CLEAN labs with NO hidden weaknesses, used to
+//   prove that a KG-primed Q-learner converges faster than a tabula-rasa one.
+//   Each loads ONLY its own self-contained building_*.ttl (schema + topology +
+//   WoT mappings + slot registry). lab-ontology.ttl is deliberately NOT loaded
+//   so nothing outside the file can leak into actuator discovery — guaranteeing
+//   zero extra actuators and zero spurious cross-zone priors. weakness_flags is
+//   [] for all three (the bench agent skips weakness fingerprinting).
+//
+//   Feature ladder (each step adds exactly one mechanism class):
+//     lab1 Trivial      → 1 zone,  1 Causes lamp                        (8 states)
+//     lab2 Intermediate → 2 zones, lamps (Causes) + blinds (Mediates)   (1024 states)
+//     lab3 Complex      → lab2 + cross-zone spill + shared spotlight     (2048 states)
+//
+//   Sunshine is sampled once per episode from {0,100,400,900} and PINNED, so the
+//   physics is a deterministic function of flow state (no PRNG in the env tick).
+
+//   lab1 → Trivial (port 1892): single Causes actuator. H1 acceleration baseline.
+lab_profile("lab1",
+            td("classpath:interactions-lab1.ttl"),
+            ont(["building_1_trivial.ttl"]),
+            scenarios("benchmark/scenarios_lab1.json"),
+            train_scenarios("benchmark/train_scenarios_lab1.json"),
+            sim_port(1892),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab1"),
+            training_params(1000, 0.9920)).
+
+//   lab2 → Intermediate (port 1893): adds the Mediates (blind <-> sun) mechanism.
+lab_profile("lab2",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab2"),
+            training_params(2000, 0.9960)).
+
+//   lab3 → Complex (port 1894): adds cross-zone coupling + shared spotlight.
+//   Deterministic, leak-free replacement for the custom9s PRNG-tick flow.
+lab_profile("lab3",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab3"),
+            training_params(3000, 0.9970)).
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.
  * Each accessor unifies its single output argument with the

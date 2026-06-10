@@ -370,15 +370,20 @@ exec_max_steps(20).
     encodeState(ZoneLevels, SunshineRank, SKs, SVs, StateVec)[artifact_id(QlId)];
     isTerminal(StateVec, Terminal)[artifact_id(QlId)];
 
-    .nth(0, ZoneLevels, L1);
-    .nth(1, ZoneLevels, L2);
-    .print("[Execute] Step ", Step, " State: Z1=", L1, " Z2=", L2, " sun=", SunshineRank);
+    // Zone-count-agnostic diagnostic: print the whole zone-level list so this
+    // plan works for single-zone (lab1) and multi-zone (lab2/lab3) labs alike.
+    // A previous hard-coded .nth(1,...) crashed on single-zone labs, which sent
+    // -!execute_policy into an infinite retry loop (continuous log output, so
+    // the orchestrator's idle-based watchdogs never fired).
+    .print("[Execute] Step ", Step, " State: zones=", ZoneLevels, " sun=", SunshineRank);
 
     if (Terminal) {
         .print("");
         .print("==========================================================");
         .print("   SUCCESS! Target illuminance levels achieved!");
-        .print("==========================================================")
+        .print("==========================================================");
+        .print("[QL] Demonstration reached goal — stopping MAS.");
+        .stopMAS
     } else {
         // Greedy action (no exploration)
         getActionFromState(StateVec, false, Action)[artifact_id(QlId)];
