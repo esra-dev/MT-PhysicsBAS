@@ -30,7 +30,7 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10"
       run_mode:
-        description: "run_config.json profile: phase1 (3000x20, recommended) | paper (10000x20) | dev (50x20, quick gate)"
+        description: "run_config.json profile: phase1 (3000x20, recommended) | phase1_baseline (arm A, KG+PBRS+trust off) | phase1_kg_only (arm C headline, KG prior only) | phase1_pbrs_only (arm B control, PBRS only) | phase1_full (arm D, full stack) | paper (10000x20) | dev (50x20, quick gate)"
         required: false
         default: "phase1"
       publish_results:

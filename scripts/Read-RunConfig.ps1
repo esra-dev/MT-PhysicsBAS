@@ -80,6 +80,22 @@ foreach ($k in @('num_episodes','max_steps_per_episode','action_delay_ms',
 $profileHt = @{}
 foreach ($prop in $profile.PSObject.Properties) { $profileHt[$prop.Name] = $prop.Value }
 
+# Merge optional per-profile 'learning_overrides' on top of the global
+# 'learning' block. This lets factorial run-modes (phase1_baseline,
+# phase1_kg_only, phase1_pbrs_only, phase1_full) pin their own accelerator
+# stack (reward_shaping / adaptive_trust / stereo_prior_scale / stereo_init_bonus)
+# without touching the shared defaults. Profiles with no overrides keep the
+# global block unchanged, preserving backward compatibility.
+$mergedLearning = $cfg.learning
+if ($profile.PSObject.Properties['learning_overrides']) {
+    $lh = @{}
+    if ($cfg.learning) {
+        foreach ($p in $cfg.learning.PSObject.Properties) { $lh[$p.Name] = $p.Value }
+    }
+    foreach ($p in $profile.learning_overrides.PSObject.Properties) { $lh[$p.Name] = $p.Value }
+    $mergedLearning = [pscustomobject]$lh
+}
+
 return [pscustomobject]@{
     Path              = $ConfigPath
     RunMode           = $RunMode
@@ -92,7 +108,7 @@ return [pscustomobject]@{
     qtable_suffix_map   = $cfg.qtable_suffix_map
     expected_state_vec_dim = $cfg.expected_state_vec_dim
     http_client       = $cfg.http_client
-    learning          = $cfg.learning
+    learning          = $mergedLearning
     dry_run           = [bool]$cfg.dry_run
     raw               = $cfg
 }

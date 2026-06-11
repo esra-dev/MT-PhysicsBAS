@@ -56,6 +56,74 @@
       "bench_runs": 5,
       "exec_max_steps_bench": 20,
       "exec_delay_ms_bench": 100
+    },
+    "phase1_baseline": {
+      "note": "Factorial arm A (negative control): KG prior OFF, PBRS OFF, adaptive-trust OFF. KG is zeroed via stereo_prior_scale=0 + stereo_init_bonus=0, which triggers the supported H5 ablation in QLearner (zero Q-init AND zero greedy prior) so the ql_true arm becomes a true no-op overlay (≈ ql_false). Confirms the harness carries no built-in bias. Same timing as phase1.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "stereo_prior_scale": 0.0,
+        "stereo_init_bonus": 0.0,
+        "reward_shaping": "none",
+        "adaptive_trust": false
+      }
+    },
+    "phase1_kg_only": {
+      "note": "Factorial arm C (HEADLINE): KG prior ON (stereo_prior_scale=1, stereo_init_bonus=15), PBRS OFF, adaptive-trust OFF. With stereo as the matrix dimension this mode emits ql_false=arm A (tabula-rasa) and ql_true=arm C (KG prior only); the within-mode ql_true-vs-ql_false delta is the thesis anchor finding. Same timing as phase1.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "none",
+        "adaptive_trust": false
+      }
+    },
+    "phase1_pbrs_only": {
+      "note": "Factorial arm B (KEY CONTROL): KG prior OFF (zeroed via H5 ablation), PBRS ON, adaptive-trust OFF. Its ql_false arm is the pure PBRS baseline. Cross-mode comparison against phase1_kg_only isolates the generic-shaping effect (A->B) and defends against the 'your speedup is just shaping' critique (C vs B). Same timing as phase1.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "stereo_prior_scale": 0.0,
+        "stereo_init_bonus": 0.0,
+        "reward_shaping": "pbrs",
+        "adaptive_trust": false
+      }
+    },
+    "phase1_full": {
+      "note": "Factorial arm D (full stack): KG prior ON, PBRS ON, adaptive-trust ON. Equivalent to the default phase1 learning block; declared explicitly for symmetry with the other factorial arms. ql_true=arm D, ql_false=arm B. Same timing as phase1.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "pbrs",
+        "adaptive_trust": true
+      }
     }
   },
   "profiles_to_run": ["lab1", "lab2", "lab3"],
