@@ -140,7 +140,29 @@ jobs:
           key: npm-noderered-${{ runner.os }}-v4
       - name: Install Node-RED
         run: npm install -g --unsafe-perm node-red@4
-      - name: Download compiled build
+      - name: Download compiled build (attempt 1)
+        id: dl_build_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Wait before retrying compiled build download
+        if: steps.dl_build_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download build-classes failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download compiled build (attempt 2)
+        id: dl_build_2
+        if: steps.dl_build_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Download compiled build (attempt 3)
+        if: steps.dl_build_1.outcome == 'failure' && steps.dl_build_2.outcome == 'failure'
         uses: actions/download-artifact@v4
         with:
           name: build-classes

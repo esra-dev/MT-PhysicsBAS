@@ -91,6 +91,23 @@
         "adaptive_trust": false
       }
     },
+    "phase1_kg_only_ib5": {
+      "note": "Factorial arm C variant — identical to phase1_kg_only (KG prior ON, PBRS OFF, adaptive-trust OFF) but with the optimistic Q-init bonus lowered 15 -> 5. Tests the diagnosed lab3 hypothesis: that the +15 init bonus over-explores the ~2048-state lab3 space and delays first-goal. Compare its lab3 ql_true-vs-ql_false delta against phase1_kg_only (bonus=15); the lab2 win should be preserved. Same timing as phase1.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "stereo_init_bonus": 5.0,
+        "reward_shaping": "none",
+        "adaptive_trust": false
+      }
+    },
     "phase1_pbrs_only": {
       "note": "Factorial arm B (KEY CONTROL): KG prior OFF (zeroed via H5 ablation), PBRS ON, adaptive-trust OFF. Its ql_false arm is the pure PBRS baseline. Cross-mode comparison against phase1_kg_only isolates the generic-shaping effect (A->B) and defends against the 'your speedup is just shaping' critique (C vs B). Same timing as phase1.",
       "tick": "0.05",
