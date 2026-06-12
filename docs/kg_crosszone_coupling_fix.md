@@ -357,6 +357,68 @@ Then run your existing analysis/aggregation over the produced
 `benchmark_results_*` / `first_goal_*` / `coverage_*` CSVs. A single run can move
 either way by chance; only the multi‑seed paired delta is interpretable.
 
+### Step 7 — Overnight A/B on GitHub Actions (n=10, the before/after)
+
+Two refs are on `origin`:
+
+* `main` (`7ac37a1`) — **BEFORE** (current setup, no cross‑zone change; the basis
+  of the prior n=10 Phase‑1 runs).
+* `kg-crosszone-coupling` — **AFTER** (this change; `phase1_kg_xzone` profile adds
+  the Part‑B cross‑zone exploration prior).
+
+Fire both dispatches once (PowerShell, repo root). The existing `phase1.yml`
+fans the full n=10 factorial across GitHub‑hosted runners; both dispatches share
+concurrency group `phase1`, so the **second queues and runs automatically after
+the first finishes** — exactly "first the current setup, then the change":
+
+```powershell
+# 1) BEFORE — current setup (main, KG‑only headline arm)
+gh workflow run phase1.yml --ref main `
+  -f run_mode=phase1_kg_only -f seeds=1,2,3,4,5,6,7,8,9,10 -f publish_results=false
+
+# 2) AFTER — the change (feature branch, cross‑zone prior ON)
+gh workflow run phase1.yml --ref kg-crosszone-coupling `
+  -f run_mode=phase1_kg_xzone -f seeds=1,2,3,4,5,6,7,8,9,10 -f publish_results=false
+```
+
+`publish_results=false` keeps both runs from colliding on the `results` branch;
+each run still uploads a self‑contained **`phase1-consolidated`** artifact
+(retained 90 days). **Do not queue a third `phase1` run while these two are
+pending** — GitHub keeps only one running + one pending per concurrency group and
+would cancel the older pending one.
+
+Monitor:
+
+```powershell
+gh run list --workflow=phase1.yml -L 5
+```
+
+Download + compare when both are done (`<BEFORE_ID>` / `<AFTER_ID>` from the list):
+
+```powershell
+gh run download <BEFORE_ID> -n phase1-consolidated -D ab/before
+gh run download <AFTER_ID>  -n phase1-consolidated -D ab/after
+```
+
+Compare these files between `ab/before` and `ab/after` (focus on the **lab3
+`ql_true`** rows; lab1/lab2 are a negative control and should be identical — the
+prior never fires without a SECONDARY cross‑zone connection, which only lab3 has):
+
+| File (`analysis/out/`) | What to read |
+|---|---|
+| `learning_speed_tests.csv` | `auc_goal` (↑ better), `mean_first_goal` / `episodes_to_threshold` (↓ better) |
+| `summary_table_ci.csv` | per‑arm mean + 95 % bootstrap CI |
+| `paired_tests.csv` | redundant‑action count + same‑goal‑rate (parity check) |
+
+**Part‑A (full‑stack) follow‑up, optional.** After the two above finish, the
+regression‑recovery story (Part A is active only when `adaptive_trust=true`) can
+be run the same way — again ≤2 queued at a time:
+
+```powershell
+gh workflow run phase1.yml --ref main                  -f run_mode=phase1_full -f seeds=1,2,3,4,5,6,7,8,9,10 -f publish_results=false
+gh workflow run phase1.yml --ref kg-crosszone-coupling -f run_mode=phase1_full -f seeds=1,2,3,4,5,6,7,8,9,10 -f publish_results=false
+```
+
 ---
 
 ## 9. Honest caveats & limitations
