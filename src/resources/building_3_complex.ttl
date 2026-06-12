@@ -64,6 +64,11 @@ ws:stateVecIndex   a owl:DatatypeProperty ; rdfs:range xsd:integer .
 ws:stateDomainSize a owl:DatatypeProperty ; rdfs:range xsd:integer .
 ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
 
+# Connection (coupling) endpoints — used to reify a brick:feeds arc as an
+# explicit elem:InternalConnection carrying a coupling stereotype (see §4b/§7b).
+ws:connSource a owl:ObjectProperty ; rdfs:label "connection source component" .
+ws:connTarget a owl:ObjectProperty ; rdfs:label "connection target component" .
+
 
 # ===========================================================================
 # 1.  PHYSICAL MECHANISMS
@@ -173,6 +178,12 @@ ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
 ws:OutdoorSunlightStream a owl:NamedIndividual, elem:StreamKind ;
     rdfs:label "Outdoor sunlight stream" .
 
+# Sub-rank cross-zone optical coupling (lamp +50 lux / blind 0.25·Sun spill).
+# Distinguishes the weak neighbour-zone bleed from the dominant same-zone
+# IndoorLightingStream above. Consumed by the WeakOpticalCoupling stereotype.
+ws:SecondaryCouplingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Secondary (cross-zone) optical coupling stream" .
+
 
 # ===========================================================================
 # 4.  COMPONENT STEREOTYPES
@@ -280,6 +291,45 @@ ws:cp_outside_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
     elem:dealsWithStuff      elem:photons ;
     elem:isRelatedToVariable ws:outdoorIlluminance ;
     elem:suitableFor         ws:OutdoorSunlightStream .
+
+
+# ===========================================================================
+# 4b. CONNECTION (COUPLING) STEREOTYPES
+# ---------------------------------------------------------------------------
+#  A coupling stereotype classifies a brick:feeds arc by the MAGNITUDE CLASS of
+#  the optical transfer it represents — mirroring how the component stereotypes
+#  above classify a device. The KG thus declares the STRUCTURE of the spillage
+#  (which component bleeds into which neighbouring zone) WITHOUT committing to a
+#  numeric magnitude; the actual gain is left for the Q-learner to discover from
+#  observation (Phase-3 write-back target = the mechanisms below).
+#
+#    • PrimaryOpticalCoupling — dominant same-zone illumination (≈ +400 lux /
+#      0.50·Sun); reliably moves the sensed-illuminance RANK.
+#    • WeakOpticalCoupling    — sub-rank cross-zone spill (≤ +50 lux lamp,
+#      0.25·Sun blind); rarely moves the neighbour's RANK (audit: WRONG ~80% of
+#      the time), so the reasoner makes NO directional rank claim for it.
+# ===========================================================================
+
+ws:pm_primary_illumination_transfer a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_primary_illumination_transfer (dominant same-zone, rank-moving)" ;
+    elem:hasDependentVariable elem:luminiscence ;
+    elem:increases            elem:luminiscence .
+
+ws:pm_secondary_illumination_transfer a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_secondary_illumination_transfer (sub-rank cross-zone spill)" ;
+    elem:hasDependentVariable elem:luminiscence ;
+    elem:increases            elem:luminiscence .
+    # NOTE: gain/magnitude intentionally ABSENT — learned by the Q-agent (Phase 3).
+
+ws:PrimaryOpticalCoupling a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Primary optical coupling (dominant, rank-moving) connection stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_primary_illumination_transfer ;
+    elem:hasStreamKind        ws:IndoorLightingStream .
+
+ws:WeakOpticalCoupling a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Weak optical coupling (cross-zone light spill) connection stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_secondary_illumination_transfer ;
+    elem:hasStreamKind        ws:SecondaryCouplingStream .
 
 
 # ===========================================================================
@@ -420,6 +470,58 @@ lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z2 .
 lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z1 .
 lab:Blind_Z1         brick:feeds  lab:LightSensor_Z2 .
 lab:Blind_Z2         brick:feeds  lab:LightSensor_Z1 .
+
+
+# ---------------------------------------------------------------------------
+# 7b. REIFIED CONNECTIONS (coupling class per arc)
+#  Each feed arc above is ALSO modelled as an explicit elem:InternalConnection
+#  carrying a coupling stereotype, so the reasoner can read the magnitude CLASS
+#  (primary vs weak) of every arc — not just its existence. The four CROSS-ZONE
+#  arcs are WEAK (secondary): the reasoner makes NO rank prediction for them
+#  (Part A) and, when -Dstereo.crossZoneBonus > 0, seeds a small optimistic
+#  exploration head-start (Part B). The four SAME-ZONE arcs are PRIMARY and are
+#  tagged only for documentary contrast (PRIMARY == legacy reasoner behaviour;
+#  same-zone arcs are excluded from the cross-zone query by the zone filter).
+# ---------------------------------------------------------------------------
+ws:conn_CLz1_to_LSz2 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Cross-zone spill: CeilingLight_Z1 -> LightSensor_Z2 (+50 lux)" ;
+    ws:connSource lab:CeilingLight_Z1 ; ws:connTarget lab:LightSensor_Z2 ;
+    elem:hasStructuralStereotype ws:WeakOpticalCoupling .
+
+ws:conn_CLz2_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Cross-zone spill: CeilingLight_Z2 -> LightSensor_Z1 (+50 lux)" ;
+    ws:connSource lab:CeilingLight_Z2 ; ws:connTarget lab:LightSensor_Z1 ;
+    elem:hasStructuralStereotype ws:WeakOpticalCoupling .
+
+ws:conn_BZ1_to_LSz2 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Cross-zone spill: Blind_Z1 -> LightSensor_Z2 (0.25*Sun)" ;
+    ws:connSource lab:Blind_Z1 ; ws:connTarget lab:LightSensor_Z2 ;
+    elem:hasStructuralStereotype ws:WeakOpticalCoupling .
+
+ws:conn_BZ2_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Cross-zone spill: Blind_Z2 -> LightSensor_Z1 (0.25*Sun)" ;
+    ws:connSource lab:Blind_Z2 ; ws:connTarget lab:LightSensor_Z1 ;
+    elem:hasStructuralStereotype ws:WeakOpticalCoupling .
+
+ws:conn_CLz1_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Same-zone primary: CeilingLight_Z1 -> LightSensor_Z1 (+400 lux)" ;
+    ws:connSource lab:CeilingLight_Z1 ; ws:connTarget lab:LightSensor_Z1 ;
+    elem:hasStructuralStereotype ws:PrimaryOpticalCoupling .
+
+ws:conn_CLz2_to_LSz2 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Same-zone primary: CeilingLight_Z2 -> LightSensor_Z2 (+400 lux)" ;
+    ws:connSource lab:CeilingLight_Z2 ; ws:connTarget lab:LightSensor_Z2 ;
+    elem:hasStructuralStereotype ws:PrimaryOpticalCoupling .
+
+ws:conn_BZ1_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Same-zone primary: Blind_Z1 -> LightSensor_Z1 (0.50*Sun)" ;
+    ws:connSource lab:Blind_Z1 ; ws:connTarget lab:LightSensor_Z1 ;
+    elem:hasStructuralStereotype ws:PrimaryOpticalCoupling .
+
+ws:conn_BZ2_to_LSz2 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Same-zone primary: Blind_Z2 -> LightSensor_Z2 (0.50*Sun)" ;
+    ws:connSource lab:Blind_Z2 ; ws:connTarget lab:LightSensor_Z2 ;
+    elem:hasStructuralStereotype ws:PrimaryOpticalCoupling .
 
 
 # ===========================================================================

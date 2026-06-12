@@ -65,9 +65,22 @@ public class StereotypeReasoner {
 
     /** Cross-zone effect: action in zone A spills to zone B. */
     public static class CrossZoneEffect {
+        /** Magnitude class of a cross-zone optical coupling. */
+        public enum CouplingClass {
+            /** Dominant, rank-moving coupling (legacy default): co-signs the
+             *  activation direction on the neighbour zone's level slot. */
+            PRIMARY,
+            /** Weak / sub-rank coupling (cross-zone spill): does NOT reliably
+             *  move the neighbour's discretised rank, so it makes no rank claim. */
+            SECONDARY
+        }
         public int actionIndex;
         public int sourceZoneIdx;  // 0-based
         public int targetZoneIdx;  // 0-based
+        /** Coupling magnitude class (default PRIMARY = legacy behaviour). Set by
+         *  {@link StereotypeReasoner#discoverCrossZoneFeeds} from the connection's
+         *  elem:hasStructuralStereotype (ws:WeakOpticalCoupling => SECONDARY). */
+        public CouplingClass couplingClass = CouplingClass.PRIMARY;
     }
 
     // -----------------------------------------------------------------------
@@ -123,7 +136,7 @@ public class StereotypeReasoner {
      * in a different zone (light spill).
      */
     private static final String CROSS_ZONE_FEEDS_QUERY = PREFIXES +
-        "SELECT ?sourceComp ?sourceZoneIdx ?targetZoneIdx ?wotActionType\n" +
+        "SELECT ?sourceComp ?sourceZoneIdx ?targetZoneIdx ?wotActionType ?couplingStereo\n" +
         "WHERE {\n" +
         "  ?sourceComp brick:feeds ?targetSensor .\n" +
         "  ?sourceComp brick:isLocatedIn ?sourceZone .\n" +
@@ -135,6 +148,14 @@ public class StereotypeReasoner {
         "  ?mech elem:hasManipulatedVariable ?mv .\n" +
         "  ?sourceComp ws:hasWoTActionSemanticType ?wotActionType .\n" +
         "  FILTER (?sourceZoneIdx != ?targetZoneIdx)\n" +
+        // KG-X: read the coupling magnitude CLASS of this arc when it has been
+        // reified as an elem:InternalConnection carrying a coupling stereotype.
+        // Absent => the consumer treats the arc as PRIMARY (legacy behaviour).
+        "  OPTIONAL {\n" +
+        "    ?conn ws:connSource ?sourceComp ;\n" +
+        "          ws:connTarget ?targetSensor ;\n" +
+        "          elem:hasStructuralStereotype ?couplingStereo .\n" +
+        "  }\n" +
         "}";
 
     // -----------------------------------------------------------------------
@@ -245,6 +266,23 @@ public class StereotypeReasoner {
      */
     private static final double INIT_BONUS_MAG =
         Double.parseDouble(System.getProperty("stereo.initBonus", "15.0"));
+
+    /**
+     * PART B — magnitude (per rank of remaining gap) of the optimistic Q-init
+     * head-start given to a SECONDARY cross-zone activation that targets a
+     * below-goal zone. Override with -Dstereo.crossZoneBonus=... (default 0.0 =
+     * OFF). Scaled by {@link #INIT_PENALTY_SCALE} like the other init terms.
+     *
+     * Rationale: the KG declares the spillage STRUCTURE (which component bleeds
+     * into which neighbour zone) but not its magnitude. A small positive seed
+     * nudges the agent to TRY the cross-zone lever early; the true (sub-rank)
+     * value is then learned by the Bellman updates. Kept far below
+     * {@link #INIT_BONUS_MAG} so it never dominates a same-zone decision, and
+     * default 0.0 so the headline factorial arms are unaffected until the lever
+     * is explicitly enabled (e.g. run profile phase1_kg_xzone).
+     */
+    private static final double CROSS_ZONE_BONUS_MAG =
+        Double.parseDouble(System.getProperty("stereo.crossZoneBonus", "0.0"));
 
 
     // -----------------------------------------------------------------------
@@ -585,6 +623,20 @@ public class StereotypeReasoner {
                 int targetZone = qs.getLiteral("targetZoneIdx").getInt() - 1;
                 String wotAction = qs.getLiteral("wotActionType").getString();
 
+                // KG-X: coupling magnitude class for this arc. Defaults to
+                // PRIMARY (legacy co-signing); becomes SECONDARY only when the
+                // arc is reified with the ws:WeakOpticalCoupling stereotype.
+                CrossZoneEffect.CouplingClass couplingClass =
+                    CrossZoneEffect.CouplingClass.PRIMARY;
+                if (qs.contains("couplingStereo")
+                        && qs.get("couplingStereo") != null
+                        && qs.get("couplingStereo").isResource()) {
+                    String csUri = qs.getResource("couplingStereo").getURI();
+                    if (csUri != null && csUri.endsWith("WeakOpticalCoupling")) {
+                        couplingClass = CrossZoneEffect.CouplingClass.SECONDARY;
+                    }
+                }
+
                 // Find the ON action for this wotActionType
                 for (ActionInfo ai : actions) {
                     if (wotAction.equals(ai.wotActionType) && ai.wotValue) {
@@ -592,6 +644,7 @@ public class StereotypeReasoner {
                         cz.actionIndex = ai.actionIndex;
                         cz.sourceZoneIdx = sourceZone;
                         cz.targetZoneIdx = targetZone;
+                        cz.couplingClass = couplingClass;
                         // Avoid duplicates
                         boolean exists = false;
                         for (CrossZoneEffect existing : crossZoneEffects) {
@@ -605,7 +658,8 @@ public class StereotypeReasoner {
                         if (!exists) {
                             crossZoneEffects.add(cz);
                             LOGGER.info("  Cross-zone: action " + ai.label
-                                      + " zone" + sourceZone + "→zone" + targetZone);
+                                      + " zone" + sourceZone + "→zone" + targetZone
+                                      + " [" + couplingClass + "]");
                         }
                         break;
                     }
@@ -720,10 +774,18 @@ public class StereotypeReasoner {
         }
 
         // 3. Cross-zone spills.
+        //    PART A (cross-zone calibration fix): a SECONDARY (weak / sub-rank)
+        //    coupling does NOT reliably move the neighbour's discretised rank
+        //    (structural audit: WRONG ~80% of the time), so the ontology makes
+        //    NO directional rank claim for it. Emitting 0 here means the
+        //    adaptive-trust calibration in QLearner.calculateQ skips this slot
+        //    (predSign==0 => continue) and no longer deflates the action's whole
+        //    prior on the strength of an effect the KG cannot resolve at rank
+        //    granularity. Only PRIMARY couplings co-sign the direction (legacy).
         for (CrossZoneEffect cz : crossZoneEffects) {
-            if (cz.actionIndex == actionIdx
-                    && cz.targetZoneIdx >= 0
-                    && cz.targetZoneIdx < zoneLevelIndices.length) {
+            if (cz.actionIndex != actionIdx) continue;
+            if (cz.couplingClass == CrossZoneEffect.CouplingClass.SECONDARY) continue;
+            if (cz.targetZoneIdx >= 0 && cz.targetZoneIdx < zoneLevelIndices.length) {
                 int slot = zoneLevelIndices[cz.targetZoneIdx];
                 if (slot >= 0 && slot < pred.length) pred[slot] += dir;
             }
@@ -983,6 +1045,31 @@ public class StereotypeReasoner {
                     || stateVec[ai.ivStateVecIndex] >= ai.ivMinRank;
             if (gap > 0 && ivOk) {
                 return INIT_BONUS_MAG * gap * INIT_PENALTY_SCALE;
+            }
+        }
+
+        // Rule 6 (PART B — cross-zone structural exploration prior; GATED by
+        // -Dstereo.crossZoneBonus, default 0.0 = OFF). The KG declares the
+        // spillage STRUCTURE — which component bleeds into which neighbour zone
+        // — but NOT its magnitude (left for RL to learn). When enabled, give a
+        // SMALL optimistic head-start to a SECONDARY cross-zone activation whose
+        // spill target (this zone) is still below goal, so the agent is nudged
+        // to TRY the cross-zone lever and then learn its true value via Bellman
+        // updates. Fires only when no discouragement well fired (penalty == 0)
+        // and is bounded well below the primary Rule-5 bonus. Spotlight is a
+        // shared (multi-zone) actuator, not a brick:feeds spill, so it is never
+        // in crossZoneEffects and therefore never triggers this rule.
+        if (CROSS_ZONE_BONUS_MAG > 0.0 && penalty == 0.0 && ai.wotValue) {
+            for (CrossZoneEffect cz : crossZoneEffects) {
+                if (cz.actionIndex == actionIdx
+                        && cz.targetZoneIdx == zoneIdx
+                        && cz.couplingClass == CrossZoneEffect.CouplingClass.SECONDARY) {
+                    int zoneLevelIdx = zoneLevelIndices[zoneIdx];
+                    int gap = goal[zoneIdx] - stateVec[zoneLevelIdx];
+                    if (gap > 0) {
+                        return CROSS_ZONE_BONUS_MAG * gap * INIT_PENALTY_SCALE;
+                    }
+                }
             }
         }
 
