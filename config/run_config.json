@@ -158,6 +158,24 @@
         "adaptive_trust": false,
         "cross_zone_bonus": 3.0
       }
+    },
+    "phase1_kg_xzone_rand": {
+      "note": "KG-X MECHANISM ABLATION (Part B control for phase1_kg_xzone). Identical in every way to phase1_kg_xzone (KG prior ON, PBRS OFF, adaptive-trust OFF, cross_zone_bonus=3.0) EXCEPT cross_zone_bonus_mode=untargeted: the cross-zone exploration bonus fires the SAME number of times at the SAME magnitude, but each arc's spill-TARGET zone is replaced by a per-run random guess (seeded by run.seed) instead of the KG-declared neighbour. Isolates the value of KNOWING where the spill goes (targeted) from the value of the optimism budget itself. Run on the bumped lab3 physics and A/B against phase1_kg_xzone (targeted): if structure matters, targeted shows better lab3 economy; the blind control recovers only what it lands on by chance. Same timing as phase1_kg_xzone.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "none",
+        "adaptive_trust": false,
+        "cross_zone_bonus": 3.0,
+        "cross_zone_bonus_mode": "untargeted"
+      }
     }
   },
   "profiles_to_run": ["lab1", "lab2", "lab3"],
@@ -234,6 +252,7 @@
     "stereo_prior_iv_unsat": 5.0,
     "stereo_init_bonus": 15.0,
     "cross_zone_bonus": 0.0,
+    "cross_zone_bonus_mode": "targeted",
     "reward_shaping": "pbrs",
     "adaptive_trust": true,
     "adaptive_trust_min_samples": 50,

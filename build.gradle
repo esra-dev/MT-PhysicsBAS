@@ -158,7 +158,7 @@ clean {
 // ─────────────────────────────────────────────────────────────────────────
 def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries','sim.http.backoffMs',
                  'reward.clip','stereo.priorScale','stereo.priorDecayEpisodes','stereo.priorDecayFloor',
-                 'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus','stereo.crossZoneBonus',
+                 'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus','stereo.crossZoneBonus','stereo.crossZoneBonusMode',
                  // Research extensions: PBRS, adaptive trust, per-run seed.
                  'reward.shaping','stereo.adaptiveTrust','stereo.adaptiveTrust.minSamples','stereo.adaptiveTrust.floor',
                  'run.seed']

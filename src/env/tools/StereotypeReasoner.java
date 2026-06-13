@@ -163,6 +163,10 @@ public class StereotypeReasoner {
     // -----------------------------------------------------------------------
     private ActionInfo[] actions;
     private List<CrossZoneEffect> crossZoneEffects;
+    /** KG-X ablation: structurally-uninformed surrogate of {@link #crossZoneEffects}
+     *  (random spill-target guess), populated only when
+     *  -Dstereo.crossZoneBonusMode=untargeted. Empty otherwise. */
+    private List<CrossZoneEffect> crossZoneEffectsUntargeted;
     private double sunshineSatisfactionProb;
     private int numActions;
 
@@ -284,6 +288,37 @@ public class StereotypeReasoner {
     private static final double CROSS_ZONE_BONUS_MAG =
         Double.parseDouble(System.getProperty("stereo.crossZoneBonus", "0.0"));
 
+    /**
+     * PART B — mechanism ablation control. Selects how the cross-zone
+     * exploration bonus (Rule 6) chooses its TARGET. Override with
+     * -Dstereo.crossZoneBonusMode=... (default "targeted").
+     *
+     *   "targeted"   (default) — the bonus is applied to the cross-zone arcs
+     *                the KG actually declares (ws:WeakOpticalCoupling): the
+     *                agent KNOWS which actuator spills into which neighbour
+     *                zone. This is the mechanism evaluated in phase1_kg_xzone.
+     *   "untargeted" — equal-budget control: the SAME number of bonus firings
+     *                at the SAME magnitude, but each arc's spill-target zone is
+     *                replaced by a per-run random guess (seeded by run.seed).
+     *                The agent gets the same optimistic-exploration budget but
+     *                WITHOUT the structural knowledge of where the spill goes.
+     *                Used by profile phase1_kg_xzone_rand to isolate the value
+     *                of the KG targeting from the value of the bonus itself.
+     *
+     * No effect on lab1/lab2 (no reified cross-zone arcs); only lab3 differs.
+     */
+    private static final String CROSS_ZONE_BONUS_MODE =
+        System.getProperty("stereo.crossZoneBonusMode", "targeted");
+
+    /** Local long-property parser (mirrors QLearner.parseLongProp) for the
+     *  per-run seed used by the untargeted ablation. */
+    private static long parseLongProp(String key, long dflt) {
+        try {
+            String v = System.getProperty(key);
+            return (v == null || v.isEmpty()) ? dflt : Long.parseLong(v);
+        } catch (Exception e) { return dflt; }
+    }
+
 
     // -----------------------------------------------------------------------
     // Ontology loading — injectable for testability (#11 DI refactor)
@@ -356,6 +391,7 @@ public class StereotypeReasoner {
     public StereotypeReasoner(OntologyLoader loader, double sunshineSatisfactionProb) {
         this.sunshineSatisfactionProb = sunshineSatisfactionProb;
         this.crossZoneEffects = new ArrayList<>();
+        this.crossZoneEffectsUntargeted = new ArrayList<>();
         this.wotActionToZones = new HashMap<>();
         this.wotStateToSvIndex = new HashMap<>();
 
@@ -399,6 +435,10 @@ public class StereotypeReasoner {
         // Discover cross-zone feeds
         discoverCrossZoneFeeds(model);
 
+        // KG-X ablation (mechanism control): build the structurally-uninformed
+        // surrogate arcs used only when -Dstereo.crossZoneBonusMode=untargeted.
+        buildUntargetedCrossZoneEffects();
+
         model.close();
 
         // Initialise IV effectiveness tracking arrays
@@ -407,6 +447,53 @@ public class StereotypeReasoner {
 
         LOGGER.info("StereotypeReasoner: " + numActions + " actions, "
                    + crossZoneEffects.size() + " cross-zone effects");
+    }
+
+    /**
+     * KG-X ablation (mechanism control). When
+     * -Dstereo.crossZoneBonusMode=untargeted, build a structurally-uninformed
+     * copy of the SECONDARY cross-zone effects: each arc keeps its source
+     * action and magnitude class but its spill-TARGET zone is replaced by a
+     * per-run random guess (seeded by run.seed). Rule 6 then spends the SAME
+     * optimistic-exploration budget as the targeted prior, but without knowing
+     * which neighbour zone the actuator actually bleeds into. A guess that
+     * lands on the actuator's OWN zone is masked by the earlier same-zone
+     * Rule 5, so — exactly as intended — a blind agent wastes part of its
+     * budget, isolating the value of the KG targeting. No-op (empty list) for
+     * the default "targeted" mode and for labs with no cross-zone arcs.
+     */
+    private void buildUntargetedCrossZoneEffects() {
+        if (this.crossZoneEffectsUntargeted == null) {
+            this.crossZoneEffectsUntargeted = new ArrayList<>();
+        }
+        if (!"untargeted".equalsIgnoreCase(CROSS_ZONE_BONUS_MODE)) {
+            return; // default targeted mode: leave the list empty (unused)
+        }
+        int nZones = (zoneLevelIndices != null) ? zoneLevelIndices.length : 0;
+        if (nZones <= 0) {
+            return;
+        }
+        // Per-run RNG: mix run.seed with a fixed salt so seeds 1..N give
+        // well-separated, reproducible target guesses.
+        long seed = parseLongProp("run.seed", 0L) * 0x9E3779B97F4A7C15L
+                  + 0x632BE59BD9B4E019L;
+        java.util.Random rng = new java.util.Random(seed);
+        for (CrossZoneEffect cz : crossZoneEffects) {
+            if (cz.couplingClass != CrossZoneEffect.CouplingClass.SECONDARY) {
+                continue;
+            }
+            CrossZoneEffect surrogate = new CrossZoneEffect();
+            surrogate.actionIndex   = cz.actionIndex;
+            surrogate.sourceZoneIdx = cz.sourceZoneIdx;
+            surrogate.targetZoneIdx = rng.nextInt(nZones); // blind spill-target guess
+            surrogate.couplingClass = CrossZoneEffect.CouplingClass.SECONDARY;
+            crossZoneEffectsUntargeted.add(surrogate);
+            LOGGER.info("  KG-X ablation (untargeted): action " + cz.actionIndex
+                      + " trueTarget=z" + (cz.targetZoneIdx + 1)
+                      + " guessedTarget=z" + (surrogate.targetZoneIdx + 1));
+        }
+        LOGGER.info("StereotypeReasoner: KG-X untargeted ablation active — "
+                  + crossZoneEffectsUntargeted.size() + " scrambled cross-zone arcs");
     }
 
     // -----------------------------------------------------------------------
@@ -1060,7 +1147,14 @@ public class StereotypeReasoner {
         // shared (multi-zone) actuator, not a brick:feeds spill, so it is never
         // in crossZoneEffects and therefore never triggers this rule.
         if (CROSS_ZONE_BONUS_MAG > 0.0 && penalty == 0.0 && ai.wotValue) {
-            for (CrossZoneEffect cz : crossZoneEffects) {
+            // KG-X ablation: "untargeted" mode consults the structurally-blind
+            // surrogate arcs (random spill-target guess) instead of the true KG
+            // arcs, holding the firing budget + magnitude identical. See
+            // buildUntargetedCrossZoneEffects() / -Dstereo.crossZoneBonusMode.
+            List<CrossZoneEffect> bonusArcs =
+                "untargeted".equalsIgnoreCase(CROSS_ZONE_BONUS_MODE)
+                    ? crossZoneEffectsUntargeted : crossZoneEffects;
+            for (CrossZoneEffect cz : bonusArcs) {
                 if (cz.actionIndex == actionIdx
                         && cz.targetZoneIdx == zoneIdx
                         && cz.couplingClass == CrossZoneEffect.CouplingClass.SECONDARY) {

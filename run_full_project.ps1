@@ -38,7 +38,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_pbrs_only","phase1_full","phase1_kg_xzone")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_kg_xzone_rand")]
     [string]$RunMode = "dev",
 
     # Optional comma-separated subset of profiles to train and benchmark.
@@ -194,6 +194,8 @@ if ($RunConfig -and $RunConfig.learning) {
     if ($ln.stereo_init_bonus           -ne $null) { $HttpArgs += "-Pstereo.initBonus=$($ln.stereo_init_bonus)" }
     # KG-X (Part B): cross-zone structural exploration prior (default 0.0 = OFF).
     if ($ln.cross_zone_bonus            -ne $null) { $HttpArgs += "-Pstereo.crossZoneBonus=$($ln.cross_zone_bonus)" }
+    # KG-X mechanism ablation: targeted (default) vs untargeted spill-target guess.
+    if ($ln.cross_zone_bonus_mode       -ne $null) { $HttpArgs += "-Pstereo.crossZoneBonusMode=$($ln.cross_zone_bonus_mode)" }
     # Research extensions: PBRS reward shaping + adaptive stereotype trust.
     if ($ln.reward_shaping              -ne $null) { $HttpArgs += "-Preward.shaping=$($ln.reward_shaping)" }
     if ($ln.adaptive_trust              -ne $null) { $HttpArgs += "-Pstereo.adaptiveTrust=$($ln.adaptive_trust)" }
