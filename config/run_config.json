@@ -239,5 +239,77 @@
     "adaptive_trust_min_samples": 50,
     "adaptive_trust_floor": 0.1
   },
+  "phase2": {
+    "description": "Phase 2 fault-detection / blacklist / re-learn (run_phase2_adapt.ps1 + .github/workflows/phase2.yml). Each adapt profile injects one or more component faults into the named parent clean lab, warm-loads that lab's clean Phase-1 Q-table (qtable_final_stereotypes_<bool><clean_source_suffix>.csv), then runs the adapt agent (taskAdapt) which detects each defect via the KG Expected-vs-Actual check, blacklists BOTH polarities of every broken component (iteratively), and re-learns over the survivors. Recovery = reconverge_episode - detect_episode (lower is better; the headline compares ql_true < ql_false). Single-fault (f1*) and multi-fault (f2*) variants span lab1/lab2/lab3 complexities and {dead, inverted} fault modes. Only CAUSES lamps/spotlight are injected; healthy Mediates blinds are excluded from detection. lab1_f1dead is degenerate (single actuator; the blacklist guard preserves the last actuator) so it is a detection-only showcase with recovery=N/A. Parent ports/flows are reused because only one faulty variant runs at a time.",
+    "adapt_profiles": ["lab1_f1dead", "lab2_f1dead", "lab2_f1inv", "lab2_f2dead", "lab2_f2inv", "lab3_f1dead", "lab3_f1inv", "lab3_f2dead", "lab3_f2inv"],
+    "adapt_modes": ["ql_true", "ql_false"],
+    "smoke_episodes": 200,
+    "parent_profile": {
+      "lab1_f1dead": "lab1",
+      "lab2_f1dead": "lab2",
+      "lab2_f1inv": "lab2",
+      "lab2_f2dead": "lab2",
+      "lab2_f2inv": "lab2",
+      "lab3_f1dead": "lab3",
+      "lab3_f1inv": "lab3",
+      "lab3_f2dead": "lab3",
+      "lab3_f2inv": "lab3"
+    },
+    "simulator_port_map": {
+      "lab1_f1dead": 1892,
+      "lab2_f1dead": 1893,
+      "lab2_f1inv": 1893,
+      "lab2_f2dead": 1893,
+      "lab2_f2inv": 1893,
+      "lab3_f1dead": 1894,
+      "lab3_f1inv": 1894,
+      "lab3_f2dead": 1894,
+      "lab3_f2inv": 1894
+    },
+    "simulator_flow_map": {
+      "lab1_f1dead": "simulator_flow_lab1_f1dead.json",
+      "lab2_f1dead": "simulator_flow_lab2_f1dead.json",
+      "lab2_f1inv": "simulator_flow_lab2_f1inv.json",
+      "lab2_f2dead": "simulator_flow_lab2_f2dead.json",
+      "lab2_f2inv": "simulator_flow_lab2_f2inv.json",
+      "lab3_f1dead": "simulator_flow_lab3_f1dead.json",
+      "lab3_f1inv": "simulator_flow_lab3_f1inv.json",
+      "lab3_f2dead": "simulator_flow_lab3_f2dead.json",
+      "lab3_f2inv": "simulator_flow_lab3_f2inv.json"
+    },
+    "qtable_suffix_map": {
+      "lab1_f1dead": "_lab1_f1dead",
+      "lab2_f1dead": "_lab2_f1dead",
+      "lab2_f1inv": "_lab2_f1inv",
+      "lab2_f2dead": "_lab2_f2dead",
+      "lab2_f2inv": "_lab2_f2inv",
+      "lab3_f1dead": "_lab3_f1dead",
+      "lab3_f1inv": "_lab3_f1inv",
+      "lab3_f2dead": "_lab3_f2dead",
+      "lab3_f2inv": "_lab3_f2inv"
+    },
+    "clean_source_suffix": {
+      "lab1_f1dead": "_lab1",
+      "lab2_f1dead": "_lab2",
+      "lab2_f1inv": "_lab2",
+      "lab2_f2dead": "_lab2",
+      "lab2_f2inv": "_lab2",
+      "lab3_f1dead": "_lab3",
+      "lab3_f1inv": "_lab3",
+      "lab3_f2dead": "_lab3",
+      "lab3_f2inv": "_lab3"
+    },
+    "expected_state_vec_dim": {
+      "lab1_f1dead": 2,
+      "lab2_f1dead": 7,
+      "lab2_f1inv": 7,
+      "lab2_f2dead": 7,
+      "lab2_f2inv": 7,
+      "lab3_f1dead": 8,
+      "lab3_f1inv": 8,
+      "lab3_f2dead": 8,
+      "lab3_f2inv": 8
+    }
+  },
   "dry_run": false
 }

@@ -301,6 +301,196 @@ lab_profile("lab3",
             weakness_flags([]),
             qtable_suffix("_lab3"),
             training_params(3000, 0.9970)).
+
+// ── Phase 2 FAULTY LADDER (Fault detection / blacklist / re-learn) ──────────
+//   Each faulty profile is a clean Phase-1 lab (lab1/lab2/lab3) whose AGENT-SIDE
+//   ontology, zone targets and discretisation bounds are IDENTICAL to the clean
+//   parent (so the Knowledge-Graph "nominal physics" is unchanged) but whose
+//   SIMULATOR flow injects exactly ONE hardware fault into ONE component:
+//     • _f1dead  — a task lamp's lux contribution is forced to 0 (the relay
+//                  closes / the actuator bit toggles, but the bulb emits
+//                  nothing). The KG predicts +Δ; reality gives 0.
+//     • _f1inv   — a task lamp's lux contribution is negated (mis-wired). The
+//                  KG predicts +Δ; reality gives 0 (from rank 0) or −Δ (from an
+//                  elevated zone). Caught by the combined anomaly-rate trigger.
+//   The faulty flow is launched on the SAME port + TD as the clean parent (only
+//   ONE lab variant runs at a time during adaptation), so no new TD is needed.
+//   adapt_source/2 (below) maps each faulty profile to the clean parent's
+//   qtable_suffix, so the adapt agent warm-loads the right Phase-1 Q-table.
+//   weakness_flags is informational here (the adapt agent uses its own
+//   observeForFaults detector, not the bench fingerprint plans).
+
+//   lab1_f1dead → DEAD single lamp. Degenerate case: lab1 has only ONE actuator,
+//   so after blacklisting there is NO surviving lever — the agent DETECTS +
+//   ALERTS but cannot recover (recovery = N/A). Minimal detection showcase.
+lab_profile("lab1_f1dead",
+            td("classpath:interactions-lab1.ttl"),
+            ont(["building_1_trivial.ttl"]),
+            scenarios("benchmark/scenarios_lab1.json"),
+            train_scenarios("benchmark/train_scenarios_lab1.json"),
+            sim_port(1892),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab1_f1dead"),
+            training_params(1000, 0.9920)).
+
+//   lab2_f1dead → DEAD Z1 lamp in the 2-zone Intermediate lab. The blind (Z1)
+//   plus the whole of Z2 survive, so the agent re-learns a recovered policy.
+lab_profile("lab2_f1dead",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab2_f1dead"),
+            training_params(2000, 0.9960)).
+
+//   lab2_f1inv → INVERTED Z1 lamp in the 2-zone Intermediate lab.
+lab_profile("lab2_f1inv",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab2_f1inv"),
+            training_params(2000, 0.9960)).
+
+//   lab3_f1dead → DEAD Z1 lamp in the 2-zone Complex lab (cross-zone + shared
+//   spotlight). Survivors include the spotlight + Z2, giving a richer recovery.
+lab_profile("lab3_f1dead",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f1dead"),
+            training_params(3000, 0.9970)).
+
+//   lab3_f1inv → INVERTED Z1 lamp in the Complex lab. The shared spotlight and
+//   cross-zone spill keep Z1 elevated, so the inversion produces genuine
+//   opposite-direction (opp) evidence, not just dead-looking Δ=0.
+lab_profile("lab3_f1inv",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab3_f1inv"),
+            training_params(3000, 0.9970)).
+
+//   ── MULTI-FAULT variants (several components broken at once) ──────────────
+//   These exercise the ITERATIVE detect→blacklist→warm-restart loop: the agent
+//   detects each broken lamp in turn, removes it, and re-learns over what is
+//   left. Only CAUSES lamps are injected (the detector ignores Mediates blinds),
+//   and lab1 is omitted (it has a single lamp, so "several" is undefined there).
+
+//   lab2_f2dead → BOTH task lamps (Z1Light + Z2Light) dead. After both are
+//   blacklisted only the (healthy) blinds survive, so full rank-3 recovery is
+//   only possible in sunny episodes — a medium-complexity SEVERAL-DEAD showcase
+//   that proves multi-component detection + alert even when recovery is partial.
+lab_profile("lab2_f2dead",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab2_f2dead"),
+            training_params(2000, 0.9960)).
+
+//   lab2_f2inv → BOTH task lamps inverted (mis-wired). Caught by the combined
+//   anomaly-rate trigger; survivors are the blinds.
+lab_profile("lab2_f2inv",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab2_f2inv"),
+            training_params(2000, 0.9960)).
+
+//   lab3_f2dead → BOTH task lamps (Z1Light + Z2Light) dead in the Complex lab.
+//   The shared Spotlight (Causes, +150 both zones) and the blinds SURVIVE, so
+//   the agent can re-learn a genuinely recovered policy — the cleanest
+//   SEVERAL-DEAD-WITH-RECOVERY case.
+lab_profile("lab3_f2dead",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f2dead"),
+            training_params(3000, 0.9970)).
+
+//   lab3_f2inv → BOTH task lamps inverted in the Complex lab. Spotlight +
+//   cross-zone keep the zones elevated so the inversion yields real opposite-
+//   direction evidence; survivors include the spotlight + blinds.
+lab_profile("lab3_f2inv",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab3_f2inv"),
+            training_params(3000, 0.9970)).
+
+/* ============================================================
+ * adapt_source/2 — maps a FAULTY profile to the clean parent's
+ * qtable_suffix, so the Phase-2 adapt agent warm-loads the right
+ * Phase-1 Q-table (qtable_final_stereotypes_<bool><CleanSuffix>.csv).
+ * ============================================================ */
+adapt_source("lab1_f1dead", "_lab1").
+adapt_source("lab2_f1dead", "_lab2").
+adapt_source("lab2_f1inv",  "_lab2").
+adapt_source("lab3_f1dead", "_lab3").
+adapt_source("lab3_f1inv",  "_lab3").
+adapt_source("lab2_f2dead", "_lab2").
+adapt_source("lab2_f2inv",  "_lab2").
+adapt_source("lab3_f2dead", "_lab3").
+adapt_source("lab3_f2inv",  "_lab3").
+
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.
  * Each accessor unifies its single output argument with the

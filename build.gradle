@@ -145,6 +145,44 @@ task taskBench (type: JavaExec, dependsOn: 'classes') {
     }
 }
 
+// Phase 2 fault-adaptation agent task.
+// Warm-loads a Phase-1 clean Q-table, detects an injected hardware fault,
+// blacklists the defective component, and re-learns over the survivors.
+//   -Pprofile=<faulty_id>  e.g. lab2_f1dead | lab2_f1inv | lab3_f1dead | ...
+//   -Pmode=<ql_true|ql_false>  selects KG-primed vs tabula-rasa re-learning.
+// Run while the MATCHING faulty Node-RED simulator flow is running.
+task taskAdapt (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the Phase-2 fault-detection / blacklist / re-learn agent'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_adapt.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pprofile=<id> -> active.profile (faulty profile selector).
+    // -Pmode=<ql_true|ql_false> -> adapt.mode (stereotype on/off). Both are
+    // read at startup by the adapt agent via tools.jia.system_prop (#7).
+    doFirst {
+        def overrideProfile = project.findProperty('profile')
+        if (overrideProfile) {
+            systemProperty 'active.profile', overrideProfile
+            println "taskAdapt: active.profile=${overrideProfile}"
+        }
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            systemProperty 'adapt.mode', overrideMode
+            println "taskAdapt: adapt.mode=${overrideMode}"
+        }
+        // -Padapt.episodes=<N> -> adapt.episodes: launch-time re-learn budget
+        // override (e.g. a fast smoke run). Read numerically by the adapt agent
+        // via tools.jia.system_prop_num; default = the profile's training_params.
+        def overrideEpisodes = project.findProperty('adapt.episodes')
+        if (overrideEpisodes) {
+            systemProperty 'adapt.episodes', overrideEpisodes
+            println "taskAdapt: adapt.episodes=${overrideEpisodes}"
+        }
+    }
+}
+
 clean {
     delete 'bin'
     delete 'build'
