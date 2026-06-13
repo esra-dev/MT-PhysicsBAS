@@ -1,0 +1,402 @@
+name: Phase 2 (fault detection, blacklist, re-learn)
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 2 — Fault-Detection / Blacklist / Re-learn, end-to-end in ONE run.
+#
+# Self-contained: a single workflow_dispatch trains the CLEAN Phase-1 baselines,
+# injects component faults, detects + blacklists the broken components, warm-
+# restarts and re-learns over the survivors, then aggregates the recovery
+# statistics. You do NOT need to run Phase 1 first — this workflow produces the
+# clean warm-start Q-tables itself, per seed, so every adapt cell pairs against
+# its own clean baseline.
+#
+# DAG:  setup → train_clean (parents × stereo × seed)
+#                    → adapt (faulty-profile × mode × seed, warm-loads its
+#                             matching clean baseline, starts the faulty
+#                             Node-RED flow, runs taskAdapt with a watchdog)
+#                    → aggregate (phase2_recovery.py: per-cell CI + paired
+#                                 bootstrap ql_true vs ql_false, BH-FDR)
+#
+# Headline metric: RecoveryEpisodes = ReconvergeEpisode − DetectEpisode
+# (lower = faster re-alignment). Thesis claim: recovery(ql_true) < recovery(
+# ql_false) — the KG prior lets the agent re-align over the surviving
+# components faster than a tabula-rasa learner.
+#
+# Every (parent × stereo × seed) clean cell and every (profile × mode × seed)
+# adapt cell runs concurrently across GitHub-hosted runners, so wall-clock is
+# set by the slowest single cell, not the cell count.
+# ──────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      adapt_profiles:
+        description: "Comma-separated faulty profiles. Default = all 9 (single + multi fault, lab1/2/3). Use e.g. lab2_f1dead,lab3_f2dead for a subset."
+        required: false
+        default: "lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv"
+      seeds:
+        description: "Comma-separated RNG seeds. Default 1..5 (paired bootstrap). Use 1..10 for Wilcoxon confirmatory power (p<0.05 needs n>=6)."
+        required: false
+        default: "1,2,3,4,5"
+      run_mode:
+        description: "run_config.json profile for the CLEAN warm-start training: phase1 (3000x20, recommended) | dev (50x20, fast smoke)."
+        required: false
+        default: "phase1"
+      adapt_episodes:
+        description: "Re-learn budget per adapt cell. 0 = each profile's training_params default (needed to actually re-converge; convergence window is 100). Set e.g. 200 for a fast pipeline smoke."
+        required: false
+        default: "0"
+      publish_results:
+        description: "Push consolidated Phase-2 results to the 'results' branch"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase2
+  cancel-in-progress: false
+
+env:
+  RUN_MODE:       ${{ github.event.inputs.run_mode       || 'phase1' }}
+  ADAPT_PROFILES: ${{ github.event.inputs.adapt_profiles || 'lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv' }}
+  SEEDS:          ${{ github.event.inputs.seeds          || '1,2,3,4,5' }}
+  ADAPT_EPISODES: ${{ github.event.inputs.adapt_episodes || '0' }}
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  setup:
+    name: Compile & build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      profiles_json: ${{ steps.profiles.outputs.json }}
+      parents_json:  ${{ steps.parents.outputs.json }}
+      seeds_json:    ${{ steps.seeds.outputs.json }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Compile classes (with retry on JitPack flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::compile attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          exit $rc
+      - name: Upload compiled build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-classes
+          path: |
+            build/classes
+            build/resources
+            build/generated
+          if-no-files-found: error
+          retention-days: 1
+      - name: Materialise faulty-profile list
+        id: profiles
+        shell: bash
+        run: |
+          json=$(echo "${{ env.ADAPT_PROFILES }}" | tr ',' '\n' | sed '/^$/d' | jq -R . | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "profiles=$json"
+      - name: Derive unique parent labs for clean warm-start training
+        id: parents
+        shell: bash
+        run: |
+          sel=$(echo "${{ env.ADAPT_PROFILES }}" | tr ',' '\n' | sed '/^$/d' | jq -R . | jq -sc .)
+          json=$(jq -c --argjson sel "$sel" \
+            '[.phase2.parent_profile | to_entries[] | select(.key as $k | $sel | index($k)) | .value] | unique' \
+            config/run_config.json)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "parents=$json"
+      - name: Materialise seed list
+        id: seeds
+        shell: bash
+        run: |
+          json=$(echo "${{ env.SEEDS }}" | tr ',' '\n' | sed '/^$/d' | jq -R 'tonumber' | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "seeds=$json"
+
+  # ────────────────────────────────────────────────────────────────────────
+  train_clean:
+    name: clean ${{ matrix.parent }} stereo=${{ matrix.stereo }} seed=${{ matrix.seed }}
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 180   # phase1 (3000 eps) ~50 min/cell; 3x safety margin
+    strategy:
+      fail-fast: false
+      matrix:
+        parent: ${{ fromJson(needs.setup.outputs.parents_json) }}
+        stereo: ["true", "false"]
+        seed:   ${{ fromJson(needs.setup.outputs.seeds_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Train clean warm-start baseline (with early-failure retry)
+        shell: pwsh
+        run: |
+          $ok = $false
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $start = Get-Date
+            ./run_full_project.ps1 `
+              -RunMode ${{ env.RUN_MODE }} `
+              -OnlyProfiles ${{ matrix.parent }} `
+              -OnlyStereo ${{ matrix.stereo }} `
+              -RunSeed ${{ matrix.seed }} `
+              -SkipBenchmark `
+              -SkipPreflight
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) { $ok = $true; break }
+            $elapsedMin = ((Get-Date) - $start).TotalMinutes
+            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
+              Write-Host "::error::clean training failed after $([math]::Round($elapsedMin,1)) min (rc=$rc)"
+              break
+            }
+            Write-Host "::warning::clean training failed early ($([math]::Round($elapsedMin,1)) min); retrying once"
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) { exit 1 }
+      - name: Upload clean warm-start Q-tables
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-${{ matrix.parent }}-stereo-${{ matrix.stereo }}-seed-${{ matrix.seed }}
+          path: |
+            qtable_final_stereotypes_${{ matrix.stereo }}_${{ matrix.parent }}*.csv
+            log/train_${{ matrix.parent }}_stereo_${{ matrix.stereo }}.log
+          if-no-files-found: error
+          retention-days: 30
+
+  # ────────────────────────────────────────────────────────────────────────
+  adapt:
+    name: adapt ${{ matrix.profile }} mode=${{ matrix.mode }} seed=${{ matrix.seed }}
+    needs: [setup, train_clean]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
+        mode:    ["ql_true", "ql_false"]
+        seed:    ${{ fromJson(needs.setup.outputs.seeds_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Resolve warm-start boolean for this mode
+        id: m
+        shell: bash
+        run: |
+          if [ "${{ matrix.mode }}" = "ql_true" ]; then echo "bool=true" >> "$GITHUB_OUTPUT"; else echo "bool=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Download matching clean warm-start Q-tables (all parents, this bool+seed)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: clean-*-stereo-${{ steps.m.outputs.bool }}-seed-${{ matrix.seed }}
+          path: .
+          merge-multiple: true
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Regenerate faulty Node-RED flows (deterministic from clean flows)
+        shell: pwsh
+        run: |
+          ./simulator/generate_faulty_flows.ps1
+      - name: Run adapt cell (fault detect → blacklist → warm restart → re-learn)
+        shell: pwsh
+        run: |
+          $ep = [int]"${{ env.ADAPT_EPISODES }}"
+          ./run_phase2_adapt.ps1 `
+            -AdaptProfiles ${{ matrix.profile }} `
+            -Modes ${{ matrix.mode }} `
+            -Episodes $ep `
+            -RunSeed ${{ matrix.seed }} `
+            -WatchdogIdleSec 1800
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Upload adapt artefacts (recovery metric + adapted policy + log)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adapt-${{ matrix.profile }}-${{ matrix.mode }}-seed-${{ matrix.seed }}
+          path: |
+            recovery_stereotypes_*.csv
+            qtable_adapted_stereotypes_*.csv
+            metrics_adapted_stereotypes_*.csv
+            log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.log
+            log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.err.log
+            run_phase2_adapt.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  # ────────────────────────────────────────────────────────────────────────
+  aggregate:
+    name: Aggregate recovery & publish
+    needs: adapt
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis deps
+        run: pip install numpy scipy
+      - name: Download all adapt artefacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: adapt-*
+          path: _artifacts/adapt
+      - name: Reconstruct per-seed recovery layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mkdir -p recovery_root
+          for d in _artifacts/adapt/*/; do
+            name=$(basename "$d")
+            seed=$(echo "$name" | sed -nE 's/.*-seed-([0-9]+)$/\1/p')
+            if [ -z "$seed" ]; then echo "WARN: no seed in $name"; continue; fi
+            mkdir -p "recovery_root/seed${seed}"
+            for f in "${d}"recovery_stereotypes_*.csv; do
+              [ -e "$f" ] || continue
+              cp -n "$f" "recovery_root/seed${seed}/" 2>/dev/null || true
+            done
+          done
+          echo "-- recovery layout --"
+          find recovery_root -type f | sort
+      - name: Aggregate Phase-2 recovery (per-cell CI + paired bootstrap, BH-FDR)
+        run: |
+          python analysis/phase2_recovery.py \
+            --root recovery_root \
+            --out analysis/out
+      - name: Generate job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "# Phase 2 (fault detection / blacklist / re-learn) — summary"
+            echo ""
+            echo "**Profiles:** \`${{ env.ADAPT_PROFILES }}\`"
+            echo "**Seeds:** \`${{ env.SEEDS }}\`"
+            echo "**Clean warm-start mode:** \`${{ env.RUN_MODE }}\`"
+            echo "**Adapt episodes:** \`${{ env.ADAPT_EPISODES }}\` (0 = profile default)"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo ""
+            echo "Headline: RecoveryEpisodes = ReconvergeEpisode − DetectEpisode (lower = faster)."
+            echo "Thesis claim: recovery(ql_true) < recovery(ql_false)."
+            echo ""
+            if [ -f analysis/out/phase2_recovery_ci.csv ]; then
+              echo "## phase2_recovery_ci.csv (per profile × arm, 95% CI)"
+              echo '```'
+              cat analysis/out/phase2_recovery_ci.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/phase2_recovery_paired.csv ]; then
+              echo "## phase2_recovery_paired.csv (ql_true − ql_false, paired bootstrap + BH-FDR)"
+              echo '```'
+              cat analysis/out/phase2_recovery_paired.csv
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload consolidated Phase-2 artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-consolidated
+          path: |
+            analysis/out/**
+            recovery_root/**
+          retention-days: 90
+      - name: Publish to 'results' branch
+        if: ${{ github.event.inputs.publish_results == 'true' }}
+        shell: bash
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          git config user.name  "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
+          ts=$(date -u +%Y%m%d-%H%M%S)
+          branch="results"
+          tmp=$(mktemp -d)
+          cp -r analysis/out "$tmp/phase2_out"
+          cp -r recovery_root "$tmp/phase2_recovery_root" 2>/dev/null || true
+          git fetch origin "$branch" || true
+          if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            git checkout -B "$branch" "origin/$branch"
+          else
+            git checkout --orphan "$branch"
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          dest="phase2/${{ github.run_id }}-${ts}"
+          mkdir -p "$dest"
+          cp -r "$tmp/phase2_out" "$dest/analysis_out"
+          cp -r "$tmp/phase2_recovery_root" "$dest/recovery_root" 2>/dev/null || true
+          git add "$dest"
+          git commit -m "Phase 2 recovery results: run ${{ github.run_id }} ($ts)" || echo "nothing to commit"
+          git push origin "$branch"
