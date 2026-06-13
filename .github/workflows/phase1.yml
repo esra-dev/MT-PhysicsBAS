@@ -139,7 +139,18 @@ jobs:
           path: ~/.npm
           key: npm-noderered-${{ runner.os }}-v4
       - name: Install Node-RED
-        run: npm install -g --unsafe-perm node-red@4
+        # Retry on transient npm network failures (e.g. ECONNRESET from the
+        # registry) so a single flaky connection does not fail the job.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            echo "npm install node-red@4 (attempt $attempt/5)"
+            if npm install -g --unsafe-perm --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 node-red@4; then
+              echo "Node-RED installed."; exit 0
+            fi
+            echo "npm install failed (attempt $attempt); retrying after backoff..."
+            sleep $((attempt * 15))
+          done
+          echo "npm install node-red@4 failed after 5 attempts"; exit 1
       - name: Download compiled build (attempt 1)
         id: dl_build_1
         continue-on-error: true
@@ -242,7 +253,18 @@ jobs:
           path: ~/.npm
           key: npm-noderered-${{ runner.os }}-v4
       - name: Install Node-RED
-        run: npm install -g --unsafe-perm node-red@4
+        # Retry on transient npm network failures (e.g. ECONNRESET from the
+        # registry) so a single flaky connection does not fail the job.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            echo "npm install node-red@4 (attempt $attempt/5)"
+            if npm install -g --unsafe-perm --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 node-red@4; then
+              echo "Node-RED installed."; exit 0
+            fi
+            echo "npm install failed (attempt $attempt); retrying after backoff..."
+            sleep $((attempt * 15))
+          done
+          echo "npm install node-red@4 failed after 5 attempts"; exit 1
       - name: Download compiled build (attempt 1)
         id: dl_build_1
         continue-on-error: true
