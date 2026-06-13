@@ -9,6 +9,7 @@ import RawDrawer from './components/RawDrawer.jsx';
 import LiveMode from './components/LiveMode.jsx';
 
 const DEMO = '/demo-traces/custom2-w1-demo.jsonl';
+const DEMO_C9 = '/demo-traces/custom9-ql-true-demo.jsonl';
 
 export default function App() {
   const [text, setText] = useState('');
@@ -48,6 +49,10 @@ export default function App() {
     fetch(DEMO).then((r) => r.text()).then((t) => { setText(t); setSourceLabel(`demo: ${DEMO}`); });
   };
 
+  const loadDemoC9 = () => {
+    fetch(DEMO_C9).then((r) => r.text()).then((t) => { setText(t); setSourceLabel(`demo: ${DEMO_C9}`); });
+  };
+
   const classifyTags = useCallback((i) => classifyStep(steps[i], schema).tags, [steps, schema]);
   const mismatchSlots = (classification.mismatches || []).map((m) => m.slot);
 
@@ -67,6 +72,7 @@ export default function App() {
             <input type="file" accept=".jsonl,.json,.txt" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} hidden />
           </label>
           <button onClick={loadDemo}>load demo (W1)</button>
+          <button onClick={loadDemoC9}>load demo (custom9)</button>
           <button className="primary" onClick={() => setShowLive(true)}>live mode</button>
         </div>
       </header>
