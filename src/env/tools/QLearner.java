@@ -263,6 +263,18 @@ public class QLearner extends Artifact {
     private static final double FAULT_ANOMALY_RATE = parseDoubleProp("fault.detect.anomalyRate", 0.75);
     private static final double FAULT_EPS_BOOST    = parseDoubleProp("fault.relearn.epsBoost",   0.30);
 
+    // Phase 2.1 — policy-stability recovery detector (adapt regime).
+    // "Recovered" = the greedy policy (jointArgmax over surviving, non-blacklisted
+    // actions) has not changed for RECOVERY_WINDOW consecutive episodes AFTER the
+    // fault was blacklisted. This replaces the Phase-1 Bellman-stability test for
+    // the post-fault regime: it tracks the RANKING of actions, so it is robust to
+    // (a) the residual ε-boost exploration noise that keeps perturbing TD targets
+    // and (b) goals that are only stochastically reachable (sun-gated survivors),
+    // neither of which let the 1e-3 Bellman test settle. It needs no lab redesign.
+    private int[]  recoveryPolicy      = null;  // last greedy policy snapshot
+    private int    recoveryStableCount = 0;     // consecutive episodes with no policy change
+    private static final int RECOVERY_WINDOW = parseIntProp("fault.recover.window", 50);
+
     // -----------------------------------------------------------------------
     // CArtAgO initialisation
     // -----------------------------------------------------------------------
@@ -1091,6 +1103,10 @@ public class QLearner extends Artifact {
         epsilon = Math.max(epsilon, FAULT_EPS_BOOST);
         currentEpisodeNum = 0;
         convergenceCount = 0;
+        // (6) Reset the policy-stability recovery detector so the recovery window
+        //     starts fresh from the warm-restart point (the post-fault baseline).
+        recoveryPolicy = null;
+        recoveryStableCount = 0;
         LOGGER.warning(String.format(
             "warmRestart: wiped %d action column(s), decayed %d poisoned state(s), "
           + "ε←%.3f, episodeClock←0, convergence reset",
@@ -1129,14 +1145,14 @@ public class QLearner extends Artifact {
      */
     @OPERATION
     public void saveRecoveryLog(String filename, int detectEp, int reconvergeEp,
-                                String blacklistedLabel) {
+                                int secondaryDetectEp, String blacklistedLabel) {
         boolean exists = new java.io.File(filename).exists();
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename, true))) {
-            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes");
+            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode");
             int rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1;
-            pw.printf("%s,%d,%d,%d%n",
+            pw.printf("%s,%d,%d,%d,%d%n",
                 blacklistedLabel == null ? "" : blacklistedLabel,
-                detectEp, reconvergeEp, rec);
+                detectEp, reconvergeEp, rec, secondaryDetectEp);
             LOGGER.info("saveRecoveryLog: appended recovery row to " + filename);
         } catch (IOException e) {
             LOGGER.warning("saveRecoveryLog: failed " + filename + " — " + e.getMessage());
@@ -1347,6 +1363,39 @@ public class QLearner extends Artifact {
     @OPERATION
     public void hasConverged(OpFeedbackParam<Boolean> converged) {
         converged.set(convergenceCount >= convergenceWindow);
+    }
+
+    /**
+     * Phase 2.1 — advance the policy-stability recovery detector by ONE episode.
+     * Call once per adapt episode (after {@link #endEpisode}) once a fault has
+     * been blacklisted. Snapshots the current greedy policy ({@link
+     * #jointArgmaxAction} over every state, which excludes blacklisted actions)
+     * and counts how many consecutive episodes the policy stays identical. The
+     * argmax ignores ε and ignores whether the (possibly sun-gated) goal was
+     * reachable this episode, so it settles where the 1e-3 Bellman test cannot.
+     */
+    @OPERATION
+    public void updateRecoveryDetector() {
+        int[] pol = new int[nStates];
+        for (int s = 0; s < nStates; s++) pol[s] = jointArgmaxAction(s);
+        if (recoveryPolicy != null && java.util.Arrays.equals(pol, recoveryPolicy)) {
+            recoveryStableCount++;
+        } else {
+            recoveryStableCount = 0;
+            recoveryPolicy = pol;
+        }
+    }
+
+    /**
+     * Phase 2.1 — true once the greedy policy has been stable for
+     * {@code fault.recover.window} (default 50) consecutive episodes, i.e. the
+     * agent has re-converged onto a fixed policy over the surviving action set.
+     *
+     * @param recovered  Output: true if the post-fault policy has re-converged.
+     */
+    @OPERATION
+    public void hasRecovered(OpFeedbackParam<Boolean> recovered) {
+        recovered.set(recoveryStableCount >= RECOVERY_WINDOW);
     }
 
     /**

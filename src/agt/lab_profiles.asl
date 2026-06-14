@@ -382,7 +382,7 @@ lab_profile("lab3_f1dead",
             sunshine_prob(0.75),
             weakness_flags([w4]),
             qtable_suffix("_lab3_f1dead"),
-            training_params(3000, 0.9970)).
+            training_params(4000, 0.9970)).
 
 //   lab3_f1inv → INVERTED Z1 lamp in the Complex lab. The shared spotlight and
 //   cross-zone spill keep Z1 elevated, so the inversion produces genuine
@@ -399,7 +399,7 @@ lab_profile("lab3_f1inv",
             sunshine_prob(0.75),
             weakness_flags([w2]),
             qtable_suffix("_lab3_f1inv"),
-            training_params(3000, 0.9970)).
+            training_params(4000, 0.9970)).
 
 //   ── MULTI-FAULT variants (several components broken at once) ──────────────
 //   These exercise the ITERATIVE detect→blacklist→warm-restart loop: the agent
@@ -457,7 +457,7 @@ lab_profile("lab3_f2dead",
             sunshine_prob(0.75),
             weakness_flags([w4]),
             qtable_suffix("_lab3_f2dead"),
-            training_params(3000, 0.9970)).
+            training_params(4000, 0.9970)).
 
 //   lab3_f2inv → BOTH task lamps inverted in the Complex lab. Spotlight +
 //   cross-zone keep the zones elevated so the inversion yields real opposite-
@@ -474,7 +474,7 @@ lab_profile("lab3_f2inv",
             sunshine_prob(0.75),
             weakness_flags([w2]),
             qtable_suffix("_lab3_f2inv"),
-            training_params(3000, 0.9970)).
+            training_params(4000, 0.9970)).
 
 /* ============================================================
  * adapt_source/2 — maps a FAULTY profile to the clean parent's

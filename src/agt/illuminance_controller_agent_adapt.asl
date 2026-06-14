@@ -244,12 +244,21 @@ action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms s
     };
 
     // Re-convergence is only meaningful AFTER a fault has been detected and a
-    // component blacklisted (the warm restart resets the convergence detector).
-    hasConverged(Converged)[artifact_id(QlId)];
-    if (detected(_) & Converged) {
-        +reconverged(N);
-        .print("[Adapt] Re-CONVERGED after fault at episode ", N + 1, " — finishing.");
-        !adapt(MaxEpisodes)   // jump to @adapt_done
+    // component blacklisted (the warm restart resets the recovery detector).
+    // Phase 2.1: recovery = the greedy policy over the SURVIVING action set has
+    // been stable for `fault.recover.window` consecutive episodes. This argmax
+    // test settles where the old 1e-3 Bellman-stability test could not (residual
+    // ε-boost noise + only-stochastically-reachable, sun-gated goals).
+    if (detected(_)) {
+        updateRecoveryDetector[artifact_id(QlId)];
+        hasRecovered(Recovered)[artifact_id(QlId)];
+        if (Recovered & not reconverged(_)) {
+            +reconverged(N);
+            .print("[Adapt] RE-CONVERGED (greedy policy stable) after fault at episode ", N + 1, " — finishing.");
+            !adapt(MaxEpisodes)   // jump to @adapt_done
+        } else {
+            !adapt(N + 1)
+        }
     } else {
         !adapt(N + 1)
     }.
@@ -341,6 +350,14 @@ action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms s
     if (not detected(_)) {
         +detected(EpN);
         +primary_defect(Comp)
+    } else {
+        // A second DISTINCT defective component (multi-fault lab). Log the
+        // episode so iterative-isolation latency is quantifiable; recovery is
+        // still measured from the PRIMARY detection to keep the metric aligned.
+        if (not secondary_detect(_)) {
+            +secondary_detect(EpN);
+            .print("[Adapt] SECONDARY defect detected at episode ", EpN + 1, ": ", Comp)
+        }
     };
     // Remove BOTH ON and OFF actions of the defective component.
     blacklistComponent(Comp, NRemoved)[artifact_id(QlId)];
@@ -370,11 +387,12 @@ action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms s
     // Recovery metric (DetectEpisode → ReconvergeEpisode).
     !get_detect_episode(DetectEp);
     !get_reconverge_episode(ReconvergeEp);
+    !get_secondary_detect_episode(SecondaryEp);
     !get_defect_label(DefectLabel);
     !sx_filename("recovery_stereotypes_", UseStereotypes, QtSuffix, ".csv", RecoveryFile);
-    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, DefectLabel)[artifact_id(QlId)];
+    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, SecondaryEp, DefectLabel)[artifact_id(QlId)];
     .print("[Adapt] Recovery metric saved to ", RecoveryFile,
-           " (detect=", DetectEp, " reconverge=", ReconvergeEp, ")");
+           " (detect=", DetectEp, " reconverge=", ReconvergeEp, " secondary=", SecondaryEp, ")");
     if (not detected(_)) {
         .print("[Adapt] NOTE: no fault was detected within the budget.")
     };
@@ -393,6 +411,10 @@ action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms s
 +!get_reconverge_episode(E) : reconverged(E) <- true.
 @get_reconverge_episode_miss
 +!get_reconverge_episode(-1) <- true.
+@get_secondary_detect_episode_hit
++!get_secondary_detect_episode(E) : secondary_detect(E) <- true.
+@get_secondary_detect_episode_miss
++!get_secondary_detect_episode(-1) <- true.
 @get_defect_label_hit
 +!get_defect_label(L) : primary_defect(L) <- true.
 @get_defect_label_miss
