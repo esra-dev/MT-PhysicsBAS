@@ -4,17 +4,25 @@ Phase 2 (fault detection / blacklist / re-learn) writes, per faulty profile x
 adapt-mode cell, a one-row-per-run CSV:
 
     recovery_stereotypes_<true|false><qtable_suffix>.csv
-        DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes
+        DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,
+        SecondaryDetectEpisode,RecoveredGoalRate
 
 where <true> == ql_true (KG-primed) and <false> == ql_false (tabula-rasa).
 RecoveryEpisodes = ReconvergeEpisode - DetectEpisode (lower == faster
 re-alignment after the fault); -1 means "did not re-converge within the budget"
 or a degenerate single-actuator lab (e.g. lab1_f1dead) where the last actuator
-is protected from blacklisting.
+is protected from blacklisting. RecoveredGoalRate (Phase 2.2) is the fraction of
+greedy (epsilon=0) evaluation episodes the FINAL policy reaches the goal in: it
+separates a policy that merely STOPPED CHANGING (stable) from one that actually
+REACHES the goal (goal-reaching).
 
 The headline Phase-2 claim is:  recovery(ql_true) < recovery(ql_false)
 -- the KG prior lets the agent re-align over the surviving components faster
-than a learner that must rediscover structure from scratch.
+than a learner that must rediscover structure from scratch. The recovery-SPEED
+contrast is only WELL-POSED where a deterministic post-fault survivor path
+exists (see _WELL_POSED_RECOVERY); ill-posed cells (lone actuator / sun-gated
+survivor) are reported descriptively and excluded from the recovery BH family,
+but remain in the DETECTION family.
 
 This script:
   * discovers recovery CSVs for every configured faulty profile (root + any
@@ -66,6 +74,22 @@ _ARMS = (("ql_true", "true"), ("ql_false", "false"))
 
 # Metrics compared per profile. Both are "lower is better".
 _METRICS = ("RecoveryEpisodes", "DetectEpisode")
+
+# Cells where a DETERMINISTIC post-fault survivor path exists, so "does KG
+# recover faster?" is a WELL-POSED question: a fixed greedy policy can actually
+# reach the goal after the fault (lab3 keeps the shared Spotlight +150 to both
+# zones plus the cross-zone lamp bleed, reaching rank-3 without relying on the
+# stochastic sun). Only these enter the RecoveryEpisodes BH family. Everywhere
+# else the lone actuator is protected (lab1_f1dead) or the only survivor is the
+# sun-gated blind (lab2_*, lab3_f2*), so a *stable* greedy policy need not be
+# *goal-reaching* and a recovery-SPEED comparison is ill-posed (it previously
+# produced misleading significant "KG slower" rows). Ill-posed cells are still
+# reported descriptively and stay in the DETECTION family.
+_WELL_POSED_RECOVERY = ("lab3_f1dead", "lab3_f1inv")
+
+# Minimum greedy goal-rate (RecoveredGoalRate) for a re-converged policy to
+# count as goal-reaching rather than merely stable.
+_GOAL_REACHING_THRESHOLD = 0.5
 
 
 def load_phase2_config(cfg_path: Path) -> dict:
@@ -120,11 +144,22 @@ def _as_int(row: dict, key: str):
         return None
 
 
+def _as_float(row: dict, key: str):
+    raw = row.get(key)
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return float(str(raw).strip())
+    except ValueError:
+        return None
+
+
 def collect_arm(rows: list[dict]) -> dict:
     """Reduce raw recovery rows into per-arm metric lists + rates."""
     detect_all = [_as_int(r, "DetectEpisode") for r in rows]
     recov_all = [_as_int(r, "ReconvergeEpisode") for r in rows]
     recovery_all = [_as_int(r, "RecoveryEpisodes") for r in rows]
+    goalrate_all = [_as_float(r, "RecoveredGoalRate") for r in rows]
     defects = sorted({(r.get("DefectComponent") or "").strip()
                       for r in rows if (r.get("DefectComponent") or "").strip()})
 
@@ -134,6 +169,15 @@ def collect_arm(rows: list[dict]) -> dict:
     # Re-convergence succeeded when RecoveryEpisodes >= 0 (>=0 implies both
     # detect and reconverge episodes were recorded).
     reconverged = [v for v in recovery_all if v is not None and v >= 0]
+    # Phase 2.2 greedy goal-rate of the FINAL policy (>=0; -1 == not measured).
+    goal_rates = [g for g in goalrate_all if g is not None and g >= 0.0]
+    # Goal-reaching recovery == re-converged AND final greedy policy reaches the
+    # goal at >= threshold (separates "stable" from "stable AND goal-reaching").
+    goal_reaching = [
+        v for v, g in zip(recovery_all, goalrate_all)
+        if v is not None and v >= 0
+        and g is not None and g >= _GOAL_REACHING_THRESHOLD
+    ]
 
     return {
         "n_runs": n_runs,
@@ -146,6 +190,11 @@ def collect_arm(rows: list[dict]) -> dict:
         "detection_rate": (len(detected) / n_runs) if n_runs else float("nan"),
         "reconverge_rate": (len(reconverged) / n_runs) if n_runs else float("nan"),
         "_reconverge_episodes": [v for v in recov_all if v is not None and v >= 0],
+        # Phase 2.2 goal-rate certification.
+        "RecoveredGoalRate": goal_rates,
+        "goal_rate_mean": (sum(goal_rates) / len(goal_rates)) if goal_rates else float("nan"),
+        "n_goal_reaching": len(goal_reaching),
+        "goal_reaching_rate": (len(goal_reaching) / n_runs) if n_runs else float("nan"),
     }
 
 
@@ -158,12 +207,18 @@ def write_ci_table(per_cell: dict, out_dir: Path, iters: int) -> int:
             "mode": mode,
             "n_runs": arm["n_runs"],
             "defect_component": ";".join(arm["defects"]) if arm["defects"] else "",
+            "well_posed_recovery": profile in _WELL_POSED_RECOVERY,
             "detection_rate": round(arm["detection_rate"], 4)
                 if arm["detection_rate"] == arm["detection_rate"] else "",
             "reconverge_rate": round(arm["reconverge_rate"], 4)
                 if arm["reconverge_rate"] == arm["reconverge_rate"] else "",
             "n_detected": arm["n_detected"],
             "n_reconverged": arm["n_reconverged"],
+            "greedy_goal_rate_mean": round(arm["goal_rate_mean"], 4)
+                if arm["goal_rate_mean"] == arm["goal_rate_mean"] else "",
+            "n_goal_reaching": arm["n_goal_reaching"],
+            "goal_reaching_rate": round(arm["goal_reaching_rate"], 4)
+                if arm["goal_reaching_rate"] == arm["goal_reaching_rate"] else "",
         }
         for metric in _METRICS:
             mean, lo, hi = _bootstrap_ci(
@@ -192,7 +247,10 @@ def write_paired_table(per_cell: dict, profiles: list[str],
     Pairs replicas by index (run i of ql_true vs run i of ql_false). mean_diff
     < 0 means ql_true is FASTER (fewer episodes) -- the headline direction.
     Benjamini-Hochberg q-values are computed across the profile family for each
-    metric independently.
+    metric independently. The RecoveryEpisodes family is restricted to
+    well-posed cells (_WELL_POSED_RECOVERY): a recovery-SPEED contrast is only
+    meaningful where a deterministic post-fault survivor path exists. The
+    DetectEpisode family keeps every profile.
     """
     rows: list[dict] = []
     metric_pidx: dict = {}  # metric -> list of (row_idx, p_value)
@@ -200,6 +258,10 @@ def write_paired_table(per_cell: dict, profiles: list[str],
     for metric in _METRICS:
         metric_pidx.setdefault(metric, [])
         for profile in profiles:
+            # Phase 2.2: keep the recovery-SPEED comparison to well-posed cells;
+            # detection latency stays a whole-family comparison.
+            if metric == "RecoveryEpisodes" and profile not in _WELL_POSED_RECOVERY:
+                continue
             ta = per_cell.get((profile, "ql_true"))
             fa = per_cell.get((profile, "ql_false"))
             if not ta or not fa:
@@ -272,11 +334,13 @@ def _fmt(x) -> str:
 
 
 def print_summary(per_cell: dict, profiles: list[str]) -> None:
-    print("\n=== Phase 2 recovery summary (lower = faster) ===")
-    header = f"{'profile':<16}{'arm':<10}{'n':>3}  {'det%':>5} {'recv%':>6}  {'detectEp':>9} {'recovEp':>9}"
+    print("\n=== Phase 2 recovery summary (lower = faster; goal% = greedy goal-rate) ===")
+    header = (f"{'profile':<16}{'arm':<10}{'n':>3}  {'det%':>5} {'recv%':>6} "
+              f"{'goal%':>6}  {'detectEp':>9} {'recovEp':>9}  wp")
     print(header)
     print("-" * len(header))
     for profile in profiles:
+        wp = "Y" if profile in _WELL_POSED_RECOVERY else "-"
         for mode, _bool in _ARMS:
             arm = per_cell.get((profile, mode))
             if not arm:
@@ -285,9 +349,10 @@ def print_summary(per_cell: dict, profiles: list[str]) -> None:
             rec_mean, _, _ = _bootstrap_ci([float(v) for v in arm["RecoveryEpisodes"]])
             det_pct = arm["detection_rate"] * 100 if arm["detection_rate"] == arm["detection_rate"] else float("nan")
             rec_pct = arm["reconverge_rate"] * 100 if arm["reconverge_rate"] == arm["reconverge_rate"] else float("nan")
+            goal_pct = arm["goal_rate_mean"] * 100 if arm["goal_rate_mean"] == arm["goal_rate_mean"] else float("nan")
             print(f"{profile:<16}{mode:<10}{arm['n_runs']:>3}  "
-                  f"{_fmt(det_pct):>5} {_fmt(rec_pct):>6}  "
-                  f"{_fmt(det_mean):>9} {_fmt(rec_mean):>9}")
+                  f"{_fmt(det_pct):>5} {_fmt(rec_pct):>6} {_fmt(goal_pct):>6}  "
+                  f"{_fmt(det_mean):>9} {_fmt(rec_mean):>9}  {wp}")
     print()
 
 

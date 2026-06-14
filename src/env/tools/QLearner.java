@@ -253,6 +253,16 @@ public class QLearner extends Artifact {
     private int[]     faultObsN;       // [nActions] — falsifiable observations of the action
     private int[]     faultDeadN;      // [nActions] — observations with no zone response (dead)
     private int[]     faultInvertN;    // [nActions] — observations with inverted zone response
+    // Phase 2.2 — component-attributable residual guard. When a Causes actuator
+    // is blacklisted its physical state is frozen (e.g. a stuck inverted lamp
+    // that keeps subtracting lux), so the ZONES it feeds no longer carry a
+    // trustworthy baseline for adjudicating a DIFFERENT component. observeForFaults
+    // skips contaminated zones, so a healthy survivor (e.g. the shared Spotlight)
+    // is never blamed for a zone whose baseline is corrupted by a stuck
+    // blacklisted neighbour. This eliminates the lab3_f2inv double-inversion
+    // Spotlight false positive without weakening genuine detection (the culprit
+    // is adjudicated BEFORE it is blacklisted, i.e. before it contaminates).
+    private boolean[] zoneCauseContaminated;  // [nZones] — zone fed by a blacklisted Causes actuator
     // wotActionType of every MEDIATES / IV-gated component (both ON and OFF
     // actions share one wotActionType, but hasIV is only set on the activation
     // action, so this set lets the detector skip BOTH polarities of a blind).
@@ -345,6 +355,7 @@ public class QLearner extends Artifact {
         faultObsN    = new int[nActions];
         faultDeadN   = new int[nActions];
         faultInvertN = new int[nActions];
+        zoneCauseContaminated = new boolean[zoneLevelIndices.length];
         // Map out MEDIATES / IV-gated components so the fault detector can skip
         // BOTH polarities (hasIV is only set on the activation action, but the
         // ON and OFF actions share one wotActionType).
@@ -983,6 +994,11 @@ public class QLearner extends Artifact {
             for (int z = 0; z < zoneLevelIndices.length; z++) {
                 int slot = zoneLevelIndices[z];
                 if (slot < 0 || slot >= before.length) continue;
+                // Phase 2.2: a zone fed by an already-blacklisted Causes actuator
+                // has a frozen/untrustworthy baseline, so a residual there is not
+                // attributable to THIS component — abstain rather than mis-charge.
+                if (zoneCauseContaminated != null && z < zoneCauseContaminated.length
+                        && zoneCauseContaminated[z]) continue;
                 int predD = (slot < pred.length) ? pred[slot] : 0;
                 if (predD == 0) continue;
                 int maxRank = (slot < domainSizes.length) ? domainSizes[slot] - 1 : 3;
@@ -1057,6 +1073,18 @@ public class QLearner extends Artifact {
             removed++;
             LOGGER.warning("blacklistComponent: removed action " + a + " (" + ai.label + ")");
         }
+        // Phase 2.2: the blacklisted component's physical state is now frozen, so
+        // every zone it Causes-feeds is no longer a trustworthy baseline for
+        // adjudicating OTHER components — mark those zones contaminated.
+        if (removed > 0 && zoneCauseContaminated != null) {
+            for (int a = 0; a < nActions; a++) {
+                StereotypeReasoner.ActionInfo ai = actionInfos[a];
+                if (ai == null || ai.wotActionType == null) continue;
+                if (!wotActionType.equals(ai.wotActionType) || ai.affectedZones == null) continue;
+                for (int z : ai.affectedZones)
+                    if (z >= 0 && z < zoneCauseContaminated.length) zoneCauseContaminated[z] = true;
+            }
+        }
         nRemoved.set(removed);
     }
 
@@ -1107,6 +1135,18 @@ public class QLearner extends Artifact {
         //     starts fresh from the warm-restart point (the post-fault baseline).
         recoveryPolicy = null;
         recoveryStableCount = 0;
+        // (7) Phase 2.2 — re-baseline fault evidence (per-component sequential
+        //     isolation). Evidence accumulated while the just-blacklisted
+        //     component was still active is discarded so the NEXT component is
+        //     adjudicated afresh in the reduced action space. This stops a
+        //     corrupted residual (e.g. a stuck inverted lamp depressing a zone)
+        //     from being carried across the isolation boundary and mis-charged
+        //     to a healthy survivor.
+        if (faultObsN != null) {
+            java.util.Arrays.fill(faultObsN, 0);
+            java.util.Arrays.fill(faultDeadN, 0);
+            java.util.Arrays.fill(faultInvertN, 0);
+        }
         LOGGER.warning(String.format(
             "warmRestart: wiped %d action column(s), decayed %d poisoned state(s), "
           + "ε←%.3f, episodeClock←0, convergence reset",
@@ -1142,17 +1182,23 @@ public class QLearner extends Artifact {
      * absent). RecoveryEpisodes = ReconvergeEpisode − DetectEpisode is the
      * headline Phase-2 metric: how many episodes the agent took to re-converge
      * after the fault was detected and the component blacklisted.
+     *
+     * Phase 2.2: {@code recoveredGoalRate} is the fraction of greedy (ε=0)
+     * evaluation episodes the FINAL policy reaches the goal in. It distinguishes
+     * a policy that merely STOPPED CHANGING (stable) from one that actually
+     * REACHES the goal (goal-reaching), closing the stability≠optimality gap.
      */
     @OPERATION
     public void saveRecoveryLog(String filename, int detectEp, int reconvergeEp,
-                                int secondaryDetectEp, String blacklistedLabel) {
+                                int secondaryDetectEp, double recoveredGoalRate,
+                                String blacklistedLabel) {
         boolean exists = new java.io.File(filename).exists();
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename, true))) {
-            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode");
+            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate");
             int rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1;
-            pw.printf("%s,%d,%d,%d,%d%n",
+            pw.printf("%s,%d,%d,%d,%d,%.4f%n",
                 blacklistedLabel == null ? "" : blacklistedLabel,
-                detectEp, reconvergeEp, rec, secondaryDetectEp);
+                detectEp, reconvergeEp, rec, secondaryDetectEp, recoveredGoalRate);
             LOGGER.info("saveRecoveryLog: appended recovery row to " + filename);
         } catch (IOException e) {
             LOGGER.warning("saveRecoveryLog: failed " + filename + " — " + e.getMessage());

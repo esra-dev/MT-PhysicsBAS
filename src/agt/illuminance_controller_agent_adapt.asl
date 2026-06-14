@@ -46,6 +46,13 @@ num_episodes(2000).
 max_steps_per_episode(20).
 action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms simulator tick
 
+// Phase 2.2 — greedy goal-rate certification. After re-learning, run this many
+// ε=0 evaluation episodes to measure whether the FINAL (recovered) policy
+// actually REACHES the goal — not merely that it stopped changing. Distinguishes
+// a *stable* policy from a *goal-reaching* one (a sun-gated / unreachable-goal
+// cell scores low here). Overridable via -Dfault.recover.evalEpisodes.
+greedy_eval_episodes(20).
+
 /* ============================================================
  * Initial Goals
  * ============================================================ */
@@ -178,6 +185,8 @@ action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms s
     !profile_training_params(NumEps, EpDecay);
     tools.jia.system_prop_num("adapt.episodes", NumEps, Budget);
     -+num_episodes(Budget);
+    tools.jia.system_prop_num("fault.recover.evalEpisodes", 20, EvalK);
+    -+greedy_eval_episodes(EvalK);
     setEpsilonDecay(EpDecay)[artifact_id(QlId)];
     setTrainingBudgetEpisodes(Budget)[artifact_id(QlId)];
     .print("[Profile] Re-learn params: num_episodes=", Budget,
@@ -384,15 +393,19 @@ action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms s
     !sx_filename("metrics_adapted_stereotypes_", UseStereotypes, QtSuffix, ".csv", MetricsFile);
     saveMetrics(MetricsFile)[artifact_id(QlId)];
     .print("[Adapt] Adaptation metrics saved to ", MetricsFile);
-    // Recovery metric (DetectEpisode → ReconvergeEpisode).
+    // Phase 2.2: certify the FINAL (recovered) policy by greedy goal-rate — does
+    // a *stable* policy actually REACH the goal? Closes the stability≠goal gap.
+    !certify_recovery(GoalRate);
+    .print("[Adapt] Greedy goal-rate of final policy = ", GoalRate);
+    // Recovery metric (DetectEpisode → ReconvergeEpisode + greedy goal-rate).
     !get_detect_episode(DetectEp);
     !get_reconverge_episode(ReconvergeEp);
     !get_secondary_detect_episode(SecondaryEp);
     !get_defect_label(DefectLabel);
     !sx_filename("recovery_stereotypes_", UseStereotypes, QtSuffix, ".csv", RecoveryFile);
-    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, SecondaryEp, DefectLabel)[artifact_id(QlId)];
+    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, SecondaryEp, GoalRate, DefectLabel)[artifact_id(QlId)];
     .print("[Adapt] Recovery metric saved to ", RecoveryFile,
-           " (detect=", DetectEp, " reconverge=", ReconvergeEp, " secondary=", SecondaryEp, ")");
+           " (detect=", DetectEp, " reconverge=", ReconvergeEp, " secondary=", SecondaryEp, " goalRate=", GoalRate, ")");
     if (not detected(_)) {
         .print("[Adapt] NOTE: no fault was detected within the budget.")
     };
@@ -419,6 +432,67 @@ action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms s
 +!get_defect_label(L) : primary_defect(L) <- true.
 @get_defect_label_miss
 +!get_defect_label("none") <- true.
+
+/* ============================================================
+ * Greedy goal-rate certification (Phase 2.2)
+ *
+ * Runs `greedy_eval_episodes` ε=0 evaluation episodes over the FINAL policy:
+ * no learning, no fault adjudication, pure exploitation of argmax over the
+ * surviving (non-blacklisted) action set. Returns the fraction that REACH the
+ * goal. This certifies that a policy the recovery detector called "stable" is
+ * also *goal-reaching*: a sun-gated / unreachable-goal cell (e.g. lab1_f1dead
+ * with its only lamp dead) will score ~0 here even though its greedy policy
+ * froze, exposing such a "recovery" as a stable-but-futile artefact.
+ * ============================================================ */
+@certify_recovery
++!certify_recovery(GoalRate) <-
+    ?greedy_eval_episodes(K);
+    !greedy_eval_loop(K, 0, 0, Goals);
+    if (K > 0) { GoalRate = Goals / K } else { GoalRate = -1.0 }.
+
+@greedy_eval_loop_done
++!greedy_eval_loop(K, I, Acc, Acc) : I >= K <- true.
+@greedy_eval_loop_step
++!greedy_eval_loop(K, I, Acc, Out) : I < K <-
+    ?lab_artifact(LabId);
+    if (train_scenarios_file(ScFile)) {
+        ?train_scenarios_count(TCount);
+        ScId = (I mod TCount) + 1;
+        setScenarioLabState(ScFile, ScId)[artifact_id(LabId)]
+    } else {
+        setRandomLabState[artifact_id(LabId)]
+    };
+    .wait(250);
+    !greedy_rollout(0, Reached);
+    NewAcc = Acc + Reached;
+    !greedy_eval_loop(K, I + 1, NewAcc, Out).
+
+// One greedy (ε=0) rollout. Reached = 1 if a terminal/goal state is hit within
+// the step budget, else 0. No Q-update and no observeForFaults are run.
+@greedy_rollout
++!greedy_rollout(Step, Reached) <-
+    ?lab_artifact(LabId);
+    ?qlearner_artifact(QlId);
+    ?max_steps_per_episode(MaxSteps);
+    ?action_delay_ms(Delay);
+    readLabStatus(ZL, SR, SK, SV)[artifact_id(LabId)];
+    encodeState(ZL, SR, SK, SV, StateVec)[artifact_id(QlId)];
+    isTerminal(StateVec, Terminal)[artifact_id(QlId)];
+    if (Terminal) {
+        Reached = 1
+    } else {
+        if (Step >= MaxSteps) {
+            Reached = 0
+        } else {
+            getActionFromState(StateVec, false, Action)[artifact_id(QlId)];
+            actionToWoT(Action, WotType, WotValue)[artifact_id(QlId)];
+            if (WotType \== "none") {
+                invokeAction(WotType, WotValue)[artifact_id(LabId)]
+            };
+            .wait(Delay);
+            !greedy_rollout(Step + 1, Reached)
+        }
+    }.
 
 /* ============================================================
  * Failure handling

@@ -319,7 +319,10 @@ jobs:
             seed=$(echo "$name" | sed -nE 's/.*-seed-([0-9]+)$/\1/p')
             if [ -z "$seed" ]; then echo "WARN: no seed in $name"; continue; fi
             mkdir -p "recovery_root/seed${seed}"
-            for f in "${d}"recovery_stereotypes_*.csv; do
+            # recovery_* drives the headline analysis; metrics_adapted_* carries
+            # the per-episode GoalReached series so reviewers can audit that a
+            # "recovered" (stable) policy is also goal-reaching (Phase 2.2).
+            for f in "${d}"recovery_stereotypes_*.csv "${d}"metrics_adapted_stereotypes_*.csv; do
               [ -e "$f" ] || continue
               cp -n "$f" "recovery_root/seed${seed}/" 2>/dev/null || true
             done
