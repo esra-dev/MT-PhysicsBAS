@@ -272,6 +272,13 @@ public class QLearner extends Artifact {
     private static final double FAULT_INV_RATE     = parseDoubleProp("fault.detect.invRate",     0.60);
     private static final double FAULT_ANOMALY_RATE = parseDoubleProp("fault.detect.anomalyRate", 0.75);
     private static final double FAULT_EPS_BOOST    = parseDoubleProp("fault.relearn.epsBoost",   0.30);
+    // Phase 2.2 — minimum dead+inverted observations for an actuator to count as
+    // a fault SUSPECT that can mask a co-located healthy actuator's zone response
+    // (primary-detection-time component attribution). Set far below
+    // FAULT_MIN_SAMPLES so a genuine fault is recognised as "suspect" — and its
+    // masking effect discounted — well before the neighbour it corrupts could be
+    // mis-flagged.
+    private static final int    FAULT_SUSPECT_MIN  = parseIntProp   ("fault.detect.suspectMin",   3);
 
     // Phase 2.1 — policy-stability recovery detector (adapt regime).
     // "Recovered" = the greedy policy (jointArgmax over surviving, non-blacklisted
@@ -1004,10 +1011,36 @@ public class QLearner extends Artifact {
                 int maxRank = (slot < domainSizes.length) ? domainSizes[slot] - 1 : 3;
                 if (predD > 0 && before[slot] >= maxRank) continue; // can't rise — not falsifiable
                 if (predD < 0 && before[slot] <= 0)       continue; // can't fall — not falsifiable
-                claimed++;
                 int obsD = after[slot] - before[slot];
-                if (obsD == 0) noResp++;
-                else if ((long) obsD * (long) predD < 0L) opp++;
+                if (obsD != 0 && (long) obsD * (long) predD < 0L) {
+                    // OPPOSITE-sign response — an INVERTED actuator. Trustworthy
+                    // even in a cross-coupled lab: only the toggled actuator
+                    // changed this step, so its own contribution sets the sign.
+                    // This evidence is NEVER gated (see below).
+                    claimed++;
+                    opp++;
+                } else if (obsD == 0) {
+                    // NO rank response. Before charging THIS component with a
+                    // dead/no-response, check whether a DIFFERENT, fault-suspect
+                    // actuator co-feeds this zone: two inverted lamps can hold a
+                    // shared zone at the rank FLOOR so a healthy Spotlight's +lux
+                    // can no longer lift the discretised rank, which looks like a
+                    // dead Spotlight. When such a suspect co-feeder exists the null
+                    // response is NOT attributable to this component, so abstain.
+                    // This is the primary-detection-time component-attribution rule
+                    // that removes the lab3_f2inv healthy-Spotlight false positive
+                    // (the culprit lamps become "suspect" via their own opp evidence
+                    // long before the Spotlight reaches FAULT_MIN_SAMPLES). It does
+                    // NOT weaken real detection: inverted faults are caught by the
+                    // ungated opp branch above, and a silently-dropped command is
+                    // caught earlier by the bit-level check.
+                    if (zoneHasSuspectCoFeeder(z, actionIdx)) continue;
+                    claimed++;
+                    noResp++;
+                } else {
+                    // Correct-direction response — a healthy, falsifiable claim.
+                    claimed++;
+                }
             }
             if (claimed > 0) {
                 if (opp > 0) inverted = true;
@@ -1037,6 +1070,44 @@ public class QLearner extends Artifact {
                 ai.wotActionType, actionIdx, ai.label,
                 faultObsN[actionIdx], deadRate, invRate, anomalyRate));
         }
+    }
+
+    /**
+     * Phase 2.2 — is action {@code b} currently carrying enough dead/inverted
+     * evidence to be treated as a fault SUSPECT? This is a deliberately EARLY,
+     * low-threshold signal (at least {@code FAULT_SUSPECT_MIN} anomalous
+     * observations that also form the majority of its falsifiable observations),
+     * well below the {@code FAULT_MIN_SAMPLES} bar required to actually flag a
+     * defect, so a real fault is recognised — and its masking effect on a shared
+     * zone discounted — before the neighbour it is corrupting can be mis-flagged.
+     */
+    private boolean isFaultSuspect(int b) {
+        if (faultObsN == null || b < 0 || b >= faultObsN.length) return false;
+        int anom = faultDeadN[b] + faultInvertN[b];
+        return anom >= FAULT_SUSPECT_MIN && anom * 2 >= faultObsN[b];
+    }
+
+    /**
+     * Phase 2.2 — does any actuator OTHER than {@code selfAction}'s component
+     * structurally feed {@code zone} AND currently look fault-suspect? Used to
+     * abstain on a zone's no-response evidence when a faulty neighbour may be
+     * masking it (component-attributable adjudication). Co-feeders are matched on
+     * the static {@code affectedZones} coupling; both the ON and OFF actions of
+     * the component under test are excluded via their shared wotActionType.
+     */
+    private boolean zoneHasSuspectCoFeeder(int zone, int selfAction) {
+        StereotypeReasoner.ActionInfo self =
+            (selfAction >= 0 && selfAction < nActions) ? actionInfos[selfAction] : null;
+        String selfType = (self != null) ? self.wotActionType : null;
+        for (int b = 0; b < nActions; b++) {
+            if (b == selfAction) continue;
+            StereotypeReasoner.ActionInfo bi = actionInfos[b];
+            if (bi == null || bi.wotActionType == null) continue;
+            if (selfType != null && selfType.equals(bi.wotActionType)) continue; // same component
+            if (bi.affectedZones == null || !bi.affectedZones.contains(zone)) continue;
+            if (isFaultSuspect(b)) return true;
+        }
+        return false;
     }
 
     /**
