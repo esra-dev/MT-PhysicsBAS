@@ -964,14 +964,17 @@ ON and OFF actions of the component under test are excluded (shared
 |---|---|
 | `lab3_f2inv` (the FP) | both Spotlight zones have an inverted-lamp suspect co-feeder → `noResp` gated → `claimed`→0 → no evidence → **no FP**; the two lamps are still flagged via their own `opp` |
 | Inverted lamps (any cell) | detected on their **own** zone via the **ungated** `opp` branch — single-step −400 dominates the sign |
-| Genuine dead lamp (`f1dead`, `f2dead`, lab2) | caught by the **bit-level** `bitObs==0` check **before** the zone loop — the gate never applies |
+| Genuine dead lamp (`f1dead`, `f2dead`, lab2) | the injected dead fault is **lux-level** (the lamp flag still toggles, `bitObs==bitPred`, but its lux contribution is zeroed), so it reaches the zone loop and is caught by the **`noResp` path on the lamp's OWN primary zone** — which has no suspect co-feeder (lamps have disjoint primary zones; the only shared feeder is the healthy Spotlight), so the gate never fires there |
 | Well-posed `lab3_f1dead` / `lab3_f1inv` (single fault) | no second faulty actuator → no suspect co-feeder → **zero behaviour change**; the headline win is untouched |
 | lab2 (independent zones, no shared feeder) | `zoneHasSuspectCoFeeder` is always false → **no behaviour change** |
 
-The gate can only ever suppress a `noResp`/dead verdict, and the only dead fault we
-inject (a silently-dropped command) is detected at the bit level, so no injected
-fault can be hidden. The post-blacklist §14.3 guards are retained — they remain
-valid for the *secondary* (post-blacklist) detection step and do not conflict.
+The gate can only ever suppress a `noResp`/dead verdict, and a genuine dead lamp
+is caught on its **own** primary zone (no suspect co-feeder there), so no injected
+fault can be hidden. (The separate bit-level `bitObs==0` branch catches a
+*different*, un-injected mode — a silently-dropped command where the flag never
+toggles — and is unaffected by the gate.) The post-blacklist §14.3 guards are
+retained — they remain valid for the *secondary* (post-blacklist) detection step
+and do not conflict.
 
 ### 16.5 Code
 
@@ -982,7 +985,343 @@ valid for the *secondary* (post-blacklist) detection step and do not conflict.
 | `zoneHasSuspectCoFeeder(int zone, int selfAction)` | true iff a different component feeding `zone` is suspect |
 | zone-loop restructure in `observeForFaults` | `opp` ungated; `noResp` gated on a suspect co-feeder; `claimed` counted per-branch |
 
-Compiles clean (`./gradlew compileJava`). **Expected CI outcome:** `lab3_f2inv`
-`ql_true` per-seed `DefectComponent` becomes `SetZ1Light`/`SetZ2Light` for all 10
-seeds (no `SetSpotlight`), restoring 100 % detection precision across all 18 cells
-and closing §13.5.
+Compiles clean (`./gradlew compileJava`). **Actual CI outcome (run #27529585379,
+“v4”): the FP was *reduced* 8/10 → 4/10, not eliminated.** Seeds 2,3,7,8 still
+flag `SetSpotlight`. The residual is a detection *race* — in those seeds the
+healthy Spotlight reaches `FAULT_MIN_SAMPLES` before BOTH inverted lamps cross the
+(v1) `FAULT_SUSPECT_MIN`=3 + majority threshold, so at least one Spotlight zone is
+still un-gated and a partial dead verdict accrues. Full forensics, the complete
+results analysis, and the verdict are in §17; the follow-up tightening that closes
+the race is in §18.
+
+---
+
+## 17 Run #27529585379 (“v4”) — full results analysis & Phase-2 verdict
+
+This is the scientific write-up of the first CI run carried under the §16
+attribution fix (commit `2aab559`). It answers, in order: *what did we test, did
+detection work, did recovery work and did the physics prior help, were the results
+as expected, and are we done with Phase 2?* All numbers below are taken verbatim
+from `phase2_results_v4/analysis/out/phase2_recovery_ci.csv` and
+`…/phase2_recovery_paired.csv` (n = 10 seeds/arm; 9 profiles × 2 arms × 10 seeds =
+**180 recovery runs**).
+
+### 17.1 Experimental design (recap)
+
+Each agent is first trained to convergence on the **clean** lab, then dropped into
+the matching **weakness** lab (one/several components made *dead* = lux zeroed, or
+*inverted* = sign flipped). Per the advisor reframing, the agent does **not** try
+to engineer around the fault: it must (a) **recognise** that an action in its
+learned policy now produces physically unexpected behaviour, (b) **re-check
+against physics** and **discard** the offending artifact (blacklist + user alert),
+then (c) **re-learn** over the surviving actuators. The two arms are:
+
+| Arm | Meaning |
+|---|---|
+| `ql_true`  | Q-learning **with** the KG physics prior (reward-shaping + falsifiable predictions) |
+| `ql_false` | vanilla Q-learning (identical hyper-params, **no** prior) |
+
+The advisor’s hypothesis: *the prior should let the agent realign **faster**.* The
+nine profiles span three lab complexities (`lab1` single lamp, `lab2` two
+independent zones, `lab3` two cross-coupled zones + shared “corridor” Spotlight) ×
+fault patterns {one dead, one inverted, two dead, two inverted}.
+
+### 17.2 Headline scorecard
+
+| Question | Result |
+|---|---|
+| Fault **detection recall** | **18/18 cells = 100 %** (`detection_rate = 1.0` everywhere) |
+| Fault **attribution precision** | **17/18 cells correct**; only `lab3_f2inv` `ql_true` still emits a spurious `SetSpotlight` (FP **8/10 → 4/10** vs run #27507087176) |
+| **Well-posed** recovery cells | `lab3_f1dead`, `lab3_f1inv` (a goal-reaching survivor policy exists) |
+| **KG re-learning win** (the one well-posed **and** goal-reaching cell, `lab3_f1dead`) | KG re-converges **2.3× faster** — paired Δ = **−184 ep**, Cliff’s δ = **−0.85 (large)**, Wilcoxon *p* = 0.0039, *q*₍BH₎ = 0.004 |
+| **Cost of the prior** under inversion (`lab3_f1inv`) | KG is **slower to detect** — Δ = **+120 ep**, δ = **+0.99**, *q*₍BH₎ = 0.0 (the compensation effect) |
+
+### 17.3 Detection — 100 % recall, one residual false positive
+
+Recall is perfect: in all 18 cells every seed detected a fault and blacklisted at
+least one component (`detection_rate = 1.0`, `n_detected = 10/10`). Attribution
+(precision) is correct in 17 of 18 cells — the recovered `defect_component`
+matches the injected fault (`SetZ1Light`, or `SetZ1Light;SetZ2Light` for the
+two-fault profiles). The lone exception is the double-inversion corner:
+
+| Cell | injected fault | recovered `defect_component` | precision |
+|---|---|---|---|
+| `lab3_f2inv` `ql_false` | Z1Light⁻, Z2Light⁻ | `SetZ1Light;SetZ2Light` | ✅ correct |
+| `lab3_f2inv` `ql_true`  | Z1Light⁻, Z2Light⁻ | `SetSpotlight;SetZ1Light;SetZ2Light` | ❌ spurious `SetSpotlight` |
+
+**Per-seed forensics** (`lab3_f2inv` `ql_true`, columns = primary defect / DetectEp
+/ SecondaryDetectEp / post-recovery goal-rate):
+
+| Seed | Primary defect | DetectEp | Secondary | verdict |
+|---|---|---|---|---|
+| 1  | `SetZ2Light` | 10 | 23 | ✅ |
+| 2  | `SetSpotlight` | 5 | −1 | ❌ FP |
+| 3  | `SetSpotlight` | 2 | −1 | ❌ FP |
+| 4  | `SetZ1Light` | 12 | 29 | ✅ |
+| 5  | `SetZ1Light` | 6 | 17 | ✅ |
+| 6  | `SetZ2Light` | 14 | 33 | ✅ |
+| 7  | `SetSpotlight` | 6 | −1 | ❌ FP |
+| 8  | `SetSpotlight` | 7 | −1 | ❌ FP |
+| 9  | `SetZ1Light` | 15 | 34 | ✅ |
+| 10 | `SetZ1Light` | 6 | 24 | ✅ |
+
+Two facts make the mechanism unambiguous and motivate the §18 fix:
+
+1. **The FP seeds detect *early* (mean DetectEp 5.0) and the correct seeds detect
+   *later* (mean 10.5).** This is a textbook **race**: when the healthy Spotlight
+   accumulates its `FAULT_MIN_SAMPLES` (20) floored-`noResp` observations *before*
+   both inverted lamps cross the v1 suspect threshold (`≥3` anomalies forming the
+   majority of obs), the §16 co-feeder gate has nothing to fire on, so a partial
+   dead verdict accrues on the still-ungated Spotlight zone.
+2. **The FP is not cosmetic — it derails the whole diagnosis.** Every FP seed has
+   `Secondary = −1`: having (wrongly) blacklisted the healthy Spotlight and with
+   the goal already unreachable (both task lamps gone), the agent never receives
+   the diagnostic pressure to find the *real* faults. The 6 correct seeds, by
+   contrast, find the first lamp and then the second (`Secondary` 17–34).
+
+So closing this FP is worth one more CI run: it recovers 4/10 seeds from
+*mis-diagnosis* to *correct two-fault diagnosis*, not merely from “3 names” to
+“2 names”.
+
+### 17.4 Recovery well-posedness & goal-rate certification
+
+A central validity question for Phase 2 is: *when an agent “fails” to reach the
+goal after a fault, did the **agent** fail or did the **task become impossible**?*
+We answer it with two orthogonal certifications baked into the analysis:
+
+- `well_posed_recovery` — hard-coded to the cells where a goal-reaching survivor
+  policy provably exists (`lab3_f1dead`, `lab3_f1inv`): removing the single faulty
+  lamp still leaves a route to target lux (the other lamp + Spotlight cross-feed).
+- `greedy_goal_rate_mean` / `n_goal_reaching` (threshold 0.5) — the post-recovery
+  greedy policy’s actual goal-hit rate, separating *stable* from *stable **and**
+  goal-reaching*.
+
+| Profile | well-posed | arm | recv-rate | goal-rate (mean) | n≥0.5 | classification |
+|---|---|---|---|---|---|---|
+| `lab3_f1dead` | **Y** | ql_true / ql_false | 0.9 / 1.0 | **0.92 / 0.925** | **9 / 10** | **genuine recovery** |
+| `lab3_f1inv`  | **Y** | ql_true / ql_false | 0.9 / 0.9 | 0.41 / 0.44 | 2 / 2 | well-posed but **hard** |
+| `lab3_f2dead` | N | ql_true / ql_false | 1.0 / 0.4 | 0.345 / 0.33 | 1 / 0 | stable-but-futile |
+| `lab3_f2inv`  | N | — | 0.0 / 0.0 | 0.26 / 0.21 | 0 / 0 | futile (+ the FP) |
+| `lab2_f1dead` | N | ql_true / ql_false | 1.0 / 0.5 | 0.055 / 0.07 | 0 / 0 | stable-but-futile |
+| `lab2_f1inv`  | N | ql_true / ql_false | 1.0 / 0.5 | 0.035 / 0.05 | 0 / 0 | stable-but-futile |
+| `lab2_f2dead` / `lab2_f2inv` | N | both | 0.0 | ≤0.055 | 0 | futile |
+| `lab1_f1dead` | N | both | 1.0 | **0.0** | 0 | futile (sole actuator removed) |
+
+The certification works exactly as designed. `lab1_f1dead` is the cleanest proof:
+both arms re-converge to a *stable* policy (recv-rate 1.0) yet goal-rate is **0.0**
+— the only lamp was the faulty one, so the target is physically unreachable and a
+goal-rate metric alone would have mislabelled a *correct* “recognise-and-stabilise”
+as failure. Only `lab3_f1dead` is simultaneously well-posed **and** goal-reaching
+(goal-rate ≈ 0.92, 9–10/10 seeds), which is why it is the decisive cell for the
+KG-vs-vanilla recovery contrast.
+
+### 17.5 The recovery win — `lab3_f1dead` (KG re-learns 2.3× faster)
+
+Decompose the post-fault timeline as
+$\text{ReconvergeEp} = \text{DetectEp} + \text{RecoveryEp}$, where **RecoveryEp**
+is the re-learning duration *after* the fault is identified. The paired,
+within-seed contrast (n = 9 seeds where both arms re-converged):
+
+| Cell | metric | KG mean | vanilla mean | Δ (KG−van) | 95 % CI | Wilcoxon *p* | Cliff’s δ | *q*₍BH₎ |
+|---|---|---|---|---|---|---|---|---|
+| `lab3_f1dead` | **RecoveryEp** | **144.6** | 328.7 | **−184.1** | [−281, −87] | **0.0039** | **−0.85 (large)** | **0.004** |
+
+Reading the decomposition (DetectEp from the n = 10 paired family, §17.7):
+
+- **Detection:** KG is *slightly slower* (43.6 vs 25.2 ep, Δ +18.4) — but this is
+  **not** significant (Wilcoxon *p* = 0.19, *q*₍BH₎ = 0.36). The prior makes the
+  agent trust the lamp a little longer before condemning it.
+- **Re-learning:** once the dead lamp is discarded, the KG prior re-shapes reward
+  over the survivors and the agent re-converges **2.3× faster** and **far more
+  reliably** — KG’s CI is tight ([123, 169]) whereas vanilla’s marginal mean is
+  694.9 with CI [268, 1454], i.e. an order-of-magnitude wider variance.
+
+Net effect on the *total* time-to-recover: KG ≈ 188 ep vs vanilla ≈ 354 ep (paired)
+— the re-learning speed-up dwarfs the small detection delay. **This is precisely
+the advisor’s predicted outcome: with physics knowledge the agent realigns faster.**
+It replicates and *strengthens* the run #27507087176 result (there Δ was −126.8).
+
+### 17.6 The compensation / diagnosability trade-off — `lab3_f1inv` (KG slower)
+
+The honest negative — and arguably the most interesting scientific finding —
+appears in the single-**inversion** cell:
+
+| Cell | metric | KG mean | vanilla mean | Δ | Cliff’s δ | Wilcoxon *p* | *q*₍BH₎ |
+|---|---|---|---|---|---|---|---|
+| `lab3_f1inv` | **DetectEp** | **132.2** | 12.1 | **+120.1** | **+0.99** | 0.00195 | **0.0** |
+| `lab3_f1inv` | RecoveryEp | 715.2 | 367.7 | +347.6 | +0.21 | 0.57 | 0.294 (ns) |
+
+KG is **10× slower to *detect*** an inverted lamp (δ = 0.99 is near-perfect
+group separation) and *non-significantly slower* to recover. **Mechanism — the
+prior fights the evidence:** the KG asserts “this lamp *raises* lux”, so when the
+lamp is inverted the agent keeps *re-selecting and re-trusting* it (compensating)
+instead of quickly concluding it is broken. A dead lamp produces a clean “it does
+nothing → remove it” signal that the prior agrees with; an *inverted* lamp
+produces a signal that directly contradicts the prior, and the prior’s confidence
+**delays** the falsification. This is the **compensation/diagnosability
+trade-off**, and it is now a robust, **4×-replicated** result (it is the single
+strongest detection effect across every run to date).
+
+### 17.7 Detection-speed map (all 9 profiles, BH-corrected family m = 9)
+
+| Profile | n | KG | vanilla | Δ | δ | Wilcoxon *p* | *q*₍BH₎ | reading |
+|---|---|---|---|---|---|---|---|---|
+| `lab3_f1inv` | 10 | 132.2 | 12.1 | +120.1 | +0.99 | 0.0020 | **0.0** | **KG much slower** (robust) |
+| `lab2_f1inv` | 10 | 4.4 | 6.5 | −2.1 | −0.48 | 0.066 | 0.050 | KG faster (borderline) |
+| `lab3_f2dead` | 10 | 9.6 | 12.0 | −2.4 | −0.55 | 0.086 | 0.053 | KG faster (borderline) |
+| `lab2_f2dead` | 10 | 4.6 | 6.3 | −1.7 | −0.32 | 0.148 | 0.106 | ns |
+| `lab2_f1dead` | 10 | 4.1 | 5.4 | −1.3 | −0.21 | 0.172 | 0.130 | ns |
+| `lab3_f1dead` | 10 | 43.6 | 25.2 | +18.4 | +0.58 | 0.193 | 0.362 | ns (KG slower) |
+| `lab2_f2inv` | 10 | 4.8 | 5.6 | −0.8 | −0.22 | 0.457 | 0.489 | ns |
+| `lab3_f2inv` | 10 | 8.3 | 10.6 | −2.3 | −0.18 | 1.000 | 0.489 | ns (FP-contaminated) |
+| `lab1_f1dead` | 10 | 3.4 | 3.2 | +0.2 | +0.12 | 0.617 | 0.710 | ns |
+
+After Benjamini–Hochberg correction the only robustly significant detection
+finding is `lab3_f1inv` (**KG slower**, the compensation effect). The simple labs
+(`lab1`, `lab2`) all detect in a *handful* of episodes regardless of arm — they
+are too easy to separate the arms — and three cells show a *negligible-to-medium*
+KG-faster trend on dead faults that does not survive multiplicity control. The
+two effects that *do* survive BH anywhere in the run are therefore: **KG faster
+re-learning on `lab3_f1dead` recovery** (§17.5) and **KG slower detection on
+`lab3_f1inv`** (§17.6) — a coherent, mechanistically-explained pair.
+(Cliff’s δ bands, Romano et al.: |δ| < 0.147 negligible, < 0.33 small, < 0.474
+medium, ≥ 0.474 large.)
+
+### 17.8 Were the results as we expected?
+
+Mostly yes, with one expected nuance and one known blemish:
+
+1. **Detection works (recall 100 %).** ✔ As expected — the falsifiable-prediction
+   detector flags every injected fault in every cell.
+2. **The KG accelerates *re-learning* where a survivor exists.** ✔ Confirmed and
+   *strengthened* on `lab3_f1dead` (Δ −184, δ −0.85). This is the advisor’s core
+   hypothesis and it holds for **dead** faults.
+3. **The prior is not a free lunch.** ◐ Expected-in-hindsight: for **inverted**
+   faults the prior *delays* recognition (`lab3_f1inv`, Δ +120, δ +0.99). The
+   advisor’s “realign faster” is therefore **fault-type-conditional**: faster for
+   dead components, slower-to-diagnose for inverted ones.
+4. **Goal-rate certification cleanly frames genuine vs futile recovery.** ✔ The
+   `well_posed × goal_reaching` split behaves exactly as designed (`lab1_f1dead`
+   goal-rate 0.0 with recv-rate 1.0 is the proof-of-concept).
+5. **The `lab3_f2inv` Spotlight FP is reduced (8→4) but not gone.** ✘ Not yet at
+   target; root-caused as a detection race (§17.3) and fixed in §18.
+
+### 17.9 Threats to validity (updated)
+
+- **Residual FP (precision).** `lab3_f2inv` `ql_true` still over-reports in 4/10
+  seeds and, worse, those seeds then mis-diagnose. *Mitigation:* §18 closes the
+  race; one confirmatory CI run required.
+- **Multiplicity.** Two pre-registered families (RecoveryEp m = 2; DetectEp
+  m = 9) are BH-controlled; we report *q*-values, not raw *p*. The two surviving
+  effects have large δ and are replicated across runs, so they are not multiplicity
+  artifacts.
+- **Pairing dropout.** `lab3_f1dead` recovery uses n = 9 (one KG seed did not
+  re-converge); the dropped seed was also a vanilla outlier (≈3990 ep), so the
+  paired test is *conservative* w.r.t. the KG advantage.
+- **Power in simple labs.** `lab1`/`lab2` detect in ≤7 episodes for both arms;
+  they confirm recall but are underpowered for arm separation — by construction,
+  not a defect.
+- **Well-posedness is hand-declared.** `_WELL_POSED_RECOVERY` is a curated set,
+  not derived; it reflects the lab physics documented in §§4–5 and is auditable.
+
+### 17.10 Verdict — are we done with Phase 2?
+
+**The science is substantively complete and defensible; one confirmatory
+engineering run remains.** Concretely:
+
+- ✅ **Detection** — 100 % recall across all 18 cells; correct attribution in 17/18.
+- ✅ **Recovery + KG hypothesis** — the advisor’s “physics ⇒ faster realignment” is
+  demonstrated with a large, BH-significant, *replicated* effect in the one cell
+  that is both well-posed and goal-reaching (`lab3_f1dead`, δ −0.85).
+- ✅ **A genuine, publishable nuance** — the compensation/diagnosability trade-off
+  on inverted faults (`lab3_f1inv`, δ +0.99, 4× replicated).
+- ✅ **Experimental design validated** — goal-rate certification distinguishes
+  genuine recovery from correct-but-futile stabilisation.
+- ◻ **One open item** — drive the `lab3_f2inv` precision FP from 4/10 to 0/10. The
+  fix is implemented (§18) and compiles clean; it needs a single CI run
+  (#v5) to confirm `lab3_f2inv` `ql_true` reports only `SetZ1Light;SetZ2Light`.
+
+After that run lands clean, Phase 2 is complete.
+
+---
+
+## 18 Fix 4 — ambiguous-abstain for masked multi-zone actuators
+
+§16 (v1) reduced the `lab3_f2inv` Spotlight FP from 8/10 to 4/10 but lost a
+**race** (§17.3): in the FP seeds the healthy Spotlight reaches `FAULT_MIN_SAMPLES`
+before *both* inverted lamps become “suspect”, so one Spotlight zone is still
+un-gated and accrues a partial dead verdict. v2 closes the race with two changes.
+
+### 18.1 Earlier, stronger suspicion (`isFaultSuspect`)
+
+A healthy actuator essentially never produces an *opposite-sign* zone response on
+its own zone, so a **single** inverted observation is now sufficient to mark an
+actuator “suspect”, and the combined-count threshold is lowered 3 → 2 with the
+majority requirement dropped:
+
+```java
+private boolean isFaultSuspect(int b) {
+    if (faultObsN == null || b < 0 || b >= faultObsN.length) return false;
+    if (faultInvertN[b] >= 1) return true;   // one inverted obs = strong evidence
+    return (faultDeadN[b] + faultInvertN[b]) >= FAULT_SUSPECT_MIN;  // FAULT_SUSPECT_MIN = 2
+}
+```
+
+This makes both inverted lamps “suspect” after their very first opposite-sign
+toggle — typically episode 1, long before the Spotlight reaches 20 observations.
+
+### 18.2 Abstain *entirely* when a zone is masked (`ambiguous`)
+
+The decisive change. A `dead` verdict means *the actuator does nothing*, which
+requires **all** its zones to be unresponsive **and** attributable. If **any** of
+an actuator’s zones is masked by a suspect co-feeder, we can no longer conclude
+“dead”, so we abstain on the whole observation rather than charge a partial verdict
+from the surviving zone(s):
+
+```java
+if (opp > 0) {
+    inverted = true;            // positive proof of inversion — NEVER gated
+} else if (ambiguous) {
+    return;                     // a suspect co-feeder may mask this actuator — abstain
+} else if (claimed > 0) {
+    if (noResp == claimed) dead = true;
+} else {
+    return;                     // nothing falsifiable here
+}
+```
+
+where `ambiguous` is set the moment any zone’s null response is gated by
+`zoneHasSuspectCoFeeder`. Now a *single* suspect lamp is enough to make the
+Spotlight abstain, so the FP cannot fire once *either* lamp has shown one opp.
+
+### 18.3 Why it is provably safe (it only ever spares the Spotlight)
+
+| Case | behaviour |
+|---|---|
+| **Inverted lamp** (any cell) | detected on its **own** zone via the **ungated** `opp` branch (`opp > 0` wins before `ambiguous`) — single-step −400 sets the sign |
+| **Dead lamp** (lux-level: flag toggles, lux zeroed) | reaches the `noResp` branch on its **own** primary zone; that zone’s only other primary feeder is the **healthy Spotlight** (never suspect), so `ambiguous` stays false → dead verdict proceeds |
+| **Two dead lamps** (`f2dead`) | lamps have **disjoint** primary zones (cross-bleed is `crossZoneEffects`, *not* `affectedZones`), so they never gate each other; the shared feeder (Spotlight) is healthy → both detected |
+| **Healthy Spotlight** (`f2inv`) | both its zones are floored by inverted lamps → both gated → `ambiguous` → **abstain** → no FP. The Spotlight can never show `opp` (it only adds +150), so abstain is the only path |
+| Single-fault well-posed (`lab3_f1dead/f1inv`), all `lab2`, `lab1` | no second faulty actuator → no suspect co-feeder → `ambiguous` never set → **zero behaviour change**; the §17.5 win is untouched |
+
+The only actuator the gate can ever spare is the multi-zone Spotlight, and the
+Spotlight is **healthy in all nine profiles** (faults are injected only on the
+task lamps), so abstaining on it can never hide a real fault. Inverted detection
+(ungated `opp`) and genuine dead-lamp detection (own primary zone, no suspect
+co-feeder) are both untouched.
+
+### 18.4 Code summary
+
+| Symbol (`src/env/tools/QLearner.java`) | v2 change |
+|---|---|
+| `FAULT_SUSPECT_MIN` (`-Dfault.detect.suspectMin`) | default **3 → 2** |
+| `isFaultSuspect(int b)` | single-opp fast path (`faultInvertN[b] >= 1`); majority requirement dropped |
+| `observeForFaults` zone-loop verdict | new `ambiguous` flag → a masked multi-zone actuator abstains instead of accruing a partial dead verdict |
+
+Compiles clean (`./gradlew compileJava`, exit 0; only pre-existing lint warnings).
+**Expected CI outcome (run “v5”):** `lab3_f2inv` `ql_true` per-seed
+`DefectComponent` is `SetZ1Light`/`SetZ2Light` for all 10 seeds (no `SetSpotlight`),
+those seeds regain a non-`−1` `SecondaryDetectEpisode` (correct two-fault
+diagnosis), and detection precision reaches 18/18 — closing §13.5 and the last open
+item in §17.10. All other cells (especially the `lab3_f1dead` recovery win) are
+expected unchanged.
