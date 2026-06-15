@@ -256,6 +256,22 @@ jobs:
           merge-multiple: true
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+      - name: Warm Gradle deps (retry on JitPack flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
       - name: Regenerate faulty Node-RED flows (deterministic from clean flows)
         shell: pwsh
         run: |
@@ -290,6 +306,10 @@ jobs:
   aggregate:
     name: Aggregate recovery & publish
     needs: adapt
+    # Aggregate whatever artefacts exist even if a single adapt leg flaked
+    # (e.g. a transient JitPack timeout). The reconstruct + analysis steps
+    # already tolerate missing seeds, so one bad cell never blocks the run.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
