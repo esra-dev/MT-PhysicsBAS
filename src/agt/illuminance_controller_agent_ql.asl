@@ -46,7 +46,7 @@ use_stereotypes(true).
 // Goal zone_goal/1 is derived at startup from zone_targets/N in the active profile.
 
 // Training parameters
-num_episodes(50).
+num_episodes(3000).
 max_steps_per_episode(20).
 // S4-5 (audit-step-4): raised from 65 ms to 250 ms to exceed the Node-RED
 // simulator's 200 ms tick. Previously the value contradicted its own
@@ -54,7 +54,7 @@ max_steps_per_episode(20).
 // the Q-update credit assignment toward the prior (rather than the
 // post-action) state. 250 ms = one full tick + safety margin.
 action_delay_ms(65).     // delay between actions during training (ms) — must exceed 200 ms simulator tick
-exec_delay_ms(65).       // delay between actions during execution (ms)
+exec_delay_ms(100).       // delay between actions during execution (ms)
 
 exec_max_steps(20).
 

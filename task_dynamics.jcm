@@ -1,0 +1,25 @@
+/*
+  MT-Esra: Phase 3 Process-Dynamics Illuminance Controller Agent
+
+  JaCaMo Project File — response-delay learning variant.
+
+  To run: ./gradlew taskDynamics -Pprofile=lab2_slow -Pmode=ql_true
+          (while the matching SLOW Node-RED simulator flow is running:
+           lab2_slow -> port 1895, lab3_slow -> port 1896)
+
+  The agent does NOT train a Q-table. It probes every actuator to learn its
+  response delay (fast task lamp ~0 ticks; slow motorized blind ~12 ticks),
+  writes the learned ws:responseDelay back to the Knowledge Graph, and then
+  exploits that knowledge to satisfy time-bounded goals ("reach the target
+  illuminance within D seconds").
+
+  Planner mode:
+    -Pmode=ql_true   KG-primed   — uses the learned per-actuator delay.
+    -Pmode=ql_false  tabula-rasa — assumes zero delay (no dynamics knowledge).
+*/
+
+mas lab_dynamics {
+
+    agent illuminance_controller_agent_dynamics
+
+}

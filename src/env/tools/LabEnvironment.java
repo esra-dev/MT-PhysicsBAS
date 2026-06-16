@@ -395,6 +395,67 @@ public class LabEnvironment extends Artifact {
     }
 
     /**
+     * Timed status read for Phase-3 response-dynamics probing.
+     *
+     * Identical discretisation to {@link #readLabStatus} for the zone
+     * illuminance ranks and the shared sunshine rank, but instead of the
+     * boolean state vector it returns the simulator's monotonically
+     * increasing {@code Tick} counter. The dynamics agent samples the tick
+     * once a baseline has settled, dispatches a single actuator command, then
+     * polls this operation until the target zone reaches the desired rank;
+     * the difference in tick values is the measured response delay (in
+     * environment ticks), later scaled to seconds via {@code seconds_per_tick}.
+     *
+     * If the simulator does not publish a {@code Tick} key (e.g. a Phase-1/2
+     * flow), {@code tick} is set to -1 so the caller can detect the absence.
+     *
+     * @param zoneLevels   Output: Integer[] of per-zone illuminance ranks,
+     *                     ordered by ascending zone index.
+     * @param sunshineRank Output: shared sunshine rank (0–3).
+     * @param tick         Output: current simulator tick counter, or -1 if absent.
+     */
+    @OPERATION
+    public void readLabStatusTimed(
+            OpFeedbackParam<Object[]> zoneLevels,
+            OpFeedbackParam<Integer>  sunshineRank,
+            OpFeedbackParam<Integer>  tick) {
+
+        try {
+            Map<String, Object> status = fetchRawStatus();
+
+            Pattern zonePattern = Pattern.compile(".+#Z(\\d+)Level$");
+            TreeMap<Integer, Integer> zoneMap = new TreeMap<>();
+            for (Map.Entry<String, Object> entry : status.entrySet()) {
+                Matcher m = zonePattern.matcher(entry.getKey());
+                if (m.matches()) {
+                    zoneMap.put(Integer.parseInt(m.group(1)),
+                                discretize((Double) entry.getValue(), lightBounds));
+                }
+            }
+
+            int sun = discretize(
+                    (Double) status.get("http://example.org/was#Sunshine"),
+                    sunshineBounds);
+
+            Object tickObj = status.get("http://example.org/was#Tick");
+            int tickVal = (tickObj instanceof Double)
+                        ? (int) Math.round((Double) tickObj)
+                        : -1;
+
+            zoneLevels.set(zoneMap.values().toArray());
+            sunshineRank.set(sun);
+            tick.set(tickVal);
+
+            LOGGER.fine("readLabStatusTimed: zones=" + zoneMap +
+                        " sunshine=" + sun + " tick=" + tickVal);
+
+        } catch (IOException e) {
+            LOGGER.severe("readLabStatusTimed failed: " + e.getMessage());
+            failed("readLabStatusTimed: " + e.getMessage());
+        }
+    }
+
+    /**
      * Read raw zone temperatures from the simulator status.
      * Parses every property whose URI matches {@code .+#Z<n>Temp$} and returns
      * the values ordered by zone index (1-based in the URI). Used by the

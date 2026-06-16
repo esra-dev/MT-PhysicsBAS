@@ -35,15 +35,15 @@ on:
         required: false
         default: "lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv"
       seeds:
-        description: "Comma-separated RNG seeds. Default 1..5 (paired bootstrap). Use 1..10 for Wilcoxon confirmatory power (p<0.05 needs n>=6)."
+        description: "Comma-separated RNG seeds. Default 1..10 for confirmatory power (paired Wilcoxon needs n>=6). Use 1..5 for a faster pilot."
         required: false
-        default: "1,2,3,4,5"
+        default: "1,2,3,4,5,6,7,8,9,10"
       run_mode:
         description: "run_config.json profile for the CLEAN warm-start training: phase1 (3000x20, recommended) | dev (50x20, fast smoke)."
         required: false
         default: "phase1"
       adapt_episodes:
-        description: "Re-learn budget per adapt cell. 0 = each profile's training_params default (needed to actually re-converge; convergence window is 100). Set e.g. 200 for a fast pipeline smoke."
+        description: "Re-learn budget per adapt cell. 0 = each profile's training_params default. Recovery now ends early when the greedy policy is stable for fault.recover.window (default 50) episodes. Set e.g. 200 for a fast pipeline smoke."
         required: false
         default: "0"
       publish_results:
@@ -62,7 +62,7 @@ concurrency:
 env:
   RUN_MODE:       ${{ github.event.inputs.run_mode       || 'phase1' }}
   ADAPT_PROFILES: ${{ github.event.inputs.adapt_profiles || 'lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv' }}
-  SEEDS:          ${{ github.event.inputs.seeds          || '1,2,3,4,5' }}
+  SEEDS:          ${{ github.event.inputs.seeds          || '1,2,3,4,5,6,7,8,9,10' }}
   ADAPT_EPISODES: ${{ github.event.inputs.adapt_episodes || '0' }}
 
 jobs:
@@ -256,6 +256,22 @@ jobs:
           merge-multiple: true
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+      - name: Warm Gradle deps (retry on JitPack flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
       - name: Regenerate faulty Node-RED flows (deterministic from clean flows)
         shell: pwsh
         run: |
@@ -290,6 +306,10 @@ jobs:
   aggregate:
     name: Aggregate recovery & publish
     needs: adapt
+    # Aggregate whatever artefacts exist even if a single adapt leg flaked
+    # (e.g. a transient JitPack timeout). The reconstruct + analysis steps
+    # already tolerate missing seeds, so one bad cell never blocks the run.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -319,7 +339,10 @@ jobs:
             seed=$(echo "$name" | sed -nE 's/.*-seed-([0-9]+)$/\1/p')
             if [ -z "$seed" ]; then echo "WARN: no seed in $name"; continue; fi
             mkdir -p "recovery_root/seed${seed}"
-            for f in "${d}"recovery_stereotypes_*.csv; do
+            # recovery_* drives the headline analysis; metrics_adapted_* carries
+            # the per-episode GoalReached series so reviewers can audit that a
+            # "recovered" (stable) policy is also goal-reaching (Phase 2.2).
+            for f in "${d}"recovery_stereotypes_*.csv "${d}"metrics_adapted_stereotypes_*.csv; do
               [ -e "$f" ] || continue
               cp -n "$f" "recovery_root/seed${seed}/" 2>/dev/null || true
             done

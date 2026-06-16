@@ -13,25 +13,35 @@
 @prefix ws:     <http://example.org/was/lab/stereotypes#> .
 
 # ===========================================================================
-#  LAB 3 — COMPLEX  (Knowledge-Guided Acceleration, Phase 1 clean ladder)
+#  LAB 3 — SLOW  (Phase 3: Learning Process Dynamics — temporal response delay)
 # ---------------------------------------------------------------------------
-#  SELF-CONTAINED domain ontology. Loaded via ont(["building_3_complex.ttl"])
-#  WITHOUT lab-ontology.ttl. Strict isolation, but now WITH coupling: two zones
-#  whose lamps and blinds spill into each other (cross-zone feeds) PLUS a shared
-#  Spotlight (Causes) that illuminates both zones equally. NO hidden weaknesses
-#  — every coupling term below is faithfully represented in the simulator.
+#  SELF-CONTAINED domain ontology. Loaded via ont(["building_3_slow.ttl"])
+#  WITHOUT lab-ontology.ttl. Structurally IDENTICAL to Lab 3 (Complex): two
+#  coupled zones (cross-zone spill) + a shared Spotlight (Causes).
 #
-#  Physics (simulator_flow_lab3.json, port 1894):
+#  The ONLY delta over building_3_complex.ttl is TEMPORAL:
+#    * the lamps AND the spotlight respond INSTANTANEOUSLY (electrical), but
+#    * both motorized blinds respond SLOWLY (ws:DelayedResponse) — ~60 s of
+#      simulator time before the indoor illuminance reaches its new steady state.
+#
+#  Physics (simulator_flow_lab3_slow.json, port 1896) — STEADY-STATE identical:
 #     Z1Level = 25 + (Z1Light?400:0) + (Z2Light?50:0)
-#                  + (Z1Blinds?0.50*Sun:0) + (Z2Blinds?0.25*Sun:0) + (Spotlight?150:0)
+#                  + (Z1BlindsEff?0.50*Sun:0) + (Z2BlindsEff?0.25*Sun:0) + (Spotlight?150:0)
 #     Z2Level = 25 + (Z2Light?400:0) + (Z1Light?50:0)
-#                  + (Z2Blinds?0.50*Sun:0) + (Z1Blinds?0.25*Sun:0) + (Spotlight?150:0)
-#  Sunshine sampled once per episode from {0,100,400,900} and PINNED.
+#                  + (Z2BlindsEff?0.50*Sun:0) + (Z1BlindsEff?0.25*Sun:0) + (Spotlight?150:0)
+#  where Z*BlindsEff is the EFFECTIVE aperture that lags the COMMANDED Z*Blinds
+#  flag by BLIND_DELAY_TICKS (= 12 env ticks). Lamps/spotlight use their flags
+#  directly. Sunshine sampled once per episode from {0,100,400,900} and PINNED.
 #  State vector = [Z1Level,Z2Level,Z1Light,Z2Light,Z1Blinds,Z2Blinds,Spotlight,Sunshine]
-#                = 4*4*2*2*2*2*2*4 = 2048 states.
-#  New feature vs. Lab 2: cross-zone coupling + a shared-resource actuator.
-#  This is the deterministic, leak-free replacement for the custom9s flow that
-#  previously injected a PRNG term (150 + 50*Math.random()) into the env tick.
+#                = 4*4*2*2*2*2*2*4 = 2048 states (unchanged; state slots read the
+#  COMMANDED blind flags, so the Q-state space is identical to Lab 3).
+#
+#  ── Phase-3 semantics ──
+#  ws:responseDelay is a LEARNABLE numeric property (seconds), deliberately NOT
+#  given a value: the agent MEASURES the per-actuator delay online (via the
+#  DynamicsLearner artifact) and writes it back to learned_dynamics_*.ttl. The
+#  domain ontology supplies only the QUALITATIVE prior (lamp/spotlight =
+#  instantaneous, motorized blind = delayed) via ws:hasResponseDynamic.
 # ===========================================================================
 
 
@@ -68,6 +78,33 @@ ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
 # explicit elem:InternalConnection carrying a coupling stereotype (see §4b/§7b).
 ws:connSource a owl:ObjectProperty ; rdfs:label "connection source component" .
 ws:connTarget a owl:ObjectProperty ; rdfs:label "connection target component" .
+
+# ── Phase-3 temporal-dynamics vocabulary ──────────────────────────────────
+# ws:responseDelay : LEARNED actuation→steady-state delay, in SECONDS. Written
+#   back per component by the DynamicsLearner (NOT asserted in this file).
+ws:responseDelay a owl:DatatypeProperty ;
+    rdfs:label "Response delay (actuation to steady state, seconds)" ;
+    rdfs:range xsd:decimal .
+
+# ws:responseDelayTicks : the same quantity in raw simulator ticks (auxiliary).
+ws:responseDelayTicks a owl:DatatypeProperty ;
+    rdfs:label "Response delay in simulator ticks" ;
+    rdfs:range xsd:integer .
+
+# ws:responseDelaySamples : number of probe observations behind a learned delay.
+ws:responseDelaySamples a owl:DatatypeProperty ;
+    rdfs:label "Probe sample count behind a learned response delay" ;
+    rdfs:range xsd:integer .
+
+# ws:hasResponseDynamic : QUALITATIVE temporal prior on a stereotype/component.
+ws:hasResponseDynamic a owl:ObjectProperty ;
+    rdfs:label "Qualitative temporal response class of an actuator" .
+
+ws:InstantaneousResponse a owl:NamedIndividual, owl:Class ;
+    rdfs:label "Instantaneous response (effect within ~one tick)" .
+
+ws:DelayedResponse a owl:NamedIndividual, owl:Class ;
+    rdfs:label "Delayed response (motorized / thermal lag)" .
 
 
 # ===========================================================================
@@ -179,8 +216,6 @@ ws:OutdoorSunlightStream a owl:NamedIndividual, elem:StreamKind ;
     rdfs:label "Outdoor sunlight stream" .
 
 # Sub-rank cross-zone optical coupling (lamp +50 lux / blind 0.25·Sun spill).
-# Distinguishes the weak neighbour-zone bleed from the dominant same-zone
-# IndoorLightingStream above. Consumed by the WeakOpticalCoupling stereotype.
 ws:SecondaryCouplingStream a owl:NamedIndividual, elem:StreamKind ;
     rdfs:label "Secondary (cross-zone) optical coupling stream" .
 
@@ -189,11 +224,13 @@ ws:SecondaryCouplingStream a owl:NamedIndividual, elem:StreamKind ;
 # 4.  COMPONENT STEREOTYPES
 # ===========================================================================
 
+# Lamp = INSTANTANEOUS responder (electrical, effect within ~one env tick).
 ws:LampIncandescentStereotype a owl:NamedIndividual, elem:Stereotype ;
     rdfs:label "Incandescent lamp stereotype" ;
     elem:hasPhysicalMechanism ws:pm_incandescent_light_emission ;
     elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
-    elem:hasConnectionPoint  ws:cp_light_photon_outlet .
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet ;
+    ws:hasResponseDynamic    ws:InstantaneousResponse .
 
 ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
     rdfs:label "Electrical inlet of incandescent lamp" ;
@@ -206,12 +243,15 @@ ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
     elem:isRelatedToVariable   elem:luminiscence ;
     elem:suitableFor           ws:IndoorLightingStream .
 
+# Blind = DELAYED responder (motorized aperture; ~60 s to steady state). The
+# numeric delay is LEARNED, not asserted; only the qualitative class is given.
 ws:BlindStereotype a owl:NamedIndividual, elem:Stereotype ;
-    rdfs:label "Window blind stereotype" ;
+    rdfs:label "Window blind stereotype (motorized, slow)" ;
     elem:hasPhysicalMechanism ws:pm_daylight_ingress ;
     elem:hasConnectionPoint  ws:cp_blind_outdoor_inlet ;
     elem:hasConnectionPoint  ws:cp_blind_actuator_inlet ;
-    elem:hasConnectionPoint  ws:cp_blind_light_outlet .
+    elem:hasConnectionPoint  ws:cp_blind_light_outlet ;
+    ws:hasResponseDynamic    ws:DelayedResponse .
 
 ws:cp_blind_outdoor_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
     rdfs:label "Outdoor sunlight inlet of blind" ;
@@ -230,11 +270,13 @@ ws:cp_blind_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
     elem:isRelatedToVariable   elem:luminiscence ;
     elem:suitableFor           ws:IndoorLightingStream .
 
+# Spotlight = INSTANTANEOUS responder (electrical, shared across both zones).
 ws:SpotlightStereotype a owl:NamedIndividual, elem:Stereotype ;
     rdfs:label "Spotlight stereotype" ;
     elem:hasPhysicalMechanism ws:pm_spotlight_illumination ;
     elem:hasConnectionPoint  ws:cp_spotlight_electrical_inlet ;
-    elem:hasConnectionPoint  ws:cp_spotlight_photon_outlet .
+    elem:hasConnectionPoint  ws:cp_spotlight_photon_outlet ;
+    ws:hasResponseDynamic    ws:InstantaneousResponse .
 
 ws:cp_spotlight_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
     rdfs:label "Electrical inlet of spotlight" ;
@@ -297,17 +339,8 @@ ws:cp_outside_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
 # 4b. CONNECTION (COUPLING) STEREOTYPES
 # ---------------------------------------------------------------------------
 #  A coupling stereotype classifies a brick:feeds arc by the MAGNITUDE CLASS of
-#  the optical transfer it represents — mirroring how the component stereotypes
-#  above classify a device. The KG thus declares the STRUCTURE of the spillage
-#  (which component bleeds into which neighbouring zone) WITHOUT committing to a
-#  numeric magnitude; the actual gain is left for the Q-learner to discover from
-#  observation (Phase-3 write-back target = the mechanisms below).
-#
-#    • PrimaryOpticalCoupling — dominant same-zone illumination (≈ +400 lux /
-#      0.50·Sun); reliably moves the sensed-illuminance RANK.
-#    • WeakOpticalCoupling    — sub-rank cross-zone spill (≤ +50 lux lamp,
-#      0.25·Sun blind); rarely moves the neighbour's RANK (audit: WRONG ~80% of
-#      the time), so the reasoner makes NO directional rank claim for it.
+#  the optical transfer it represents. Identical to Lab 3 (Complex); coupling is
+#  spatial, not temporal, so the Phase-3 slow variant leaves it untouched.
 # ===========================================================================
 
 ws:pm_primary_illumination_transfer a owl:NamedIndividual, elem:PhysicalMechanism ;
@@ -319,7 +352,6 @@ ws:pm_secondary_illumination_transfer a owl:NamedIndividual, elem:PhysicalMechan
     rdfs:label "pm_secondary_illumination_transfer (sub-rank cross-zone spill)" ;
     elem:hasDependentVariable elem:luminiscence ;
     elem:increases            elem:luminiscence .
-    # NOTE: gain/magnitude intentionally ABSENT — learned by the Q-agent (Phase 3).
 
 ws:PrimaryOpticalCoupling a owl:NamedIndividual, elem:Stereotype ;
     rdfs:label "Primary optical coupling (dominant, rank-moving) connection stereotype" ;
@@ -341,7 +373,7 @@ lab:Workstation a owl:Class ;
     rdfs:subClassOf brick:Space .
 
 lab:ComplexBuilding a brick:Building ;
-    rdfs:label "Lab 3 (Complex) Building" ;
+    rdfs:label "Lab 3 (Slow) Building" ;
     brick:hasPart lab:Lab .
 
 lab:Lab a brick:Room ;
@@ -395,7 +427,7 @@ lab:Blind_Z2 a brick:Blind, elem:Actuator ;
     elem:isPartOf      lab:OutdoorSunlightStream .
 
 # Spotlight — single shared unit located in BOTH zones so the actuator query
-# returns it once per zone (affects both zones equally, +150 lux).
+# returns it once per zone (affects both zones equally, +150 lux). INSTANT.
 lab:Spotlight a brick:Luminaire, elem:Actuator ;
     rdfs:label "Shared high-lux spotlight" ;
     brick:isLocatedIn lab:Zone1 ;
@@ -474,14 +506,6 @@ lab:Blind_Z2         brick:feeds  lab:LightSensor_Z1 .
 
 # ---------------------------------------------------------------------------
 # 7b. REIFIED CONNECTIONS (coupling class per arc)
-#  Each feed arc above is ALSO modelled as an explicit elem:InternalConnection
-#  carrying a coupling stereotype, so the reasoner can read the magnitude CLASS
-#  (primary vs weak) of every arc — not just its existence. The four CROSS-ZONE
-#  arcs are WEAK (secondary): the reasoner makes NO rank prediction for them
-#  (Part A) and, when -Dstereo.crossZoneBonus > 0, seeds a small optimistic
-#  exploration head-start (Part B). The four SAME-ZONE arcs are PRIMARY and are
-#  tagged only for documentary contrast (PRIMARY == legacy reasoner behaviour;
-#  same-zone arcs are excluded from the cross-zone query by the zone filter).
 # ---------------------------------------------------------------------------
 ws:conn_CLz1_to_LSz2 a owl:NamedIndividual, elem:InternalConnection ;
     rdfs:label "Cross-zone spill: CeilingLight_Z1 -> LightSensor_Z2 (+50 lux)" ;
@@ -552,6 +576,9 @@ lab:Spotlight elem:hasComponentAction ws:SetSpotlight_ON, ws:SetSpotlight_OFF .
 # ===========================================================================
 # 9.  STATE VECTOR SLOT REGISTRY  (length 8)
 #  [Z1Level,Z2Level,Z1Light,Z2Light,Z1Blinds,Z2Blinds,Spotlight,Sunshine]
+#  NOTE: the boolean blind slots read the COMMANDED flag (Z*Blinds), so the
+#  Q-state space is byte-for-byte identical to Lab 3 (Complex). The temporal
+#  delay is observable ONLY in the Z*Level dynamics, not in state cardinality.
 # ===========================================================================
 
 lab:Slot_ZoneLevel_Z1

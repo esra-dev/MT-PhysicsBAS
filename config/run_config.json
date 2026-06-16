@@ -141,6 +141,23 @@
         "reward_shaping": "pbrs",
         "adaptive_trust": true
       }
+    },
+    "phase1_kg_xzone": {
+      "note": "KG-X arm (Part B lever): identical to phase1_kg_only (KG prior ON, PBRS OFF, adaptive-trust OFF) plus the cross-zone structural exploration prior cross_zone_bonus=3.0. Tests the lab3 spillage hypothesis: the KG declares WHICH components spill into the neighbour zone (ws:WeakOpticalCoupling in building_3_complex.ttl) and this small optimistic Q-init head-start nudges the agent to TRY the cross-zone lever, after which RL learns the true (sub-rank) magnitude. Compare its lab3 ql_true-vs-ql_false first-goal/coverage delta against phase1_kg_only (no xzone). Same timing as phase1.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "none",
+        "adaptive_trust": false,
+        "cross_zone_bonus": 3.0
+      }
     }
   },
   "profiles_to_run": ["lab1", "lab2", "lab3"],
@@ -158,7 +175,9 @@
     "custom9s": 1891,
     "lab1": 1892,
     "lab2": 1893,
-    "lab3": 1894
+    "lab3": 1894,
+    "lab2_slow": 1895,
+    "lab3_slow": 1896
   },
   "simulator_flow_map": {
     "custom2": "simulator_flow_custom2.json",
@@ -172,7 +191,9 @@
     "custom9s": "simulator_flow_custom9s.json",
     "lab1": "simulator_flow_lab1.json",
     "lab2": "simulator_flow_lab2.json",
-    "lab3": "simulator_flow_lab3.json"
+    "lab3": "simulator_flow_lab3.json",
+    "lab2_slow": "simulator_flow_lab2_slow.json",
+    "lab3_slow": "simulator_flow_lab3_slow.json"
   },
   "qtable_suffix_map": {
     "custom2": "_custom2",
@@ -186,7 +207,9 @@
     "custom9s": "_custom9s",
     "lab1": "_lab1",
     "lab2": "_lab2",
-    "lab3": "_lab3"
+    "lab3": "_lab3",
+    "lab2_slow": "_lab2_slow",
+    "lab3_slow": "_lab3_slow"
   },
   "expected_state_vec_dim": {
     "custom2": 13,
@@ -200,7 +223,9 @@
     "custom9s": 8,
     "lab1": 2,
     "lab2": 7,
-    "lab3": 8
+    "lab3": 8,
+    "lab2_slow": 7,
+    "lab3_slow": 8
   },
   "http_client": {
     "connect_timeout_ms": 2000,
@@ -216,10 +241,128 @@
     "stereo_prior_redundant": 1.0,
     "stereo_prior_iv_unsat": 5.0,
     "stereo_init_bonus": 15.0,
+    "cross_zone_bonus": 0.0,
     "reward_shaping": "pbrs",
     "adaptive_trust": true,
     "adaptive_trust_min_samples": 50,
     "adaptive_trust_floor": 0.1
+  },
+  "phase2": {
+    "description": "Phase 2 fault-detection / blacklist / re-learn (run_phase2_adapt.ps1 + .github/workflows/phase2.yml). Each adapt profile injects one or more component faults into the named parent clean lab, warm-loads that lab's clean Phase-1 Q-table (qtable_final_stereotypes_<bool><clean_source_suffix>.csv), then runs the adapt agent (taskAdapt) which detects each defect via the KG Expected-vs-Actual check, blacklists BOTH polarities of every broken component (iteratively), and re-learns over the survivors. Recovery = reconverge_episode - detect_episode (lower is better; the headline compares ql_true < ql_false). Single-fault (f1*) and multi-fault (f2*) variants span lab1/lab2/lab3 complexities and {dead, inverted} fault modes. Only CAUSES lamps/spotlight are injected; healthy Mediates blinds are excluded from detection. lab1_f1dead is degenerate (single actuator; the blacklist guard preserves the last actuator) so it is a detection-only showcase with recovery=N/A. Parent ports/flows are reused because only one faulty variant runs at a time.",
+    "adapt_profiles": ["lab1_f1dead", "lab2_f1dead", "lab2_f1inv", "lab2_f2dead", "lab2_f2inv", "lab3_f1dead", "lab3_f1inv", "lab3_f2dead", "lab3_f2inv"],
+    "adapt_modes": ["ql_true", "ql_false"],
+    "smoke_episodes": 200,
+    "parent_profile": {
+      "lab1_f1dead": "lab1",
+      "lab2_f1dead": "lab2",
+      "lab2_f1inv": "lab2",
+      "lab2_f2dead": "lab2",
+      "lab2_f2inv": "lab2",
+      "lab3_f1dead": "lab3",
+      "lab3_f1inv": "lab3",
+      "lab3_f2dead": "lab3",
+      "lab3_f2inv": "lab3"
+    },
+    "simulator_port_map": {
+      "lab1_f1dead": 1892,
+      "lab2_f1dead": 1893,
+      "lab2_f1inv": 1893,
+      "lab2_f2dead": 1893,
+      "lab2_f2inv": 1893,
+      "lab3_f1dead": 1894,
+      "lab3_f1inv": 1894,
+      "lab3_f2dead": 1894,
+      "lab3_f2inv": 1894
+    },
+    "simulator_flow_map": {
+      "lab1_f1dead": "simulator_flow_lab1_f1dead.json",
+      "lab2_f1dead": "simulator_flow_lab2_f1dead.json",
+      "lab2_f1inv": "simulator_flow_lab2_f1inv.json",
+      "lab2_f2dead": "simulator_flow_lab2_f2dead.json",
+      "lab2_f2inv": "simulator_flow_lab2_f2inv.json",
+      "lab3_f1dead": "simulator_flow_lab3_f1dead.json",
+      "lab3_f1inv": "simulator_flow_lab3_f1inv.json",
+      "lab3_f2dead": "simulator_flow_lab3_f2dead.json",
+      "lab3_f2inv": "simulator_flow_lab3_f2inv.json"
+    },
+    "qtable_suffix_map": {
+      "lab1_f1dead": "_lab1_f1dead",
+      "lab2_f1dead": "_lab2_f1dead",
+      "lab2_f1inv": "_lab2_f1inv",
+      "lab2_f2dead": "_lab2_f2dead",
+      "lab2_f2inv": "_lab2_f2inv",
+      "lab3_f1dead": "_lab3_f1dead",
+      "lab3_f1inv": "_lab3_f1inv",
+      "lab3_f2dead": "_lab3_f2dead",
+      "lab3_f2inv": "_lab3_f2inv"
+    },
+    "clean_source_suffix": {
+      "lab1_f1dead": "_lab1",
+      "lab2_f1dead": "_lab2",
+      "lab2_f1inv": "_lab2",
+      "lab2_f2dead": "_lab2",
+      "lab2_f2inv": "_lab2",
+      "lab3_f1dead": "_lab3",
+      "lab3_f1inv": "_lab3",
+      "lab3_f2dead": "_lab3",
+      "lab3_f2inv": "_lab3"
+    },
+    "expected_state_vec_dim": {
+      "lab1_f1dead": 2,
+      "lab2_f1dead": 7,
+      "lab2_f1inv": 7,
+      "lab2_f2dead": 7,
+      "lab2_f2inv": 7,
+      "lab3_f1dead": 8,
+      "lab3_f1inv": 8,
+      "lab3_f2dead": 8,
+      "lab3_f2inv": 8
+    }
+  },
+  "phase3": {
+    "description": "Phase 3 process dynamics / response-delay learning (run_phase3_dynamics.ps1 + .github/workflows/phase3.yml). Each slow profile is a clean Phase-1 parent (lab2/lab3) whose simulator gives the motorized blind a temporal response delay (blind_delay_ticks env ticks). The dynamics agent (taskDynamics) runs N controlled probe trials per actuator: it pins a baseline via /setState, reads the Tick clock, toggles ONE actuator ON, then polls until the target zone illuminance rank is reached, measuring the delay in ticks. responseDelaySeconds = ticks * seconds_per_tick. Per-actuator Welford statistics are written back to the KG (learned_dynamics_stereotypes_<bool><suffix>.ttl, ws:responseDelay). The agent then runs a time-bounded benchmark: for each (zone, target rank, deadline) goal it chooses actuators using the learned delays (KG-primed, mode ql_true) vs no delay knowledge (tabula-rasa, mode ql_false); tight deadlines (< blind delay) force the fast lamp, loose deadlines admit the cheap blind. Headline metrics: delay-learning accuracy (learned vs ground-truth blind_delay_ticks) and deadline-compliance rate + energy (ql_true should meet tight deadlines and use less energy on loose ones). Dedicated ports/ontologies keep Phase 1/2 untouched.",
+    "dynamics_profiles": ["lab2_slow", "lab3_slow"],
+    "dynamics_modes": ["ql_true", "ql_false"],
+    "seconds_per_tick": 5.0,
+    "blind_delay_ticks": 12,
+    "smoke_probes": 3,
+    "parent_profile": {
+      "lab2_slow": "lab2",
+      "lab3_slow": "lab3"
+    },
+    "simulator_port_map": {
+      "lab2_slow": 1895,
+      "lab3_slow": 1896
+    },
+    "simulator_flow_map": {
+      "lab2_slow": "simulator_flow_lab2_slow.json",
+      "lab3_slow": "simulator_flow_lab3_slow.json"
+    },
+    "qtable_suffix_map": {
+      "lab2_slow": "_lab2_slow",
+      "lab3_slow": "_lab3_slow"
+    },
+    "expected_state_vec_dim": {
+      "lab2_slow": 7,
+      "lab3_slow": 8
+    },
+    "probe": {
+      "probes_per_actuator": 8,
+      "settle_ms": 400,
+      "poll_ms": 50,
+      "max_wait_ticks": 60,
+      "target_rank": 3,
+      "probe_sun_rank": 900
+    },
+    "timebounded_goals_note": "Canonical time-bounded exploit goals. These are mirrored as tb_goal/4 facts in src/agt/illuminance_controller_agent_dynamics.asl (keep in sync). Each goal = a target zone illuminance rank that must be reached within a wall-clock-equivalent deadline (seconds). Sun is pinned high (900) so the motorized blind is EFFECTIVE; the only differentiator is its response delay vs the deadline. blind_delay_ticks(12) * seconds_per_tick(5) = 60 s, so deadlines < 60 s are 'tight' (only the instantaneous lamp/spotlight can meet them) and deadlines >= 60 s are 'loose' (the cheap blind also qualifies). The KG-primed arm (ql_true) uses the LEARNED per-actuator delay; the tabula-rasa arm (ql_false) assumes zero delay (no knowledge) and therefore always prefers the cheapest actuator, missing tight deadlines.",
+    "timebounded_goals": [
+      { "id": "g1", "zone": 1, "target_rank": 3, "deadline_sec": 15.0 },
+      { "id": "g2", "zone": 1, "target_rank": 3, "deadline_sec": 45.0 },
+      { "id": "g3", "zone": 1, "target_rank": 3, "deadline_sec": 90.0 },
+      { "id": "g4", "zone": 1, "target_rank": 3, "deadline_sec": 300.0 },
+      { "id": "g5", "zone": 2, "target_rank": 3, "deadline_sec": 15.0 },
+      { "id": "g6", "zone": 2, "target_rank": 3, "deadline_sec": 300.0 }
+    ]
   },
   "dry_run": false
 }

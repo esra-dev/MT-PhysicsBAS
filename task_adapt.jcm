@@ -1,0 +1,20 @@
+/*
+  MT-Esra: Phase 2 Fault-Adaptation Illuminance Controller Agent
+
+  JaCaMo Project File — Fault-adaptation variant.
+
+  To run: ./gradlew taskAdapt -Pprofile=lab2_f1dead -Pmode=ql_true
+          (while the matching FAULTY Node-RED simulator flow is running)
+
+  The agent warm-loads a Phase-1 clean Q-table (mapped via adapt_source/2 in
+  src/agt/lab_profiles.asl), detects the injected hardware fault, blacklists the
+  defective component, and re-learns over the surviving components.
+
+  Switch stereotype mode with -Pmode=ql_true|ql_false (default: ql_true).
+*/
+
+mas lab_adapt {
+
+    agent illuminance_controller_agent_adapt
+
+}

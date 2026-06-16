@@ -26,13 +26,13 @@
 // bench_mode("ql_false").
 bench_mode("ql_true").
 
-bench_runs(2).
+bench_runs(5).
 exec_max_steps(20).
 // S4-5 (audit-step-4): raised from 65 ms to 250 ms so the post-invokeAction
 // readLabStatus observes the state AFTER the Node-RED simulator's 200 ms
 // tick has propagated through compute_levels. Previously 65 ms < 200 ms
 // could return pre-tick state and bias training credit assignment.
-exec_delay_ms(65).
+exec_delay_ms(100).
 
 // S4-1 (audit-step-4): gate the bench-only anti-stuck rescue path. When
 // false, the bench evaluates the TRAINED greedy policy as-is (no runtime

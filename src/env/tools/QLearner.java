@@ -226,6 +226,73 @@ public class QLearner extends Artifact {
     private static final double CONVERGENCE_THRESHOLD = 1e-3;
 
     // -----------------------------------------------------------------------
+    // Phase 2 — fault detection, blacklisting & warm-restart re-learning
+    // -----------------------------------------------------------------------
+    // A component is flagged DEFECTIVE when the Knowledge-Graph prediction for
+    // one of its actions is repeatedly contradicted by the observed transition:
+    //   • DEAD     — the actuator bit flips as commanded (or is silently
+    //                dropped) but the zone illuminance it should move does not
+    //                respond, across >= FAULT_DEAD_RATE of observations.
+    //   • INVERTED — the zone moves in the OPPOSITE direction to the KG sign,
+    //                across >= FAULT_INV_RATE of observations.
+    //   • ANOMALY  — combined dead+inverted rate >= FAULT_ANOMALY_RATE. This
+    //                catches a component whose evidence is SPLIT between the two
+    //                modes (e.g. an inverted lamp that reads 'dead' when the
+    //                zone is already at rank 0 and 'inverted' when the zone is
+    //                elevated) so that neither single rate crosses on its own.
+    // Detection requires at least FAULT_MIN_SAMPLES falsifiable observations of
+    // the action so a few saturated / no-op steps cannot trip a false alarm.
+    // Only CAUSES actuators are adjudicated: a MEDIATES / IV-gated actuator
+    // (e.g. a sunshine-gated blind) has no unconditional sign, and its null
+    // response is expected whenever the IV is low or the zone is lamp-saturated,
+    // so observeForFaults skips it (the fault model — dead / inverted lux —
+    // targets Causes lamps). Once flagged, blacklistComponent() removes BOTH the
+    // ON and OFF actions of the component, and warmRestart() re-primes learning
+    // over the survivors. All thresholds are -D overridable.
+    private boolean[] blacklisted;     // [nActions] — true → removed from action space
+    private int[]     faultObsN;       // [nActions] — falsifiable observations of the action
+    private int[]     faultDeadN;      // [nActions] — observations with no zone response (dead)
+    private int[]     faultInvertN;    // [nActions] — observations with inverted zone response
+    // Phase 2.2 — component-attributable residual guard. When a Causes actuator
+    // is blacklisted its physical state is frozen (e.g. a stuck inverted lamp
+    // that keeps subtracting lux), so the ZONES it feeds no longer carry a
+    // trustworthy baseline for adjudicating a DIFFERENT component. observeForFaults
+    // skips contaminated zones, so a healthy survivor (e.g. the shared Spotlight)
+    // is never blamed for a zone whose baseline is corrupted by a stuck
+    // blacklisted neighbour. This eliminates the lab3_f2inv double-inversion
+    // Spotlight false positive without weakening genuine detection (the culprit
+    // is adjudicated BEFORE it is blacklisted, i.e. before it contaminates).
+    private boolean[] zoneCauseContaminated;  // [nZones] — zone fed by a blacklisted Causes actuator
+    // wotActionType of every MEDIATES / IV-gated component (both ON and OFF
+    // actions share one wotActionType, but hasIV is only set on the activation
+    // action, so this set lets the detector skip BOTH polarities of a blind).
+    private java.util.Set<String> ivGatedComponents = new java.util.HashSet<>();
+    private static final int    FAULT_MIN_SAMPLES  = parseIntProp   ("fault.detect.minSamples",  20);
+    private static final double FAULT_DEAD_RATE    = parseDoubleProp("fault.detect.deadRate",    0.80);
+    private static final double FAULT_INV_RATE     = parseDoubleProp("fault.detect.invRate",     0.60);
+    private static final double FAULT_ANOMALY_RATE = parseDoubleProp("fault.detect.anomalyRate", 0.75);
+    private static final double FAULT_EPS_BOOST    = parseDoubleProp("fault.relearn.epsBoost",   0.30);
+    // Phase 2.2 — combined dead+inverted observations for an actuator to count as
+    // a fault SUSPECT that can mask a co-located healthy actuator's zone response
+    // (primary-detection-time component attribution). Kept small — and paired with
+    // a single-inverted-observation fast path in isFaultSuspect — so a genuine
+    // fault is recognised as "suspect", and its masking effect discounted, before
+    // the neighbour it corrupts can reach FAULT_MIN_SAMPLES and be mis-flagged.
+    private static final int    FAULT_SUSPECT_MIN  = parseIntProp   ("fault.detect.suspectMin",   2);
+
+    // Phase 2.1 — policy-stability recovery detector (adapt regime).
+    // "Recovered" = the greedy policy (jointArgmax over surviving, non-blacklisted
+    // actions) has not changed for RECOVERY_WINDOW consecutive episodes AFTER the
+    // fault was blacklisted. This replaces the Phase-1 Bellman-stability test for
+    // the post-fault regime: it tracks the RANKING of actions, so it is robust to
+    // (a) the residual ε-boost exploration noise that keeps perturbing TD targets
+    // and (b) goals that are only stochastically reachable (sun-gated survivors),
+    // neither of which let the 1e-3 Bellman test settle. It needs no lab redesign.
+    private int[]  recoveryPolicy      = null;  // last greedy policy snapshot
+    private int    recoveryStableCount = 0;     // consecutive episodes with no policy change
+    private static final int RECOVERY_WINDOW = parseIntProp("fault.recover.window", 50);
+
+    // -----------------------------------------------------------------------
     // CArtAgO initialisation
     // -----------------------------------------------------------------------
 
@@ -290,6 +357,21 @@ public class QLearner extends Artifact {
         int numZones = this.goal.length;
         qTables = new double[numZones][nStates][nActions];
         visitCounts = new long[nStates][nActions];
+        // Phase 2: per-action blacklist + fault-evidence counters.
+        blacklisted  = new boolean[nActions];
+        faultObsN    = new int[nActions];
+        faultDeadN   = new int[nActions];
+        faultInvertN = new int[nActions];
+        zoneCauseContaminated = new boolean[zoneLevelIndices.length];
+        // Map out MEDIATES / IV-gated components so the fault detector can skip
+        // BOTH polarities (hasIV is only set on the activation action, but the
+        // ON and OFF actions share one wotActionType).
+        ivGatedComponents.clear();
+        for (StereotypeReasoner.ActionInfo ai : actionInfos) {
+            if (ai != null && ai.hasIV && ai.wotActionType != null) {
+                ivGatedComponents.add(ai.wotActionType);
+            }
+        }
         int sunBuckets = (sunshineIndex >= 0 && sunshineIndex < domainSizes.length)
                        ? Math.max(1, domainSizes[sunshineIndex]) : 1;
         actionCalSum = new double[nActions][sunBuckets];
@@ -846,6 +928,377 @@ public class QLearner extends Artifact {
         fired.set(out);
     }
 
+    // -----------------------------------------------------------------------
+    // Phase 2 — fault detection, blacklisting & warm-restart re-learning
+    // -----------------------------------------------------------------------
+
+    /**
+     * Strict Expected-vs-Actual check for ONE transition. Compares the
+     * Knowledge-Graph prediction for {@code actionIdx} in {@code stateVecBefore}
+     * against the observed Δ to {@code stateVecAfter}, and accumulates per-action
+     * evidence that the underlying component is DEAD (no response) or INVERTED
+     * (opposite response). When an action crosses its detection threshold for
+     * the first time, {@code newlyDefective} is set to the component's WoT
+     * action-type URI; otherwise it is set to the empty string.
+     *
+     * Only falsifiable observations are counted: the action must make a non-zero
+     * KG bit-claim (i.e. it is not redundant in this state), and a zone the
+     * action claims to move must not already be saturated at the boundary. This
+     * prevents already-ON / already-saturated steps from producing false "dead"
+     * evidence.
+     *
+     * Only CAUSES actuators (unconditional {@code elem:increases} sign) are
+     * adjudicated. MEDIATES / IV-gated actuators (e.g. blinds, whose effect is
+     * gated by sunshine and is rank-masked when a co-located lamp saturates the
+     * zone) are skipped: their null response is expected healthy behaviour, not
+     * fault evidence, so adjudicating them yields false DEFECTIVE verdicts.
+     *
+     * Pure accumulation — does NOT mutate the policy. Call
+     * {@link #blacklistComponent} + {@link #warmRestart} to act on a defect.
+     */
+    @OPERATION
+    public void observeForFaults(Object[] stateVecBefore, int actionIdx,
+                                 Object[] stateVecAfter,
+                                 OpFeedbackParam<String> newlyDefective) {
+        newlyDefective.set("");
+        if (actionIdx < 0 || actionIdx >= nActions) return;
+        StereotypeReasoner.ActionInfo ai = actionInfos[actionIdx];
+        if (ai == null || ai.wotActionType == null) return;          // DO_NOTHING — no claim
+        if (blacklisted != null && blacklisted[actionIdx]) return;   // already removed
+        // Only CAUSES actuators (unconditional elem:increases) are adjudicated.
+        // A MEDIATES / IV-gated actuator (e.g. a blind, whose effect is
+        // 0.5·sunshine) has NO unconditional sign: its zone response is absent
+        // when the IV is low AND is rank-masked whenever a co-located lamp
+        // already saturates the zone at its target rank. A null response is
+        // therefore EXPECTED healthy behaviour, not fault evidence, so scoring
+        // it manufactures false DEFECTIVE verdicts (observed: a healthy blind
+        // flagged at deadRate=1.00 because Z2 was lamp-pinned at its rank-3
+        // target). The injected fault model (dead / inverted lux) only applies
+        // to Causes lamps; detecting a broken Mediates actuator from discretised
+        // ranks alone is unsound, so it is deliberately out of detector scope.
+        // NB: hasIV is set only on the activation action, so we test the whole
+        // component (both ON and OFF actions share one wotActionType).
+        if (ivGatedComponents.contains(ai.wotActionType)) return;
+
+        int[] before = toIntArray(stateVecBefore);
+        int[] after  = toIntArray(stateVecAfter);
+        int[] pred   = reasoner.getActionPrediction(before, actionIdx);
+
+        int bitSlot = ai.stateVecBitIndex;
+        if (bitSlot < 0 || bitSlot >= before.length) return;
+        int bitPred = (bitSlot < pred.length) ? pred[bitSlot] : 0;
+        if (bitPred == 0) return; // actuator already in target state — not falsifiable
+        int bitObs = after[bitSlot] - before[bitSlot];
+
+        boolean dead = false;
+        boolean inverted = false;
+        if (bitObs == 0) {
+            // Command silently dropped — the actuator did not even toggle.
+            dead = true;
+        } else if (bitObs == bitPred) {
+            // Bit flipped as commanded. Did the zone(s) it should move respond?
+            int claimed = 0, noResp = 0, opp = 0;
+            boolean ambiguous = false;   // a zone's null response was explained away by a suspect co-feeder
+            for (int z = 0; z < zoneLevelIndices.length; z++) {
+                int slot = zoneLevelIndices[z];
+                if (slot < 0 || slot >= before.length) continue;
+                // Phase 2.2: a zone fed by an already-blacklisted Causes actuator
+                // has a frozen/untrustworthy baseline, so a residual there is not
+                // attributable to THIS component — abstain rather than mis-charge.
+                if (zoneCauseContaminated != null && z < zoneCauseContaminated.length
+                        && zoneCauseContaminated[z]) continue;
+                int predD = (slot < pred.length) ? pred[slot] : 0;
+                if (predD == 0) continue;
+                int maxRank = (slot < domainSizes.length) ? domainSizes[slot] - 1 : 3;
+                if (predD > 0 && before[slot] >= maxRank) continue; // can't rise — not falsifiable
+                if (predD < 0 && before[slot] <= 0)       continue; // can't fall — not falsifiable
+                int obsD = after[slot] - before[slot];
+                if (obsD != 0 && (long) obsD * (long) predD < 0L) {
+                    // OPPOSITE-sign response — an INVERTED actuator. Trustworthy
+                    // even in a cross-coupled lab: only the toggled actuator
+                    // changed this step, so its own contribution sets the sign.
+                    // This evidence is NEVER gated (see below).
+                    claimed++;
+                    opp++;
+                } else if (obsD == 0) {
+                    // NO rank response. Before charging THIS component with a
+                    // dead/no-response, check whether a DIFFERENT, fault-suspect
+                    // actuator co-feeds this zone. In lab3_f2inv both task lamps are
+                    // INVERTED yet still active: they subtract large lux and hold the
+                    // two shared zones at the rank FLOOR, so a healthy Spotlight's
+                    // +150 can no longer lift the discretised rank — its correct
+                    // toggle then reads as a dead/no-response. When a suspect
+                    // co-feeder is present that null response is NOT attributable to
+                    // this component, so abstain. This primary-detection-time
+                    // attribution rule removes the healthy-Spotlight false positive.
+                    // It does NOT weaken real detection: an inverted fault is caught
+                    // by the ungated opp branch above, and the injected DEAD fault
+                    // (the lamp flag still toggles but its lux contribution is zeroed)
+                    // reaches THIS branch on the lamp's OWN primary zone, which has no
+                    // suspect co-feeder — lamps have DISJOINT primary zones and the
+                    // only shared multi-zone feeder is the healthy Spotlight — so a
+                    // genuine dead lamp is never gated.
+                    if (zoneHasSuspectCoFeeder(z, actionIdx)) { ambiguous = true; continue; }
+                    claimed++;
+                    noResp++;
+                } else {
+                    // Correct-direction response — a healthy, falsifiable claim.
+                    claimed++;
+                }
+            }
+            if (opp > 0) {
+                // Positive proof of inversion from this actuator's own toggle —
+                // never gated, never abstained.
+                inverted = true;
+            } else if (ambiguous) {
+                // At least one zone's null response may be a suspect co-feeder
+                // masking this actuator's real effect (the floored-Spotlight case).
+                // We cannot conclude "dead", so abstain on the whole observation
+                // rather than charge a partial dead verdict from the surviving
+                // zone(s). This shuts the one-lamp-suspect race that previously let
+                // a healthy multi-zone Spotlight be flagged before BOTH inverted
+                // lamps crossed the suspect threshold.
+                return;
+            } else if (claimed > 0) {
+                if (noResp == claimed) dead = true;
+                // else: partial/correct response — a non-anomalous observation.
+            } else {
+                return; // every claim was unfalsifiable here — ignore this step
+            }
+        } else {
+            return; // bitObs neither 0 nor == bitPred (shouldn't happen for a 0/1 bit)
+        }
+
+        faultObsN[actionIdx]++;
+        if (dead)     faultDeadN[actionIdx]++;
+        if (inverted) faultInvertN[actionIdx]++;
+
+        if (faultObsN[actionIdx] < FAULT_MIN_SAMPLES) return;
+        double deadRate    = (double) faultDeadN[actionIdx]   / faultObsN[actionIdx];
+        double invRate     = (double) faultInvertN[actionIdx] / faultObsN[actionIdx];
+        double anomalyRate = (double) (faultDeadN[actionIdx] + faultInvertN[actionIdx])
+                                    / faultObsN[actionIdx];
+        if (deadRate >= FAULT_DEAD_RATE || invRate >= FAULT_INV_RATE
+                || anomalyRate >= FAULT_ANOMALY_RATE) {
+            newlyDefective.set(ai.wotActionType);
+            LOGGER.warning(String.format(
+                "observeForFaults: component %s flagged DEFECTIVE via action %d (%s) "
+              + "[obs=%d deadRate=%.2f invRate=%.2f anomalyRate=%.2f]",
+                ai.wotActionType, actionIdx, ai.label,
+                faultObsN[actionIdx], deadRate, invRate, anomalyRate));
+        }
+    }
+
+    /**
+     * Phase 2.2 — is action {@code b} currently carrying enough anomaly evidence to
+     * be treated as a fault SUSPECT whose corruption of a shared zone should be
+     * discounted when adjudicating a co-located actuator? Deliberately an EARLY,
+     * low bar — far below the {@code FAULT_MIN_SAMPLES} needed to actually flag a
+     * defect — so a real fault is recognised before the neighbour it corrupts can
+     * be mis-flagged (the lab3_f2inv race). Two triggers:
+     *   • a SINGLE opposite-direction (inverted) observation — essentially
+     *     impossible for a healthy actuator on its own zone, so it alone suffices;
+     *   • OR {@code FAULT_SUSPECT_MIN} combined dead+inverted observations.
+     * Over-suspicion is safe here: the only actuator the co-feeder gate can ever
+     * spare is the shared multi-zone Spotlight (lamps have DISJOINT primary zones
+     * and so never gate each other), and the Spotlight is healthy in every injected
+     * profile, so a false "suspect" can never hide a genuine lamp fault.
+     */
+    private boolean isFaultSuspect(int b) {
+        if (faultObsN == null || b < 0 || b >= faultObsN.length) return false;
+        if (faultInvertN[b] >= 1) return true;   // one inverted obs = strong evidence
+        return (faultDeadN[b] + faultInvertN[b]) >= FAULT_SUSPECT_MIN;
+    }
+
+    /**
+     * Phase 2.2 — does any actuator OTHER than {@code selfAction}'s component
+     * structurally feed {@code zone} AND currently look fault-suspect? Used to
+     * abstain on a zone's no-response evidence when a faulty neighbour may be
+     * masking it (component-attributable adjudication). Co-feeders are matched on
+     * the static {@code affectedZones} coupling; both the ON and OFF actions of
+     * the component under test are excluded via their shared wotActionType.
+     */
+    private boolean zoneHasSuspectCoFeeder(int zone, int selfAction) {
+        StereotypeReasoner.ActionInfo self =
+            (selfAction >= 0 && selfAction < nActions) ? actionInfos[selfAction] : null;
+        String selfType = (self != null) ? self.wotActionType : null;
+        for (int b = 0; b < nActions; b++) {
+            if (b == selfAction) continue;
+            StereotypeReasoner.ActionInfo bi = actionInfos[b];
+            if (bi == null || bi.wotActionType == null) continue;
+            if (selfType != null && selfType.equals(bi.wotActionType)) continue; // same component
+            if (bi.affectedZones == null || !bi.affectedZones.contains(zone)) continue;
+            if (isFaultSuspect(b)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Blacklist a defective component: remove BOTH its ON and OFF actions from
+     * the action space so the policy can never select them again. DO_NOTHING is
+     * never removed, and the last surviving actuator action is protected so the
+     * action space can never be emptied. Sets {@code nRemoved} to the number of
+     * action indices actually removed (0, 1 or 2).
+     */
+    @OPERATION
+    public void blacklistComponent(String wotActionType, OpFeedbackParam<Integer> nRemoved) {
+        int removed = 0;
+        if (wotActionType == null || wotActionType.isEmpty() || blacklisted == null) {
+            nRemoved.set(0);
+            return;
+        }
+        for (int a = 0; a < nActions; a++) {
+            StereotypeReasoner.ActionInfo ai = actionInfos[a];
+            if (ai == null || ai.wotActionType == null) continue;       // never DO_NOTHING
+            if (!wotActionType.equals(ai.wotActionType) || blacklisted[a]) continue;
+            // Guarantee at least one non-DO_NOTHING action survives the removal.
+            int surviving = 0;
+            for (int b = 0; b < nActions; b++) {
+                if (b == a) continue;
+                StereotypeReasoner.ActionInfo bi = actionInfos[b];
+                if (bi != null && bi.wotActionType != null && !blacklisted[b]) surviving++;
+            }
+            if (surviving < 1) {
+                LOGGER.warning("blacklistComponent: refusing to remove the last actuator action "
+                             + a + " (" + ai.label + ")");
+                continue;
+            }
+            blacklisted[a] = true;
+            removed++;
+            LOGGER.warning("blacklistComponent: removed action " + a + " (" + ai.label + ")");
+        }
+        // Phase 2.2: the blacklisted component's physical state is now frozen, so
+        // every zone it Causes-feeds is no longer a trustworthy baseline for
+        // adjudicating OTHER components — mark those zones contaminated.
+        if (removed > 0 && zoneCauseContaminated != null) {
+            for (int a = 0; a < nActions; a++) {
+                StereotypeReasoner.ActionInfo ai = actionInfos[a];
+                if (ai == null || ai.wotActionType == null) continue;
+                if (!wotActionType.equals(ai.wotActionType) || ai.affectedZones == null) continue;
+                for (int z : ai.affectedZones)
+                    if (z >= 0 && z < zoneCauseContaminated.length) zoneCauseContaminated[z] = true;
+            }
+        }
+        nRemoved.set(removed);
+    }
+
+    /**
+     * Warm-restart re-learning after a component has been blacklisted (master
+     * plan §3.1). Does NOT wipe the whole Q-table — it surgically removes the
+     * dependence on the pruned action and re-primes exploration:
+     *   1. Zero Q(s,a*) and visit counts for every blacklisted action a*.
+     *   2. Halve the surviving Q-values in "poisoned" states — those whose old
+     *      greedy action was a blacklisted action — so re-learning can re-rank
+     *      the survivors quickly without fighting a stale optimum.
+     *   3. Boost ε to {@code fault.relearn.epsBoost} so the agent re-explores
+     *      the reduced action set.
+     *   4. Reset the prior-decay clock so the KG priors regain weight over the
+     *      surviving actions during re-learning (ql_true; no-op for ql_false).
+     *   5. Reset the convergence detector for the new regime.
+     */
+    @OPERATION
+    public void warmRestart() {
+        if (blacklisted == null) return;
+        // Snapshot poisoned states using the ORIGINAL Q (before any wipe).
+        boolean[] poisonedState = new boolean[nStates];
+        int poisoned = 0;
+        for (int s = 0; s < nStates; s++) {
+            int oldArg = unfilteredArgmax(s);
+            if (oldArg >= 0 && blacklisted[oldArg]) { poisonedState[s] = true; poisoned++; }
+        }
+        // (1) Wipe blacklisted action columns + their visit counts.
+        int wiped = 0;
+        for (int a = 0; a < nActions; a++) {
+            if (!blacklisted[a]) continue;
+            wiped++;
+            for (int z = 0; z < qTables.length; z++)
+                for (int s = 0; s < nStates; s++) qTables[z][s][a] = 0.0;
+            for (int s = 0; s < nStates; s++) visitCounts[s][a] = 0L;
+        }
+        // (2) Decay poisoned states' surviving Q toward 0.
+        for (int s = 0; s < nStates; s++) {
+            if (!poisonedState[s]) continue;
+            for (int z = 0; z < qTables.length; z++)
+                for (int a = 0; a < nActions; a++) qTables[z][s][a] *= 0.5;
+        }
+        // (3) ε boost, (4) prior-decay reset, (5) convergence reset.
+        epsilon = Math.max(epsilon, FAULT_EPS_BOOST);
+        currentEpisodeNum = 0;
+        convergenceCount = 0;
+        // (6) Reset the policy-stability recovery detector so the recovery window
+        //     starts fresh from the warm-restart point (the post-fault baseline).
+        recoveryPolicy = null;
+        recoveryStableCount = 0;
+        // (7) Phase 2.2 — re-baseline fault evidence (per-component sequential
+        //     isolation). Evidence accumulated while the just-blacklisted
+        //     component was still active is discarded so the NEXT component is
+        //     adjudicated afresh in the reduced action space. This stops a
+        //     corrupted residual (e.g. a stuck inverted lamp depressing a zone)
+        //     from being carried across the isolation boundary and mis-charged
+        //     to a healthy survivor.
+        if (faultObsN != null) {
+            java.util.Arrays.fill(faultObsN, 0);
+            java.util.Arrays.fill(faultDeadN, 0);
+            java.util.Arrays.fill(faultInvertN, 0);
+        }
+        LOGGER.warning(String.format(
+            "warmRestart: wiped %d action column(s), decayed %d poisoned state(s), "
+          + "ε←%.3f, episodeClock←0, convergence reset",
+            wiped, poisoned, epsilon));
+    }
+
+    /** Number of actions currently selectable (excludes blacklisted). */
+    @OPERATION
+    public void getNumApplicableActions(OpFeedbackParam<Integer> n) {
+        int c = 0;
+        for (int a = 0; a < nActions; a++) if (blacklisted == null || !blacklisted[a]) c++;
+        n.set(c);
+    }
+
+    /** True iff any action of the given component is currently blacklisted. */
+    @OPERATION
+    public void isComponentBlacklisted(String wotActionType, OpFeedbackParam<Boolean> result) {
+        boolean any = false;
+        if (wotActionType != null && blacklisted != null) {
+            for (int a = 0; a < nActions; a++) {
+                StereotypeReasoner.ActionInfo ai = actionInfos[a];
+                if (ai != null && wotActionType.equals(ai.wotActionType) && blacklisted[a]) {
+                    any = true;
+                    break;
+                }
+            }
+        }
+        result.set(any);
+    }
+
+    /**
+     * Append one recovery-metric row to a CSV (creating it with a header if
+     * absent). RecoveryEpisodes = ReconvergeEpisode − DetectEpisode is the
+     * headline Phase-2 metric: how many episodes the agent took to re-converge
+     * after the fault was detected and the component blacklisted.
+     *
+     * Phase 2.2: {@code recoveredGoalRate} is the fraction of greedy (ε=0)
+     * evaluation episodes the FINAL policy reaches the goal in. It distinguishes
+     * a policy that merely STOPPED CHANGING (stable) from one that actually
+     * REACHES the goal (goal-reaching), closing the stability≠optimality gap.
+     */
+    @OPERATION
+    public void saveRecoveryLog(String filename, int detectEp, int reconvergeEp,
+                                int secondaryDetectEp, double recoveredGoalRate,
+                                String blacklistedLabel) {
+        boolean exists = new java.io.File(filename).exists();
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filename, true))) {
+            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate");
+            int rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1;
+            pw.printf("%s,%d,%d,%d,%d,%.4f%n",
+                blacklistedLabel == null ? "" : blacklistedLabel,
+                detectEp, reconvergeEp, rec, secondaryDetectEp, recoveredGoalRate);
+            LOGGER.info("saveRecoveryLog: appended recovery row to " + filename);
+        } catch (IOException e) {
+            LOGGER.warning("saveRecoveryLog: failed " + filename + " — " + e.getMessage());
+        }
+    }
+
     /**
      * Map a WoT action type URI to the corresponding action index.
      * Returns −1 if not found.
@@ -1050,6 +1503,39 @@ public class QLearner extends Artifact {
     @OPERATION
     public void hasConverged(OpFeedbackParam<Boolean> converged) {
         converged.set(convergenceCount >= convergenceWindow);
+    }
+
+    /**
+     * Phase 2.1 — advance the policy-stability recovery detector by ONE episode.
+     * Call once per adapt episode (after {@link #endEpisode}) once a fault has
+     * been blacklisted. Snapshots the current greedy policy ({@link
+     * #jointArgmaxAction} over every state, which excludes blacklisted actions)
+     * and counts how many consecutive episodes the policy stays identical. The
+     * argmax ignores ε and ignores whether the (possibly sun-gated) goal was
+     * reachable this episode, so it settles where the 1e-3 Bellman test cannot.
+     */
+    @OPERATION
+    public void updateRecoveryDetector() {
+        int[] pol = new int[nStates];
+        for (int s = 0; s < nStates; s++) pol[s] = jointArgmaxAction(s);
+        if (recoveryPolicy != null && java.util.Arrays.equals(pol, recoveryPolicy)) {
+            recoveryStableCount++;
+        } else {
+            recoveryStableCount = 0;
+            recoveryPolicy = pol;
+        }
+    }
+
+    /**
+     * Phase 2.1 — true once the greedy policy has been stable for
+     * {@code fault.recover.window} (default 50) consecutive episodes, i.e. the
+     * agent has re-converged onto a fixed policy over the surviving action set.
+     *
+     * @param recovered  Output: true if the post-fault policy has re-converged.
+     */
+    @OPERATION
+    public void hasRecovered(OpFeedbackParam<Boolean> recovered) {
+        recovered.set(recoveryStableCount >= RECOVERY_WINDOW);
     }
 
     /**
@@ -1666,7 +2152,24 @@ public class QLearner extends Artifact {
      * by lowest action index for determinism.
      */
     private int jointArgmaxAction(int stateIdx) {
-        int best = 0;
+        int best = -1;
+        double bestVal = Double.NEGATIVE_INFINITY;
+        for (int a = 0; a < nActions; a++) {
+            if (blacklisted != null && blacklisted[a]) continue; // Phase 2: skip defective actions
+            double v = combinedQ(stateIdx, a);
+            if (v > bestVal) { bestVal = v; best = a; }
+        }
+        if (best < 0) best = 0; // safety: DO_NOTHING is never blacklisted, so unreachable
+        return best;
+    }
+
+    /**
+     * Argmax over ALL actions including blacklisted ones (combined Q). Used by
+     * {@link #warmRestart} to identify "poisoned" states whose old greedy action
+     * was the now-removed defective action.
+     */
+    private int unfilteredArgmax(int stateIdx) {
+        int best = -1;
         double bestVal = Double.NEGATIVE_INFINITY;
         for (int a = 0; a < nActions; a++) {
             double v = combinedQ(stateIdx, a);
@@ -1683,14 +2186,24 @@ public class QLearner extends Artifact {
      */
     private int[] computeApplicableActions(Object[] stateVec) {
         if (!useStereotypes || !maskStrict) {
-            // All actions applicable — priors are applied in greedy selection only
-            int[] all = new int[nActions];
-            for (int i = 0; i < nActions; i++) all[i] = i;
-            return all;
+            // All non-blacklisted actions applicable — priors are applied in
+            // greedy selection only. Phase 2: a blacklisted (defective) action
+            // is removed from the action space entirely.
+            int n = 0;
+            int[] buf = new int[nActions];
+            for (int i = 0; i < nActions; i++) {
+                if (blacklisted == null || !blacklisted[i]) buf[n++] = i;
+            }
+            return Arrays.copyOf(buf, n);
         }
         // Hard masking for ablation (mask_strict=true)
         int[] sv = toIntArray(stateVec);
-        return reasoner.getApplicableActions(sv);
+        int[] masked = reasoner.getApplicableActions(sv);
+        if (blacklisted == null) return masked;
+        int n = 0;
+        int[] buf = new int[masked.length];
+        for (int a : masked) if (!blacklisted[a]) buf[n++] = a;
+        return Arrays.copyOf(buf, n);
     }
 
     /** Select greedy action from applicable set using combined Q + soft priors. */

@@ -1,0 +1,341 @@
+name: Phase 3 (process dynamics, response-delay learning)
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 3 — Response-Delay Learning / Time-Bounded Exploitation, end-to-end.
+#
+# Self-contained: a single workflow_dispatch probes every actuator on the SLOW
+# labs to learn its response delay (fast lamp/spotlight ~0 ticks; motorized
+# blind ~blind_delay_ticks), writes the learned ws:responseDelay back to the
+# Knowledge Graph, then runs a time-bounded benchmark choosing actuators WITH
+# (ql_true, KG-primed) or WITHOUT (ql_false, tabula-rasa) the learned delay.
+# There is NO Q-table training phase — the dynamics agent does not learn a
+# policy, it learns timing and plans against deadlines.
+#
+# DAG:  setup → dynamics (slow-profile × mode × replica: start the matching slow
+#                         Node-RED flow, run taskDynamics with a watchdog,
+#                         upload the learned-dynamics TTL + delay table + the
+#                         time-bounded results)
+#                    → aggregate (phase3_dynamics.py: delay-learning accuracy
+#                                 + per-cell compliance CI + paired bootstrap
+#                                 ql_true vs ql_false, BH-FDR)
+#
+# Two headline claims:
+#   (1) delay-learning accuracy: learned blind delay ≈ ground-truth
+#       blind_delay_ticks (config phase3), instantaneous vs delayed cleanly split.
+#   (2) deadline compliance: compliance(ql_true) > compliance(ql_false),
+#       especially on TIGHT goals (deadline < blind delay) — the KG-primed
+#       planner reaches for the fast lamp under a tight deadline and the cheap
+#       blind under a loose one, while the tabula-rasa planner always grabs the
+#       cheapest (slow) actuator and misses every tight deadline.
+#
+# "Replicas" repeat the identical cell to sample the small measurement jitter
+# (HTTP timing vs the 50 ms env tick) for confidence intervals — Phase 3 has no
+# RNG seed because the probe + planner are deterministic given the simulator.
+#
+# Every (profile × mode × replica) cell runs concurrently, so wall-clock is set
+# by the slowest single cell, not the cell count.
+# ──────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      dynamics_profiles:
+        description: "Comma-separated slow profiles. Default = both (lab2_slow,lab3_slow)."
+        required: false
+        default: "lab2_slow,lab3_slow"
+      replicas:
+        description: "Comma-separated replica indices (repeat the identical cell to sample measurement jitter for CIs). Default 1..5. Use 1 for a fast pipeline smoke."
+        required: false
+        default: "1,2,3,4,5"
+      probes:
+        description: "Per-actuator delay-sample budget (-Pprobe.count). 0 = config phase3.probe.probes_per_actuator (8). Use 3 for a fast smoke."
+        required: false
+        default: "0"
+      publish_results:
+        description: "Push consolidated Phase-3 results to the 'results' branch"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase3
+  cancel-in-progress: false
+
+env:
+  DYNAMICS_PROFILES: ${{ github.event.inputs.dynamics_profiles || 'lab2_slow,lab3_slow' }}
+  REPLICAS:          ${{ github.event.inputs.replicas          || '1,2,3,4,5' }}
+  PROBES:            ${{ github.event.inputs.probes             || '0' }}
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  setup:
+    name: Compile & build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      profiles_json: ${{ steps.profiles.outputs.json }}
+      replicas_json: ${{ steps.replicas.outputs.json }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Compile classes (with retry on JitPack flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::compile attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          exit $rc
+      - name: Upload compiled build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-classes
+          path: |
+            build/classes
+            build/resources
+            build/generated
+          if-no-files-found: error
+          retention-days: 1
+      - name: Materialise slow-profile list
+        id: profiles
+        shell: bash
+        run: |
+          json=$(echo "${{ env.DYNAMICS_PROFILES }}" | tr ',' '\n' | sed '/^$/d' | jq -R . | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "profiles=$json"
+      - name: Materialise replica list
+        id: replicas
+        shell: bash
+        run: |
+          json=$(echo "${{ env.REPLICAS }}" | tr ',' '\n' | sed '/^$/d' | jq -R 'tonumber' | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "replicas=$json"
+
+  # ────────────────────────────────────────────────────────────────────────
+  dynamics:
+    name: dyn ${{ matrix.profile }} mode=${{ matrix.mode }} rep=${{ matrix.replica }}
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30   # probe(8) + 6 exploit goals ≈ 3-5 min/cell; wide margin
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
+        mode:    ["ql_true", "ql_false"]
+        replica: ${{ fromJson(needs.setup.outputs.replicas_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Warm Gradle deps (retry on JitPack flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
+      - name: Run dynamics cell (probe → learn → KG writeback → time-bounded exploit)
+        shell: pwsh
+        run: |
+          $probes = [int]"${{ env.PROBES }}"
+          ./run_phase3_dynamics.ps1 `
+            -DynamicsProfiles ${{ matrix.profile }} `
+            -Modes ${{ matrix.mode }} `
+            -Probes $probes `
+            -WatchdogIdleSec 600
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Resolve filename boolean for this mode
+        id: m
+        shell: bash
+        run: |
+          if [ "${{ matrix.mode }}" = "ql_true" ]; then echo "bool=true" >> "$GITHUB_OUTPUT"; else echo "bool=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Upload dynamics artefacts (learned KG + delay table + time-bounded results + log)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dynamics-${{ matrix.profile }}-${{ matrix.mode }}-rep-${{ matrix.replica }}
+          path: |
+            learned_dynamics_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.ttl
+            dynamics_delays_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            timebounded_results_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            log/dynamics_${{ matrix.profile }}_${{ matrix.mode }}.log
+            log/dynamics_${{ matrix.profile }}_${{ matrix.mode }}.err.log
+            run_phase3_dynamics.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  # ────────────────────────────────────────────────────────────────────────
+  aggregate:
+    name: Aggregate dynamics & publish
+    needs: dynamics
+    # Aggregate whatever artefacts exist even if a single dynamics leg flaked
+    # (e.g. a transient JitPack timeout). The reconstruct + analysis steps
+    # tolerate missing replicas, so one bad cell never blocks the run.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis deps
+        run: pip install numpy scipy
+      - name: Download all dynamics artefacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dynamics-*
+          path: _artifacts/dynamics
+      - name: Reconstruct per-replica dynamics layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          mkdir -p dynamics_root
+          for d in _artifacts/dynamics/*/; do
+            name=$(basename "$d")
+            rep=$(echo "$name" | sed -nE 's/.*-rep-([0-9]+)$/\1/p')
+            if [ -z "$rep" ]; then echo "WARN: no replica in $name"; continue; fi
+            mkdir -p "dynamics_root/rep${rep}"
+            # Each replica's three artefacts (delay table drives the accuracy
+            # headline; time-bounded results drive deadline compliance; the TTL
+            # is the KG writeback kept for audit). Same filenames across replicas
+            # live in separate rep dirs so phase3_dynamics.py aggregates them.
+            for f in "${d}"dynamics_delays_*.csv "${d}"timebounded_results_*.csv "${d}"learned_dynamics_*.ttl; do
+              [ -e "$f" ] || continue
+              cp -n "$f" "dynamics_root/rep${rep}/" 2>/dev/null || true
+            done
+          done
+          echo "-- dynamics layout --"
+          find dynamics_root -type f | sort
+      - name: Aggregate Phase-3 dynamics (delay accuracy + compliance CI + paired bootstrap)
+        run: |
+          python analysis/phase3_dynamics.py \
+            --root dynamics_root \
+            --out analysis/out
+      - name: Generate job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "# Phase 3 (process dynamics / response-delay learning) — summary"
+            echo ""
+            echo "**Profiles:** \`${{ env.DYNAMICS_PROFILES }}\`"
+            echo "**Replicas:** \`${{ env.REPLICAS }}\`"
+            echo "**Probes/actuator:** \`${{ env.PROBES }}\` (0 = config default 8)"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo ""
+            echo "Headline 1: learned blind delay ≈ ground-truth blind_delay_ticks (delay-learning accuracy)."
+            echo "Headline 2: compliance(ql_true) > compliance(ql_false), especially on TIGHT goals."
+            echo ""
+            if [ -f analysis/out/phase3_delay_accuracy.csv ]; then
+              echo "## phase3_delay_accuracy.csv (learned vs ground-truth blind ticks)"
+              echo '```'
+              cat analysis/out/phase3_delay_accuracy.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/phase3_compliance_ci.csv ]; then
+              echo "## phase3_compliance_ci.csv (per profile × arm, 95% CI)"
+              echo '```'
+              cat analysis/out/phase3_compliance_ci.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/phase3_compliance_paired.csv ]; then
+              echo "## phase3_compliance_paired.csv (ql_true − ql_false, paired bootstrap + BH-FDR)"
+              echo '```'
+              cat analysis/out/phase3_compliance_paired.csv
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload consolidated Phase-3 artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase3-consolidated
+          path: |
+            analysis/out/**
+            dynamics_root/**
+          retention-days: 90
+      - name: Publish to 'results' branch
+        if: ${{ github.event.inputs.publish_results == 'true' }}
+        shell: bash
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          git config user.name  "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
+          ts=$(date -u +%Y%m%d-%H%M%S)
+          branch="results"
+          tmp=$(mktemp -d)
+          cp -r analysis/out "$tmp/phase3_out"
+          cp -r dynamics_root "$tmp/phase3_dynamics_root" 2>/dev/null || true
+          git fetch origin "$branch" || true
+          if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            git checkout -B "$branch" "origin/$branch"
+          else
+            git checkout --orphan "$branch"
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          dest="phase3/${{ github.run_id }}-${ts}"
+          mkdir -p "$dest"
+          cp -r "$tmp/phase3_out" "$dest/analysis_out"
+          cp -r "$tmp/phase3_dynamics_root" "$dest/dynamics_root" 2>/dev/null || true
+          git add "$dest"
+          git commit -m "Phase 3 dynamics results: run ${{ github.run_id }} ($ts)" || echo "nothing to commit"
+          git push origin "$branch"

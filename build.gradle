@@ -145,6 +145,80 @@ task taskBench (type: JavaExec, dependsOn: 'classes') {
     }
 }
 
+// Phase 2 fault-adaptation agent task.
+// Warm-loads a Phase-1 clean Q-table, detects an injected hardware fault,
+// blacklists the defective component, and re-learns over the survivors.
+//   -Pprofile=<faulty_id>  e.g. lab2_f1dead | lab2_f1inv | lab3_f1dead | ...
+//   -Pmode=<ql_true|ql_false>  selects KG-primed vs tabula-rasa re-learning.
+// Run while the MATCHING faulty Node-RED simulator flow is running.
+task taskAdapt (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the Phase-2 fault-detection / blacklist / re-learn agent'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_adapt.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pprofile=<id> -> active.profile (faulty profile selector).
+    // -Pmode=<ql_true|ql_false> -> adapt.mode (stereotype on/off). Both are
+    // read at startup by the adapt agent via tools.jia.system_prop (#7).
+    doFirst {
+        def overrideProfile = project.findProperty('profile')
+        if (overrideProfile) {
+            systemProperty 'active.profile', overrideProfile
+            println "taskAdapt: active.profile=${overrideProfile}"
+        }
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            systemProperty 'adapt.mode', overrideMode
+            println "taskAdapt: adapt.mode=${overrideMode}"
+        }
+        // -Padapt.episodes=<N> -> adapt.episodes: launch-time re-learn budget
+        // override (e.g. a fast smoke run). Read numerically by the adapt agent
+        // via tools.jia.system_prop_num; default = the profile's training_params.
+        def overrideEpisodes = project.findProperty('adapt.episodes')
+        if (overrideEpisodes) {
+            systemProperty 'adapt.episodes', overrideEpisodes
+            println "taskAdapt: adapt.episodes=${overrideEpisodes}"
+        }
+    }
+}
+
+// Phase 3 process-dynamics agent task.
+// Probes every actuator to learn its response delay (fast lamp ~0 ticks; slow
+// motorized blind ~12 ticks = 60 s), writes the learned ws:responseDelay back
+// to the Knowledge Graph, then exploits that knowledge to satisfy time-bounded
+// goals. Outputs (per profile P, mode bool B in {true,false}):
+//   learned_dynamics_<B>_<P>.ttl     — KG writeback of ws:responseDelay
+//   dynamics_delays_<B>_<P>.csv      — flat per-actuator delay table
+//   timebounded_results_<B>_<P>.csv  — deadline-compliance + energy per goal
+//   -Pprofile=<slow_id>  e.g. lab2_slow | lab3_slow
+//   -Pmode=<ql_true|ql_false>  KG-primed vs tabula-rasa planner.
+// Run while the MATCHING slow Node-RED simulator flow is running
+//   (lab2_slow -> port 1895, lab3_slow -> port 1896).
+task taskDynamics (type: JavaExec, dependsOn: 'classes') {
+    description = 'runs the Phase-3 response-delay learning / time-bounded exploitation agent'
+    group = ' JaCaMo'
+    mainClass = 'jacamo.infra.JaCaMoLauncher'
+    args 'task_dynamics.jcm'
+    classpath sourceSets.main.runtimeClasspath
+
+    // -Pprofile=<id> -> active.profile (slow profile selector).
+    // -Pmode=<ql_true|ql_false> -> dynamics.mode (planner KG-primed on/off).
+    // Both are read at startup by the dynamics agent via tools.jia.system_prop.
+    doFirst {
+        def overrideProfile = project.findProperty('profile')
+        if (overrideProfile) {
+            systemProperty 'active.profile', overrideProfile
+            println "taskDynamics: active.profile=${overrideProfile}"
+        }
+        def overrideMode = project.findProperty('mode')
+        if (overrideMode) {
+            systemProperty 'dynamics.mode', overrideMode
+            println "taskDynamics: dynamics.mode=${overrideMode}"
+        }
+    }
+}
+
 clean {
     delete 'bin'
     delete 'build'
@@ -158,10 +232,17 @@ clean {
 // ─────────────────────────────────────────────────────────────────────────
 def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries','sim.http.backoffMs',
                  'reward.clip','stereo.priorScale','stereo.priorDecayEpisodes','stereo.priorDecayFloor',
-                 'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus',
+                 'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus','stereo.crossZoneBonus',
                  // Research extensions: PBRS, adaptive trust, per-run seed.
                  'reward.shaping','stereo.adaptiveTrust','stereo.adaptiveTrust.minSamples','stereo.adaptiveTrust.floor',
-                 'run.seed']
+                 'run.seed',
+                 // Phase 3 process-dynamics: probe cadence / hold window / sample
+                 // budget + DynamicsLearner thresholds. Read by the dynamics agent
+                 // (tools.jia.system_prop_num) and by tools.DynamicsLearner
+                 // (System.getProperty). active.profile + dynamics.mode are
+                 // forwarded separately by taskDynamics.doFirst.
+                 'seconds.per.tick','probe.settle.ms','probe.poll.ms','probe.max.wait.ticks',
+                 'probe.hold.ticks','probe.count','dynamics.learner.minSamples','dynamics.instant.threshold.sec']
 tasks.withType(JavaExec).configureEach {
     // QLearner allocates per-zone Q-tables of size nStates*nActions (for
     // custom2 stereotype init: ~22 M doubles ~= 180 MB) plus serialisation
