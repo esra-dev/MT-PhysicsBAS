@@ -44,9 +44,9 @@ on:
         required: false
         default: "lab2_slow,lab3_slow"
       replicas:
-        description: "Comma-separated replica indices (repeat the identical cell to sample measurement jitter for CIs). Default 1..5. Use 1 for a fast pipeline smoke."
+        description: "Comma-separated replica indices (repeat the identical cell to sample measurement jitter for CIs). Default 1..10 to match Phase 2's n>=6 convention so the Wilcoxon signed-rank column can clear 0.05 (n=5 floor is 0.0625). Use 1 for a fast pipeline smoke."
         required: false
-        default: "1,2,3,4,5"
+        default: "1,2,3,4,5,6,7,8,9,10"
       probes:
         description: "Per-actuator delay-sample budget (-Pprobe.count). 0 = config phase3.probe.probes_per_actuator (8). Use 3 for a fast smoke."
         required: false
