@@ -175,7 +175,9 @@
     "custom9s": 1891,
     "lab1": 1892,
     "lab2": 1893,
-    "lab3": 1894
+    "lab3": 1894,
+    "lab2_slow": 1895,
+    "lab3_slow": 1896
   },
   "simulator_flow_map": {
     "custom2": "simulator_flow_custom2.json",
@@ -189,7 +191,9 @@
     "custom9s": "simulator_flow_custom9s.json",
     "lab1": "simulator_flow_lab1.json",
     "lab2": "simulator_flow_lab2.json",
-    "lab3": "simulator_flow_lab3.json"
+    "lab3": "simulator_flow_lab3.json",
+    "lab2_slow": "simulator_flow_lab2_slow.json",
+    "lab3_slow": "simulator_flow_lab3_slow.json"
   },
   "qtable_suffix_map": {
     "custom2": "_custom2",
@@ -203,7 +207,9 @@
     "custom9s": "_custom9s",
     "lab1": "_lab1",
     "lab2": "_lab2",
-    "lab3": "_lab3"
+    "lab3": "_lab3",
+    "lab2_slow": "_lab2_slow",
+    "lab3_slow": "_lab3_slow"
   },
   "expected_state_vec_dim": {
     "custom2": 13,
@@ -217,7 +223,9 @@
     "custom9s": 8,
     "lab1": 2,
     "lab2": 7,
-    "lab3": 8
+    "lab3": 8,
+    "lab2_slow": 7,
+    "lab3_slow": 8
   },
   "http_client": {
     "connect_timeout_ms": 2000,
@@ -310,6 +318,51 @@
       "lab3_f2dead": 8,
       "lab3_f2inv": 8
     }
+  },
+  "phase3": {
+    "description": "Phase 3 process dynamics / response-delay learning (run_phase3_dynamics.ps1 + .github/workflows/phase3.yml). Each slow profile is a clean Phase-1 parent (lab2/lab3) whose simulator gives the motorized blind a temporal response delay (blind_delay_ticks env ticks). The dynamics agent (taskDynamics) runs N controlled probe trials per actuator: it pins a baseline via /setState, reads the Tick clock, toggles ONE actuator ON, then polls until the target zone illuminance rank is reached, measuring the delay in ticks. responseDelaySeconds = ticks * seconds_per_tick. Per-actuator Welford statistics are written back to the KG (learned_dynamics_stereotypes_<bool><suffix>.ttl, ws:responseDelay). The agent then runs a time-bounded benchmark: for each (zone, target rank, deadline) goal it chooses actuators using the learned delays (KG-primed, mode ql_true) vs no delay knowledge (tabula-rasa, mode ql_false); tight deadlines (< blind delay) force the fast lamp, loose deadlines admit the cheap blind. Headline metrics: delay-learning accuracy (learned vs ground-truth blind_delay_ticks) and deadline-compliance rate + energy (ql_true should meet tight deadlines and use less energy on loose ones). Dedicated ports/ontologies keep Phase 1/2 untouched.",
+    "dynamics_profiles": ["lab2_slow", "lab3_slow"],
+    "dynamics_modes": ["ql_true", "ql_false"],
+    "seconds_per_tick": 5.0,
+    "blind_delay_ticks": 12,
+    "smoke_probes": 3,
+    "parent_profile": {
+      "lab2_slow": "lab2",
+      "lab3_slow": "lab3"
+    },
+    "simulator_port_map": {
+      "lab2_slow": 1895,
+      "lab3_slow": 1896
+    },
+    "simulator_flow_map": {
+      "lab2_slow": "simulator_flow_lab2_slow.json",
+      "lab3_slow": "simulator_flow_lab3_slow.json"
+    },
+    "qtable_suffix_map": {
+      "lab2_slow": "_lab2_slow",
+      "lab3_slow": "_lab3_slow"
+    },
+    "expected_state_vec_dim": {
+      "lab2_slow": 7,
+      "lab3_slow": 8
+    },
+    "probe": {
+      "probes_per_actuator": 8,
+      "settle_ms": 400,
+      "poll_ms": 50,
+      "max_wait_ticks": 60,
+      "target_rank": 3,
+      "probe_sun_rank": 900
+    },
+    "timebounded_goals_note": "Canonical time-bounded exploit goals. These are mirrored as tb_goal/4 facts in src/agt/illuminance_controller_agent_dynamics.asl (keep in sync). Each goal = a target zone illuminance rank that must be reached within a wall-clock-equivalent deadline (seconds). Sun is pinned high (900) so the motorized blind is EFFECTIVE; the only differentiator is its response delay vs the deadline. blind_delay_ticks(12) * seconds_per_tick(5) = 60 s, so deadlines < 60 s are 'tight' (only the instantaneous lamp/spotlight can meet them) and deadlines >= 60 s are 'loose' (the cheap blind also qualifies). The KG-primed arm (ql_true) uses the LEARNED per-actuator delay; the tabula-rasa arm (ql_false) assumes zero delay (no knowledge) and therefore always prefers the cheapest actuator, missing tight deadlines.",
+    "timebounded_goals": [
+      { "id": "g1", "zone": 1, "target_rank": 3, "deadline_sec": 15.0 },
+      { "id": "g2", "zone": 1, "target_rank": 3, "deadline_sec": 45.0 },
+      { "id": "g3", "zone": 1, "target_rank": 3, "deadline_sec": 90.0 },
+      { "id": "g4", "zone": 1, "target_rank": 3, "deadline_sec": 300.0 },
+      { "id": "g5", "zone": 2, "target_rank": 3, "deadline_sec": 15.0 },
+      { "id": "g6", "zone": 2, "target_rank": 3, "deadline_sec": 300.0 }
+    ]
   },
   "dry_run": false
 }

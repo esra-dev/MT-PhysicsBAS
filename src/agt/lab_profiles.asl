@@ -302,6 +302,48 @@ lab_profile("lab3",
             qtable_suffix("_lab3"),
             training_params(3000, 0.9970)).
 
+// ── Phase 3 SLOW LADDER (Learning Process Dynamics / response delay) ────────
+//   Each slow profile is structurally IDENTICAL to its clean Phase-1 parent
+//   (same agent-side ontology shape, zone targets and discretisation bounds, so
+//   the Q-state space is unchanged) but its SIMULATOR flow gives the motorized
+//   blind a TEMPORAL response delay (~60 s = 12 ticks). The lamp (and, in lab3,
+//   the spotlight) stay instantaneous. The dynamics agent MEASURES the per-
+//   actuator delay online and writes it back to the KG (learned_dynamics_*.ttl),
+//   then exploits it for time-bounded ("bright immediately" vs "within 5 min")
+//   goals. The slow labs use dedicated ports/ontologies, so Phase 1/2 are
+//   untouched. Benchmark + training scenarios are reused from the clean parents
+//   (the state schema is identical).
+
+//   lab2_slow → Lab 2 (Intermediate) + motorized-blind delay (port 1895).
+lab_profile("lab2_slow",
+            td("classpath:interactions-lab2_slow.ttl"),
+            ont(["building_2_slow.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1895),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab2_slow"),
+            training_params(2000, 0.9960)).
+
+//   lab3_slow → Lab 3 (Complex) + motorized-blind delay on BOTH blinds (1896).
+lab_profile("lab3_slow",
+            td("classpath:interactions-lab3_slow.ttl"),
+            ont(["building_3_slow.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1896),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab3_slow"),
+            training_params(3000, 0.9970)).
+
 // ── Phase 2 FAULTY LADDER (Fault detection / blacklist / re-learn) ──────────
 //   Each faulty profile is a clean Phase-1 lab (lab1/lab2/lab3) whose AGENT-SIDE
 //   ontology, zone targets and discretisation bounds are IDENTICAL to the clean
