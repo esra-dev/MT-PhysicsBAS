@@ -508,4 +508,175 @@ than to learner capacity.
 
 ---
 
+## 7. Addendum — Phase 1 Clean-Lab Design (added 2026-06-19, post-pivot)
+
+### 7.1 Context and pivot date
+
+After Sweep-18 returned a null on `custom9` (registered §6.7), the project pivoted
+(thesis meeting 2026-06-08) to a **clean physics-first lab design** on three purpose-built
+labs (`lab1`, `lab2`, `lab3`) with no ontology-weakness injection and no PBRS. The
+pivot rationale: test the baseline thesis claim (knowledge primes converge faster in a
+clean world) before introducing adversarial complications. This addendum documents that
+design so all confirmatory claims in the Phase 1 analysis documents
+(`docs/phase1_xzone_bumped_analysis.md`, `docs/phase1_xzone_replication_s11_20_analysis.md`,
+`docs/phase1_xzone_ablation_analysis.md`) have a traceable pre-registration equivalent.
+
+**Transparency note:** This addendum was written **after** data collection and should be
+reported as *confirmatory-with-post-hoc-registration* per Munafò et al. 2017. The clean-lab
+hypotheses were formed before data analysis began (the lab design and metric families were
+fixed at the time of the CI run) but were not committed to this file before the first CI
+result was seen. Readers / reviewers should treat §7.3 as pre-analysis intent rather than
+strictly pre-data.
+
+### 7.2 Design at a glance
+
+- **Independent variable (treatment):** `mode ∈ {rule_based, ql_false, ql_true}`
+  - `ql_true` = Q-learner with KG-derived stereotype priors (cross-zone bonus enabled)
+  - `ql_false` = tabula-rasa Q-learner (no priors)
+  - `rule_based` = hand-coded rule policy (oracle ceiling reference)
+- **Independent variable (lab):** `profile ∈ {lab1, lab2, lab3}`
+  - `lab1` — trivial one-zone room (expected null; positive control)
+  - `lab2` — two-zone room, no cross-zone coupling (primary discriminating lab)
+  - `lab3` — two-zone room, cross-zone light spill present (bump to rank-moving magnitude)
+- **Replications:** `seed ∈ {1, …, 10}` (10 independent paired training seeds)
+- **Configuration under test (run profile `phase1_kg_xzone`):**
+  - `reward_shaping = "none"` (no PBRS — knowledge priors only)
+  - `adaptive_trust = false`
+  - `cross_zone_bonus = 3.0` (`stereo.crossZoneBonus`)
+  - `cross_zone_bonus_mode = "targeted"` (`stereo.crossZoneBonusMode`)
+  - `stereo_init_bonus = 15.0`
+  - `num_episodes = 10000`, `exec_max_steps = 20`
+
+### 7.3 Confirmatory hypotheses
+
+**H-CL1 (medium lab, primary):** On `lab2`, `ql_true` achieves a higher AUC-goal
+(area under the per-episode goal-rate curve) than `ql_false`, paired by seed.
+
+- Test: within-seed paired bootstrap (10,000 resamples) on `auc_goal`, two-sided. BH family
+  m = 42 (all benchmark paired tests, confirmatory mode-pairs).
+- Prediction: CI of `ql_true − ql_false` is strictly positive, q ≤ 0.05.
+- Falsified if: CI includes 0 or is strictly negative.
+
+**H-CL2 (null control):** On `lab1`, no metric shows a significant difference between
+`ql_true` and `ql_false`.
+
+- Test: same paired bootstrap + BH, all metrics. Prediction: zero cells reject at q ≤ 0.05.
+- Falsified if: any cell rejects (which would indicate a code-path bug or runaway prior).
+
+**H-CL3 (efficiency, medium lab):** On `lab2`, `ql_true` produces fewer `avg_redundant`
+actions than `ql_false`.
+
+- Test: paired bootstrap on `avg_redundant`, two-sided, BH family m = 42.
+- Prediction: CI strictly negative, q ≤ 0.05.
+
+**H-CL4 (cross-zone mechanism, hard lab):** On `lab3`, `ql_true` shows a higher
+`auc_reward` than `ql_false`.
+
+- Test: paired bootstrap on `auc_reward`, two-sided, BH family m = 42.
+- Prediction: CI strictly positive, q ≤ 0.05.
+- Rationale: `auc_goal` may ceiling (both arms reach near-100% goal-rate); `auc_reward`
+  captures economy (steps, energy, deviation) and is expected to show KG advantage even
+  when the goal-rate curves converge.
+
+### 7.4 Statistical families (BH correction)
+
+| Family | Description | m (denominator) | File |
+|---|---|---|---|
+| `confirmatory` | All `(lab, metric, mode_pair)` benchmark paired tests, `ql_true` vs `ql_false` + `ql_true` vs `rule_based` | 42 | `analysis/out/paired_tests.csv` |
+| `exploratory` | `ql_false` vs `rule_based` comparisons | 21 | same file, `family=exploratory` |
+| `learning_speed` | All `(lab, metric)` pairs in learning-speed table, `ql_true − ql_false` | 12 | `analysis/out/learning_speed_tests.csv` |
+
+BH correction is applied **independently** per family; families are not pooled.
+
+### 7.5 Primary metrics
+
+- `auc_goal` (normalised mean goal-rate over the training curve) — primary learning-speed
+  metric; higher is better.
+- `auc_reward` — secondary learning-speed metric; higher is better; the sensitive metric for
+  `lab3` due to goal-rate ceiling.
+- `mean_first_goal` — secondary; episodes to first successful goal; lower is better; reported
+  with its BH q-value but not the headline claim.
+- Benchmark metrics: `goal_rate`, `avg_steps`, `avg_redundant`, `avg_wasted`, `avg_dev`,
+  `avg_energy`, `avg_cycling` — all seven reported in `paired_tests.csv`.
+
+### 7.6 Registered deviations from the original pre-registration
+
+- The original design (§1–§6) used `profile ∈ {custom2…custom8}`, PBRS on, adaptive
+  trust on, and `goal_rate` (terminal) as the primary metric. All of those choices are
+  superseded for Phase 1 by this addendum.
+- The learning-speed primary metric (`auc_goal`) was introduced in §6.6 (SW17-1) and
+  carries over unchanged.
+- The `episodes_to_threshold` metric is retained in `learning_speed_tests.csv` but
+  classified `secondary_censored` (SW18-1); it is not a headline claim for Phase 1.
+- Exploratory analysis of the **mechanism ablation** (`cross_zone_bonus_mode = "untargeted"`,
+  run `27464846574`) is reported in `docs/phase1_xzone_ablation_analysis.md` and is
+  labelled exploratory throughout; it was not pre-registered as a confirmatory test.
+
+---
+
+---
+
+## 8. Addendum — Phase 3 Process-Dynamics Design (added post-implementation, pre-analysis of confirmatory run)
+
+### 8.1 Context and registration timing
+
+After Phase 1 (KG-acceleration on clean labs) established that ontology priors can bootstrap a Q-learner, Phase 3 extends the system with **online learning of actuator response dynamics**: the agent probes each actuator, measures its empirical response time (ticks-to-settled), writes the result into the KG as `learned:learned_delay_sec`, and subsequently uses that knowledge to honour time-bounded goals (e.g. "make the room bright within 45 s").
+
+**Transparency note:** The Phase 3 code (`DynamicsLearner`, `illuminance_controller_agent_dynamics.asl`, slow-lab environments) was designed and committed before the CI run. The hypotheses, statistical protocol, and expected outcomes in §§8.3–8.4 were written into `docs/PHASE2_TO_PHASE3_CHANGES.md` §19.2 **before** the confirmatory run (`27621106006`) was dispatched, and committed in `eda6ca1` (branch `phase3-process-dynamics`). This addendum is therefore *pre-analysis* relative to the confirmatory n = 10 data; it should be cited as such. The n = 5 exploratory run (`27598417789`) was seen before §19.2 was written — it informed the design but the outcomes are reported separately (§16 of `PHASE2_TO_PHASE3_CHANGES.md`) and labelled exploratory.
+
+### 8.2 Design at a glance
+
+- **Agent:** `illuminance_controller_agent_dynamics.asl` (BDI Jason agent).
+  - **Phase A — probe:** plans 8 probe episodes per actuator; `DynamicsLearner.recordDelaySample` accumulates Welford online statistics; final mean written to KG via `saveLearnedDynamics` / `saveDelayTable`.
+  - **Phase B — exploit:** runs time-bounded goals (tight ≤ 45 s, loose ≤ 120 s) consulting `learned:learned_delay_sec` triples; action selector chooses `lamp` for tight deadlines and `blind` otherwise.
+- **Labs:** `lab2_slow` (port 1895, two-zone, `seconds_per_tick = 5.0`) and `lab3_slow` (port 1896, cross-zone spill). Blind countdown: 12 ticks = 60 s simulated. Lamp: ≤ 2 ticks ≈ 10 s (instantaneous class).
+- **Comparative arms:** `ql_true` (reads `learned_delay_sec` from KG) vs `ql_false` (ignores KG; treats all actuators as instantaneous; chooses blind by default).
+- **Replications:** `n = 10` replicas (CI dispatch input `"1,2,3,4,5,6,7,8,9,10"`). Each replica is one full probe + exploit session. The planner is deterministic given the learned table, so replicas resample tick-quantisation jitter, not a random-seed policy.
+- **Metrics:**
+  - **Delay accuracy:** `learned_delay_sec` vs ground truth 60 s (12 ticks); relative error; classification accuracy (instant vs delayed).
+  - **overall_compliance:** fraction of all goals met within their deadline.
+  - **tight_compliance:** fraction of tight-deadline goals met.
+  - **loose_compliance:** fraction of loose-deadline goals met.
+  - **total_energy:** lamp-use energy cost (lamps cost +1 per tick; blinds cost 0).
+- **Analysis script:** `analysis/phase3_dynamics.py`; paired bootstrap (10 000 resamples, RNG seed 0xC1), Wilcoxon signed-rank, Cliff's δ, BH-FDR over the 2-metric compliance family (m = 4: overall + tight × 2 labs, excluding the degenerate loose tie).
+
+### 8.3 Pre-registered hypotheses
+
+**H-P3a (delay-learning accuracy):** The agent learns the blind delay to within 5 % relative error after 8 probe episodes, and correctly classifies all actuators as instant vs delayed (threshold 30 s = 6 ticks).
+
+- Prediction: `rel_err ≤ 0.05` for every delayed actuator across both labs; classification accuracy = 100 %.
+- Falsified if: any delayed actuator has rel_err > 0.05, or any actuator is misclassified.
+
+**H-P3b (deadline compliance, primary):** `ql_true` achieves strictly higher `overall_compliance` and `tight_compliance` than `ql_false`, paired by replica.
+
+- Test: within-replica paired bootstrap (10 000 resamples) + Wilcoxon signed-rank + Cliff's δ; BH-FDR family m = 4.
+- Prediction (pre-registered in `docs/PHASE2_TO_PHASE3_CHANGES.md` §19.2, committed before run `27621106006`):
+  - `overall_compliance` diff = +0.5, CI = [0.5, 0.5], p_boot = 0.000, p_wilcoxon ≤ 0.002 (n = 10 floor = 2/2¹⁰ = 0.001953), Cliff's δ = 1.0.
+  - `tight_compliance` diff = +1.0, CI = [1.0, 1.0], identical statistics.
+  - `loose_compliance`: tie (both arms = 1.0, loose threshold easily met by both actuators).
+- Falsified if: mean diff ≤ 0 on either compliance metric, or CI includes 0.
+
+### 8.4 Statistical protocol (Phase 3)
+
+| Component | Value |
+|---|---|
+| Bootstrap resamples | 10 000 |
+| RNG seed | 0xC1 |
+| Wilcoxon (two-sided) | yes |
+| n (replicas) | 10 |
+| Wilcoxon floor at n = 10 | 2 / 2¹⁰ = 0.001953 |
+| BH family m | 4 (overall + tight × 2 labs) |
+| Significance threshold | q ≤ 0.05 |
+| Effect size | Cliff's δ (non-parametric) |
+| CI level | 95 % (two-sided, percentile) |
+
+### 8.5 Registered deviations / design notes
+
+- **D-P3-1 — n raised 5 → 10 (Wilcoxon floor).** The first exploratory sweep used `n = 5`; the two-sided signed-rank floor at n = 5 is `2/2⁵ = 0.0625 > 0.05`, so the Wilcoxon column cannot clear 0.05 regardless of effect size. The workflow default was bumped to `1..10` (commit `eda6ca1`), and the confirmatory run uses n = 10. Bootstrap and Cliff's δ were the load-bearing significance statistics for the n = 5 exploratory run; the n = 10 run satisfies all three tests.
+- **D-P3-2 — Planner is deterministic (CIs are degenerate by design).** The exploit planner always chooses lamp for tight goals (learned_delay_blind = 60 s > 45 s threshold) and blind for loose goals. Given the learned table, the per-replica outcome is deterministic: exactly 6/6 goals met by `ql_true`, exactly 3/6 by `ql_false`. The `[1.0, 1.0]` / `[0.0, 0.0]` compliance CIs reflect this determinism, not under-powered sampling. Genuine stochasticity (tick-quantisation jitter) appears only in the delay accuracy CIs.
+- **D-P3-3 — Cross-zone exploitation in lab3_slow (observed, not pre-registered).** The `ql_true` arm in `lab3_slow` satisfies a cross-zone goal by actuating `Z1Blinds` rather than `Z2Blinds`, because the probe phase measured a valid cross-zone effect (`action_effect/3`) during probing. This is an emergent and benign result — the agent discovered the cross-zone coupling from data rather than from a hand-asserted prior. Reported as an observation in `docs/PHASE2_TO_PHASE3_CHANGES.md` §17 Q3; not a confirmatory claim.
+- **D-P3-4 — Energy metric direction.** Higher `total_energy` in `ql_true` is expected and correct: choosing a lamp (instantaneous, costs +1/tick) instead of a blind (delayed, costs 0) is the right trade-off for tight deadlines. The energy cost is a transparency metric, not an efficiency regression.
+
+---
+
 *Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*
