@@ -1,0 +1,70 @@
+[
+  {
+    "comment": "lab4 SMART-PLUG held-out benchmark (16 scenarios, 4 per sun rank). Forked from lab3 and adds a hidden-but-documented power DEPENDENCY: the Z1 ceiling lamp is wired through a SMART PLUG (PlugZ1). The Z1 lamp emits light ONLY when BOTH Z1Light AND PlugZ1 are ON (z1lamp_on = Z1Light AND PlugZ1). Targets Z1=bright(3) AND Z2=bright(3) (level>=300). Physics: Z1 = 25 + (z1lamp_on?400) + (Z2Light?150) + (Z1Blinds?0.50*Sun) + (Z2Blinds?0.40*Sun) + (Spotlight?150); Z2 = 25 + (Z2Light?400) + (z1lamp_on?150) + (Z2Blinds?0.50*Sun) + (Z1Blinds?0.40*Sun) + (Spotlight?150). PlugZ1 starts OFF in most scenarios so the agent must learn to enable the plug before the Z1 lamp does anything. Scenarios 3 and 11 are the signature TRAP: Z1Light is already ON but the plug is OFF, so Z1 stays dark — the fix is to toggle the plug, not the lamp. A KG-primed agent reads ws:powerGates and enables the plug first; a tabula-rasa agent must discover the dependency by trial and error. At sun=900 opening both blinds gives 835/zone (0.50*Sun own + 0.40*Sun cross) at ZERO energy = the cheap optimum (plug irrelevant). Sun in {0,100,400,900} via bounds [50,200,600].",
+    "id": 1, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 0,
+    "description": "sun=0, all off, plug off -> enable plug + both lamps (the Z1 lamp needs the plug)"
+  },
+  {
+    "id": 2, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 0,
+    "description": "sun=0, both at target via lamps (plug on) -> hold"
+  },
+  {
+    "id": 3, "Z1Level": 175, "Z2Level": 425, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 0,
+    "description": "sun=0, Z1 lamp switch ON but plug OFF (Z1 dark, rank2) while Z2 at target -> turn the SMART PLUG on (not the lamp)"
+  },
+  {
+    "id": 4, "Z1Level": 725, "Z2Level": 725, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "PlugZ1": true,  "Sunshine": 0,
+    "description": "sun=0, both bright (plug on) but spotlight ALSO on -> turn spotlight off (redundant energy)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 1 (sun=100) ===",
+    "id": 5, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 100,
+    "description": "sun=1, all off, plug off -> enable plug + both lamps (blinds reach only rank1 at sun1)"
+  },
+  {
+    "id": 6, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 100,
+    "description": "sun=1, both at target via lamps (plug on) -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 425, "Z2Level": 175, "Z1Light": true,  "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 100,
+    "description": "sun=1, Z1 lit (plug on) at target, Z2 rank2 -> turn Z2 lamp on"
+  },
+  {
+    "id": 8, "Z1Level": 175, "Z2Level": 175, "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "PlugZ1": false, "Sunshine": 100,
+    "description": "sun=1, spotlight-only rank2 (175) -> enable plug + both lamps (spotlight redundant once lamps on)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 2 (sun=400) ===",
+    "id": 9, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 400,
+    "description": "sun=2, all off, plug off -> enable plug + both lamps (blinds alone reach only rank2 at sun2)"
+  },
+  {
+    "id": 10, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 400,
+    "description": "sun=2, both at target via lamps (plug on) -> hold"
+  },
+  {
+    "id": 11, "Z1Level": 175, "Z2Level": 425, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 400,
+    "description": "sun=2, Z1 lamp switch ON but plug OFF (Z1 dark) while Z2 at target -> turn the SMART PLUG on"
+  },
+  {
+    "id": 12, "Z1Level": 725, "Z2Level": 725, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "PlugZ1": true,  "Sunshine": 400,
+    "description": "sun=2, both bright (plug on) but spotlight on -> turn spotlight off (redundant energy)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 3 (sun=900) — both blinds open = 835/zone at ZERO energy (plug irrelevant) ===",
+    "id": 13, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 900,
+    "description": "sun=3, all off -> OPEN both blinds (835 each, zero energy) is the cheap optimum (no plug needed)"
+  },
+  {
+    "id": 14, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 900,
+    "description": "sun=3, both bright via lamps (plug on, energy-costly) -> open blinds and switch lamps+plug off to save energy"
+  },
+  {
+    "id": 15, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": true,  "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 900,
+    "description": "sun=3, Z1 switch on but plug off (no effect, both rank0) -> open both blinds (zero-energy optimum); the lamp switch is a no-op without the plug"
+  },
+  {
+    "id": 16, "Z1Level": 835, "Z2Level": 835, "Z1Light": false, "Z2Light": false, "Z1Blinds": true,  "Z2Blinds": true,  "Spotlight": false, "PlugZ1": false, "Sunshine": 900,
+    "description": "sun=3, both at target via blinds only -> hold (already zero-energy optimum)"
+  }
+]

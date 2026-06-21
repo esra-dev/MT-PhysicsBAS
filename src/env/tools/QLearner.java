@@ -65,6 +65,19 @@ public class QLearner extends Artifact {
     // swing per visit) instead of dominating it. Sysprop / run_config still
     // overrides; H5 ablation uses 0.0.
     private static final double STEREO_PRIOR_SCALE = parseDoubleProp("stereo.priorScale", 1.0);
+    // Phase 4 (lab5 energy): weight of the NON-FADING energy prior. Unlike the
+    // stereotype prior above (which decays over episodes and fades per visited
+    // cell so Bellman learning can override it), this term is a PERMANENT
+    // structural bias of magnitude ENERGY_PRIOR_WEIGHT * ws:energyCost
+    // subtracted from the greedy Q of every activation action that drives a
+    // costed actuator. Energy is deliberately NOT part of the Q-reward, so this
+    // is the ONLY channel through which a KG-primed agent can prefer the cheaper
+    // of two optically-identical lamps (or zero-energy blinds) — including at
+    // benchmark, once the stereotype prior has faded to its floor. Default
+    // 0.0 = OFF; only lab5's KG declares ws:energyCost, so labs 1-4 are
+    // unaffected even when this is > 0. The run_config "phase4" profile sets
+    // stereo.energyPriorWeight=2.0 (override with -Dstereo.energyPriorWeight).
+    private static final double ENERGY_PRIOR_WEIGHT = parseDoubleProp("stereo.energyPriorWeight", 0.0);
     // Total episodes used to decay the stereotype prior weight to its floor.
     // S2-3 (audit Step 2): made non-final so it can be coupled to num_episodes
     // at runtime via setPriorDecayEpisodes() / setTrainingBudgetEpisodes().
@@ -2262,6 +2275,19 @@ public class QLearner extends Artifact {
                 effectivePrior = priorWeight * priors[a] * calMul * cellMul;
             }
             double q = combinedQ(stateIdx, a) + effectivePrior;
+            // Phase 4 (lab5): non-fading energy prior (see ENERGY_PRIOR_WEIGHT).
+            // Triple-gated so it stays inert unless stereotypes are on, the knob
+            // is set, and this action activates an actuator the KG marks as
+            // costed (ws:energyCost > 0). Independent of priorWeight/cellMul, so
+            // it persists through prior decay and into the benchmark — exactly
+            // where the KG-primed agent must still prefer the efficient lamp.
+            if (useStereotypes && ENERGY_PRIOR_WEIGHT > 0.0
+                    && actionInfos != null && a < actionInfos.length
+                    && actionInfos[a] != null
+                    && actionInfos[a].wotValue
+                    && actionInfos[a].energyCost > 0.0) {
+                q -= ENERGY_PRIOR_WEIGHT * actionInfos[a].energyCost;
+            }
             if (q > bestQ + 1e-9) {
                 bestQ = q;
                 tieN  = 0;

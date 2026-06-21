@@ -99,8 +99,12 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_pbrs_only","phase1_full","phase1_kg_xzone")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase4")]
     [string]$RunMode = "dev",
+
+    # Profiles to train/benchmark. Empty = Phase-1 clean ladder (lab1,lab2,lab3).
+    # For Phase 4 pass -Profiles lab4,lab5 (with -RunMode phase4).
+    [string[]]$Profiles = @(),
 
     [ValidateRange(1,6)]
     [int]$MaxParallel = 3,
@@ -134,7 +138,9 @@ if (-not $ClonesRoot) {
 }
 
 # ─── Project layout (must match run_full_project.ps1) ─────────────────────────
-$Profiles = @("lab1","lab2","lab3")
+if (-not $Profiles -or $Profiles.Count -eq 0) {
+    $Profiles = @("lab1","lab2","lab3")
+}
 $BenchModes = "rule_based,ql_false,ql_true"
 $StereoModes = @("true","false")
 
@@ -142,6 +148,8 @@ $Simulators = @(
     [pscustomobject]@{ Profile="lab1"; Port=1892; Flow="simulator_flow_lab1.json" }
     [pscustomobject]@{ Profile="lab2"; Port=1893; Flow="simulator_flow_lab2.json" }
     [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
+    [pscustomobject]@{ Profile="lab4"; Port=1897; Flow="simulator_flow_lab4.json" }
+    [pscustomobject]@{ Profile="lab5"; Port=1898; Flow="simulator_flow_lab5.json" }
 )
 
 # ─── Logging ─────────────────────────────────────────────────────────────────

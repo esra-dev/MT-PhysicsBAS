@@ -1,0 +1,662 @@
+name: Phase 4 (Dependencies + Energy, KG vs LLM framing)
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 4 — Hidden DEPENDENCIES and ENERGY-aware goals on two NEW clean labs,
+# plus an offline LLM baseline for the overarching "KG informs the agent
+# better than an LLM's general knowledge" comparison.
+#
+#   lab4  (smart-plug dependency): the Zone-1 ceiling lamp is wired behind a
+#         smart plug and only emits light when BOTH the lamp switch AND the
+#         plug are ON. The dependency is KNOWN in the knowledge graph
+#         (ws:powerGates / ws:poweredBy) so the KG-primed learner enables the
+#         plug first; a tabula-rasa learner must discover it by trial.
+#
+#   lab5  (energy-aware): each zone has two directly-actionable lamps with the
+#         SAME brightness but DIFFERENT energy cost (efficient=1, inefficient=4,
+#         encoded as ws:energyCost in the KG). The energy-aware goal is
+#         "both zones bright AND steady-state power <= budget". The KG-primed
+#         learner carries a non-fading energy prior that prefers the efficient
+#         lamp; the tabula-rasa learner is energy-blind. Energy is NOT part of
+#         the Q-reward — compliance is scored at benchmark time.
+#
+# Same setup -> train -> bench -> aggregate DAG as phase1.yml, with Phase-4
+# defaults: profiles lab4,lab5; run_mode phase4 (3000 episodes; the phase4
+# run-mode profile sets stereo.energyPriorWeight=2.0 for the KG arm); seeds
+# 1..10 for confirmatory power (Wilcoxon reaches p<0.05 only at n>=6). Every
+# (profile x stereo x seed) training cell and (profile x mode x seed) benchmark
+# cell runs concurrently, so wall-clock is set by the slowest single cell.
+#
+# The aggregate job runs THREE analyses:
+#   * sweep_report.py    -> goal_rate, avg_redundant, first_goal, AUC, energy
+#                           (the KG-vs-tabula-rasa learning-speed headline)
+#   * phase4_energy.py    -> lab5 energy-budget compliance (the ONE new metric)
+#   * phase4_llm_baseline.py -> offline LLM baseline on the same scenarios
+#                           (KG-vs-LLM framing; reproducible, no live API)
+# ──────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      profiles:
+        description: "Comma-separated Phase-4 labs (default lab4,lab5)"
+        required: false
+        default: "lab4,lab5"
+      seeds:
+        description: "Comma-separated RNG seeds. Default 1..10 (confirmatory power: Wilcoxon can reach p<0.05 only at n>=6). Use 1,2,3,4,5 for a faster smoke replication."
+        required: false
+        default: "1,2,3,4,5,6,7,8,9,10"
+      run_mode:
+        description: "run_config.json profile: phase4 (3000x20, KG arm energyPriorWeight=2.0, recommended) | dev (50x20, quick gate)"
+        required: false
+        default: "phase4"
+      run_llm_baseline:
+        description: "Also compute the offline LLM baseline (analysis/phase4_llm_baseline.py)"
+        type: boolean
+        required: false
+        default: true
+      publish_results:
+        description: "Push consolidated results to 'results' branch"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase4
+  cancel-in-progress: false
+
+env:
+  RUN_MODE: ${{ github.event.inputs.run_mode || 'phase4' }}
+  PROFILES: ${{ github.event.inputs.profiles || 'lab4,lab5' }}
+  SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5,6,7,8,9,10' }}
+
+jobs:
+  setup:
+    name: Compile & cache
+    runs-on: ubuntu-latest
+    outputs:
+      profiles_json: ${{ steps.profiles.outputs.json }}
+      seeds_json:    ${{ steps.seeds.outputs.json }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Compile classes (with retry on JitPack flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon classes
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::compile attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          exit $rc
+      - name: Upload compiled build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-classes
+          path: |
+            build/classes
+            build/resources
+            build/generated
+          if-no-files-found: error
+          retention-days: 1
+      - name: Materialise matrix profile list
+        id: profiles
+        shell: bash
+        run: |
+          profs="${{ env.PROFILES }}"
+          json=$(echo "$profs" | tr ',' '\n' | jq -R . | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+      - name: Materialise matrix seed list
+        id: seeds
+        shell: bash
+        run: |
+          seeds="${{ env.SEEDS }}"
+          # Emit as JSON array of integers (sweep_report parses results_seed<N>).
+          json=$(echo "$seeds" | tr ',' '\n' | jq -R 'tonumber' | jq -sc .)
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+
+  train:
+    name: train ${{ matrix.profile }} stereo=${{ matrix.stereo }} seed=${{ matrix.seed }}
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 180    # phase4 (3000 eps) ~50 min/cell; 3x safety margin
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
+        stereo:  ["true", "false"]
+        seed:    ${{ fromJson(needs.setup.outputs.seeds_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build (attempt 1)
+        id: dl_build_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Wait before retrying compiled build download
+        if: steps.dl_build_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download build-classes failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download compiled build (attempt 2)
+        id: dl_build_2
+        if: steps.dl_build_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Download compiled build (attempt 3)
+        if: steps.dl_build_1.outcome == 'failure' && steps.dl_build_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Run training cell (with early-failure retry)
+        shell: pwsh
+        run: |
+          $ok = $false
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $start = Get-Date
+            ./run_full_project.ps1 `
+              -RunMode ${{ env.RUN_MODE }} `
+              -OnlyProfiles ${{ matrix.profile }} `
+              -OnlyStereo ${{ matrix.stereo }} `
+              -RunSeed ${{ matrix.seed }} `
+              -SkipBenchmark `
+              -SkipPreflight
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) { $ok = $true; break }
+            $elapsedMin = ((Get-Date) - $start).TotalMinutes
+            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
+              Write-Host "::error::training cell failed after $([math]::Round($elapsedMin,1)) min on attempt $attempt (rc=$rc) - not retrying"
+              break
+            }
+            Write-Host "::warning::training cell failed early ($([math]::Round($elapsedMin,1)) min) on attempt $attempt (rc=$rc); retrying once"
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) { exit 1 }
+      - name: Upload training artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-${{ matrix.stereo }}-seed-${{ matrix.seed }}
+          path: |
+            qtable_final_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}*.csv
+            qtable_initial_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}*.csv
+            metrics_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.csv
+            iv_stats_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.json
+            coverage_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.csv
+            first_goal_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.csv
+            learned_stereotypes_${{ matrix.stereo }}_${{ matrix.profile }}.ttl
+            benchmark/results/${{ matrix.profile }}/training_stereo_${{ matrix.stereo }}/**
+            log/train_${{ matrix.profile }}_stereo_${{ matrix.stereo }}.log
+            log/train_${{ matrix.profile }}_stereo_${{ matrix.stereo }}.err.log
+            run_full_project.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  bench:
+    name: bench ${{ matrix.profile }} mode=${{ matrix.mode }} seed=${{ matrix.seed }}
+    needs: [setup, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
+        mode:    ["rule_based", "ql_false", "ql_true"]
+        seed:    ${{ fromJson(needs.setup.outputs.seeds_json) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cache global npm (node-red)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-noderered-${{ runner.os }}-v4
+      - name: Install Node-RED
+        run: npm install -g --unsafe-perm node-red@4
+      - name: Download compiled build (attempt 1)
+        id: dl_build_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Wait before retrying compiled build download
+        if: steps.dl_build_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download build-classes failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download compiled build (attempt 2)
+        id: dl_build_2
+        if: steps.dl_build_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+      - name: Download compiled build (attempt 3)
+        if: steps.dl_build_1.outcome == 'failure' && steps.dl_build_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: build-classes
+          path: build
+
+      - name: Download stereo=true training artefacts (attempt 1)
+        id: dl_train_true_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-true-seed-${{ matrix.seed }}
+          path: .
+      - name: Wait before retrying stereo=true artefact download
+        if: steps.dl_train_true_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download train-stereo=true failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download stereo=true training artefacts (attempt 2)
+        id: dl_train_true_2
+        if: steps.dl_train_true_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-true-seed-${{ matrix.seed }}
+          path: .
+      - name: Download stereo=true training artefacts (attempt 3)
+        if: steps.dl_train_true_1.outcome == 'failure' && steps.dl_train_true_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-true-seed-${{ matrix.seed }}
+          path: .
+
+      - name: Download stereo=false training artefacts (attempt 1)
+        id: dl_train_false_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-false-seed-${{ matrix.seed }}
+          path: .
+      - name: Wait before retrying stereo=false artefact download
+        if: steps.dl_train_false_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download train-stereo=false failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download stereo=false training artefacts (attempt 2)
+        id: dl_train_false_2
+        if: steps.dl_train_false_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-false-seed-${{ matrix.seed }}
+          path: .
+      - name: Download stereo=false training artefacts (attempt 3)
+        if: steps.dl_train_false_1.outcome == 'failure' && steps.dl_train_false_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: train-${{ matrix.profile }}-stereo-false-seed-${{ matrix.seed }}
+          path: .
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Run benchmark cell (with early-failure retry)
+        shell: pwsh
+        run: |
+          $ok = $false
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $start = Get-Date
+            ./run_full_project.ps1 `
+              -RunMode ${{ env.RUN_MODE }} `
+              -OnlyProfiles ${{ matrix.profile }} `
+              -OnlyModes ${{ matrix.mode }} `
+              -RunSeed ${{ matrix.seed }} `
+              -SkipTraining `
+              -SkipPreflight
+            $rc = $LASTEXITCODE
+            if ($rc -eq 0) { $ok = $true; break }
+            $elapsedMin = ((Get-Date) - $start).TotalMinutes
+            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
+              Write-Host "::error::benchmark cell failed after $([math]::Round($elapsedMin,1)) min on attempt $attempt (rc=$rc) - not retrying"
+              break
+            }
+            Write-Host "::warning::benchmark cell failed early ($([math]::Round($elapsedMin,1)) min) on attempt $attempt (rc=$rc); retrying once"
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) { exit 1 }
+      - name: Upload benchmark artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.profile }}-${{ matrix.mode }}-seed-${{ matrix.seed }}
+          path: |
+            benchmark/results/${{ matrix.profile }}/${{ matrix.mode }}/**
+            benchmark_results_${{ matrix.mode }}.csv
+            bench_step_log_${{ matrix.mode }}.csv
+            log/benchmark_sweep.log
+            run_full_project.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  aggregate:
+    name: Aggregate & publish
+    needs: bench
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Free disk space on runner
+        shell: bash
+        run: |
+          set -eu
+          echo "Disk before cleanup:"; df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/.ghcup /usr/local/share/boost \
+                      "$AGENT_TOOLSDIRECTORY" || true
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          echo "Disk after cleanup:"; df -h /
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis deps
+        run: pip install numpy scipy matplotlib
+      - name: Download all training artefacts (attempt 1)
+        id: dl_all_train_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: train-*
+          path: _artifacts/train
+      - name: Wait before retrying training artefact download
+        if: steps.dl_all_train_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download train-* failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download all training artefacts (attempt 2)
+        id: dl_all_train_2
+        if: steps.dl_all_train_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: train-*
+          path: _artifacts/train
+      - name: Download all training artefacts (attempt 3)
+        if: steps.dl_all_train_1.outcome == 'failure' && steps.dl_all_train_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: train-*
+          path: _artifacts/train
+
+      - name: Download all benchmark artefacts (attempt 1)
+        id: dl_all_bench_1
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          path: _artifacts/bench
+      - name: Wait before retrying benchmark artefact download
+        if: steps.dl_all_bench_1.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "::warning::download bench-* failed on attempt 1; retrying after backoff"
+          sleep 20
+      - name: Download all benchmark artefacts (attempt 2)
+        id: dl_all_bench_2
+        if: steps.dl_all_bench_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          path: _artifacts/bench
+      - name: Download all benchmark artefacts (attempt 3)
+        if: steps.dl_all_bench_1.outcome == 'failure' && steps.dl_all_bench_2.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          path: _artifacts/bench
+      - name: Reconstruct per-seed directory layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for d in _artifacts/train/*/; do
+            name=$(basename "$d")
+            seed=$(echo "$name" | sed -nE 's/.*-seed-([0-9]+)$/\1/p')
+            if [ -z "$seed" ]; then echo "WARN: no seed in $name"; continue; fi
+            mkdir -p "benchmark/results_seed${seed}"
+            if [ -d "${d}benchmark/results" ]; then
+              cp -rn "${d}benchmark/results"/* "benchmark/results_seed${seed}/" 2>/dev/null || true
+            fi
+            mkdir -p "_train_root_seed${seed}"
+            for f in "${d}"*.csv "${d}"*.json "${d}"*.ttl; do
+              [ -e "$f" ] || continue
+              cp -n "$f" "_train_root_seed${seed}/" 2>/dev/null || true
+            done
+          done
+          for d in _artifacts/bench/*/; do
+            name=$(basename "$d")
+            seed=$(echo "$name" | sed -nE 's/.*-seed-([0-9]+)$/\1/p')
+            if [ -z "$seed" ]; then echo "WARN: no seed in $name"; continue; fi
+            mkdir -p "benchmark/results_seed${seed}"
+            if [ -d "${d}benchmark/results" ]; then
+              cp -rn "${d}benchmark/results"/* "benchmark/results_seed${seed}/" 2>/dev/null || true
+            fi
+          done
+          echo "-- per-seed layout --"
+          for sd in benchmark/results_seed*/; do
+            echo "[$sd]"
+            find "$sd" -maxdepth 3 -type d | sort | head -20
+          done
+      - name: Clean up downloaded artifacts to free disk space
+        shell: bash
+        run: |
+          set -eu
+          echo "Disk before cleanup:"; df -h /
+          rm -rf _artifacts/ || true
+          echo "Disk after cleanup:"; df -h /
+      - name: Stage seed-1 results at canonical path (for legacy charts)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d benchmark/results_seed1 ]; then
+            mkdir -p benchmark/results
+            cp -rn benchmark/results_seed1/* benchmark/results/ 2>/dev/null || true
+          fi
+          if [ -d _train_root_seed1 ]; then
+            cp -n _train_root_seed1/* . 2>/dev/null || true
+          fi
+      - name: Run sweep analysis (multi-seed mode)
+        run: |
+          python analysis/sweep_report.py \
+            --root benchmark/results \
+            --out analysis/out \
+            --seeds-mode \
+            --ci-bootstrap-iters 10000
+      - name: Run Phase-4 energy-budget compliance analysis
+        run: |
+          python analysis/phase4_energy.py \
+            --root benchmark \
+            --config config/run_config.json \
+            --scenarios-dir benchmark \
+            --out analysis/out \
+            --iters 10000
+      - name: Run offline LLM baseline (general-knowledge proxy)
+        if: ${{ github.event.inputs.run_llm_baseline != 'false' }}
+        run: |
+          python analysis/phase4_llm_baseline.py \
+            --scenarios-dir benchmark \
+            --out analysis/out \
+            --seeds "${{ env.SEEDS }}" \
+            --emit-prompts \
+            || echo "phase4_llm_baseline.py: non-fatal failure (offline baseline; will revisit)"
+      - name: Run learning curves (multi-seed bands)
+        if: always()
+        run: |
+          python analysis/learning_curves.py \
+            --root . \
+            --out analysis/out \
+            || echo "learning_curves.py: non-fatal failure (will revisit)"
+      - name: Aggressive cleanup before git operations
+        shell: bash
+        run: |
+          set -eu
+          rm -rf benchmark/results || true
+          rm -rf log/ || true
+          rm -rf run_full_project.log || true
+          rm -rf .gradle/ || true
+          rm -rf build/ || true
+          sudo docker system prune -f >/dev/null 2>&1 || true
+      - name: Generate job summary
+        shell: bash
+        run: |
+          {
+            echo "# Phase 4 (Dependencies + Energy) -- summary"
+            echo ""
+            echo "**Profiles:** \`${{ env.PROFILES }}\`"
+            echo "**Seeds:** \`${{ env.SEEDS }}\`"
+            echo "**Mode:** \`${{ env.RUN_MODE }}\`"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo ""
+            echo "Three analyses run in this job:"
+            echo "1. **sweep_report** -> learning-speed headline (KG ql_true vs tabula-rasa ql_false): auc_goal (PRIMARY, higher_better) favours ql_true; mean_first_goal and redundant actions (lower_better) smaller for ql_true."
+            echo "2. **phase4_energy** -> lab5 energy-budget compliance (the ONE new metric): energy_compliance (higher_better) and mean_steady_power / over_budget_rate (lower_better) favour ql_true."
+            echo "3. **phase4_llm_baseline** -> offline LLM baseline on the SAME scenarios (KG-vs-LLM framing). Compare the KG agent's energy_compliance against the LLM's."
+            echo ""
+            if [ -f analysis/out/learning_speed_tests.csv ]; then
+              echo "## learning_speed_tests.csv (ql_true - ql_false, paired across seeds)"
+              echo '```'
+              head -40 analysis/out/learning_speed_tests.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/paired_tests.csv ]; then
+              echo "## paired_tests.csv (redundant actions + same-goal-rate check)"
+              echo '```'
+              head -40 analysis/out/paired_tests.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/phase4_energy_paired.csv ]; then
+              echo "## phase4_energy_paired.csv (ql_true - ql_false: energy-budget compliance)"
+              echo '```'
+              head -40 analysis/out/phase4_energy_paired.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/phase4_energy_ci.csv ]; then
+              echo "## phase4_energy_ci.csv (per profile/mode, 95% CI)"
+              echo '```'
+              head -60 analysis/out/phase4_energy_ci.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/phase4_llm_summary.csv ]; then
+              echo "## phase4_llm_summary.csv (offline LLM baseline)"
+              echo '```'
+              head -40 analysis/out/phase4_llm_summary.csv
+              echo '```'
+            fi
+            if [ -f analysis/out/summary_table_ci.csv ]; then
+              echo "## summary_table_ci.csv (multi-seed, 95% CI)"
+              echo '```'
+              head -60 analysis/out/summary_table_ci.csv
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload consolidated artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-consolidated
+          path: |
+            analysis/out/**
+            benchmark/results_seed*/**
+            qtable_final_*.csv
+            metrics_*.csv
+            learned_stereotypes_*.ttl
+            iv_stats_*.json
+            benchmark_results_*.csv
+          retention-days: 90
+      - name: Final disk space check before version_artifacts
+        shell: bash
+        run: |
+          AVAIL=$(df / | tail -1 | awk '{print $4}')
+          AVAIL_GB=$((AVAIL / 1024 / 1024))
+          echo "Disk available: ${AVAIL_GB} GB"
+          if [ "$AVAIL_GB" -lt 5 ]; then
+            echo "::warning::Only ${AVAIL_GB} GB disk free; skipping publish to results branch (need >= 5 GB)"
+            echo "SKIP_PUBLISH=1" >> "$GITHUB_ENV"
+          else
+            echo "SKIP_PUBLISH=0" >> "$GITHUB_ENV"
+          fi
+      - name: Publish to 'results' branch
+        if: ${{ env.SKIP_PUBLISH == '0' && github.event.inputs.publish_results == 'true' }}
+        shell: pwsh
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          git config user.name  "$env:GIT_AUTHOR_NAME"
+          git config user.email "$env:GIT_AUTHOR_EMAIL"
+          ./scripts/version_artifacts.ps1 `
+            -RunMode ${{ env.RUN_MODE }} `
+            -Profiles "${{ env.PROFILES }}" `
+            -Modes "rule_based,ql_false,ql_true" `
+            -OverwriteResultsBranch `
+            -PublishResults
+      - name: Skip publish warning
+        if: ${{ env.SKIP_PUBLISH == '1' }}
+        shell: bash
+        run: |
+          echo "::notice::Results publish skipped due to low disk space. Analysis outputs are in analysis/out/ and consolidated artifacts are uploaded to Actions artifacts."

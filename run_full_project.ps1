@@ -194,6 +194,10 @@ if ($RunConfig -and $RunConfig.learning) {
     if ($ln.stereo_init_bonus           -ne $null) { $HttpArgs += "-Pstereo.initBonus=$($ln.stereo_init_bonus)" }
     # KG-X (Part B): cross-zone structural exploration prior (default 0.0 = OFF).
     if ($ln.cross_zone_bonus            -ne $null) { $HttpArgs += "-Pstereo.crossZoneBonus=$($ln.cross_zone_bonus)" }
+    # Phase 4 (lab5 energy): non-fading energy prior weight (default 0.0 = OFF).
+    # Only lab5's KG declares ws:energyCost, so this knob has NO effect on
+    # labs 1-4 even when set > 0 (their actuators have energyCost 0).
+    if ($ln.stereo_energy_prior_weight  -ne $null) { $HttpArgs += "-Pstereo.energyPriorWeight=$($ln.stereo_energy_prior_weight)" }
     # Research extensions: PBRS reward shaping + adaptive stereotype trust.
     if ($ln.reward_shaping              -ne $null) { $HttpArgs += "-Preward.shaping=$($ln.reward_shaping)" }
     if ($ln.adaptive_trust              -ne $null) { $HttpArgs += "-Pstereo.adaptiveTrust=$($ln.adaptive_trust)" }
@@ -206,9 +210,15 @@ if ($RunSeed -ne 0) {
 }
 
 # ─── Project layout ───────────────────────────────────────────────────────────
-# Profiles to train/benchmark. Phase 1 clean ladder: lab1/lab2/lab3 only.
+# Profiles to train/benchmark. Phase 1 clean ladder: lab1/lab2/lab3 by default.
+# Phase 4 adds lab4/lab5 (selected per-cell via -OnlyProfiles by phase4.yml);
+# they are NOT in the default set so a plain phase1 run is unchanged.
 $TrainProfiles = @(
     "lab1", "lab2", "lab3"
+)
+# Superset of all known/selectable profiles (used only to validate -OnlyProfiles).
+$KnownProfiles = @(
+    "lab1", "lab2", "lab3", "lab4", "lab5"
 )
 
 # Apply -OnlyProfiles filter (parallel orchestrator passes one profile per clone).
@@ -217,9 +227,9 @@ if ($OnlyProfiles) {
     if ($requested.Count -eq 0) {
         throw "-OnlyProfiles supplied but parsed to empty list: '$OnlyProfiles'"
     }
-    $unknown = @($requested | Where-Object { $_ -notin $TrainProfiles })
+    $unknown = @($requested | Where-Object { $_ -notin $KnownProfiles })
     if ($unknown.Count -gt 0) {
-        throw "Unknown profile(s) in -OnlyProfiles: $($unknown -join ', '). Valid: $($TrainProfiles -join ', ')"
+        throw "Unknown profile(s) in -OnlyProfiles: $($unknown -join ', '). Valid: $($KnownProfiles -join ', ')"
     }
     $TrainProfiles = $requested
 }
@@ -269,6 +279,8 @@ $ProfileQtableSuffix = @{
     lab1 = "_lab1"
     lab2 = "_lab2"
     lab3 = "_lab3"
+    lab4 = "_lab4"
+    lab5 = "_lab5"
 }
 
 # Simulator map: each entry is a profile → (port, flow file) binding
@@ -276,6 +288,8 @@ $Simulators = @(
     [pscustomobject]@{ Profile="lab1"; Port=1892; Flow="simulator_flow_lab1.json" }
     [pscustomobject]@{ Profile="lab2"; Port=1893; Flow="simulator_flow_lab2.json" }
     [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
+    [pscustomobject]@{ Profile="lab4"; Port=1897; Flow="simulator_flow_lab4.json" }
+    [pscustomobject]@{ Profile="lab5"; Port=1898; Flow="simulator_flow_lab5.json" }
 )
 
 # ASL file paths (relative; resolved via Set-Location above)

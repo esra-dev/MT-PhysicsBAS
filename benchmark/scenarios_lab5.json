@@ -1,0 +1,70 @@
+[
+  {
+    "comment": "lab5 ENERGY held-out benchmark (16 scenarios, 4 per sun rank). Forked from lab3. Each zone has TWO directly-actionable lamps with IDENTICAL light output (+400 lux) but different energy cost: an EFFICIENT lamp (Z1Eff/Z2Eff, ws:energyCost 1) and an INEFFICIENT lamp (Z1Ineff/Z2Ineff, ws:energyCost 4). Targets Z1=bright(3) AND Z2=bright(3) (level>=300). Physics: z*AnyLamp = (Eff OR Ineff); Z1 = 25 + (z1AnyLamp?400) + (z2AnyLamp?150) + (Z1Blinds?0.50*Sun) + (Z2Blinds?0.40*Sun) + (Spotlight?150); Z2 symmetric. Energy/tick = (Z1Eff?1)+(Z1Ineff?4)+(Z2Eff?1)+(Z2Ineff?4)+(Spotlight?2); blinds passive (0). ENERGY IS NOT IN THE Q-REWARD: only a KG-primed agent (reading ws:energyCost) prefers the cheap lamp / zero-energy blinds; a tabula-rasa agent is energy-blind. The 'energyBudget' is the per-tick steady-state power of the final actuator configuration that an energy-aware solution should not exceed; compliance = GoalReached AND steady-state-power <= energyBudget. budget=2 admits two efficient lamps (1+1) or blinds (0) and flags any inefficient lamp (4), redundant double-lamp (5/6/8), or unnecessary spotlight (+2). Held-OUT (test-only): 3,4,8,12,14,15. Sun in {0,100,400,900} via bounds [50,200,600].",
+    "id": 1, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0, "energyBudget": 2,
+    "description": "sun=0, all off -> add the EFFICIENT lamp in each zone (not the inefficient one); blinds cannot reach rank3 at sun0"
+  },
+  {
+    "id": 2, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0, "energyBudget": 2,
+    "description": "sun=0, both at target via EFFICIENT lamps -> hold (steady power = 2, compliant)"
+  },
+  {
+    "id": 3, "Z1Level": 175, "Z2Level": 425, "Z1Eff": false, "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0, "energyBudget": 2,
+    "description": "sun=0, Z1 rank2 (cross-spill), Z2 at target (eff) -> add the EFFICIENT lamp in Z1"
+  },
+  {
+    "id": 4, "Z1Level": 575, "Z2Level": 575, "Z1Eff": false, "Z1Ineff": true,  "Z2Eff": false, "Z2Ineff": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0, "energyBudget": 2,
+    "description": "sun=0, both bright via INEFFICIENT lamps (steady power = 8) -> switch each zone to its efficient lamp to cut energy"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 1 (sun=100) ===",
+    "id": 5, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100, "energyBudget": 2,
+    "description": "sun=1, all off -> add the efficient lamp in each zone (blinds reach only rank2 at sun1)"
+  },
+  {
+    "id": 6, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100, "energyBudget": 2,
+    "description": "sun=1, both at target via efficient lamps -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 425, "Z2Level": 175, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100, "energyBudget": 2,
+    "description": "sun=1, Z1 at target (eff), Z2 rank2 -> add the efficient lamp in Z2"
+  },
+  {
+    "id": 8, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": true,  "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100, "energyBudget": 2,
+    "description": "sun=1, Z1 has BOTH lamps on (redundant, +400 once but energy 5) -> turn off the inefficient Z1 lamp"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 2 (sun=400) ===",
+    "id": 9, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400, "energyBudget": 2,
+    "description": "sun=2, all off -> add the efficient lamp in each zone (or open both blinds for zero energy: 385 each)"
+  },
+  {
+    "id": 10, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400, "energyBudget": 2,
+    "description": "sun=2, both at target via efficient lamps -> hold"
+  },
+  {
+    "id": 11, "Z1Level": 175, "Z2Level": 425, "Z1Eff": false, "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400, "energyBudget": 2,
+    "description": "sun=2, Z1 rank2, Z2 at target (eff) -> add the efficient lamp in Z1"
+  },
+  {
+    "id": 12, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400, "energyBudget": 2,
+    "description": "sun=2, Z1 efficient but Z2 uses the INEFFICIENT lamp (steady power = 5) -> switch Z2 to its efficient lamp"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 3 (sun=900) — both blinds open = 835/zone at ZERO energy ===",
+    "id": 13, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 900, "energyBudget": 2,
+    "description": "sun=3, all off -> open both blinds (835 each, ZERO energy) is the optimum; efficient lamps also comply"
+  },
+  {
+    "id": 14, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 900, "energyBudget": 2,
+    "description": "sun=3, both bright via efficient lamps (power 2) -> open blinds to reach ZERO energy (both still compliant)"
+  },
+  {
+    "id": 15, "Z1Level": 575, "Z2Level": 575, "Z1Eff": false, "Z1Ineff": true,  "Z2Eff": false, "Z2Ineff": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 900, "energyBudget": 2,
+    "description": "sun=3, both bright via INEFFICIENT lamps (power 8) -> open both blinds for the zero-energy optimum"
+  },
+  {
+    "id": 16, "Z1Level": 835, "Z2Level": 835, "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": true,  "Z2Blinds": true,  "Spotlight": false, "Sunshine": 900, "energyBudget": 2,
+    "description": "sun=3, both at target via blinds only (zero energy) -> hold (already the optimum)"
+  }
+]
