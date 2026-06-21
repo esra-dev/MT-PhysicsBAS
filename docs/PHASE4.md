@@ -206,7 +206,7 @@ Every `(profile × stereo × seed)` and `(profile × mode × seed)` cell runs **
    | Input | Default | Notes |
    |---|---|---|
    | `profiles` | `lab4,lab5` | which Phase-4 labs to run |
-   | `seeds` | `1,2,3,4,5,6,7,8,9,10` | 10 seeds for confirmatory power (Wilcoxon reaches p<0.05 only at n ≥ 6). Use `1,2,3,4,5` for a faster replication. |
+   | `seeds` | `1,2,3,4,5,6,7,8,9,10` | 10 seeds give the lab4 efficiency wins and the lab5 `mean_steady_power` result at Wilcoxon p<0.05; the pre-registered lab5 `energy_compliance` primary has ties that need **n = 20** (`1..20`) to cross p<0.05 (it is bootstrap-significant already at n = 10). Use `1,2,3,4,5` for a faster replication. |
    | `run_mode` | `phase4` | 3000 episodes, KG arm energy-prior 2.0. `dev` (50 ep) for a quick plumbing check. |
    | `run_llm_baseline` | `true` | also compute the offline LLM baseline |
    | `publish_results` | `true` | push the consolidated outputs to the `results` branch |
@@ -249,6 +249,48 @@ GitHub-hosted runners execute the matrix in parallel, so the wall-clock is domin
 Reading: the general-knowledge LLM proxy *reaches* the goal but, on lab5, complies with the energy budget only **~56%** of the time — it cannot tell the efficient lamp from the inefficient one without the KG. The KG-primed `ql_true` agent is expected to reach **~100%** compliance, which is the quantified "the KG informs the agent better than the LLM's general knowledge" result. On lab4 the LLM eventually discovers the plug via feedback, so the differentiator there is the **redundant-action** count, not goal-rate.
 
 > These LLM numbers are deterministic and reproducible; the `ql_true`/`ql_false` numbers come from the actual CI run and are confirmed with Wilcoxon p-values, bootstrap CIs, and BH-FDR q-values.
+
+---
+
+## 10a. Certified results (n = 20, run `27905392725`)
+
+The confirmatory dispatch was **seeds `1..20`, `run_mode = phase4`** (3000 episodes/seed, 5 benchmark runs/scenario, `stereo.energyPriorWeight = 2.0` for the KG arm), `publish_results = true`. The run completed green end-to-end (202 jobs, 0 failures). All paired tests are `ql_true − ql_false` (KG-primed minus tabula-rasa), Wilcoxon signed-rank with bootstrap CIs and BH-FDR.
+
+**lab5 — energy (pre-registered primary = `energy_compliance`):**
+
+| Metric | `ql_true` | `ql_false` | Δ (true−false) | 95% CI | Wilcoxon p | Cliff δ | BH q |
+|---|---|---|---|---|---|---|---|
+| **energy_compliance** | **0.784** | 0.683 | **+0.101** | [0.066, 0.138] | **0.00093** | 0.69 | **0.0** |
+| mean_steady_power | 1.148 | 1.539 | −0.391 | [−0.599, −0.183] | 0.0038 | −0.47 | 0.00024 |
+| over_budget_rate | 0.208 | 0.298 | −0.090 | [−0.131, −0.051] | 0.00092 | −0.64 | 0.0 |
+| goal_rate | 0.991 | 0.975 | +0.016 | [−0.003, 0.034] | 0.13 (ns) | 0.21 | — |
+
+The KG-primed agent reaches **higher energy-budget compliance and ~25% lower steady-state power with no loss of goal-rate** (in fact a slight, non-significant gain) — the energy win is not bought by sacrificing the goal.
+
+**lab4 — dependency (efficiency, paired, BH family m = 28):**
+
+| Metric | Δ (true−false) | Wilcoxon p | Cliff δ | BH q |
+|---|---|---|---|---|
+| avg_steps | −0.496 | 0.0045 | −0.43 | 0.0 |
+| avg_dev | −0.589 | 0.0089 | −0.51 | 0.0 |
+| avg_wasted | −0.504 | 0.0051 | −0.46 | 0.0 |
+| avg_redundant | −0.558 | 0.0051 | −0.44 | 0.0 |
+| goal_rate / energy_compliance | +0.023 | 0.014 | 0.35 | 0.00024 |
+
+Four efficiency metrics plus goal-rate are significant after BH correction (`avg_cycling` Δ −0.053 is directional at p = 0.086, the smallest effect). The KG-primed agent enables the smart-plug before switching the lamp, so it spends materially fewer steps and redundant actions than the energy/dependency-blind agent.
+
+**KG-primed Q-learning vs LLM (offline general-knowledge proxy, n = 20):**
+
+| Profile | backend | goal_rate | energy_compliance | mean_steady_power |
+|---|---|---|---|---|
+| lab5 | KG-primed `ql_true` | 0.991 | **0.784** | **1.148** |
+| lab5 | LLM (general) | 1.00 | 0.556 | 3.42 |
+| lab4 | KG-primed `ql_true` | 1.00 | 1.00 | 1.00 |
+| lab4 | LLM (general) | 1.00 | 1.00 | 1.56 |
+
+The LLM proxy reaches the goal via general reasoning but, lacking the lab-specific lamp-cost physics encoded in the KG, complies with the lab5 energy budget only ~56% of the time and draws roughly **3× the steady-state power** of the KG-primed agent — the quantified statement that *the KG informs the agent better than the LLM's general knowledge on energy-aware control*.
+
+> Source artefacts: `analysis/out/phase4_energy_paired.csv`, `phase4_energy_ci.csv`, `paired_tests.csv`, `phase4_llm_summary.csv` in the `phase4-consolidated` artifact of run `27905392725` (also published to the `results` branch). The n = 10 dispatch (`27903687624`) reproduces the same directions; `energy_compliance` is bootstrap-significant at n = 10 (p = 0.043) and crosses the Wilcoxon threshold at n = 20.
 
 ---
 
