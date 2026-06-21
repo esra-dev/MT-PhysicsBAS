@@ -1,0 +1,43 @@
+[
+  {
+    "comment": "lab5 ENERGY training set (10 held-in scenarios). Held-OUT for test-only: 3,4,8,12,14,15 (the energy-correction / redundancy traps stay unseen during training). Same gated physics and energy accounting as scenarios_lab5.json. These held-in cases give the efficient-lamp learning signal: ids 1/5/9/13 (all off -> add lamps) and 7/11 (add one lamp) let the energy-primed agent learn to reach the brightness target with the EFFICIENT lamp (or zero-energy blinds at high sun), while the tabula-rasa agent learns the target with no energy preference.",
+    "id": 1, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0, "energyBudget": 2,
+    "description": "sun=0, all off -> add the efficient lamp in each zone"
+  },
+  {
+    "id": 2, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 0, "energyBudget": 2,
+    "description": "sun=0, both at target via efficient lamps -> hold"
+  },
+  {
+    "id": 5, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100, "energyBudget": 2,
+    "description": "sun=1, all off -> add the efficient lamp in each zone"
+  },
+  {
+    "id": 6, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100, "energyBudget": 2,
+    "description": "sun=1, both at target via efficient lamps -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 425, "Z2Level": 175, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100, "energyBudget": 2,
+    "description": "sun=1, Z1 at target (eff), Z2 rank2 -> add the efficient lamp in Z2"
+  },
+  {
+    "id": 9, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400, "energyBudget": 2,
+    "description": "sun=2, all off -> add the efficient lamp in each zone (or open both blinds for zero energy)"
+  },
+  {
+    "id": 10, "Z1Level": 575, "Z2Level": 575, "Z1Eff": true,  "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400, "energyBudget": 2,
+    "description": "sun=2, both at target via efficient lamps -> hold"
+  },
+  {
+    "id": 11, "Z1Level": 175, "Z2Level": 425, "Z1Eff": false, "Z1Ineff": false, "Z2Eff": true,  "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 400, "energyBudget": 2,
+    "description": "sun=2, Z1 rank2, Z2 at target (eff) -> add the efficient lamp in Z1"
+  },
+  {
+    "id": 13, "Z1Level": 25,  "Z2Level": 25,  "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 900, "energyBudget": 2,
+    "description": "sun=3, all off -> open both blinds (zero energy) or add efficient lamps"
+  },
+  {
+    "id": 16, "Z1Level": 835, "Z2Level": 835, "Z1Eff": false, "Z1Ineff": false, "Z2Eff": false, "Z2Ineff": false, "Z1Blinds": true,  "Z2Blinds": true,  "Spotlight": false, "Sunshine": 900, "energyBudget": 2,
+    "description": "sun=3, both at target via blinds only (zero energy) -> hold"
+  }
+]

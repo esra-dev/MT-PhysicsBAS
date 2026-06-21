@@ -233,6 +233,9 @@ clean {
 def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries','sim.http.backoffMs',
                  'reward.clip','stereo.priorScale','stereo.priorDecayEpisodes','stereo.priorDecayFloor',
                  'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus','stereo.crossZoneBonus',
+                 // Phase 4 (lab5 energy): non-fading energy prior weight. Only
+                 // lab5's KG declares ws:energyCost, so it is inert on labs 1-4.
+                 'stereo.energyPriorWeight',
                  // Research extensions: PBRS, adaptive trust, per-run seed.
                  'reward.shaping','stereo.adaptiveTrust','stereo.adaptiveTrust.minSamples','stereo.adaptiveTrust.floor',
                  'run.seed',

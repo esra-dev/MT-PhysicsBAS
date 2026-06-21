@@ -600,18 +600,25 @@ public class LabEnvironment extends Artifact {
 
     /**
      * Extract all data fields from a scenario JSON object (skipping the meta
-     * keys "id", "description", "comment"). Boolean and number primitives are
-     * preserved as Java {@link Boolean} / {@link Double}; everything else is
-     * stringified.  Used by {@link #setRandomLabState} and
+     * keys "id", "description", "comment", "energyBudget"). Boolean and number
+     * primitives are preserved as Java {@link Boolean} / {@link Double};
+     * everything else is stringified.  Used by {@link #setRandomLabState} and
      * {@link #setScenarioLabState} to support arbitrary 4-zone field sets
      * without hard-coding a fixed 8-element ordering.
+     *
+     * <p>"energyBudget" is a Phase-4 (lab5) scenario-level SCORING annotation —
+     * the per-scenario power ceiling read by analysis/phase4_energy.py — and is
+     * NOT a simulator state field, so it must be skipped here just like the
+     * other meta keys (otherwise WotInputValidator rejects it as an unknown
+     * state key and the reset retries forever).
      */
     private void extractScenarioKV(com.google.gson.JsonObject obj,
                                    List<String> keysOut,
                                    List<Object> valuesOut) {
         for (Map.Entry<String, com.google.gson.JsonElement> e : obj.entrySet()) {
             String k = e.getKey();
-            if ("id".equals(k) || "description".equals(k) || "comment".equals(k)) continue;
+            if ("id".equals(k) || "description".equals(k) || "comment".equals(k)
+                    || "energyBudget".equals(k)) continue;
             com.google.gson.JsonElement val = e.getValue();
             if (val == null || val.isJsonNull()) continue;
             if (val.isJsonPrimitive()) {
@@ -756,12 +763,19 @@ public class LabEnvironment extends Artifact {
      * Derive a simulator URL by replacing the path suffix of the action endpoint.
      * Handles both http:// and classpath: TD sources. Returns null if the URL
      * cannot be determined.
+     *
+     * <p>The simulator base URL is recovered from <em>any</em> action
+     * affordance's {@code invokeAction} form: every action Form in these labs
+     * targets the same {@code /was/rl/action} endpoint, so we just swap the
+     * {@code /action} suffix for {@code path}. This MUST NOT hardcode a specific
+     * action semantic type — labs whose lamps use non-default types (e.g. lab5's
+     * energy lamps {@code SetZ1Eff}/{@code SetZ1Ineff} instead of
+     * {@code SetZ1Light}) would otherwise fail to derive {@code /setState} and
+     * {@code /reset}, silently leaving the simulator in a stale state.
      */
     private String deriveSimulatorUrl(String path) {
-        Optional<ActionAffordance> anyAction = this.td.getFirstActionBySemanticType(
-                "http://example.org/was#SetZ1Light");
-        if (anyAction.isPresent()) {
-            Optional<Form> f = anyAction.get().getFirstFormForOperationType(TD.invokeAction);
+        for (ActionAffordance action : this.td.getActions()) {
+            Optional<Form> f = action.getFirstFormForOperationType(TD.invokeAction);
             if (f.isPresent()) {
                 return f.get().getTarget().replaceAll("/action$", path);
             }

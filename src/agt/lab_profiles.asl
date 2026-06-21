@@ -302,6 +302,61 @@ lab_profile("lab3",
             qtable_suffix("_lab3"),
             training_params(3000, 0.9970)).
 
+// ── Phase 4 KNOWLEDGE LADDER (Hidden Dependencies & Energy) ─────────────────
+//   lab4/lab5 extend the Phase-1 clean ladder with KG-encoded knowledge that a
+//   tabula-rasa learner cannot see but a KG-primed learner can exploit. Both are
+//   STRICTLY-CLEAN (no hidden weakness): the simulator physics is fully aligned
+//   with the building_*.ttl, so every difference between ql_true and ql_false is
+//   attributable to the prior knowledge in the Knowledge Graph. weakness_flags is
+//   [] (the bench agent skips weakness fingerprinting). Same discretisation and
+//   pinned-sunshine regime as lab3.
+//
+//     lab4 Smart-Plug → lab3 + a hidden POWER dependency: the Z1 ceiling lamp is
+//                       wired through SmartPlug_Z1 (ws:powerGates) and emits light
+//                       only when BOTH the lamp switch AND the plug are ON. A
+//                       KG-primed agent reads ws:powerGates and enables the plug
+//                       first; a tabula-rasa agent must discover the AND-gate by
+//                       trial and error.                                (4096 states)
+//
+//     lab5 Energy     → lab3 + two directly-actionable lamps per zone with the
+//                       SAME light output (+400) but different ws:energyCost
+//                       (efficient = 1/tick, inefficient = 4/tick). Energy is NOT
+//                       in the Q-reward; only a KG-primed agent (reading
+//                       ws:energyCost, applied as a non-fading energy prior) learns
+//                       to prefer the cheap lamp / zero-energy blinds. Compliance is
+//                       scored at benchmark time (goal reached AND steady-state
+//                       power <= energyBudget).                          (8192 states)
+
+//   lab4 → Smart-Plug dependency (port 1897). powerGates AND-gate on the Z1 lamp.
+lab_profile("lab4",
+            td("classpath:interactions-lab4.ttl"),
+            ont(["building_4_smartplug.ttl"]),
+            scenarios("benchmark/scenarios_lab4.json"),
+            train_scenarios("benchmark/train_scenarios_lab4.json"),
+            sim_port(1897),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab4"),
+            training_params(3000, 0.9970)).
+
+//   lab5 → Energy differentiation (port 1898). Two lamps/zone, ws:energyCost 1 vs 4.
+lab_profile("lab5",
+            td("classpath:interactions-lab5.ttl"),
+            ont(["building_5_energy.ttl"]),
+            scenarios("benchmark/scenarios_lab5.json"),
+            train_scenarios("benchmark/train_scenarios_lab5.json"),
+            sim_port(1898),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab5"),
+            training_params(3000, 0.9970)).
+
 // ── Phase 3 SLOW LADDER (Learning Process Dynamics / response delay) ────────
 //   Each slow profile is structurally IDENTICAL to its clean Phase-1 parent
 //   (same agent-side ontology shape, zone targets and discretisation bounds, so

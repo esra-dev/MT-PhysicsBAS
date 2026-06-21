@@ -56,6 +56,10 @@ public class StereotypeReasoner {
         public int ivStateVecIndex;    // which state vec element is the IV (e.g. IDX_SUNSHINE)
         public int ivMinRank = 1;      // KG-9: minimum IV rank at which Mediates effect is meaningful
                                        //       (ws:ivMinRank in the ontology; defaults to 1 when absent)
+        public double energyCost = 0.0; // Phase 4 (lab5): ws:energyCost — electrical power
+                                       //       drawn per tick when this actuator is ON. 0.0 when the
+                                       //       KG declares no cost (labs 1-4), which makes the
+                                       //       non-fading energy prior in QLearner inert for them.
         public String label;           // human-readable label
 
         public ActionInfo() {
@@ -109,7 +113,7 @@ public class StereotypeReasoner {
      */
     private static final String ACTUATOR_DISCOVERY_QUERY = PREFIXES +
         "SELECT ?comp ?zone ?zoneIdx ?dvLabel ?iv ?ivMinRank " +
-        "       ?wotActionType ?wotStateType ?actionValue\n" +
+        "       ?wotActionType ?wotStateType ?actionValue ?energyCost\n" +
         "WHERE {\n" +
         "  ?comp  brick:isLocatedIn             ?zone .\n" +
         "  ?zone  a                             lab:Workstation .\n" +
@@ -128,6 +132,9 @@ public class StereotypeReasoner {
         "  OPTIONAL { ?mech ws:ivMinRank ?ivMinRank . }\n" +
         "  OPTIONAL { ?comp ws:hasWoTActionSemanticType ?wotActionType . }\n" +
         "  OPTIONAL { ?comp ws:hasWoTStateSemanticType  ?wotStateType . }\n" +
+        // Phase 4 (lab5): per-actuator electrical power draw per tick. Absent
+        // on labs 1-4, so ?energyCost is unbound there and parsed as 0.0.
+        "  OPTIONAL { ?comp ws:energyCost               ?energyCost . }\n" +
         "}\n" +
         "ORDER BY ?zoneIdx ?wotActionType ?actionValue";
 
@@ -156,6 +163,25 @@ public class StereotypeReasoner {
         "          ws:connTarget ?targetSensor ;\n" +
         "          elem:hasStructuralStereotype ?couplingStereo .\n" +
         "  }\n" +
+        "}";
+
+    /**
+     * Phase 4 (lab4): discover smart-plug power-gate dependencies. Each row is
+     * one (gate -> gated) arc declared via ws:powerGates, where the gate's WoT
+     * STATE slot must be ON for the gated component's activation action to have
+     * any optical effect (an AND-gate power wiring). The gated lamp's ON action
+     * is then treated as IV-gated on the plug slot, REUSING the existing
+     * Mediates/IV machinery (Rule 2 Q-init penalty, Rule 5 constructive bonus,
+     * isIVSatisfied runtime prior, recordActionOutcome adaptive trust), so no
+     * rule code changes. Absent ws:powerGates triples => empty result => no-op
+     * (labs 1-3 and 5 are unaffected).
+     */
+    private static final String POWER_GATE_QUERY = PREFIXES +
+        "SELECT ?gateState ?gatedAction\n" +
+        "WHERE {\n" +
+        "  ?gate  ws:powerGates               ?gated .\n" +
+        "  ?gate  ws:hasWoTStateSemanticType  ?gateState .\n" +
+        "  ?gated ws:hasWoTActionSemanticType ?gatedAction .\n" +
         "}";
 
     // -----------------------------------------------------------------------
@@ -396,6 +422,11 @@ public class StereotypeReasoner {
         // Discover actuators and build action registry
         discoverActuators(model);
 
+        // Phase 4 (lab4): apply smart-plug power-gate dependencies on top of the
+        // freshly-built action registry. Reuses the IV machinery, so it must run
+        // AFTER discoverActuators (actions[] must exist) and BEFORE model.close().
+        discoverPowerGates(model);
+
         // Discover cross-zone feeds
         discoverCrossZoneFeeds(model);
 
@@ -529,6 +560,9 @@ public class StereotypeReasoner {
                 int ivMinRank = (qs.contains("ivMinRank") && qs.get("ivMinRank") != null)
                         ? qs.getLiteral("ivMinRank").getInt()
                         : 1; // KG-9 default per Audit Step 1
+                double energyCost = (qs.contains("energyCost") && qs.get("energyCost") != null)
+                        ? qs.getLiteral("energyCost").getDouble()
+                        : 0.0; // Phase 4 (lab5): absent on labs 1-4 => 0.0
 
                 if (wotAction == null) continue;
 
@@ -548,10 +582,14 @@ public class StereotypeReasoner {
                     actionMap.put(key, ai);
                 }
                 ai.affectedZones.add(zoneIdx);
+                // Phase 4 (lab5): keep the largest declared cost across the
+                // per-zone rows that merge into one action (they agree in
+                // practice; max is a safe reducer).
+                if (energyCost > ai.energyCost) ai.energyCost = energyCost;
 
                 LOGGER.fine("  Discovered: " + wotAction + " value=" + actionValue
                           + " zone=" + zoneIdx + " hasIV=" + hasIV
-                          + " ivMinRank=" + ivMinRank);
+                          + " ivMinRank=" + ivMinRank + " energyCost=" + energyCost);
             }
         }
 
@@ -607,6 +645,55 @@ public class StereotypeReasoner {
                 "StereotypeReasoner.discoverActuators: 0 actuator actions found in ontology."
               + " Check ws:hasWoTActionSemanticType / elem:hasComponentAction / ws:actionValue"
               + " triples in the lab + wot-mappings TTL files.");
+        }
+    }
+
+    /**
+     * Apply smart-plug power-gate dependencies (Phase 4, lab4). For each
+     * ws:powerGates arc, find the gated component's ACTIVATION (ON) action and
+     * bind its independent variable to the gate component's state-vector slot
+     * with ivMinRank=1 ("effective only when the gate slot is ON"). This reuses
+     * the generic IV machinery, so the gated lamp is penalised at Q-init when
+     * the plug is OFF (Rule 2) and rewarded once the plug is ON (Rule 5), while
+     * the plug's own ON action — having no IV of its own — receives the
+     * unconditional constructive bonus, yielding enabler-first behaviour. Must
+     * run AFTER {@link #discoverActuators(OntModel)} (the action registry must
+     * exist) and BEFORE model.close(). No-op when the ontology declares no
+     * ws:powerGates arcs (labs 1-3 and 5).
+     */
+    private void discoverPowerGates(OntModel model) {
+        int applied = 0;
+        try (QueryExecution qe = QueryExecutionFactory.create(POWER_GATE_QUERY, model)) {
+            ResultSet rs = qe.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution qs = rs.next();
+                if (!qs.contains("gateState") || !qs.contains("gatedAction")) continue;
+                String gateState   = qs.getLiteral("gateState").getString();
+                String gatedAction = qs.getLiteral("gatedAction").getString();
+                Integer gateSlot = wotStateToSvIndex.get(gateState);
+                if (gateSlot == null) {
+                    LOGGER.warning("discoverPowerGates: gate state " + gateState
+                                 + " has no state-vector slot — skipping power-gate arc");
+                    continue;
+                }
+                // Bind the gated component's ACTIVATION (ON) action to the gate slot.
+                for (ActionInfo ai : actions) {
+                    if (ai.wotActionType != null
+                            && ai.wotActionType.equals(gatedAction)
+                            && ai.wotValue) {
+                        ai.hasIV = true;
+                        ai.ivStateVecIndex = gateSlot;
+                        ai.ivMinRank = 1; // binary gate slot: ON (rank>=1) enables the gated DV
+                        applied++;
+                        LOGGER.info("Power-gate: " + ai.label + " is now IV-gated on slot "
+                                  + gateSlot + " (" + gateState + ") ivMinRank=1");
+                    }
+                }
+            }
+        }
+        if (applied > 0) {
+            LOGGER.info("StereotypeReasoner: applied " + applied
+                      + " smart-plug power-gate dependenc(ies)");
         }
     }
 

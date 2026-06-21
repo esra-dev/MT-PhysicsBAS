@@ -1,0 +1,43 @@
+[
+  {
+    "comment": "lab4 SMART-PLUG TRAINING scenarios (10 of 16) held-in set for QL training. Held-OUT (test-only): 3, 4, 8, 12, 14, 15 (incl. the plug-trap scenario 3, spotlight-redundancy and energy-optimization cases). PlugZ1 starts OFF wherever the Z1 lamp is needed, so the agent learns the power dependency (z1lamp_on = Z1Light AND PlugZ1). Scenario 11 is the held-in plug-trap (switch on, plug off). Full sun coverage (ranks 0..3). Targets Z1=bright(3), Z2=bright(3).",
+    "id": 1, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 0,
+    "description": "sun=0, all off, plug off -> enable plug + both lamps"
+  },
+  {
+    "id": 2, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 0,
+    "description": "sun=0, both at target via lamps (plug on) -> hold"
+  },
+  {
+    "id": 5, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 100,
+    "description": "sun=1, all off, plug off -> enable plug + both lamps"
+  },
+  {
+    "id": 6, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 100,
+    "description": "sun=1, both at target via lamps (plug on) -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 425, "Z2Level": 175, "Z1Light": true,  "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 100,
+    "description": "sun=1, Z1 lit (plug on) at target, Z2 rank2 -> turn Z2 lamp on"
+  },
+  {
+    "id": 9, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 400,
+    "description": "sun=2, all off, plug off -> enable plug + both lamps"
+  },
+  {
+    "id": 10, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "Sunshine": 400,
+    "description": "sun=2, both at target via lamps (plug on) -> hold"
+  },
+  {
+    "id": 11, "Z1Level": 175, "Z2Level": 425, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 400,
+    "description": "sun=2, Z1 switch ON but plug OFF (Z1 dark) while Z2 at target -> turn the smart plug on"
+  },
+  {
+    "id": 13, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "Sunshine": 900,
+    "description": "sun=3, all off -> open both blinds (835 each, zero energy)"
+  },
+  {
+    "id": 16, "Z1Level": 835, "Z2Level": 835, "Z1Light": false, "Z2Light": false, "Z1Blinds": true,  "Z2Blinds": true,  "Spotlight": false, "PlugZ1": false, "Sunshine": 900,
+    "description": "sun=3, both at target via blinds only -> hold"
+  }
+]
