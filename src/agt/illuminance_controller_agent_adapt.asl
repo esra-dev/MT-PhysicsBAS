@@ -308,8 +308,17 @@ greedy_eval_episodes(20).
     ?action_delay_ms(Delay);
     ?max_steps_per_episode(MaxSteps);
 
-    // ε-greedy action over the CURRENT (possibly reduced) action space.
-    getActionFromState(StateVec, true, Action)[artifact_id(QlId)];
+    // Action selection is regime-dependent (advisor's "operate, then re-learn"
+    // design). BEFORE any fault is detected the agent runs its FROZEN clean
+    // policy "as normal" (greedy, explore=false) — it does NOT adapt; it only
+    // monitors. AFTER a fault has been detected, blacklisted and warm-restarted
+    // it re-learns over the surviving action space with ε-boosted re-exploration
+    // (warmRestart restored ε to fault.relearn.epsBoost).
+    if (detected(_)) {
+        getActionFromState(StateVec, true,  Action)[artifact_id(QlId)]   // Regime B: re-explore
+    } else {
+        getActionFromState(StateVec, false, Action)[artifact_id(QlId)]   // Regime A: exploit frozen clean policy
+    };
     actionToWoT(Action, WotType, WotValue)[artifact_id(QlId)];
     if (WotType \== "none") {
         invokeAction(WotType, WotValue)[artifact_id(LabId)]
@@ -320,13 +329,23 @@ greedy_eval_episodes(20).
     readLabStatus(ZoneLevels2, SunshineRank2, SKs2, SVs2)[artifact_id(LabId)];
     encodeState(ZoneLevels2, SunshineRank2, SKs2, SVs2, NextState)[artifact_id(QlId)];
 
-    // Learn (Bellman update + dynamics stats).
-    calculateQ(StateVec, Action, NextState)[artifact_id(QlId)];
-    ?learner_artifact(LId);
-    observe(StateVec, Action, NextState)[artifact_id(LId)];
+    // Learn (Bellman update + dynamics stats) ONLY after a fault has been
+    // detected, discarded (blacklisted) and warm-restarted. Pre-detection the
+    // clean Q-table stays FROZEN so the agent does NOT silently adapt around the
+    // fault (advisor: "the agent will not try to work around a fault").
+    // `detected(_)` is asserted in @on_defect_new, which fires AFTER
+    // observeForFaults below, so the detecting step itself does not learn; every
+    // step from the next one onward does.
+    if (detected(_)) {
+        calculateQ(StateVec, Action, NextState)[artifact_id(QlId)];
+        ?learner_artifact(LId);
+        observe(StateVec, Action, NextState)[artifact_id(LId)]
+    };
 
     // STRICT Expected-vs-Actual check: does the KG prediction for this action
-    // match what actually happened? Accumulates per-component fault evidence.
+    // match what actually happened? Phase 2.3 — INSTANT isolation: the FIRST
+    // unambiguous anomaly (dead/inverted) names the defective component; there is
+    // no fault counter / accumulation threshold.
     observeForFaults(StateVec, Action, NextState, NewlyDefective)[artifact_id(QlId)];
     if (NewlyDefective \== "") {
         !on_defect(NewlyDefective, EpN)

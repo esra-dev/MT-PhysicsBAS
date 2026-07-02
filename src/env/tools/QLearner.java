@@ -241,27 +241,31 @@ public class QLearner extends Artifact {
     // -----------------------------------------------------------------------
     // Phase 2 — fault detection, blacklisting & warm-restart re-learning
     // -----------------------------------------------------------------------
-    // A component is flagged DEFECTIVE when the Knowledge-Graph prediction for
-    // one of its actions is repeatedly contradicted by the observed transition:
+    // Phase 2.3 — INSTANT isolation (NO evidence-accumulation threshold). A
+    // component is flagged DEFECTIVE the FIRST time the Knowledge-Graph
+    // prediction for one of its actions is contradicted by the observed
+    // transition:
     //   • DEAD     — the actuator bit flips as commanded (or is silently
     //                dropped) but the zone illuminance it should move does not
-    //                respond, across >= FAULT_DEAD_RATE of observations.
-    //   • INVERTED — the zone moves in the OPPOSITE direction to the KG sign,
-    //                across >= FAULT_INV_RATE of observations.
-    //   • ANOMALY  — combined dead+inverted rate >= FAULT_ANOMALY_RATE. This
-    //                catches a component whose evidence is SPLIT between the two
-    //                modes (e.g. an inverted lamp that reads 'dead' when the
-    //                zone is already at rank 0 and 'inverted' when the zone is
-    //                elevated) so that neither single rate crosses on its own.
-    // Detection requires at least FAULT_MIN_SAMPLES falsifiable observations of
-    // the action so a few saturated / no-op steps cannot trip a false alarm.
+    //                respond.
+    //   • INVERTED — the zone moves in the OPPOSITE direction to the KG sign.
+    // A SINGLE unambiguous, component-attributable observation of either mode is
+    // sufficient: the advisor's design is that the agent recognises an action in
+    // its policy produced UNEXPECTED behaviour, discards that artifact, and
+    // re-learns — there is no "how many times was it faulty" counter. False
+    // alarms are prevented STRUCTURALLY rather than statistically: only
+    // FALSIFIABLE claims are scored (the action must make a non-zero KG bit-claim
+    // and the zone it should move must not already be saturated at the boundary),
+    // a zone fed by an already-blacklisted Causes actuator is skipped
+    // (contamination guard), and a no-response on a zone with a fault-SUSPECT
+    // co-feeder is abstained.
     // Only CAUSES actuators are adjudicated: a MEDIATES / IV-gated actuator
     // (e.g. a sunshine-gated blind) has no unconditional sign, and its null
     // response is expected whenever the IV is low or the zone is lamp-saturated,
     // so observeForFaults skips it (the fault model — dead / inverted lux —
     // targets Causes lamps). Once flagged, blacklistComponent() removes BOTH the
     // ON and OFF actions of the component, and warmRestart() re-primes learning
-    // over the survivors. All thresholds are -D overridable.
+    // over the survivors.
     private boolean[] blacklisted;     // [nActions] — true → removed from action space
     private int[]     faultObsN;       // [nActions] — falsifiable observations of the action
     private int[]     faultDeadN;      // [nActions] — observations with no zone response (dead)
@@ -280,17 +284,18 @@ public class QLearner extends Artifact {
     // actions share one wotActionType, but hasIV is only set on the activation
     // action, so this set lets the detector skip BOTH polarities of a blind).
     private java.util.Set<String> ivGatedComponents = new java.util.HashSet<>();
-    private static final int    FAULT_MIN_SAMPLES  = parseIntProp   ("fault.detect.minSamples",  20);
-    private static final double FAULT_DEAD_RATE    = parseDoubleProp("fault.detect.deadRate",    0.80);
-    private static final double FAULT_INV_RATE     = parseDoubleProp("fault.detect.invRate",     0.60);
-    private static final double FAULT_ANOMALY_RATE = parseDoubleProp("fault.detect.anomalyRate", 0.75);
+    // Phase 2.3 — INSTANT isolation: a component is blacklisted on its FIRST
+    // unambiguous fault observation, so the minSamples / dead-rate / inv-rate /
+    // anomaly-rate accumulation thresholds have been removed. False positives are
+    // held off by the structural falsifiability + contamination + suspect-
+    // co-feeder guards below, not by counting repeated anomalies.
     private static final double FAULT_EPS_BOOST    = parseDoubleProp("fault.relearn.epsBoost",   0.30);
     // Phase 2.2 — combined dead+inverted observations for an actuator to count as
     // a fault SUSPECT that can mask a co-located healthy actuator's zone response
     // (primary-detection-time component attribution). Kept small — and paired with
     // a single-inverted-observation fast path in isFaultSuspect — so a genuine
     // fault is recognised as "suspect", and its masking effect discounted, before
-    // the neighbour it corrupts can reach FAULT_MIN_SAMPLES and be mis-flagged.
+    // the neighbour it corrupts is itself (instantly) mis-flagged.
     private static final int    FAULT_SUSPECT_MIN  = parseIntProp   ("fault.detect.suspectMin",   2);
 
     // Phase 2.1 — policy-stability recovery detector (adapt regime).
@@ -948,11 +953,12 @@ public class QLearner extends Artifact {
     /**
      * Strict Expected-vs-Actual check for ONE transition. Compares the
      * Knowledge-Graph prediction for {@code actionIdx} in {@code stateVecBefore}
-     * against the observed Δ to {@code stateVecAfter}, and accumulates per-action
-     * evidence that the underlying component is DEAD (no response) or INVERTED
-     * (opposite response). When an action crosses its detection threshold for
-     * the first time, {@code newlyDefective} is set to the component's WoT
-     * action-type URI; otherwise it is set to the empty string.
+     * against the observed Δ to {@code stateVecAfter}. Phase 2.3 — INSTANT
+     * isolation: the FIRST time a falsifiable, component-attributable observation
+     * shows the underlying component is DEAD (no response) or INVERTED (opposite
+     * response), {@code newlyDefective} is set to the component's WoT action-type
+     * URI; otherwise it is set to the empty string. There is no accumulation
+     * threshold — a single unambiguous anomaly is sufficient to isolate it.
      *
      * Only falsifiable observations are counted: the action must make a non-zero
      * KG bit-claim (i.e. it is not redundant in this state), and a zone the
@@ -992,6 +998,23 @@ public class QLearner extends Artifact {
         // NB: hasIV is set only on the activation action, so we test the whole
         // component (both ON and OFF actions share one wotActionType).
         if (ivGatedComponents.contains(ai.wotActionType)) return;
+
+        // Phase 2.3 — INSTANT detection adjudicates ONLY single-zone (dominant)
+        // Causes actuators. A shared MULTI-ZONE Causes feeder (the Spotlight,
+        // affectedZones=[0,1]) contributes only a MARGINAL amount to each zone, so
+        // a healthy toggle may fail to cross a discretised rank boundary — a no-op
+        // that single-observation detection would mis-read as "dead" (observed:
+        // the healthy Spotlight flagged in lab3_f1dead) — and its net per-zone
+        // response is confounded by co-feeders (an inverted co-lamp flooring a
+        // shared zone reads as "inverted"). Such an actuator is NOT falsifiable at
+        // rank resolution and is NEVER fault-injected (the model targets single-
+        // zone lamps), so adjudicating it only manufactures false positives. A
+        // single-zone lamp is the DOMINANT feeder of its zone, so its rank response
+        // IS a sound falsifiable signal and stays fully adjudicated. (Verified: in
+        // every lab, SetZxLight feeds exactly one zone; only SetSpotlight is multi-
+        // zone.) This is the structural guard that makes threshold-free instant
+        // isolation safe.
+        if (ai.affectedZones != null && ai.affectedZones.size() > 1) return;
 
         int[] before = toIntArray(stateVecBefore);
         int[] after  = toIntArray(stateVecAfter);
@@ -1082,23 +1105,27 @@ public class QLearner extends Artifact {
             return; // bitObs neither 0 nor == bitPred (shouldn't happen for a 0/1 bit)
         }
 
+        // Maintain the per-action counters BEFORE flagging: the suspect-co-feeder
+        // guard (isFaultSuspect) reads faultInvertN / faultDeadN to attribute
+        // masking on shared zones, and faultObsN bounds-guards that lookup.
         faultObsN[actionIdx]++;
         if (dead)     faultDeadN[actionIdx]++;
         if (inverted) faultInvertN[actionIdx]++;
 
-        if (faultObsN[actionIdx] < FAULT_MIN_SAMPLES) return;
-        double deadRate    = (double) faultDeadN[actionIdx]   / faultObsN[actionIdx];
-        double invRate     = (double) faultInvertN[actionIdx] / faultObsN[actionIdx];
-        double anomalyRate = (double) (faultDeadN[actionIdx] + faultInvertN[actionIdx])
-                                    / faultObsN[actionIdx];
-        if (deadRate >= FAULT_DEAD_RATE || invRate >= FAULT_INV_RATE
-                || anomalyRate >= FAULT_ANOMALY_RATE) {
+        // Phase 2.3 — INSTANT isolation. A single unambiguous, component-
+        // attributable fault observation (a dead/no-response OR an
+        // inverted/opposite-response on the actuator's own falsifiable claim)
+        // blacklists the component immediately — there is no accumulation
+        // threshold. Every false-positive guard above has already run and
+        // `return`ed on any unfalsifiable / saturated / suspect-co-feeder /
+        // contaminated-zone step, so only a genuine anomaly reaches this point.
+        if (dead || inverted) {
             newlyDefective.set(ai.wotActionType);
             LOGGER.warning(String.format(
                 "observeForFaults: component %s flagged DEFECTIVE via action %d (%s) "
-              + "[obs=%d deadRate=%.2f invRate=%.2f anomalyRate=%.2f]",
+              + "on FIRST anomalous observation [%s]",
                 ai.wotActionType, actionIdx, ai.label,
-                faultObsN[actionIdx], deadRate, invRate, anomalyRate));
+                dead ? "dead/no-response" : "inverted/opposite-response"));
         }
     }
 
@@ -1106,9 +1133,9 @@ public class QLearner extends Artifact {
      * Phase 2.2 — is action {@code b} currently carrying enough anomaly evidence to
      * be treated as a fault SUSPECT whose corruption of a shared zone should be
      * discounted when adjudicating a co-located actuator? Deliberately an EARLY,
-     * low bar — far below the {@code FAULT_MIN_SAMPLES} needed to actually flag a
-     * defect — so a real fault is recognised before the neighbour it corrupts can
-     * be mis-flagged (the lab3_f2inv race). Two triggers:
+     * low bar so a real fault is recognised as suspect the moment it shows any
+     * anomaly, before the neighbour it corrupts is itself (instantly) mis-flagged
+     * (the lab3_f2inv race). Two triggers:
      *   • a SINGLE opposite-direction (inverted) observation — essentially
      *     impossible for a healthy actuator on its own zone, so it alone suffices;
      *   • OR {@code FAULT_SUSPECT_MIN} combined dead+inverted observations.
