@@ -1,0 +1,12 @@
+profile,metric,n_paired,ql_true_mean,ql_false_mean,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_bootstrap_one_sided_true_faster,p_wilcoxon,cliffs_delta,ql_true_faster,q_bootstrap_bh,bh_family_m
+lab3_f1dead,RecoveryEpisodes,10,137.4,342.3,-204.9,-324.2075,-101.79750000000003,0.0,1.0,0.009765625,-0.72,True,0.0,2
+lab3_f1inv,RecoveryEpisodes,7,1575.2857142857142,1876.0,-300.7142857142857,-701.1714285714285,84.57142857142857,0.1422,0.9289,0.46875,0.02040816326530612,True,0.1422,2
+lab1_f1dead,DetectEpisode,10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,1.0,9
+lab2_f1dead,DetectEpisode,10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,1.0,9
+lab2_f1inv,DetectEpisode,10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,1.0,9
+lab2_f2dead,DetectEpisode,10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,1.0,9
+lab2_f2inv,DetectEpisode,10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,1.0,9
+lab3_f1dead,DetectEpisode,10,2.1,1.0,1.1,-0.6,3.2,0.2622,0.1311,0.4375,0.18,False,1.0,9
+lab3_f1inv,DetectEpisode,10,3.5,1.5,2.0,-0.2,4.4,0.0964,0.0482,0.25,0.31,False,0.8676,9
+lab3_f2dead,DetectEpisode,10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,1.0,9
+lab3_f2inv,DetectEpisode,10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,1.0,9
