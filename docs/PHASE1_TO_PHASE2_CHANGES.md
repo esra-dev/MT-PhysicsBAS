@@ -2059,3 +2059,28 @@ The Phase 2.4 extension delivered both objectives and strengthened the Phase 2 s
 3. **The recovery claim now replicates.** The new symmetric `lab3_f1dead_z2` reproduces the `lab3_f1dead` win (δ −0.84, q < 0.001), so the Phase-2 recovery-speed result stands on **five** significant goal-reaching (Tier-1) cells instead of one.
 
 **Net:** the user's anticipation — *"the KG-supported agent adapts faster than the other agent"* — is confirmed decisively on the new fault class (4×–9× faster recovery) and on the expanded well-posed family. The honest boundary is unchanged from §20 and now precisely scoped by tier (§21.7.4): the Tier-2 inverted-lamp lab3 cells are physically hard and goal-reaching in neither arm, and single-observation isolation occasionally over-flags a second component in exactly those futile cells (never in a confirmatory cell, so no significant result is affected). Energy weighting remains 0 for lab1–lab3, so — as in §20 — the blind's redundancy under a goal-only reward is precisely what makes the *active* self-test necessary and the result meaningful.
+
+### 21.9 Clean `lab2_f1binv` run of record (backfilling the flaked seed)
+
+In run `28745352239` the single infrastructure flake was `lab2_f1binv ql_false seed 8` (a 28 s *"Install Node-RED"* failure, §21.7), leaving that one cell at n = 9. `lab2_f1binv` is **Tier-2 descriptive** (its vanilla arm reaches goal only 49 % of the time), so it is **excluded from the recovery BH family and carries no significant claim** — the flake never touched a headline result. For completeness of the record, the full cell was re-dispatched clean:
+
+> `gh workflow run phase2.yml --ref phase2-instant-blacklist -f adapt_profiles="lab2_f1binv" -f seeds="1,2,3,4,5,6,7,8,9,10" -f run_mode="phase1" -f adapt_episodes="0" -f publish_results=true`
+
+**Run:** GitHub Actions `phase2.yml` #`28750100413` (branch `phase2-instant-blacklist`, commit `51fae94` — identical simulation code to `282acc4`; the only diff is the Tier-1 analysis in `analysis/phase2_recovery.py`). **Design:** 1 profile × 2 arms × 10 seeds = **20 adapt runs**, self-contained, so `lab2_f1binv` now has a green **n = 10 / arm** cell of record. The aggregate step re-runs `phase2_recovery.py`, so the published artefact already carries the `recovery_tier` column and the Tier-1 (m = 5) BH family.
+
+<!-- BACKFILL_RESULTS -->
+
+**Result (run `28750100413`, status *success*, n = 10 / arm):**
+
+| Metric | KG `ql_true` | vanilla `ql_false` | Δ (true−false) | 95 % CI | δ | Wilcoxon p | in BH family? |
+|---|---:|---:|---:|---|---:|---:|:--:|
+| `RecoveryEpisodes` (n_pair = 9\*) | 287.2 | 333.8 | −46.6 | [−158.3, +70.6] | −0.33 | 0.359 | **no — Tier-2** |
+| `DetectEpisode` (n = 10) | 7.6 | 6.1 | +1.5 | [0.0, +3.2] | +0.12 | 0.219 | — |
+
+\* Both arms ran 10 seeds; the vanilla arm reconverged in **9/10** (KG **10/10**), so one seed has no `RecoveryEpisodes` value to pair — a genuine non-reconvergence, not a flake.
+
+Detection is 100 % in both arms (n = 10). Goal-reaching rates are **0.5 (KG) / 0.3 (vanilla)** — the vanilla arm stays below the 0.5 threshold, so `classify_recovery_tier` keeps the cell **Tier-2 descriptive** and `q_bootstrap_bh = NaN` (excluded from the family). The recovery direction (KG faster, δ −0.33, ns) and the reliability edge (KG 10/10 vs 9/10 reconvergence) match the n = 9 view. The record is now green end-to-end with no missing seed.
+
+
+**Bottom line:** the clean n = 10 leaves `lab2_f1binv` a **Tier-2 descriptive** cell — directionally KG-faster, not significant, excluded from the BH family — exactly as at n = 9. No headline, no q-value, and no tier assignment anywhere in §21 changes; this run only closes the one infrastructure gap so the record is green end-to-end.
+
