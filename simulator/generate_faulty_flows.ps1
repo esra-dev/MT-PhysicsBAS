@@ -100,6 +100,15 @@ New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f1binv.json' `
     'Lab_2_Intermediate (port 1893)' 'Lab_2_Intermediate_F1BINV (port 1893)' `
     @(,@('z1b ? 0.50 * sun', 'z1b ? -0.50 * sun'))
 
+# ── Phase 2.5 — MONITOR emergency-fallback lab ───────────────────────────────
+# labmon_f1dead - DEAD primary lamp (kill the +400 lux Z1Light contribution).
+# After blacklisting, the only surviving rank-3 path is {Z1Monitor, Z1Backup}
+# = 375 lux, so the KG-primed agent must fall back on the monitor as an
+# unconventional light source.
+New-FaultyFlow 'simulator_flow_labmon.json' 'simulator_flow_labmon_f1dead.json' `
+    'Lab_Monitor_Emergency (port 1899)' 'Lab_Monitor_Emergency_F1DEAD (port 1899)' `
+    @(,@('z1l   ? 400 : 0', 'z1l   ? 0 : 0'))
+
 Write-Host "`n--- verify each faulty flow is valid JSON ---"
 Get-ChildItem simulator_flow_lab*_f*.json | ForEach-Object {
     $null = Get-Content -Raw $_.FullName | ConvertFrom-Json

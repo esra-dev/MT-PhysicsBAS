@@ -1,0 +1,27 @@
+[
+  {
+    "comment": "labmon TRAINING scenarios (held-in) for QL clean training. Single zone, goal Z1=rank3 (>300 lux). Deterministic physics: Z1=25 + (Z1Light?400)+(Z1Monitor?290). The clean optimum is the FREE primary lamp (425=rank3); the COSTLY monitor (315=rank3) is the emergency fallback exercised in labmon_f1dead.",
+    "id": 1, "Z1Level": 25,  "Z1Light": false, "Z1Monitor": false,
+    "description": "all off, dark -> turn on the free primary lamp"
+  },
+  {
+    "id": 2, "Z1Level": 425, "Z1Light": true, "Z1Monitor": false,
+    "description": "primary lamp on, at target (rank3) -> hold"
+  },
+  {
+    "id": 3, "Z1Level": 315, "Z1Light": false, "Z1Monitor": true,
+    "description": "monitor on (rank3 but costly) -> prefer switching to the free lamp"
+  },
+  {
+    "id": 4, "Z1Level": 75, "Z1Light": false, "Z1Monitor": false,
+    "description": "dim (rank1), all off -> turn on the free primary lamp"
+  },
+  {
+    "id": 6, "Z1Level": 500, "Z1Light": true, "Z1Monitor": true,
+    "description": "both on (rank3, wasteful) -> turn the costly monitor off, keep the lamp"
+  },
+  {
+    "id": 7, "Z1Level": 25, "Z1Light": true, "Z1Monitor": false,
+    "description": "lamp already on but level stale -> settle at rank3 on the lamp"
+  }
+]

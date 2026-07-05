@@ -102,6 +102,11 @@ _WELL_POSED_RECOVERY = (
     "lab3_f1dead_z2", "lab3_f1inv_z2",
     "lab3_f1bdead", "lab3_f1binv",
     "lab2_f1bdead", "lab2_f1binv",
+    # Phase 2.5 — monitor emergency-fallback lab. After the primary lamp is
+    # blacklisted, the only surviving rank-3 path is {Z1Monitor, Z1Backup} =
+    # 375 lux, which is deterministic (no sunshine term), so a recovery-SPEED
+    # contrast is well-posed.
+    "labmon_f1dead",
 )
 
 # Minimum greedy goal-rate (RecoveredGoalRate) for a re-converged policy to

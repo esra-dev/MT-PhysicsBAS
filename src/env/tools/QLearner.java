@@ -78,6 +78,16 @@ public class QLearner extends Artifact {
     // unaffected even when this is > 0. The run_config "phase4" profile sets
     // stereo.energyPriorWeight=2.0 (override with -Dstereo.energyPriorWeight).
     private static final double ENERGY_PRIOR_WEIGHT = parseDoubleProp("stereo.energyPriorWeight", 0.0);
+    // Phase 2.5 (labmon): weight of the SYMMETRIC pessimistic Q-init bias applied
+    // to any actuator carrying ws:rewardEnergyCost (i.e. the costly monitor).
+    // Applied IDENTICALLY to ql_true and ql_false, so it does NOT bias the
+    // KG-vs-vanilla contrast; it only ensures that the FREE primary lamp is the
+    // clean optimum (so a dead lamp is exercised and DETECTED) instead of the two
+    // one-action rank-3 levers being an entrenchment lottery under the reward
+    // clip. Self-gating: rewardEnergyCost is 0.0 for every lab except labmon, so
+    // this term vanishes everywhere else regardless of the weight.
+    private static final double REWARD_ENERGY_INIT_WEIGHT =
+        parseDoubleProp("reward.energyInitWeight", 12.0);
     // Total episodes used to decay the stereotype prior weight to its floor.
     // S2-3 (audit Step 2): made non-final so it can be coupled to num_episodes
     // at runtime via setPriorDecayEpisodes() / setTrainingBudgetEpisodes().
@@ -431,6 +441,24 @@ public class QLearner extends Artifact {
         } else {
             for (double[][] zt : qTables) for (double[] row : zt) Arrays.fill(row, 0.0);
             LOGGER.info("QLearner initialised — STEREOTYPE MODE: OFF (standard zero-init)");
+        }
+
+        // Phase 2.5 (labmon): SYMMETRIC pessimistic Q-init for any actuator that
+        // carries a reward-side energy cost (ws:rewardEnergyCost > 0). Applied to
+        // BOTH arms so it does not bias the KG-vs-vanilla contrast; it only makes
+        // the FREE primary lamp the clean optimum, so the frozen clean policy
+        // exercises the lamp and its death is detected, while the costly monitor
+        // stays a fallback. Self-gating: 0 for every lab that declares no cost.
+        if (REWARD_ENERGY_INIT_WEIGHT > 0.0 && actionInfos != null) {
+            for (int a = 0; a < nActions; a++) {
+                StereotypeReasoner.ActionInfo ai = actionInfos[a];
+                if (ai != null && ai.wotValue && ai.rewardEnergyCost > 0.0) {
+                    double pen = REWARD_ENERGY_INIT_WEIGHT * ai.rewardEnergyCost;
+                    for (int z = 0; z < numZones; z++)
+                        for (int s = 0; s < nStates; s++)
+                            qTables[z][s][a] -= pen;
+                }
+            }
         }
 
         LOGGER.info("  Goal: " + Arrays.toString(this.goal));
@@ -2254,6 +2282,29 @@ public class QLearner extends Artifact {
         // Stagnation penalty when not at goal
         if (actionInfos[action].wotActionType == null && nextLevel != target) {
             r -= 5.0;
+        }
+
+        // Phase 2.5 (labmon): reward-side energy cost. Subtract, ONCE per step
+        // (zone 0 only, so it is not multiplied by the zone count), the per-tick
+        // ws:rewardEnergyCost of every actuator that is ON in the resulting
+        // state. This is SELF-GATING — only the monitor lab declares
+        // ws:rewardEnergyCost, so rewardEnergyCost is 0.0 for every other lab
+        // and this term vanishes. It makes BOTH arms (it is in the reward, not
+        // the KG prior) prefer the cheap primary lamp in the clean lab, so the
+        // dead lamp is actually exercised and detected, while the costly monitor
+        // remains available as the only survivor path in the emergency.
+        if (zoneIdx == 0) {
+            double energyPenalty = 0.0;
+            for (StereotypeReasoner.ActionInfo ai : actionInfos) {
+                if (ai.wotValue && ai.rewardEnergyCost > 0.0
+                        && ai.stateVecBitIndex >= 0
+                        && toInt(nextStateVec[ai.stateVecBitIndex]) == 1) {
+                    energyPenalty += ai.rewardEnergyCost;
+                }
+            }
+            if (energyPenalty > 0.0) {
+                r -= energyPenalty;
+            }
         }
 
         return new RewardResult(r, wasted);

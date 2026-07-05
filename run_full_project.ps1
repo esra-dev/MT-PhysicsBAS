@@ -218,7 +218,7 @@ $TrainProfiles = @(
 )
 # Superset of all known/selectable profiles (used only to validate -OnlyProfiles).
 $KnownProfiles = @(
-    "lab1", "lab2", "lab3", "lab4", "lab5"
+    "lab1", "lab2", "lab3", "lab4", "lab5", "labmon"
 )
 
 # Apply -OnlyProfiles filter (parallel orchestrator passes one profile per clone).
@@ -281,6 +281,7 @@ $ProfileQtableSuffix = @{
     lab3 = "_lab3"
     lab4 = "_lab4"
     lab5 = "_lab5"
+    labmon = "_labmon"
 }
 
 # Simulator map: each entry is a profile → (port, flow file) binding
@@ -290,6 +291,7 @@ $Simulators = @(
     [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
     [pscustomobject]@{ Profile="lab4"; Port=1897; Flow="simulator_flow_lab4.json" }
     [pscustomobject]@{ Profile="lab5"; Port=1898; Flow="simulator_flow_lab5.json" }
+    [pscustomobject]@{ Profile="labmon"; Port=1899; Flow="simulator_flow_labmon.json" }
 )
 
 # ASL file paths (relative; resolved via Set-Location above)

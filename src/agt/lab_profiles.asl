@@ -357,6 +357,30 @@ lab_profile("lab5",
             qtable_suffix("_lab5"),
             training_params(3000, 0.9970)).
 
+// ── Phase 2.5 MONITOR EMERGENCY-FALLBACK LAB ───────────────────────────────
+//   A single-zone lab with THREE Causes actuators: the primary task lamp, a
+//   computer MONITOR whose light output is only a side-effect (new
+//   ws:MonitorStereotype), and a dim backup lamp. Fully deterministic (no
+//   sunshine, no blinds). Clean optimum = the primary lamp alone (rank 3).
+//   The emergency variant labmon_f1dead kills the primary lamp so the ONLY
+//   surviving rank-3 path is {monitor, backup} (375 lux) — the monitor is the
+//   necessary, unconventional fallback the KG-primed agent should exploit
+//   faster than a tabula-rasa learner. State = [Z1Level, Z1Light, Z1Monitor,
+//   Z1Backup] = 32 states. Port 1899.
+lab_profile("labmon",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon"),
+            training_params(1500, 0.9950)).
+
 // ── Phase 3 SLOW LADDER (Learning Process Dynamics / response delay) ────────
 //   Each slow profile is structurally IDENTICAL to its clean Phase-1 parent
 //   (same agent-side ontology shape, zone targets and discretisation bounds, so
@@ -688,6 +712,27 @@ lab_profile("lab2_f1binv",
             qtable_suffix("_lab2_f1binv"),
             training_params(2000, 0.9960)).
 
+//   labmon_f1dead → DEAD primary lamp in the Monitor emergency-fallback lab.
+//   After the lamp is blacklisted, the ONLY surviving rank-3 path is
+//   {Z1Monitor, Z1Backup} = 375 lux (deterministic, sun-independent). The
+//   MONITOR is the necessary unconventional fallback; the KG-primed agent
+//   (positive Causes-light priors on the monitor + backup ON actions) should
+//   re-align faster than the tabula-rasa agent. Reuses the parent labmon
+//   ont/td/port so the warm-loaded Q-table shape matches.
+lab_profile("labmon_f1dead",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon_f1dead"),
+            training_params(1500, 0.9950)).
+
 /* ============================================================
  * adapt_source/2 — maps a FAULTY profile to the clean parent's
  * qtable_suffix, so the Phase-2 adapt agent warm-loads the right
@@ -709,6 +754,8 @@ adapt_source("lab3_f1bdead",   "_lab3").
 adapt_source("lab3_f1binv",    "_lab3").
 adapt_source("lab2_f1bdead",   "_lab2").
 adapt_source("lab2_f1binv",    "_lab2").
+// Phase 2.5 — monitor emergency-fallback lab.
+adapt_source("labmon_f1dead",  "_labmon").
 
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.
