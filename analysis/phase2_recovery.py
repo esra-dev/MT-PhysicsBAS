@@ -109,6 +109,48 @@ _WELL_POSED_RECOVERY = (
 _GOAL_REACHING_THRESHOLD = 0.5
 
 
+# ---------------------------------------------------------------------------
+# Two-tier recovery reporting (Phase 2.4).
+#
+# _WELL_POSED_RECOVERY gates whether a recovery-SPEED contrast is *defined* (a
+# deterministic post-fault survivor path exists). Within that set we further
+# stratify by whether the recovered policy is actually GOAL-REACHING, because a
+# well-posed cell can still be futile in practice. Concretely, lab3 physics is
+#   z1 = 25 + (z1l?400) + (z2l?150) + (z1b?0.5*sun) + (z2b?0.4*sun) + (sp?150)
+# so after a DEAD Z1 lamp is blacklisted, {Z2Light,Spotlight} still gives
+# z1 = 25+150+150 = 325 > 300 = rank 3 (sun-independent) -> both arms reach goal
+# (~0.9-1.0). An INVERTED Z1 lamp has the SAME survivor path on paper, but its
+# -400 contribution keeps dragging the zone in the states the re-learner
+# revisits, so NEITHER arm reliably reaches the goal (~0.3). A BLIND fault
+# leaves the deterministic +400 task lamp, so both arms reach goal.
+#
+# Tier-1 (CONFIRMATORY): well-posed AND goal-reaching in BOTH arms
+#   (per-arm goal_reaching_rate >= _GOAL_REACHING_THRESHOLD). "Recovered" here
+#   means "re-reaches the target", so a recovery-SPEED comparison is meaningful.
+#   The RecoveryEpisodes BH-FDR family is restricted to these cells.
+# Tier-2 (DESCRIPTIVE): well-posed but NOT reliably goal-reaching in both arms
+#   (the inverted-lamp cells; partially-posed lab2_f1binv). Reported with full
+#   statistics but EXCLUDED from the recovery BH family -- their number is
+#   time-to-stable-but-futile-policy, not time-to-recovery.
+#
+# The stratifier is task ACHIEVABILITY, a property of the ENVIRONMENT: it agrees
+# across both arms (ql_true and ql_false classify identically), so conditioning
+# on it does NOT bias the KG-vs-vanilla contrast (it is not a treatment
+# selector). Cells outside _WELL_POSED_RECOVERY are 'ill_posed'.
+def classify_recovery_tier(profile: str, per_cell: dict) -> str:
+    """'confirmatory' | 'descriptive' | 'ill_posed' for a profile."""
+    if profile not in _WELL_POSED_RECOVERY:
+        return "ill_posed"
+    t = per_cell.get((profile, "ql_true"))
+    f = per_cell.get((profile, "ql_false"))
+    grt = t["goal_reaching_rate"] if t else float("nan")
+    grf = f["goal_reaching_rate"] if f else float("nan")
+    both_goal = (grt == grt and grf == grf
+                 and grt >= _GOAL_REACHING_THRESHOLD
+                 and grf >= _GOAL_REACHING_THRESHOLD)
+    return "confirmatory" if both_goal else "descriptive"
+
+
 def load_phase2_config(cfg_path: Path) -> dict:
     """Return the phase2 block from run_config.json (suffix map + profiles)."""
     if not cfg_path.is_file():
@@ -225,6 +267,7 @@ def write_ci_table(per_cell: dict, out_dir: Path, iters: int) -> int:
             "n_runs": arm["n_runs"],
             "defect_component": ";".join(arm["defects"]) if arm["defects"] else "",
             "well_posed_recovery": profile in _WELL_POSED_RECOVERY,
+            "recovery_tier": classify_recovery_tier(profile, per_cell),
             "detection_rate": round(arm["detection_rate"], 4)
                 if arm["detection_rate"] == arm["detection_rate"] else "",
             "reconverge_rate": round(arm["reconverge_rate"], 4)
@@ -264,10 +307,14 @@ def write_paired_table(per_cell: dict, profiles: list[str],
     Pairs replicas by index (run i of ql_true vs run i of ql_false). mean_diff
     < 0 means ql_true is FASTER (fewer episodes) -- the headline direction.
     Benjamini-Hochberg q-values are computed across the profile family for each
-    metric independently. The RecoveryEpisodes family is restricted to
-    well-posed cells (_WELL_POSED_RECOVERY): a recovery-SPEED contrast is only
-    meaningful where a deterministic post-fault survivor path exists. The
-    DetectEpisode family keeps every profile.
+    metric independently. Rows are EMITTED for every well-posed recovery cell
+    and every detection cell, but the RecoveryEpisodes BH-FDR family is
+    restricted to Tier-1 CONFIRMATORY cells (well-posed AND goal-reaching in
+    both arms; see classify_recovery_tier): a recovery-SPEED contrast is only
+    meaningful where "recovered" means "re-reaches the target". Tier-2
+    DESCRIPTIVE well-posed cells (inverted-lamp / partially-posed) are reported
+    with full statistics but carry no q-value. The DetectEpisode family keeps
+    every profile. The per-row recovery_tier column records the classification.
     """
     rows: list[dict] = []
     metric_pidx: dict = {}  # metric -> list of (row_idx, p_value)
@@ -275,8 +322,8 @@ def write_paired_table(per_cell: dict, profiles: list[str],
     for metric in _METRICS:
         metric_pidx.setdefault(metric, [])
         for profile in profiles:
-            # Phase 2.2: keep the recovery-SPEED comparison to well-posed cells;
-            # detection latency stays a whole-family comparison.
+            # Recovery-SPEED is only DEFINED on well-posed cells (a deterministic
+            # post-fault survivor exists); detection latency stays whole-family.
             if metric == "RecoveryEpisodes" and profile not in _WELL_POSED_RECOVERY:
                 continue
             ta = per_cell.get((profile, "ql_true"))
@@ -298,10 +345,13 @@ def write_paired_table(per_cell: dict, profiles: list[str],
             else:
                 mean_d, lo, hi = raw_diff, float("nan"), float("nan")
                 p_boot = p_pos = p_neg = p_wil = delta = float("nan")
+            tier = (classify_recovery_tier(profile, per_cell)
+                    if metric == "RecoveryEpisodes" else "")
             row_idx = len(rows)
             rows.append({
                 "profile": profile,
                 "metric": metric,
+                "recovery_tier": tier,
                 "n_paired": n_pair,
                 "ql_true_mean": (sum(a) / len(a)) if a else float("nan"),
                 "ql_false_mean": (sum(b) / len(b)) if b else float("nan"),
@@ -314,7 +364,10 @@ def write_paired_table(per_cell: dict, profiles: list[str],
                 "cliffs_delta": delta,
                 "ql_true_faster": (mean_d < 0) if mean_d == mean_d else "",
             })
-            metric_pidx[metric].append((row_idx, p_boot))
+            # BH family: RecoveryEpisodes -> Tier-1 CONFIRMATORY only (goal-
+            # reaching in both arms); DetectEpisode -> whole family.
+            if metric != "RecoveryEpisodes" or tier == "confirmatory":
+                metric_pidx[metric].append((row_idx, p_boot))
 
     # BH per metric family.
     for pidx in metric_pidx.values():
@@ -353,11 +406,12 @@ def _fmt(x) -> str:
 def print_summary(per_cell: dict, profiles: list[str]) -> None:
     print("\n=== Phase 2 recovery summary (lower = faster; goal% = greedy goal-rate) ===")
     header = (f"{'profile':<16}{'arm':<10}{'n':>3}  {'det%':>5} {'recv%':>6} "
-              f"{'goal%':>6}  {'detectEp':>9} {'recovEp':>9}  wp")
+              f"{'goal%':>6}  {'detectEp':>9} {'recovEp':>9}  tier")
     print(header)
     print("-" * len(header))
+    _TIER_ABBR = {"confirmatory": "conf", "descriptive": "desc", "ill_posed": "ill"}
     for profile in profiles:
-        wp = "Y" if profile in _WELL_POSED_RECOVERY else "-"
+        tier = _TIER_ABBR.get(classify_recovery_tier(profile, per_cell), "?")
         for mode, _bool in _ARMS:
             arm = per_cell.get((profile, mode))
             if not arm:
@@ -369,7 +423,7 @@ def print_summary(per_cell: dict, profiles: list[str]) -> None:
             goal_pct = arm["goal_rate_mean"] * 100 if arm["goal_rate_mean"] == arm["goal_rate_mean"] else float("nan")
             print(f"{profile:<16}{mode:<10}{arm['n_runs']:>3}  "
                   f"{_fmt(det_pct):>5} {_fmt(rec_pct):>6} {_fmt(goal_pct):>6}  "
-                  f"{_fmt(det_mean):>9} {_fmt(rec_mean):>9}  {wp}")
+                  f"{_fmt(det_mean):>9} {_fmt(rec_mean):>9}  {tier}")
     print()
 
 

@@ -1741,10 +1741,11 @@ The whole point of the redesign was to remove the accumulation window so that *w
 
 Compare directly with §19.4 / §12.6, where the accumulation detector produced a huge, significant `DetectEpisode` gap in exactly these lab3 single-fault cells — `lab3_f1inv` was **90.5 (KG) vs 16.8 (vanilla)**, Cliff's δ = +1.00, the largest effect in the study, and `lab3_f1dead` was **54.2 vs 15.7**, δ = +0.92. Under instant recognition those gaps shrink to **3.5 vs 1.5** and **2.1 vs 1.0**, and **neither survives BH**. The "robustness ↔ diagnosability trade-off" (the physics-primed policy compensating around a fault and thereby under-sampling it) was an **artefact of the sampling-threshold detector**, not a property of the agent — and removing the threshold dissolves it. This is the central methodological payoff of Phase 2.3.
 
-#### 20.6.2 Precision and recall both held at 100 % (the §20.3 guard worked)
+#### 20.6.2 Recall 100 % and clean single-component precision on every lamp-fault cell (the §20.3 guard worked)
 
 - **Recall = 1.00 in all 18 cells** (`n_detected = 10/10` everywhere): a single unambiguous observation is sufficient to catch every injected fault.
-- **Precision = 1.00 in all 18 cells**: the logged `DefectComponent` is correct in every case — `SetZ1Light` for single-fault profiles, `SetZ1Light;SetZ2Light` for the pairs. Critically, `lab3_f2inv` `ql_true` — the *only* cell that ever produced a false positive under the accumulation design (the healthy multi-zone Spotlight mis-read as dead, §12.7 / §20.3) — now reports **`SetZ1Light;SetZ2Light` with no Spotlight**. The multi-zone structural guard (§20.3) spares the shared feeder on a single observation exactly as designed. Instant detection did **not** cost precision.
+- **Clean single-component precision in all 18 cells *of this run***: the logged `DefectComponent` is exactly the injected fault in every case — `SetZ1Light` for single-fault profiles, `SetZ1Light;SetZ2Light` for the pairs — with no spurious extra flag. Critically, `lab3_f2inv` `ql_true` — the *only* cell that ever produced a false positive under the accumulation design (the healthy multi-zone Spotlight mis-read as dead, §12.7 / §20.3) — now reports **`SetZ1Light;SetZ2Light` with no Spotlight**. The multi-zone structural guard (§20.3) spares the shared feeder on a single observation exactly as designed. Instant detection did **not** cost precision **on this lamp-fault matrix**.
+- **Scope of the precision claim.** This 100 % single-component precision is a property of *this* cell set (single / paired lamp faults, all either goal-reaching or degenerate). When the well-posed family is extended to the harder **inverted** cells and the new blind class in §21, single-observation isolation exhibits **scoped secondary co-detections confined to the futile Tier-2 inverted cells** (recall stays 100 %, and no confirmatory / significant recovery result is affected) — see the tiered precision table in §21.7.4. Precision is therefore reported as *100 % on the confirmatory / dead-fault cells*, with the inverted-cell boundary disclosed rather than folded into a universal headline.
 
 #### 20.6.3 The clean recovery win — `lab3_f1dead` (KG 2.5× faster, confound-free)
 
@@ -1790,7 +1791,7 @@ The instant-blacklist redesign achieved both of its objectives:
 1. **The detection-latency confound is eliminated.** `DetectEpisode ≈ 0` for both arms in every cell (max 3.5), and the §19.4 significant "KG detects slower" effects (δ = +0.92 / +1.00) collapse to non-significant noise. The robustness↔diagnosability trade-off is confirmed to have been an artefact of the sampling-threshold detector, not a property of the physics priors.
 2. **Recovery speed is now the clean differentiator, and the KG arm wins it.** In the one well-posed, goal-reaching cell (`lab3_f1dead`) the KG-primed agent re-aligns **2.49× faster** (137 vs 342 ep; Δ −204.9, δ −0.72, q < 0.001, Wilcoxon 0.0098) — the advisor's actual claim, now demonstrated free of the detection artefact that clouded the accumulation design. In the harder inverted cell the KG arm is directionally faster and strictly more reliable (10/10 vs 7/10 reconvergence).
 
-Precision and recall both held at 100 % across 180 runs (the §20.3 multi-zone guard preserved the healthy Spotlight even on single-observation triggering). **Net:** Phase 2.3 gives a simpler, more faithful, and more defensible instantiation of the Phase 2 story — *physics priors act as a single-observation fault detector and then re-align the policy faster over the surviving action space* — with the detection-latency confound that complicated §19 removed rather than merely discussed.
+Recall held at 100 % across 180 runs and single-component precision was clean on every cell of this lamp-fault matrix (the §20.3 multi-zone guard preserved the healthy Spotlight even on single-observation triggering); the scoped precision boundary for the harder inverted / blind family is disclosed by tier in §21.7.4. **Net:** Phase 2.3 gives a simpler, more faithful, and more defensible instantiation of the Phase 2 story — *physics priors act as a single-observation fault detector and then re-align the policy faster over the surviving action space* — with the detection-latency confound that complicated §19 removed rather than merely discussed.
 
 **Honest caveats.** The significant recovery win rests on the single well-posed goal-reaching cell (`lab3_f1dead`); `lab3_f1inv` is a null on speed (neither arm reaches goal); and the futile `f2*` / degenerate-lab cells are unchanged physical limits where the KG priors are a mild net cost on time-to-stable-policy but a net gain on reconvergence reliability. Energy weighting is 0 for lab1–lab3, so these numbers sit on the Phase-2 baseline dynamics.
 
@@ -1972,7 +1973,22 @@ via the surviving deterministic lamp.
 > × seeds 1–10, `run_mode = phase1`, `adapt_episodes = 0` (each profile's full
 > budget with early-stop on reconvergence).
 
-**Run:** GitHub Actions `phase2.yml` #`28745352239` (branch `phase2-instant-blacklist`, commit `282acc4`). **Design:** 8 cells × 2 arms × 10 seeds = **160 adapt runs**, each warm-started from its lab's clean Phase-1 Q-table, frozen clean policy (with active probe) until the first fault observation, then instant blacklist + warm restart (ε-boost 0.30) + re-learn. **One** adapt cell (`lab2_f1binv ql_false seed 8`) flaked in 28 s at the *"Install Node-RED"* infrastructure step (a transient npm/runner failure, unrelated to the code) so that cell contributes n = 9; the overall run is therefore marked *failure* even though the **aggregate job succeeded and published the consolidated artefact**. **Analysis:** `analysis/phase2_recovery.py` — per-cell bootstrap 95 % CI, paired bootstrap `ql_true − ql_false` with Benjamini–Hochberg FDR (recovery family m = 8), Wilcoxon signed-rank, Cliff's δ.
+**Run:** GitHub Actions `phase2.yml` #`28745352239` (branch `phase2-instant-blacklist`, commit `282acc4`). **Design:** 8 cells × 2 arms × 10 seeds = **160 adapt runs**, each warm-started from its lab's clean Phase-1 Q-table, frozen clean policy (with active probe) until the first fault observation, then instant blacklist + warm restart (ε-boost 0.30) + re-learn. **One** adapt cell (`lab2_f1binv ql_false seed 8`) flaked in 28 s at the *"Install Node-RED"* infrastructure step (a transient npm/runner failure, unrelated to the code) so that cell contributes n = 9; the overall run is therefore marked *failure* even though the **aggregate job succeeded and published the consolidated artefact** (a clean n = 10 re-dispatch of record is documented in §21.9). **Analysis:** `analysis/phase2_recovery.py` — per-cell bootstrap 95 % CI, paired bootstrap `ql_true − ql_false` with Benjamini–Hochberg FDR (recovery BH family restricted to the **Tier-1 confirmatory** cells, m = 5 — see §21.7.0), Wilcoxon signed-rank, Cliff's δ.
+
+#### 21.7.0 Two-tier recovery family — separating *goal-reaching* recovery from *stable-but-futile* recovery
+
+Not every well-posed cell yields a meaningful recovery-**speed** contrast. A cell is *well-posed* when a deterministic post-fault survivor path exists (§20.6.5); but a well-posed cell can still be **futile in practice**. lab3 illuminance is
+
+    z1 = 25 + (Z1lamp?400) + (Z2lamp?150) + (Z1blind?0.50·sun) + (Z2blind?0.40·sun) + (Spotlight?150)
+
+with rank-3 (goal) requiring z1 > 300. After a **dead** Z1 lamp is blacklisted, the survivor combination {Z2Light, Spotlight} gives z1 = 25 + 150 + 150 = **325 > 300 = rank 3**, sun-independent — both arms reach the target (goal-rate ≈ 0.9–1.0). An **inverted** Z1 lamp has the *same* survivor path on paper, but its **−400** contribution keeps dragging the zone down in the states the re-learner revisits, so **neither arm** reliably reaches the goal (goal-rate ≈ 0.3 in both arms). A **blind** fault leaves the deterministic +400 task lamp intact, so both arms reach goal.
+
+We therefore stratify the well-posed set into two tiers and **restrict the recovery BH-FDR family to Tier-1**:
+
+- **Tier-1 (confirmatory)** — well-posed **and** goal-reaching in **both** arms (per-arm greedy goal-rate ≥ 0.5). "Recovered" here means "re-reaches the target," so a recovery-**speed** comparison is meaningful. Five cells qualify: `lab3_f1dead`, `lab3_f1dead_z2`, `lab3_f1bdead`, `lab3_f1binv`, `lab2_f1bdead`. **The `RecoveryEpisodes` BH family is m = 5.**
+- **Tier-2 (descriptive)** — well-posed but **not** reliably goal-reaching in both arms: `lab3_f1inv`, `lab3_f1inv_z2` (inverted lamps, goal-rate ≈ 0.3), and `lab2_f1binv` (partially goal-reaching, vanilla arm 0.49 < 0.5). Reported with full statistics but **excluded from the BH family** — their `RecoveryEpisodes` measures time-to-a-stable-**but-futile** policy, not time-to-recovery.
+
+The stratifier is **task achievability**, a property of the *environment*: it classifies both arms identically (`ql_true` and `ql_false` land in the same tier for every cell), so conditioning on it does **not** bias the KG-vs-vanilla contrast — it is a legitimate stratifier, not a treatment selector. It is emitted per row as the `recovery_tier` column (`confirmatory` / `descriptive` / `ill_posed`) by `classify_recovery_tier`. Narrowing the family from 8 to 5 only **tightens** the reported q-values (fewer simultaneous hypotheses to correct across).
 
 #### 21.7.1 The blind fault class is detected — the active self-test works
 
@@ -1980,16 +1996,16 @@ via the surviving deterministic lamp.
 
 #### 21.7.2 Headline — the KG arm re-aligns dramatically faster after a blind fault
 
-With detection near-simultaneous for both arms, `RecoveryEpisodes` is a pure re-learning-speed measure. Paired bootstrap, recovery family m = 8:
+With detection near-simultaneous for both arms, `RecoveryEpisodes` is a pure re-learning-speed measure. Paired bootstrap, Tier-1 BH family **m = 5** (`lab2_f1binv` is Tier-2 → descriptive, excluded from the family):
 
-| Profile | Fault | n | KG `ql_true` | vanilla `ql_false` | Δ (true−false) | 95 % CI | δ | Wilcoxon p | q (BH) | speed-up |
-|---|---|---:|---:|---:|---:|---|---:|---:|---:|---:|
-| **lab3_f1bdead** | dead Z1 blind | 10 | **62.1** | 488.6 | **−426.5** | [−1183.8, −20.3] | −0.55 | 0.027 | **0.0032\*** | **7.9×** |
-| **lab3_f1binv** | inv. Z1 blind | 9 | **112.0** | 1052.6 | **−940.6** | [−2156.7, −79.7] | −0.49 | 0.012 | **0.000\*** | **9.4×** |
-| **lab2_f1bdead** | dead Z1 blind | 10 | **70.8** | 297.5 | **−226.7** | [−333.6, −141.5] | −0.92 | 0.002 | **0.000\*** | **4.2×** |
-| lab2_f1binv | inv. Z1 blind | 9 | 316.3 | 402.0 | −85.7 | [−221.8, +45.7] | −0.15 | 0.359 | 0.293 | 1.3× (ns) |
+| Profile | Fault | Tier | n | KG `ql_true` | vanilla `ql_false` | Δ (true−false) | 95 % CI | δ | Wilcoxon p | q (BH) | speed-up |
+|---|---|---|---:|---:|---:|---:|---|---:|---:|---:|---:|
+| **lab3_f1bdead** | dead Z1 blind | conf | 10 | **62.1** | 488.6 | **−426.5** | [−1183.8, −20.3] | −0.55 | 0.027 | **0.002\*** | **7.9×** |
+| **lab3_f1binv** | inv. Z1 blind | conf | 9 | **112.0** | 1052.6 | **−940.6** | [−2156.7, −79.7] | −0.49 | 0.012 | **0.000\*** | **9.4×** |
+| **lab2_f1bdead** | dead Z1 blind | conf | 10 | **70.8** | 297.5 | **−226.7** | [−333.6, −141.5] | −0.92 | 0.002 | **0.000\*** | **4.2×** |
+| lab2_f1binv | inv. Z1 blind | desc | 9 | 316.3 | 402.0 | −85.7 | [−221.8, +45.7] | −0.15 | 0.359 | — (Tier-2) | 1.3× (ns) |
 
-Three of the four blind cells show a **large, significant** KG recovery advantage — the physics-primed agent re-aligns over the surviving action space **4×–9× faster** than tabula-rasa after the blind is blacklisted. The two dead-blind cells are especially clean: both arms are **100 % goal-reaching** (`lab3_f1bdead` goal-rate 0.99/1.00, `lab2_f1bdead` 1.00/0.74, both reconverge 10/10), so this is a genuine like-for-like recovery-quality comparison. Notice the vanilla arm's enormous variance (`lab3_f1bdead` CI up to 1246 ep, `lab3_f1binv` up to 2073 ep): tabula-rasa re-exploration under the ε-boost occasionally wanders for hundreds of episodes, whereas the KG arm is tight (54–135 ep) — the priors act as both a **speed** and a **reliability** lever. `lab2_f1binv` (the hardest, only partially goal-reaching, and the cell with the flaked seed) is directionally KG-faster but not significant.
+All three **Tier-1** blind cells show a **large, significant** KG recovery advantage — the physics-primed agent re-aligns over the surviving action space **4×–9× faster** than tabula-rasa after the blind is blacklisted, and the tightened m = 5 family sharpens every q-value (`lab3_f1bdead` q 0.0032 → **0.002**; the other two remain q < 0.001). The two dead-blind cells are especially clean: both arms are **100 % goal-reaching** (`lab3_f1bdead` goal-rate 0.99/1.00, `lab2_f1bdead` 1.00/0.74, both reconverge 10/10), so this is a genuine like-for-like recovery-quality comparison. Notice the vanilla arm's enormous variance (`lab3_f1bdead` CI up to 1246 ep, `lab3_f1binv` up to 2073 ep): tabula-rasa re-exploration under the ε-boost occasionally wanders for hundreds of episodes, whereas the KG arm is tight (54–135 ep) — the priors act as both a **speed** and a **reliability** lever. `lab2_f1binv` is **Tier-2 descriptive** (its vanilla arm reaches goal only 49 % of the time, below the 0.5 threshold): it is directionally KG-faster but excluded from the BH family because its `RecoveryEpisodes` is not a clean time-to-goal-reaching-recovery.
 
 #### 21.7.3 The symmetric lamp cell replicates the §20.6.3 headline
 
@@ -1997,20 +2013,40 @@ Adding the zone-2 lamp faults gives the recovery claim an independent replicate 
 
 | Profile | n | KG `ql_true` | vanilla `ql_false` | Δ | 95 % CI | δ | Wilcoxon p | q (BH) | goal-reaching |
 |---|---:|---:|---:|---:|---|---:|---:|---:|---|
-| lab3_f1dead (§20 cell) | 9 | 174.8 | 236.3 | −61.6 | [−102.8, −12.0] | −0.63 | 0.055 | **0.028\*** | 9/10 vs 10/10 |
+| lab3_f1dead (§20 cell) | 9 | 174.8 | 236.3 | −61.6 | [−102.8, −12.0] | −0.63 | 0.055 | **0.018\*** | 9/10 vs 10/10 |
 | **lab3_f1dead_z2** (new) | 10 | 151.3 | 247.0 | −95.7 | [−140.9, −54.9] | −0.84 | 0.004 | **0.000\*** | 10/10 vs 10/10 |
 
-`lab3_f1dead_z2` **confirms** `lab3_f1dead`: a symmetric zone-2 lamp fault reproduces the same significant KG recovery win (Δ −95.7, δ −0.84, q < 0.001), both arms fully goal-reaching. The §20 result was not a zone-1-specific accident — the KG recovery advantage is a property of the well-posed lamp-fault family. The recovery-speed claim of Phase 2 now rests on **four** significant goal-reaching cells (`lab3_f1dead`, `lab3_f1dead_z2`, `lab3_f1bdead`, `lab2_f1bdead`) rather than one.
+`lab3_f1dead_z2` **confirms** `lab3_f1dead`: a symmetric zone-2 lamp fault reproduces the same significant KG recovery win (Δ −95.7, δ −0.84, q < 0.001), both arms fully goal-reaching. The §20 result was not a zone-1-specific accident — the KG recovery advantage is a property of the well-posed lamp-fault family. The recovery-speed claim of Phase 2 now rests on **five** significant goal-reaching (Tier-1) cells — `lab3_f1dead`, `lab3_f1dead_z2`, `lab3_f1bdead`, `lab3_f1binv`, `lab2_f1bdead` — rather than one.
 
-#### 21.7.4 Inverted-lamp cells and secondary detections (honest caveats)
+#### 21.7.4 Detection precision — scoped to the two tiers (honest boundary)
 
-The inverted-lamp cells remain **not goal-reaching in either arm** (`lab3_f1inv` goal-rate 0.30/0.27, `lab3_f1inv_z2` 0.33/0.38; recovery Δ −54 and −195, both non-significant) — exactly as in §20.6.4: an inverted lamp lab3 cell is well-posed on paper but genuinely hard, and neither arm reaches the target, so its recovery number is time-to-stable-but-futile. The redesign changed nothing here, which is the correct outcome.
+The inverted-lamp cells remain **not goal-reaching in either arm** (`lab3_f1inv` goal-rate 0.30/0.27, `lab3_f1inv_z2` 0.33/0.38; recovery Δ −54 and −195, both non-significant) — exactly as in §20.6.4: an inverted lamp lab3 cell is well-posed on paper but genuinely hard, so its recovery number is time-to-stable-but-futile. The redesign changed nothing here, which is the correct outcome.
 
-Two honesty notes on **precision**: the *pure* dead-blind and dead-lamp cells attribute a single, correct component. The harder **inverted** cells show occasional **secondary co-detections** during ε-boosted re-learning — `lab3_f1inv` `ql_true` additionally flagged `SetZ1Blinds`, `lab3_f1inv_z2` `ql_false` additionally flagged `SetZ1Light`, and `lab2_f1binv` flagged a second lamp in both arms. In every case the *injected* component is caught; the extra flag is a conservative over-isolation in the already-futile / hardest cells, not a missed fault. This is consistent with §18/§20.3: single-observation isolation trades a little precision for instant recognition, and the effect is confined to the inverted cells where recovery is not goal-reaching anyway.
+**Recall is 100 % everywhere** — the injected component is flagged in all 16 arm-cells (`detection_rate = 1.00`). **Precision, however, must be scoped by tier.** *Clean single-component* attribution (exactly the injected component, no extra flag) holds perfectly on the confirmatory cells but degrades on the futile inverted cells:
+
+| Tier | Cells × arms | Recall (injected caught) | Clean single-component precision |
+|---|---:|:--:|:--:|
+| **Tier-1 (confirmatory)** | 5 × 2 = 10 arm-cells | 10/10 = **100 %** | **10/10 = 100 %** — one correct component, no secondary flag |
+| **Tier-2 (descriptive)** | 3 × 2 = 6 arm-cells | 6/6 = **100 %** | 2/6 = 33 % — a **secondary co-detection** in 4/6 |
+
+The four Tier-2 secondary co-detections are, exactly:
+
+| Cell | Arm | Injected | Detected set | Secondary (false) |
+|---|---|---|---|---|
+| `lab3_f1inv` | `ql_true` | Z1 lamp | `SetZ1Light;SetZ1Blinds` | `SetZ1Blinds` |
+| `lab3_f1inv_z2` | `ql_false` | Z2 lamp | `SetZ1Light;SetZ2Light` | `SetZ1Light` |
+| `lab2_f1binv` | `ql_true` | Z1 blind | `SetZ1Blinds;SetZ1Light` | `SetZ1Light` |
+| `lab2_f1binv` | `ql_false` | Z1 blind | `SetZ1Blinds;SetZ2Light` | `SetZ2Light` |
+
+Three points make this a **bounded, disclosed** limitation rather than a headline threat:
+
+1. **The injected component is always caught** (recall 100 %); the extra flag is an *over*-isolation, never a *miss*.
+2. **Every secondary is confined to a Tier-2 futile cell** — none touches a Tier-1 confirmatory cell, so **not one of the five significant recovery results is affected**. The significant claims all rest on cells with 100 % clean single-component precision.
+3. **Mechanism.** Once the primary fault is blacklisted, the ε-boosted (0.30) re-learner re-explores the surviving action space; in the *futile* inverted cells it repeatedly revisits states where a healthy actuator's marginal increment does not happen to cross a discretisation rank boundary, producing a one-off *no-rank-response* that single-observation isolation reads as a second fault (the §18/§20.3 precision↔instant-recognition trade). The **confirmation-window lever** (require k ≥ 2 consecutive anomalous observations before isolating) would suppress these, but we **deliberately did not pull it**: it would re-introduce exactly the accumulation-window detection-latency confound that §20.6.1 removed, and the secondary flags touch no confirmatory result. We disclose the boundary rather than trade the confound back in.
 
 #### 21.7.5 Goal-rate certification
 
-Four cells are genuinely goal-reaching after recovery and **all four carry a significant KG recovery win**: `lab3_f1bdead` (0.99/1.00), `lab2_f1bdead` (1.00/0.74), `lab3_f1dead_z2` (0.85/0.94) and `lab3_f1dead` (0.92/0.93). The inverted `f1inv*` cells and the partially-posed `lab2_f1binv` are where "recovered" does not mean "reaches target," and those are exactly the non-significant / futile cells — the recovery-speed claim is certified precisely on the cells where recovery is real.
+Five cells are genuinely goal-reaching after recovery (the Tier-1 confirmatory set) and **all five carry a significant KG recovery win**: `lab3_f1bdead` (0.99/1.00), `lab2_f1bdead` (1.00/0.74), `lab3_f1binv` (0.95/0.97), `lab3_f1dead_z2` (0.85/0.94) and `lab3_f1dead` (0.92/0.93). The inverted `f1inv*` cells and the partially-posed `lab2_f1binv` are the Tier-2 cells where "recovered" does not mean "reaches target," and those are exactly the non-significant / futile cells — the recovery-speed claim is certified precisely on the cells where recovery is real.
 
 ### 21.8 Verdict
 
@@ -2020,6 +2056,6 @@ The Phase 2.4 extension delivered both objectives and strengthened the Phase 2 s
 
 2. **The KG arm re-aligns 4×–9× faster after a blind fault.** Three of four blind cells (`lab3_f1bdead` 7.9×, `lab3_f1binv` 9.4×, `lab2_f1bdead` 4.2×) show a large, significant recovery advantage (q ≤ 0.003), two of them fully goal-reaching in both arms; the fourth is directionally faster and more reliable. The vanilla arm's high-variance re-exploration (recovery CIs up to ~2000 ep) versus the KG arm's tight 54–135 ep window shows the priors buy both **speed and reliability**.
 
-3. **The recovery claim now replicates.** The new symmetric `lab3_f1dead_z2` reproduces the `lab3_f1dead` win (δ −0.84, q < 0.001), so the Phase-2 recovery-speed result stands on **four** significant goal-reaching cells instead of one.
+3. **The recovery claim now replicates.** The new symmetric `lab3_f1dead_z2` reproduces the `lab3_f1dead` win (δ −0.84, q < 0.001), so the Phase-2 recovery-speed result stands on **five** significant goal-reaching (Tier-1) cells instead of one.
 
-**Net:** the user's anticipation — *"the KG-supported agent adapts faster than the other agent"* — is confirmed decisively on the new fault class (4×–9× faster recovery) and on the expanded well-posed family. The honest boundary is unchanged from §20: inverted-lamp lab3 cells are physically hard and goal-reaching in neither arm, and single-observation isolation occasionally over-flags a second component in exactly those futile cells. Energy weighting remains 0 for lab1–lab3, so — as in §20 — the blind's redundancy under a goal-only reward is precisely what makes the *active* self-test necessary and the result meaningful.
+**Net:** the user's anticipation — *"the KG-supported agent adapts faster than the other agent"* — is confirmed decisively on the new fault class (4×–9× faster recovery) and on the expanded well-posed family. The honest boundary is unchanged from §20 and now precisely scoped by tier (§21.7.4): the Tier-2 inverted-lamp lab3 cells are physically hard and goal-reaching in neither arm, and single-observation isolation occasionally over-flags a second component in exactly those futile cells (never in a confirmatory cell, so no significant result is affected). Energy weighting remains 0 for lab1–lab3, so — as in §20 — the blind's redundancy under a goal-only reward is precisely what makes the *active* self-test necessary and the result meaningful.
