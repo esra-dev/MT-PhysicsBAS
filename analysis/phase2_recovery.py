@@ -85,7 +85,24 @@ _METRICS = ("RecoveryEpisodes", "DetectEpisode")
 # *goal-reaching* and a recovery-SPEED comparison is ill-posed (it previously
 # produced misleading significant "KG slower" rows). Ill-posed cells are still
 # reported descriptively and stay in the DETECTION family.
-_WELL_POSED_RECOVERY = ("lab3_f1dead", "lab3_f1inv")
+#
+# Phase 2 extension — additional well-posed cells:
+#   • lab3_f1dead_z2 / lab3_f1inv_z2 — symmetric Z2-lamp faults; the target zone
+#     is still reachable deterministically via the shared Spotlight + surviving
+#     lamp cross-zone spill (same argument as lab3_f1dead/f1inv).
+#   • lab3_f1bdead / lab3_f1binv / lab2_f1bdead / lab2_f1binv — BLIND (Mediates)
+#     faults. After the blind is blacklisted the TASK LAMP survives as a
+#     deterministic rank-3 lever (lab2: +400; lab3: +400 own + spotlight/spill),
+#     so the recovered greedy policy is genuinely goal-reaching (sun-independent)
+#     and a recovery-SPEED contrast is well-posed. (Note lab2 LAMP faults stay
+#     ill-posed because there the only survivor is the sun-gated blind; a lab2
+#     BLIND fault is the reverse — the lamp survives — hence well-posed.)
+_WELL_POSED_RECOVERY = (
+    "lab3_f1dead", "lab3_f1inv",
+    "lab3_f1dead_z2", "lab3_f1inv_z2",
+    "lab3_f1bdead", "lab3_f1binv",
+    "lab2_f1bdead", "lab2_f1binv",
+)
 
 # Minimum greedy goal-rate (RecoveredGoalRate) for a re-converged policy to
 # count as goal-reaching rather than merely stable.

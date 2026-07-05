@@ -64,6 +64,42 @@ New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2inv.json' `
     @(@('z1l ? 400', 'z1l ? -400'), @('z1l ? 150', 'z1l ? -150'), `
       @('z2l ? 400', 'z2l ? -400'), @('z2l ? 150', 'z2l ? -150'))
 
+# ── Phase 2 EXTENSION — more well-posed lamp cells + blind (Mediates) faults ──
+# (1) Symmetric Z2-lamp variants double the well-posed lab3 recovery sample.
+# (2) Blind faults are a NEW class: the blind's lux is 0.50*sun (own) + 0.40*sun
+#     (cross, lab3 only). DEAD zeros it; INVERTED negates it. The adapt agent
+#     catches these on the OPEN action under sun rank >= 2 (QLearner IV-gate).
+
+# lab3_f1dead_z2 - DEAD Z2Light (own 400 + cross-zone 150 spill), symmetric to f1dead
+New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1dead_z2.json' `
+    'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1DEAD_Z2 (port 1894)' `
+    @(@('z2l ? 400', 'z2l ? 0'), @('z2l ? 150', 'z2l ? 0'))
+
+# lab3_f1inv_z2 - INVERTED Z2Light (negate own 400 + cross-zone 150), symmetric to f1inv
+New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1inv_z2.json' `
+    'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1INV_Z2 (port 1894)' `
+    @(@('z2l ? 400', 'z2l ? -400'), @('z2l ? 150', 'z2l ? -150'))
+
+# lab3_f1bdead - DEAD Z1Blinds (kill own-zone 0.50*sun + cross-zone 0.40*sun)
+New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1bdead.json' `
+    'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1BDEAD (port 1894)' `
+    @(@('z1b ? 0.50 * sun', 'z1b ? 0'), @('z1b ? 0.40 * sun', 'z1b ? 0'))
+
+# lab3_f1binv - INVERTED Z1Blinds (negate own-zone 0.50*sun + cross-zone 0.40*sun)
+New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1binv.json' `
+    'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1BINV (port 1894)' `
+    @(@('z1b ? 0.50 * sun', 'z1b ? -0.50 * sun'), @('z1b ? 0.40 * sun', 'z1b ? -0.40 * sun'))
+
+# lab2_f1bdead - DEAD Z1Blinds in the Intermediate lab (own-zone 0.50*sun; no cross-zone)
+New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f1bdead.json' `
+    'Lab_2_Intermediate (port 1893)' 'Lab_2_Intermediate_F1BDEAD (port 1893)' `
+    @(,@('z1b ? 0.50 * sun', 'z1b ? 0'))
+
+# lab2_f1binv - INVERTED Z1Blinds in the Intermediate lab (negate own-zone 0.50*sun)
+New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f1binv.json' `
+    'Lab_2_Intermediate (port 1893)' 'Lab_2_Intermediate_F1BINV (port 1893)' `
+    @(,@('z1b ? 0.50 * sun', 'z1b ? -0.50 * sun'))
+
 Write-Host "`n--- verify each faulty flow is valid JSON ---"
 Get-ChildItem simulator_flow_lab*_f*.json | ForEach-Object {
     $null = Get-Content -Raw $_.FullName | ConvertFrom-Json

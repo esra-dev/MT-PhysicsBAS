@@ -284,6 +284,12 @@ public class QLearner extends Artifact {
     // actions share one wotActionType, but hasIV is only set on the activation
     // action, so this set lets the detector skip BOTH polarities of a blind).
     private java.util.Set<String> ivGatedComponents = new java.util.HashSet<>();
+    // Phase 2 extension — ACTIVE self-test bookkeeping. An IV-gated (blind)
+    // component is added here once it has been soundly OPENED under adequate sun
+    // and adjudicated HEALTHY by observeForFaults, so getDiagnosticProbeAction
+    // stops probing it (a healthy blind is tested exactly once). A faulty blind
+    // never enters this set — it is blacklisted instead — so it is never re-probed.
+    private java.util.Set<String> probeVerified = new java.util.HashSet<>();
     // Phase 2.3 — INSTANT isolation: a component is blacklisted on its FIRST
     // unambiguous fault observation, so the minSamples / dead-rate / inv-rate /
     // anomaly-rate accumulation thresholds have been removed. False positives are
@@ -309,6 +315,21 @@ public class QLearner extends Artifact {
     private int[]  recoveryPolicy      = null;  // last greedy policy snapshot
     private int    recoveryStableCount = 0;     // consecutive episodes with no policy change
     private static final int RECOVERY_WINDOW = parseIntProp("fault.recover.window", 50);
+
+    // Phase 2 extension — IV-gated (Mediates) fault detection floor. A blind's
+    // lux contribution is 0.50·sunshine, so its rank response is only FALSIFIABLE
+    // when the instrumental variable (sunshine) is high enough that a healthy
+    // OPEN ALWAYS crosses a discretised rank boundary. Below this sun rank a null
+    // response is expected-healthy (the sun is too weak to move the zone a whole
+    // rank) and adjudicating it would manufacture false "dead" verdicts. At sun
+    // rank ≥2 (sun≥400 → ≥200 lux own-zone contribution) a healthy blind crosses
+    // a rank boundary from EVERY achievable pre-open zone lux in labs 2/3 — the
+    // deterministic lux lattice yields pre-open zone values of ~25 (rank 0) or
+    // ~175 (rank 2) with no own-blind term, and +200 lux lifts both across a
+    // boundary — so 2 is the sound floor. Override -Dfault.detect.ivMinSunRank=3
+    // for a stricter (sun=900-only) gate.
+    private static final int IV_DETECT_MIN_SUN_RANK =
+        parseIntProp("fault.detect.ivMinSunRank", 2);
 
     // -----------------------------------------------------------------------
     // CArtAgO initialisation
@@ -951,6 +972,65 @@ public class QLearner extends Artifact {
     // -----------------------------------------------------------------------
 
     /**
+     * ACTIVE KG-driven actuator self-test (Phase 2 extension). Returns, for the
+     * CURRENT state, the OPEN action of an un-verified, non-blacklisted IV-gated
+     * (blind) component whose falsifiability preconditions are satisfied RIGHT
+     * NOW — otherwise -1.
+     *
+     * A blind's lux effect is 0.50·sunshine, so its rank response is only
+     * soundly falsifiable when (a) the blind is currently OFF (opening it makes a
+     * non-zero KG bit-claim), (b) the sunshine rank is ≥ {@link
+     * #IV_DETECT_MIN_SUN_RANK} (a healthy open MUST cross a rank boundary), and
+     * (c) the blind's own zone has headroom (it is below its saturation rank, so
+     * a healthy +Δ can actually raise the discretised rank). When such a state
+     * arises the adapt agent takes this probe instead of its greedy monitoring
+     * action, so {@link #observeForFaults} can adjudicate the blind. This is what
+     * lets a blind fault surface even though a deterministic lamp dominates the
+     * sun-gated blind on the (energy-free) greedy path — the blind is otherwise
+     * never opened. A healthy blind is verified on its first probe (see {@link
+     * #probeVerified}) and never probed again; a faulty one is blacklisted.
+     *
+     * Pure read — does NOT mutate policy or state.
+     */
+    @OPERATION
+    public void getDiagnosticProbeAction(Object[] stateVec,
+                                         OpFeedbackParam<Integer> probeAction) {
+        probeAction.set(-1);
+        if (reasoner == null || actionInfos == null) return;
+        int[] s = toIntArray(stateVec);
+        if (sunshineIndex < 0 || sunshineIndex >= s.length) return;
+        if (s[sunshineIndex] < IV_DETECT_MIN_SUN_RANK) return; // sun too low to test any blind
+        for (int a = 0; a < nActions; a++) {
+            StereotypeReasoner.ActionInfo ai = actionInfos[a];
+            if (ai == null || ai.wotActionType == null) continue;
+            if (!ai.wotValue) continue;                                  // only OPEN actions test a blind
+            if (!ivGatedComponents.contains(ai.wotActionType)) continue; // blinds only
+            if (blacklisted != null && a < blacklisted.length && blacklisted[a]) continue;
+            if (probeVerified.contains(ai.wotActionType)) continue;      // already tested healthy
+            int bitSlot = ai.stateVecBitIndex;
+            if (bitSlot < 0 || bitSlot >= s.length) continue;
+            int[] pred = reasoner.getActionPrediction(s, a);
+            int bitPred = (bitSlot < pred.length) ? pred[bitSlot] : 0;
+            if (bitPred == 0) continue;                                  // blind already OPEN — not falsifiable
+            // Require headroom on EVERY own zone the blind claims to raise, so a
+            // healthy open is guaranteed to cross a rank boundary (no false dead).
+            boolean testable = false, saturated = false;
+            for (int z = 0; z < zoneLevelIndices.length; z++) {
+                int slot = zoneLevelIndices[z];
+                if (slot < 0 || slot >= s.length) continue;
+                int predD = (slot < pred.length) ? pred[slot] : 0;
+                if (predD <= 0) continue;
+                int maxRank = (slot < domainSizes.length) ? domainSizes[slot] - 1 : 3;
+                if (s[slot] >= maxRank) { saturated = true; break; }     // no headroom here
+                testable = true;
+            }
+            if (saturated || !testable) continue;
+            probeAction.set(a);
+            return;
+        }
+    }
+
+    /**
      * Strict Expected-vs-Actual check for ONE transition. Compares the
      * Knowledge-Graph prediction for {@code actionIdx} in {@code stateVecBefore}
      * against the observed Δ to {@code stateVecAfter}. Phase 2.3 — INSTANT
@@ -967,10 +1047,14 @@ public class QLearner extends Artifact {
      * evidence.
      *
      * Only CAUSES actuators (unconditional {@code elem:increases} sign) are
-     * adjudicated. MEDIATES / IV-gated actuators (e.g. blinds, whose effect is
-     * gated by sunshine and is rank-masked when a co-located lamp saturates the
-     * zone) are skipped: their null response is expected healthy behaviour, not
-     * fault evidence, so adjudicating them yields false DEFECTIVE verdicts.
+     * adjudicated unconditionally. MEDIATES / IV-gated actuators (e.g. blinds,
+     * whose effect is 0.50·sunshine) are adjudicated CONDITIONALLY (Phase 2
+     * extension): only on their OPEN action and only when the sunshine rank is
+     * ≥ {@link #IV_DETECT_MIN_SUN_RANK}, so that a healthy blind's null response
+     * under weak/low sun is never mis-read as a fault, while a genuinely dead or
+     * inverted blind is still caught the first time it is opened under adequate
+     * sun. A shared MULTI-ZONE Causes feeder (the Spotlight) remains out of scope
+     * (see the multi-zone guard below).
      *
      * Pure accumulation — does NOT mutate the policy. Call
      * {@link #blacklistComponent} + {@link #warmRestart} to act on a defect.
@@ -984,20 +1068,19 @@ public class QLearner extends Artifact {
         StereotypeReasoner.ActionInfo ai = actionInfos[actionIdx];
         if (ai == null || ai.wotActionType == null) return;          // DO_NOTHING — no claim
         if (blacklisted != null && blacklisted[actionIdx]) return;   // already removed
-        // Only CAUSES actuators (unconditional elem:increases) are adjudicated.
-        // A MEDIATES / IV-gated actuator (e.g. a blind, whose effect is
-        // 0.5·sunshine) has NO unconditional sign: its zone response is absent
-        // when the IV is low AND is rank-masked whenever a co-located lamp
-        // already saturates the zone at its target rank. A null response is
-        // therefore EXPECTED healthy behaviour, not fault evidence, so scoring
-        // it manufactures false DEFECTIVE verdicts (observed: a healthy blind
-        // flagged at deadRate=1.00 because Z2 was lamp-pinned at its rank-3
-        // target). The injected fault model (dead / inverted lux) only applies
-        // to Causes lamps; detecting a broken Mediates actuator from discretised
-        // ranks alone is unsound, so it is deliberately out of detector scope.
-        // NB: hasIV is set only on the activation action, so we test the whole
-        // component (both ON and OFF actions share one wotActionType).
-        if (ivGatedComponents.contains(ai.wotActionType)) return;
+        // MEDIATES / IV-gated actuators (blinds, whose lux effect is 0.50·sunshine)
+        // are adjudicated CONDITIONALLY (Phase 2 extension). Their zone response
+        // is only falsifiable on the OPEN (activation) action and only when the
+        // instrumental variable (sunshine) is high enough that a healthy open
+        // ALWAYS crosses a discretised rank boundary; below that the null response
+        // is expected-healthy, not fault evidence. The conditional IV-gate is
+        // applied further down — AFTER the pre/post state and the KG prediction
+        // are decoded — because it needs the sunshine rank from `before`. (See the
+        // IV-gate block below.) Everything between here and there — the multi-zone
+        // guard, the bit/zone falsifiability checks, and the dead/inverted
+        // adjudication — then applies to a blind unchanged, so a genuinely dead or
+        // inverted blind is caught the FIRST time it is opened under adequate sun,
+        // while a healthy blind is never mis-flagged.
 
         // Phase 2.3 — INSTANT detection adjudicates ONLY single-zone (dominant)
         // Causes actuators. A shared MULTI-ZONE Causes feeder (the Spotlight,
@@ -1019,6 +1102,19 @@ public class QLearner extends Artifact {
         int[] before = toIntArray(stateVecBefore);
         int[] after  = toIntArray(stateVecAfter);
         int[] pred   = reasoner.getActionPrediction(before, actionIdx);
+
+        // ── Conditional IV-gate (Phase 2 extension) ─────────────────────────
+        // A blind (Mediates / IV-gated) is only SOUNDLY falsifiable on its OPEN
+        // action and only when sunshine is strong enough to guarantee a rank
+        // crossing for a healthy blind. Skip otherwise so a healthy blind is
+        // never mis-flagged (its CLOSE action, or an open under weak/low sun,
+        // legitimately produces a null rank response), while a genuinely dead or
+        // inverted blind IS caught the first time it is opened under adequate sun.
+        if (ivGatedComponents.contains(ai.wotActionType)) {
+            if (!ai.wotValue) return;                                    // only the OPEN action is falsifiable
+            if (sunshineIndex < 0 || sunshineIndex >= before.length) return;
+            if (before[sunshineIndex] < IV_DETECT_MIN_SUN_RANK) return; // IV too low → healthy null expected
+        }
 
         int bitSlot = ai.stateVecBitIndex;
         if (bitSlot < 0 || bitSlot >= before.length) return;
@@ -1111,6 +1207,17 @@ public class QLearner extends Artifact {
         faultObsN[actionIdx]++;
         if (dead)     faultDeadN[actionIdx]++;
         if (inverted) faultInvertN[actionIdx]++;
+
+        // Phase 2 extension — ACTIVE self-test verification. A blind (IV-gated)
+        // OPEN action that reached this point was soundly falsifiable (sun ≥
+        // threshold, own zone had headroom, bit flipped) and, if it is neither
+        // dead nor inverted, responded CORRECTLY — mark the component verified so
+        // getDiagnosticProbeAction stops probing it. (Lamps/spotlight are not
+        // probed, so gating on ivGatedComponents keeps this a blind-only signal.)
+        if (!dead && !inverted && ai.wotValue
+                && ivGatedComponents.contains(ai.wotActionType)) {
+            probeVerified.add(ai.wotActionType);
+        }
 
         // Phase 2.3 — INSTANT isolation. A single unambiguous, component-
         // attributable fault observation (a dead/no-response OR an

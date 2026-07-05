@@ -573,6 +573,121 @@ lab_profile("lab3_f2inv",
             qtable_suffix("_lab3_f2inv"),
             training_params(4000, 0.9970)).
 
+//   ── Phase 2 EXTENSION — additional well-posed lamp cells + blind faults ───
+//   Two motivations (advisor request):
+//     (1) MORE well-posed recovery data in lab3. lab3_f1dead/f1inv fault the Z1
+//         lamp; the SYMMETRIC Z2-lamp variants below double the well-posed
+//         recovery sample. Both are well-posed because after the broken task
+//         lamp is blacklisted the target zone is still reachable DETERMINISTICALLY
+//         (sun-independent) via the shared Spotlight (+150) plus the surviving
+//         lamp's cross-zone spill (+150) = 325 ≥ 300 (rank 3).
+//     (2) A NEW fault class — DEFECTIVE / INVERTED BLINDS. Blinds are Mediates
+//         (IV-gated: lux = 0.50·sunshine), so their fault is only soundly
+//         falsifiable on the OPEN action under sun rank ≥2 (QLearner conditional
+//         IV-gate). The agent OPENS blinds during pre-detection ACTIVE MONITORING
+//         (ε-greedy probe), observes the missing/inverted response, blacklists
+//         the blind and re-learns over the surviving (lamp) levers. These cells
+//         are well-posed: the task lamp survives as a deterministic rank-3 lever.
+
+//   lab3_f1dead_z2 → DEAD Z2 lamp in the Complex lab (symmetric to lab3_f1dead).
+lab_profile("lab3_f1dead_z2",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f1dead_z2"),
+            training_params(4000, 0.9970)).
+
+//   lab3_f1inv_z2 → INVERTED Z2 lamp in the Complex lab (symmetric to lab3_f1inv).
+lab_profile("lab3_f1inv_z2",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab3_f1inv_z2"),
+            training_params(4000, 0.9970)).
+
+//   lab3_f1bdead → DEAD Z1 BLIND in the Complex lab. The blind's whole lux
+//   contribution (own-zone 0.50·sun + cross-zone 0.40·sun) is zeroed. Detected
+//   on the OPEN action under sun rank ≥2; survivors (Z1 lamp, spotlight) give a
+//   deterministic rank-3 recovery. First Mediates-fault showcase.
+lab_profile("lab3_f1bdead",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f1bdead"),
+            training_params(4000, 0.9970)).
+
+//   lab3_f1binv → INVERTED Z1 BLIND in the Complex lab (own + cross contributions
+//   negated). Opening it under high sun SUBTRACTS lux; from an elevated zone this
+//   is caught as an opposite-direction (inverted) response, from the rank floor
+//   it clamps and reads as dead — either way the blind is isolated + blacklisted.
+lab_profile("lab3_f1binv",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab3_f1binv"),
+            training_params(4000, 0.9970)).
+
+//   lab2_f1bdead → DEAD Z1 BLIND in the Intermediate lab (own-zone 0.50·sun
+//   zeroed; lab2 has no cross-zone/spotlight). Well-posed: the Z1 lamp (+400)
+//   survives as a deterministic rank-3 lever. Blind fault at medium complexity.
+lab_profile("lab2_f1bdead",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab2_f1bdead"),
+            training_params(2000, 0.9960)).
+
+//   lab2_f1binv → INVERTED Z1 BLIND in the Intermediate lab (own-zone 0.50·sun
+//   negated). Survivor: the Z1 lamp. Blind inversion at medium complexity.
+lab_profile("lab2_f1binv",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab2_f1binv"),
+            training_params(2000, 0.9960)).
+
 /* ============================================================
  * adapt_source/2 — maps a FAULTY profile to the clean parent's
  * qtable_suffix, so the Phase-2 adapt agent warm-loads the right
@@ -587,6 +702,13 @@ adapt_source("lab2_f2dead", "_lab2").
 adapt_source("lab2_f2inv",  "_lab2").
 adapt_source("lab3_f2dead", "_lab3").
 adapt_source("lab3_f2inv",  "_lab3").
+// Phase 2 extension — additional well-posed lamp cells + blind faults.
+adapt_source("lab3_f1dead_z2", "_lab3").
+adapt_source("lab3_f1inv_z2",  "_lab3").
+adapt_source("lab3_f1bdead",   "_lab3").
+adapt_source("lab3_f1binv",    "_lab3").
+adapt_source("lab2_f1bdead",   "_lab2").
+adapt_source("lab2_f1binv",    "_lab2").
 
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.

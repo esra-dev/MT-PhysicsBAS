@@ -310,14 +310,31 @@ greedy_eval_episodes(20).
 
     // Action selection is regime-dependent (advisor's "operate, then re-learn"
     // design). BEFORE any fault is detected the agent runs its FROZEN clean
-    // policy "as normal" (greedy, explore=false) — it does NOT adapt; it only
-    // monitors. AFTER a fault has been detected, blacklisted and warm-restarted
-    // it re-learns over the surviving action space with ε-boosted re-exploration
-    // (warmRestart restored ε to fault.relearn.epsBoost).
+    // policy "as normal" (greedy) — it does NOT adapt; it only monitors — with
+    // one addition: ACTIVE KG-DRIVEN SELF-TEST. Some actuators (the sun-mediated
+    // blinds) are never on the greedy path (a deterministic lamp dominates the
+    // stochastic blind at energy-free reward), so a blind fault would stay latent
+    // under passive monitoring. getDiagnosticProbeAction returns the OPEN action
+    // of an un-verified blind whenever the CURRENT state satisfies its
+    // falsifiability preconditions (sun rank >= fault.detect.ivMinSunRank, own
+    // zone below saturation, blind currently OFF) — i.e. a state in which a
+    // healthy blind MUST cross a rank boundary. The agent takes that probe so the
+    // KG Expected-vs-Actual check below can adjudicate the blind; a healthy blind
+    // is verified once and never probed again, a faulty one is caught on the
+    // first probe. This is fault DETECTION (sampling), not policy adaptation: the
+    // Q-table stays FROZEN (no calculateQ until `detected(_)`), so the agent
+    // still does NOT work around the fault. AFTER a fault is detected, blacklisted
+    // and warm-restarted the agent re-learns over the survivors with ε-boosted
+    // re-exploration (warmRestart restored ε to fault.relearn.epsBoost).
     if (detected(_)) {
-        getActionFromState(StateVec, true,  Action)[artifact_id(QlId)]   // Regime B: re-explore
+        getActionFromState(StateVec, true, Action)[artifact_id(QlId)]        // Regime B: post-fault re-learning (ε-boosted)
     } else {
-        getActionFromState(StateVec, false, Action)[artifact_id(QlId)]   // Regime A: exploit frozen clean policy
+        getDiagnosticProbeAction(StateVec, Probe)[artifact_id(QlId)];
+        if (Probe >= 0) {
+            Action = Probe                                                  // active self-test: probe an un-verified actuator
+        } else {
+            getActionFromState(StateVec, false, Action)[artifact_id(QlId)]   // Regime A: exploit frozen clean policy (monitor)
+        }
     };
     actionToWoT(Action, WotType, WotValue)[artifact_id(QlId)];
     if (WotType \== "none") {

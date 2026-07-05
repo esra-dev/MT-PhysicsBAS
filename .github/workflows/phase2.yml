@@ -31,9 +31,9 @@ on:
   workflow_dispatch:
     inputs:
       adapt_profiles:
-        description: "Comma-separated faulty profiles. Default = all 9 (single + multi fault, lab1/2/3). Use e.g. lab2_f1dead,lab3_f2dead for a subset."
+        description: "Comma-separated faulty profiles. Default = all 15 (lamp single/multi + Z2-lamp + blind dead/inverted, lab1/2/3). Use e.g. lab3_f1bdead,lab3_f1binv for a subset."
         required: false
-        default: "lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv"
+        default: "lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv,lab3_f1dead_z2,lab3_f1inv_z2,lab3_f1bdead,lab3_f1binv,lab2_f1bdead,lab2_f1binv"
       seeds:
         description: "Comma-separated RNG seeds. Default 1..10 for confirmatory power (paired Wilcoxon needs n>=6). Use 1..5 for a faster pilot."
         required: false
@@ -61,7 +61,7 @@ concurrency:
 
 env:
   RUN_MODE:       ${{ github.event.inputs.run_mode       || 'phase1' }}
-  ADAPT_PROFILES: ${{ github.event.inputs.adapt_profiles || 'lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv' }}
+  ADAPT_PROFILES: ${{ github.event.inputs.adapt_profiles || 'lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv,lab3_f1dead_z2,lab3_f1inv_z2,lab3_f1bdead,lab3_f1binv,lab2_f1bdead,lab2_f1binv' }}
   SEEDS:          ${{ github.event.inputs.seeds          || '1,2,3,4,5,6,7,8,9,10' }}
   ADAPT_EPISODES: ${{ github.event.inputs.adapt_episodes || '0' }}
 
