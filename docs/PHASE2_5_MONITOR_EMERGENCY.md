@@ -231,7 +231,31 @@ at least as fast as tabula-rasa.*
 
 ## 6. Confirmatory CI run
 
-<!-- CI_RESULTS -->
+**Run:** GitHub Actions `phase2.yml` #`28754743461` (branch `phase2-instant-blacklist`, commit `4ec1f44`), status *success*. **Design:** the `labmon_f1dead` cell × {`ql_true`, `ql_false`} × seeds 1–10 = **20 adapt runs**, each warm-started from its arm's clean Phase-1 `labmon` baseline, frozen clean policy until the dead lamp is observed, then instant blacklist + warm restart + re-learn over the surviving monitor. **Analysis:** `analysis/phase2_recovery.py` (the same two-tier recovery pipeline as §20/§21 of `PHASE1_TO_PHASE2_CHANGES.md`).
+
+### 6.1 Detection — instant, symmetric, correctly attributed
+
+| Arm | n | Detection rate | Defect attributed | `DetectEpisode` |
+|---|---:|:--:|---|:--:|
+| KG (`ql_true`) | 10 | **1.00** | `SetZ1Light` | 0.0 |
+| vanilla (`ql_false`) | 10 | **1.00** | `SetZ1Light` | 0.0 |
+
+Both arms detect the dead primary lamp on the **first** faulty observation (as designed, detection is not KG-gated — the cost + init bias put the lamp on the clean greedy path for both arms, so both exercise it and see the no-response).
+
+### 6.2 Recovery — the KG arm re-aligns significantly faster (Tier-1 confirmatory)
+
+Paired bootstrap, `RecoveryEpisodes` (`labmon_f1dead` is a **Tier-1 confirmatory** cell — both arms are 100 % goal-reaching after recovery, and the monitor survivor path is deterministic):
+
+| Profile | Tier | n | KG `ql_true` | vanilla `ql_false` | Δ (true−false) | 95 % CI | Cliff's δ | Wilcoxon p | q (BH) | goal-reaching |
+|---|---|---:|---:|---:|---:|---|---:|---:|---:|---|
+| **labmon_f1dead** | conf | 10 | **53.0** | 59.2 | **−6.2** | [−8.5, −4.2] | **−0.86** | 0.002 | **0.000\*** | 10/10 vs 10/10 |
+
+The KG-primed agent re-aligns to the monitor fallback **6.2 episodes faster** than tabula-rasa — a **large** effect (δ = −0.86), significant at **q < 0.001** with a concordant Wilcoxon (p = 0.002) and a CI that excludes zero. **Both arms reach the goal in 10/10 seeds** (`goal_reaching_rate = 1.0`), so this is a genuine like-for-like recovery-quality comparison: the win is pure re-learning speed, not a race to a futile policy.
+
+### 6.3 Interpretation
+
+This confirms the research question decisively: **when the primary lamp fails, the system falls back on the monitor** — an unconventional, side-effect light source it would never use willingly (it is costly) — **and the physics/KG-primed agent discovers that fallback significantly faster** than a tabula-rasa learner. It extends the Phase-2 recovery story to a qualitatively new *kind* of recovery lever (a device used outside its primary role), on a well-posed, confirmatory cell that joins the Tier-1 BH-FDR family in `analysis/phase2_recovery.py`.
+
 
 ## 7. Analysis wiring
 
