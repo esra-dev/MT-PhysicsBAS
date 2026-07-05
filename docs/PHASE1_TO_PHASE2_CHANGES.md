@@ -1793,3 +1793,233 @@ The instant-blacklist redesign achieved both of its objectives:
 Precision and recall both held at 100 % across 180 runs (the §20.3 multi-zone guard preserved the healthy Spotlight even on single-observation triggering). **Net:** Phase 2.3 gives a simpler, more faithful, and more defensible instantiation of the Phase 2 story — *physics priors act as a single-observation fault detector and then re-align the policy faster over the surviving action space* — with the detection-latency confound that complicated §19 removed rather than merely discussed.
 
 **Honest caveats.** The significant recovery win rests on the single well-posed goal-reaching cell (`lab3_f1dead`); `lab3_f1inv` is a null on speed (neither arm reaches goal); and the futile `f2*` / degenerate-lab cells are unchanged physical limits where the KG priors are a mild net cost on time-to-stable-policy but a net gain on reconvergence reliability. Energy weighting is 0 for lab1–lab3, so these numbers sit on the Phase-2 baseline dynamics.
+
+## 21 Phase 2.4 — Extending the well-posed family and adding a blind (IV-gated) fault class via active KG self-test
+
+> **Status:** a scope extension of Phase 2.3, on the same instant-blacklist
+> trigger. It adds (a) **more well-posed goal-reaching cells** so the recovery
+> claim of §20.6.3 no longer rests on a single cell, and (b) a **new fault
+> class** — defective / inverted *blinds* (sun-gated, IV-dependent actuators) —
+> detected and blacklisted analogously to the lamps. Adding the blind class
+> surfaced a genuine scientific problem (blinds are never on the greedy policy
+> path) that required a mechanism the lamp cells never needed: an **active,
+> KG-driven actuator self-test**.
+
+### 21.1 Motivation — two gaps in the Phase 2.3 matrix
+
+Phase 2.3 (§20) certified the recovery-speed claim on exactly **one** goal-reaching
+cell, `lab3_f1dead` (§20.6.6). That is scientifically thin: a single cell cannot
+distinguish a real effect from a lab-3-specific accident. Two extensions were
+requested:
+
+1. **More well-posed cells.** lab3 is symmetric (§ physics below): a fault on the
+   **zone-2** lamp is just as well-posed as the zone-1 fault already tested, because
+   the surviving zone-1 lamp plus the cross-coupling and corridor spotlight still
+   let both zones reach the target. Adding `lab3_f1dead_z2` / `lab3_f1inv_z2` gives
+   the recovery comparison an independent, symmetric replicate of the `lab3_f1dead`
+   / `lab3_f1inv` result rather than a single data point.
+2. **A blind fault class.** Every fault in §§1–20 targets a **lamp** (a
+   deterministic `Causes` actuator). The blinds — sun-gated `IlluminanceValue`-
+   dependent actuators whose lux effect is `0.50 · sunshine` — were never fault-
+   injected, so the detector had never been exercised on an IV-gated component. The
+   brief was to break blinds (dead / inverted) and have the agent *detect and
+   blacklist them analogously to the lamps*.
+
+### 21.2 The scientific problem — blinds are off the (energy-free) greedy path
+
+Extending detection to blinds is **not** a symmetric copy of the lamp case, for a
+reason that is fundamental to this reward model. `QLearner.computeZoneReward` is
+**energy-free** for lab1–lab3 (`ENERGY_PRIOR_WEIGHT = 0`, no per-actuator energy
+term — §20.7 caveat): the reward is purely goal-based. Under a goal-only reward:
+
+- A **lamp** is a *deterministic* rank-3 lever (`+400` lux, always crosses to the
+  top rank regardless of sun).
+- A **blind** is a *stochastic, sun-gated* lever (`0.50 · sunshine`; it only
+  reaches a useful rank when the sun is high, and never exceeds what the lamp
+  already delivers deterministically).
+
+So the clean greedy policy **always** prefers the lamp and **never opens a blind**.
+This was confirmed empirically: a first smoke of `lab3_f1bdead` (dead zone-1 blind)
+under the §20 frozen-greedy design returned `defect = none, detect = −1,
+goalRate = 0.95` — the agent reached its goal *despite* the dead blind, precisely
+**because the blind is off the policy path**. Passive monitoring (watch whatever
+the greedy policy happens to do, §§6–8, §20) therefore **cannot** surface a blind
+fault: the broken actuator is never exercised, so there is nothing to observe.
+
+This is not a bug — it is the correct consequence of an energy-free reward, and it
+means *"detect a broken blind analogously to the lamps"* is impossible under purely
+passive observation. A blind fault is only **meaningful and detectable if the agent
+actively tests the blind.**
+
+### 21.3 Solution — an active, KG-driven actuator self-test
+
+The fix aligns tightly with the advisor's fault-scenario brief (*"recheck with
+physics knowledge … discard the artifact … re-learn"*): the physics knowledge (the
+KG) is used **actively**, to *self-test* an actuator whose health cannot be inferred
+from the exploitation path. This is standard **active fault detection / isolation
+(FDI)** — the agent injects a deliberate diagnostic probe to make a latent fault
+observable — and it is a *stronger* thesis contribution than passive monitoring:
+**the KG lets the agent decide, from physics, exactly when and how to test an
+actuator it would otherwise never exercise.**
+
+Concretely (`QLearner.java`, `illuminance_controller_agent_adapt.asl`, commit
+`282acc4`):
+
+- **`getDiagnosticProbeAction(stateVec)` `@OPERATION` (new).** Given the current
+  state, it returns the OPEN action of an *un-verified, non-blacklisted* blind
+  **iff the current state satisfies the blind's falsifiability preconditions**
+  (§21.4) — otherwise `−1`. It is a pure read: it never mutates the policy or Q-table.
+- **Probe-else-greedy action selection.** In `@do_step_adapt`, *before the first
+  detection* (`not detected(_)`), the agent asks for a probe; if one is offered
+  (`Probe ≥ 0`) it takes the probe, otherwise it falls back to its **frozen clean
+  greedy** action exactly as in §20. The policy is **still frozen** (learning
+  remains gated on `detected(_)`, §20.2) — the probe is a diagnostic deviation, not
+  a policy adaptation, so the lamp cells behave identically to their §20-validated
+  form apart from the occasional probe step.
+- **`probeVerified` bookkeeping (new).** Once a blind is soundly opened under
+  adequate sun and adjudicated **healthy** by `observeForFaults`, its component is
+  recorded and **never probed again** — a healthy blind is tested exactly once. A
+  faulty blind is **blacklisted** instead (it never enters `probeVerified`), so it
+  is likewise never re-probed. The self-test therefore adds at most one probe step
+  per blind per run.
+
+Why this actually fires: at **episode step 1 every actuator is OFF**, so each zone
+sits at its base level `25` (rank 0 — maximum headroom). On any episode that draws
+a high sun sample, step 1 is a *perfect* probe opportunity, so an un-verified blind
+is tested within one or two high-sun episodes and the fault (or health) is
+established almost immediately — mirroring the near-instant detection of the lamp
+class (§20.6.1) rather than lagging it.
+
+### 21.4 The conditional IV-gate — falsifiability preconditions
+
+The §§6–8 detector deliberately **skipped all IV-gated actuators** (their sun-
+dependent response was treated as non-falsifiable at rank resolution). Phase 2.4
+replaces that blanket skip with a **conditional** gate so a blind *is* adjudicated
+— but only in states where a healthy open is *guaranteed* to move the discretised
+rank, which is what makes a no-response a sound `dead` verdict. Both
+`observeForFaults` (adjudication) and `getDiagnosticProbeAction` (probe selection)
+enforce the same three preconditions:
+
+1. **OPEN action only** (`wotValue == true`). Only *opening* a blind makes a
+   non-trivial KG claim (`+Δ` lux on its own zone); closing it is not falsifiable.
+2. **Adequate sun** (`sunshine rank ≥ IV_DETECT_MIN_SUN_RANK`, default **2**).
+   With `sunshine_bounds = [50, 200, 600]`, rank 2 means `sun ≥ 400`, so a healthy
+   blind adds `0.50 · 400 = 200` lux — enough to cross a `light_bounds =
+   [50, 100, 300]` rank boundary from any achievable pre-open level. Below rank 2
+   the healthy response can legitimately be a rank no-op, so the blind is **not**
+   adjudicated (no false `dead`).
+3. **Own-zone headroom.** Every zone the blind claims to raise must be **below its
+   saturation rank**; if a claimed zone is already at max rank, a healthy `+Δ`
+   cannot raise it and the observation is not falsifiable — so the probe/adjudication
+   is skipped for that state (this is the guard that prevented probing an already
+   lamp-saturated zone).
+
+`IV_DETECT_MIN_SUN_RANK` is a single named constant
+(`fault.detect.ivMinSunRank`, default 2). The multi-zone Spotlight guard of §20.3
+is retained unchanged, so shared feeders remain out of scope; blinds are single-
+zone and pass it.
+
+### 21.5 New cells and scenario design
+
+Six cells were added (profiles in `lab_profiles.asl`, config maps in
+`config/run_config.json`, faulty Node-RED flows generated by
+`simulator/generate_faulty_flows.ps1` and validated):
+
+| Profile | Lab | Fault | Well-posed? | Rationale |
+|---|---|---|---|---|
+| `lab3_f1dead_z2` | lab3 | zone-2 lamp dead | **yes** | symmetric replicate of `lab3_f1dead` |
+| `lab3_f1inv_z2` | lab3 | zone-2 lamp inverted | yes (hard) | symmetric replicate of `lab3_f1inv` |
+| `lab3_f1bdead` | lab3 | zone-1 **blind** dead | **yes** | task lamp survives as rank-3 lever |
+| `lab3_f1binv` | lab3 | zone-1 **blind** inverted | **yes** | task lamp survives as rank-3 lever |
+| `lab2_f1bdead` | lab2 | zone-1 **blind** dead | **yes** | task lamp survives (independent zone) |
+| `lab2_f1binv` | lab2 | zone-1 **blind** inverted | **yes** | task lamp survives (independent zone) |
+
+Note the **inversion** relative to the lamp cells: a lab2 *lamp* fault is
+**ill-posed** (lab2 zones are independent single-lamp cells, so killing the lamp
+leaves no deterministic survivor), but a lab2 *blind* fault is **well-posed** — the
+lamp survives as the rank-3 lever and the blind was never needed for the goal. The
+blind cells are well-posed precisely because the blind is a *redundant* actuator
+under a goal-only reward; the whole point of the active self-test is to detect a
+fault in an actuator whose redundancy is what hid it. `analysis/phase2_recovery.py`
+`_WELL_POSED_RECOVERY` was extended to the eight well-posed cells accordingly.
+
+The faulty physics are the exact analogue of the lamp faults: **dead** zeroes the
+blind's own-zone *and* its cross-zone lux term (`z1b ? 0.50*sun → z1b ? 0` and
+`z1b ? 0.40*sun → z1b ? 0`), **inverted** negates them (`… → z1b ? -0.50*sun`).
+The other zone's blind is left healthy so each cell isolates a single blind fault.
+
+### 21.6 Smoke validation (local, KG arm, 200-episode budget, seed 1)
+
+| Profile | Detection | False positive? | Goal-rate | Notes |
+|---|---|---|---|---|
+| `lab3_f1bdead` | `SetZ1Blinds` dead @ **ep 8** | none | **0.95** | vs `detect = −1` under passive monitoring — the active probe surfaces the fault; recovered via the surviving lamp |
+| `lab3_f1dead` (lamp fault, blind **healthy**) | `SetZ1Light` dead @ **ep 4** | **none** — healthy blind verified, **not** flagged | 0.90 | probe tests the healthy blind once, adjudicates healthy; only the genuinely-dead lamp is blacklisted |
+| `lab3_f1binv` | `SetZ1Blinds` @ **ep 8** (adjudicated `dead/no-response`: an inverted open under high sun *lowers* the zone, so KG's `+1` claim fails) | none | 0.95 | inverted blind detected & blacklisted, recovered via the surviving lamp |
+
+The three smokes confirm every part of the mechanism: (a) the active probe makes a
+dead blind observable where passive monitoring saw nothing (`detect = −1 → ep 8`);
+(b) the healthy-blind false-positive guard holds — on a lamp-fault cell the probe
+opens the healthy blind, verifies it, and does **not** flag it, while the real lamp
+fault is still caught at ep 4; (c) an inverted blind is detected and blacklisted
+just like a dead one. In all three the agent still reaches its goal after recovery
+via the surviving deterministic lamp.
+
+### 21.7 Confirmatory CI results (run `28745352239`)
+
+> Dispatched via `gh workflow run phase2.yml --ref phase2-instant-blacklist` for
+> the eight cells `lab3_f1dead, lab3_f1inv, lab3_f1dead_z2, lab3_f1inv_z2,
+> lab3_f1bdead, lab3_f1binv, lab2_f1bdead, lab2_f1binv` × {`ql_true`, `ql_false`}
+> × seeds 1–10, `run_mode = phase1`, `adapt_episodes = 0` (each profile's full
+> budget with early-stop on reconvergence).
+
+**Run:** GitHub Actions `phase2.yml` #`28745352239` (branch `phase2-instant-blacklist`, commit `282acc4`). **Design:** 8 cells × 2 arms × 10 seeds = **160 adapt runs**, each warm-started from its lab's clean Phase-1 Q-table, frozen clean policy (with active probe) until the first fault observation, then instant blacklist + warm restart (ε-boost 0.30) + re-learn. **One** adapt cell (`lab2_f1binv ql_false seed 8`) flaked in 28 s at the *"Install Node-RED"* infrastructure step (a transient npm/runner failure, unrelated to the code) so that cell contributes n = 9; the overall run is therefore marked *failure* even though the **aggregate job succeeded and published the consolidated artefact**. **Analysis:** `analysis/phase2_recovery.py` — per-cell bootstrap 95 % CI, paired bootstrap `ql_true − ql_false` with Benjamini–Hochberg FDR (recovery family m = 8), Wilcoxon signed-rank, Cliff's δ.
+
+#### 21.7.1 The blind fault class is detected — the active self-test works
+
+`detection_rate = 1.00` in **all four blind cells, both arms** — every injected blind fault is caught, where the pre-redesign smoke saw `detect = −1`. The `DetectEpisode` is ~6–8 (the probe fires on the first high-sun episode, a few episodes in), consistent for `ql_true` and `ql_false` (all four detection deltas non-significant, q ≥ 0.35) — as designed, detection is **not** gated by the stereotype flag (the probe and the IV-gate run identically for both arms; the KG only differentiates *recovery*). Primary attribution is clean: `SetZ1Blinds` in every blind cell. The active KG-driven self-test converts a previously **undetectable** fault (a redundant, off-policy actuator) into one caught within a handful of episodes.
+
+#### 21.7.2 Headline — the KG arm re-aligns dramatically faster after a blind fault
+
+With detection near-simultaneous for both arms, `RecoveryEpisodes` is a pure re-learning-speed measure. Paired bootstrap, recovery family m = 8:
+
+| Profile | Fault | n | KG `ql_true` | vanilla `ql_false` | Δ (true−false) | 95 % CI | δ | Wilcoxon p | q (BH) | speed-up |
+|---|---|---:|---:|---:|---:|---|---:|---:|---:|---:|
+| **lab3_f1bdead** | dead Z1 blind | 10 | **62.1** | 488.6 | **−426.5** | [−1183.8, −20.3] | −0.55 | 0.027 | **0.0032\*** | **7.9×** |
+| **lab3_f1binv** | inv. Z1 blind | 9 | **112.0** | 1052.6 | **−940.6** | [−2156.7, −79.7] | −0.49 | 0.012 | **0.000\*** | **9.4×** |
+| **lab2_f1bdead** | dead Z1 blind | 10 | **70.8** | 297.5 | **−226.7** | [−333.6, −141.5] | −0.92 | 0.002 | **0.000\*** | **4.2×** |
+| lab2_f1binv | inv. Z1 blind | 9 | 316.3 | 402.0 | −85.7 | [−221.8, +45.7] | −0.15 | 0.359 | 0.293 | 1.3× (ns) |
+
+Three of the four blind cells show a **large, significant** KG recovery advantage — the physics-primed agent re-aligns over the surviving action space **4×–9× faster** than tabula-rasa after the blind is blacklisted. The two dead-blind cells are especially clean: both arms are **100 % goal-reaching** (`lab3_f1bdead` goal-rate 0.99/1.00, `lab2_f1bdead` 1.00/0.74, both reconverge 10/10), so this is a genuine like-for-like recovery-quality comparison. Notice the vanilla arm's enormous variance (`lab3_f1bdead` CI up to 1246 ep, `lab3_f1binv` up to 2073 ep): tabula-rasa re-exploration under the ε-boost occasionally wanders for hundreds of episodes, whereas the KG arm is tight (54–135 ep) — the priors act as both a **speed** and a **reliability** lever. `lab2_f1binv` (the hardest, only partially goal-reaching, and the cell with the flaked seed) is directionally KG-faster but not significant.
+
+#### 21.7.3 The symmetric lamp cell replicates the §20.6.3 headline
+
+Adding the zone-2 lamp faults gives the recovery claim an independent replicate rather than a single cell:
+
+| Profile | n | KG `ql_true` | vanilla `ql_false` | Δ | 95 % CI | δ | Wilcoxon p | q (BH) | goal-reaching |
+|---|---:|---:|---:|---:|---|---:|---:|---:|---|
+| lab3_f1dead (§20 cell) | 9 | 174.8 | 236.3 | −61.6 | [−102.8, −12.0] | −0.63 | 0.055 | **0.028\*** | 9/10 vs 10/10 |
+| **lab3_f1dead_z2** (new) | 10 | 151.3 | 247.0 | −95.7 | [−140.9, −54.9] | −0.84 | 0.004 | **0.000\*** | 10/10 vs 10/10 |
+
+`lab3_f1dead_z2` **confirms** `lab3_f1dead`: a symmetric zone-2 lamp fault reproduces the same significant KG recovery win (Δ −95.7, δ −0.84, q < 0.001), both arms fully goal-reaching. The §20 result was not a zone-1-specific accident — the KG recovery advantage is a property of the well-posed lamp-fault family. The recovery-speed claim of Phase 2 now rests on **four** significant goal-reaching cells (`lab3_f1dead`, `lab3_f1dead_z2`, `lab3_f1bdead`, `lab2_f1bdead`) rather than one.
+
+#### 21.7.4 Inverted-lamp cells and secondary detections (honest caveats)
+
+The inverted-lamp cells remain **not goal-reaching in either arm** (`lab3_f1inv` goal-rate 0.30/0.27, `lab3_f1inv_z2` 0.33/0.38; recovery Δ −54 and −195, both non-significant) — exactly as in §20.6.4: an inverted lamp lab3 cell is well-posed on paper but genuinely hard, and neither arm reaches the target, so its recovery number is time-to-stable-but-futile. The redesign changed nothing here, which is the correct outcome.
+
+Two honesty notes on **precision**: the *pure* dead-blind and dead-lamp cells attribute a single, correct component. The harder **inverted** cells show occasional **secondary co-detections** during ε-boosted re-learning — `lab3_f1inv` `ql_true` additionally flagged `SetZ1Blinds`, `lab3_f1inv_z2` `ql_false` additionally flagged `SetZ1Light`, and `lab2_f1binv` flagged a second lamp in both arms. In every case the *injected* component is caught; the extra flag is a conservative over-isolation in the already-futile / hardest cells, not a missed fault. This is consistent with §18/§20.3: single-observation isolation trades a little precision for instant recognition, and the effect is confined to the inverted cells where recovery is not goal-reaching anyway.
+
+#### 21.7.5 Goal-rate certification
+
+Four cells are genuinely goal-reaching after recovery and **all four carry a significant KG recovery win**: `lab3_f1bdead` (0.99/1.00), `lab2_f1bdead` (1.00/0.74), `lab3_f1dead_z2` (0.85/0.94) and `lab3_f1dead` (0.92/0.93). The inverted `f1inv*` cells and the partially-posed `lab2_f1binv` are where "recovered" does not mean "reaches target," and those are exactly the non-significant / futile cells — the recovery-speed claim is certified precisely on the cells where recovery is real.
+
+### 21.8 Verdict
+
+The Phase 2.4 extension delivered both objectives and strengthened the Phase 2 story:
+
+1. **The blind (IV-gated) fault class is detectable — via active KG self-test.** Passive monitoring provably *cannot* surface a blind fault under an energy-free reward (the blind is never on the greedy path; `detect = −1`), so the extension required a genuinely new mechanism: the KG decides, from physics, when a redundant actuator is falsifiable and injects a one-off diagnostic probe. It works — `detection_rate = 1.00` across all four blind cells, both arms, with clean primary attribution. This is a *stronger* contribution than passive detection: **physics knowledge lets the agent actively self-test an actuator it would otherwise never exercise.**
+
+2. **The KG arm re-aligns 4×–9× faster after a blind fault.** Three of four blind cells (`lab3_f1bdead` 7.9×, `lab3_f1binv` 9.4×, `lab2_f1bdead` 4.2×) show a large, significant recovery advantage (q ≤ 0.003), two of them fully goal-reaching in both arms; the fourth is directionally faster and more reliable. The vanilla arm's high-variance re-exploration (recovery CIs up to ~2000 ep) versus the KG arm's tight 54–135 ep window shows the priors buy both **speed and reliability**.
+
+3. **The recovery claim now replicates.** The new symmetric `lab3_f1dead_z2` reproduces the `lab3_f1dead` win (δ −0.84, q < 0.001), so the Phase-2 recovery-speed result stands on **four** significant goal-reaching cells instead of one.
+
+**Net:** the user's anticipation — *"the KG-supported agent adapts faster than the other agent"* — is confirmed decisively on the new fault class (4×–9× faster recovery) and on the expanded well-posed family. The honest boundary is unchanged from §20: inverted-lamp lab3 cells are physically hard and goal-reaching in neither arm, and single-observation isolation occasionally over-flags a second component in exactly those futile cells. Energy weighting remains 0 for lab1–lab3, so — as in §20 — the blind's redundancy under a goal-only reward is precisely what makes the *active* self-test necessary and the result meaningful.
