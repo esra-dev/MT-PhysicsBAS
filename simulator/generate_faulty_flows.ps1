@@ -137,6 +137,27 @@ New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2dead_lowsun.jso
       @('z2l ? 400', 'z2l ? 0'), @('z2l ? 150', 'z2l ? 0'), `
       @('sunRanks[Math.floor(Math.random() * sunRanks.length)]', '100'))
 
+# ── Phase 2.5 — labmon2 DUAL-ZONE MULTI-SURVIVOR MONITOR fallback ───────────
+# labmon2_f2dead_lowsun - BOTH primary task lamps dead (kill each +400 lux
+# contribution) AND the episode sun PINNED to rank-1 (100 lux) instead of being
+# sampled from {0,100,400,900}. Rationale:
+#   * With both lamps gone and sun = 100 the per-zone ceiling is
+#     25 + monitor(200) + blind(0.50*100=50) = 275 lux = rank 2. The nominal
+#     rank-3 goal is UNREACHABLE in BOTH zones on EVERY episode.
+#   * Survivors after the two lamps are blacklisted = Z1Monitor, Z2Monitor,
+#     Z1Blinds, Z2Blinds -> 2^4 = 16 reachability-probe combos, and BOTH zones
+#     must be probed. This is the MULTI-SURVIVOR triage the single-zone labmon
+#     lab could not show, WITHOUT a spotlight.
+#   * The MONITOR (Causes light, rank 2 alone) is the ESSENTIAL best-effort
+#     lever in each zone. Both arms warm-start from the same clean policy (which
+#     uses the lamp at low sun); the KG arm's structural prior (Monitor Causes
+#     light) lets it re-value and reconverge on the monitor faster than vanilla.
+New-FaultyFlow 'simulator_flow_labmon2.json' 'simulator_flow_labmon2_f2dead_lowsun.json' `
+    'Labmon2_DualMonitor (port 1900)' 'Labmon2_DualMonitor_F2DEAD_LOWSUN (port 1900)' `
+    @(@('z1l ? 400', 'z1l ? 0'), `
+      @('z2l ? 400', 'z2l ? 0'), `
+      @('sunRanks[Math.floor(Math.random() * sunRanks.length)]', '100'))
+
 Write-Host "`n--- verify each faulty flow is valid JSON ---"
 Get-ChildItem simulator_flow_lab*_f*.json | ForEach-Object {
     $null = Get-Content -Raw $_.FullName | ConvertFrom-Json

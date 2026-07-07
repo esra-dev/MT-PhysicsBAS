@@ -120,6 +120,15 @@ _WELL_POSED_RECOVERY = (
     # becomes the essential best-effort lever, giving the KG's structural prior a
     # multi-actuator triage where a recovery-SPEED contrast can actually show up.
     "lab3_f2dead_lowsun",
+    # Phase 2.5 — labmon2 DUAL-ZONE MULTI-SURVIVOR monitor fallback (NO spotlight).
+    # BOTH primary lamps are dead and the sun is pinned to rank 1 (100 lux), so the
+    # nominal rank-3 goal is UNREACHABLE in BOTH zones on every episode (per-zone
+    # ceiling 25 + monitor 200 + blind 50 = 275 = rank 2). After the two lamps are
+    # blacklisted the survivors are Z1Monitor, Z2Monitor, Z1Blinds, Z2Blinds (4
+    # actuators → 16 probe combos), and BOTH zones degrade to rank 2. The MONITOR
+    # (Causes light, rank 2 alone) is the essential best-effort lever in each zone,
+    # giving the KG's structural prior a multi-actuator triage without a spotlight.
+    "labmon2_f2dead_lowsun",
 )
 
 # Minimum greedy goal-rate (RecoveredGoalRate) for a re-converged policy to

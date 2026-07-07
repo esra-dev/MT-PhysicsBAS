@@ -381,6 +381,32 @@ lab_profile("labmon",
             qtable_suffix("_labmon"),
             training_params(1500, 0.9950)).
 
+// ── Phase 2.5 DUAL-ZONE MONITOR-FALLBACK LAB (labmon2, NO spotlight) ────────
+//   Two INDEPENDENT workstations, each with a primary task lamp, a computer
+//   MONITOR (light is a screen-backlight SIDE-EFFECT, ws:MonitorStereotype) and
+//   a sun-mediated window BLIND. NO spotlight, NO cross-zone coupling. This is
+//   the multi-survivor extension of labmon: when BOTH lamps fail and daylight is
+//   low the goal (rank 3) is unreachable in both zones, and the monitor (rank 2
+//   alone) is the essential best-effort fallback in EACH zone (4 survivors →
+//   16 probe combos). Physics: Zi = 25 + (ZiLight?400) + (ZiMonitor?200) +
+//   (ZiBlinds?0.50*Sun). At LOW sun the lamp is the ONLY rank-3 lever, so both
+//   arms use it and its death is detected (no reward-cost / Q-init bias needed).
+//   State = [Z1Level,Z2Level,Z1Light,Z2Light,Z1Monitor,Z2Monitor,Z1Blinds,
+//   Z2Blinds,Sunshine] = 4096 states. Port 1900.
+lab_profile("labmon2",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon2"),
+            training_params(4000, 0.9975)).
+
 // ── Phase 3 SLOW LADDER (Learning Process Dynamics / response delay) ────────
 //   Each slow profile is structurally IDENTICAL to its clean Phase-1 parent
 //   (same agent-side ontology shape, zone targets and discretisation bounds, so
@@ -759,6 +785,30 @@ lab_profile("lab3_f2dead_lowsun",
             qtable_suffix("_lab3_f2dead_lowsun"),
             training_params(4000, 0.9970)).
 
+//   labmon2_f2dead_lowsun → BOTH primary task lamps dead AND the episode sun
+//   PINNED to rank-1 (100 lux) in the dual-zone monitor lab. With both lamps
+//   gone and sun = 100 the per-zone ceiling = 25 + monitor(200) + blind(50)
+//   = 275 lux = rank 2, so the nominal rank-3 goal is UNREACHABLE in BOTH zones
+//   on EVERY episode. Survivors after the two lamps are blacklisted = Z1Monitor,
+//   Z2Monitor, Z1Blinds, Z2Blinds (4 actuators → 16 probe combos), and BOTH
+//   zones degrade to rank 2. The MONITOR (Causes light, rank 2 alone) is the
+//   ESSENTIAL best-effort lever in each zone; the KG's structural prior (Monitor
+//   Causes light) should let it re-value and reconverge faster than tabula-rasa.
+//   Reuses the labmon2 ont/td/port so the warm-loaded Q-table shape matches.
+lab_profile("labmon2_f2dead_lowsun",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon2_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
 /* ============================================================
  * adapt_source/2 — maps a FAULTY profile to the clean parent's
  * qtable_suffix, so the Phase-2 adapt agent warm-loads the right
@@ -784,6 +834,8 @@ adapt_source("lab2_f1binv",    "_lab2").
 adapt_source("labmon_f1dead",  "_labmon").
 // Phase 2.5B — lab3 multi-survivor degraded cell (both lamps dead + sun pinned).
 adapt_source("lab3_f2dead_lowsun", "_lab3").
+// Phase 2.5 — labmon2 dual-zone multi-survivor monitor fallback (both lamps dead + sun pinned).
+adapt_source("labmon2_f2dead_lowsun", "_labmon2").
 
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.
