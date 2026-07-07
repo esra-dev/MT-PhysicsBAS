@@ -1591,6 +1591,17 @@ public class QLearner extends Artifact {
     // recovery (the probe reports "reachable", effectiveGoal stays == goal).
 
     /**
+     * Number of controlled zones (= length of the goal vector). Read by the
+     * adapt agent so it can run the reachability probe over EVERY zone: a
+     * single-zone lab (e.g. labmon) probes only zone 0, while a two-zone lab
+     * (e.g. lab3) probes zones 0 and 1. Keeps the degradation logic generic.
+     */
+    @OPERATION
+    public void getNumZones(OpFeedbackParam<Integer> out) {
+        out.set(goal.length);
+    }
+
+    /**
      * Nominal (configured) goal rank for a zone — the target the agent tries to
      * reach before any degradation. Read by the adapt agent to report the
      * shortfall when it must fall back to a best-effort rank.

@@ -416,8 +416,12 @@ greedy_eval_episodes(20).
     // the nominal goal is still reachable with the surviving actuators. Only if
     // it is NOT do we lower the target to the closest achievable rank and NOTIFY
     // the user; if the goal is still reachable this is a no-op and the agent
-    // keeps recovering toward the true goal exactly as before.
-    !assess_reachability(0).
+    // keeps recovering toward the true goal exactly as before. Probe EVERY zone:
+    // a single-zone lab (labmon) probes only zone 0, a two-zone lab (lab3)
+    // probes zones 0 and 1, each lowering its own effective goal independently.
+    getNumZones(NumZones)[artifact_id(QlId)];
+    .print("[Adapt] Probing reachability across ", NumZones, " zone(s).");
+    !assess_zones(0, NumZones).
 @on_defect_dup
 +!on_defect(_, _) <- true.   // component already known — ignore.
 
@@ -430,6 +434,18 @@ greedy_eval_episodes(20).
  * the goal is UNREACHABLE: lower the effective goal to that rank and inform the
  * user (belief + console alert). Otherwise the goal is still reachable → no-op.
  * ============================================================ */
+
+// Probe every zone in turn. Each zone's probe independently re-enumerates the
+// surviving-actuator combinations (beginReachabilityProbe resets its scratch and
+// argmin toward that zone's own nominal goal), so a multi-zone degradation (both
+// zones below their nominal rank) is detected and reported zone-by-zone.
+@assess_zones_done
++!assess_zones(Z, N) : Z >= N <- true.
+@assess_zones_step
++!assess_zones(Z, N) : Z < N <-
+    !assess_reachability(Z);
+    !assess_zones(Z + 1, N).
+
 @assess_reachability
 +!assess_reachability(Zone) <-
     ?qlearner_artifact(QlId);

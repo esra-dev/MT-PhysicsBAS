@@ -110,6 +110,16 @@ _WELL_POSED_RECOVERY = (
     # recovery-SPEED contrast is well-posed against that effective best-effort
     # goal: RecoveredGoalRate here measures best-effort (rank-2) attainment.
     "labmon_f1dead",
+    # Phase 2.5b — lab3 MULTI-SURVIVOR degraded cell. BOTH task lamps are dead and
+    # the sun is pinned to rank 1 (100 lux), so the nominal rank-3 goal is
+    # UNREACHABLE in BOTH zones on every episode (per-zone ceiling 25 + spotlight
+    # 150 + blinds 50+40 = 265 = rank 2). After the two lamps are blacklisted the
+    # survivors are Z1Blinds, Z2Blinds and the Spotlight (3 actuators), so the
+    # reachability probe has 8 combos and BOTH zones degrade to rank 2. Unlike
+    # labmon (single survivor), here the Spotlight — REDUNDANT in the clean lab —
+    # becomes the essential best-effort lever, giving the KG's structural prior a
+    # multi-actuator triage where a recovery-SPEED contrast can actually show up.
+    "lab3_f2dead_lowsun",
 )
 
 # Minimum greedy goal-rate (RecoveredGoalRate) for a re-converged policy to

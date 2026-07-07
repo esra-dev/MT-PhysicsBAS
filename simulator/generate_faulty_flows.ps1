@@ -110,6 +110,33 @@ New-FaultyFlow 'simulator_flow_labmon.json' 'simulator_flow_labmon_f1dead.json' 
     'Lab_Monitor_Emergency (port 1899)' 'Lab_Monitor_Emergency_F1DEAD (port 1899)' `
     @(,@('z1l   ? 400 : 0', 'z1l   ? 0 : 0'))
 
+# ── Phase 2.5B — lab3 MULTI-SURVIVOR DEGRADED cell (KG recovery-speed contrast) ─
+# lab3_f2dead_lowsun - BOTH task lamps dead (own 400 + cross-zone 150 spill) AND
+# the episode sun PINNED to rank-1 (100 lux) instead of being sampled from
+# {0,100,400,900}. Rationale:
+#   * Killing both lamps alone is NOT robustly degraded: at high sun the blinds
+#     (0.50*sun) reach rank 3 on their own (0.50*900 = 450 > 300), so plain
+#     lab3_f2dead is degraded only on low-sun episodes — a muddied, sun-conditional
+#     cell. Pinning sun low makes the goal UNREACHABLE every episode.
+#   * With both lamps gone and sun = 100 the per-zone ceiling is
+#     25 + spotlight(150) + own_blind(0.50*100=50) + cross_blind(0.40*100=40)
+#     = 265 lux = rank 2. Both zones DEGRADE to rank 2 (nominal rank 3).
+#   * Survivors after the two lamps are blacklisted = Z1Blinds, Z2Blinds,
+#     Spotlight -> 2^3 = 8 reachability-probe combos, and BOTH zones must be probed.
+#   * The Spotlight is REDUNDANT in the clean lab (150 < 300, never sufficient
+#     alone, so the agent learns to AVOID it). The fault INVERTS its value: it
+#     becomes the ESSENTIAL best-effort lever. Both arms warm-start from the same
+#     "avoid-spotlight" clean policy; the KG arm's structural prior (Spotlight
+#     Causes light) lets it re-value and reconverge on the spotlight faster than
+#     vanilla, which must unlearn by exploration. This is the KG recovery-speed
+#     contrast INSIDE a degradation that the single-survivor labmon lab could not
+#     show.
+New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2dead_lowsun.json' `
+    'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F2DEAD_LOWSUN (port 1894)' `
+    @(@('z1l ? 400', 'z1l ? 0'), @('z1l ? 150', 'z1l ? 0'), `
+      @('z2l ? 400', 'z2l ? 0'), @('z2l ? 150', 'z2l ? 0'), `
+      @('sunRanks[Math.floor(Math.random() * sunRanks.length)]', '100'))
+
 Write-Host "`n--- verify each faulty flow is valid JSON ---"
 Get-ChildItem simulator_flow_lab*_f*.json | ForEach-Object {
     $null = Get-Content -Raw $_.FullName | ConvertFrom-Json

@@ -733,6 +733,32 @@ lab_profile("labmon_f1dead",
             qtable_suffix("_labmon_f1dead"),
             training_params(1500, 0.9950)).
 
+//   lab3_f2dead_lowsun → BOTH task lamps dead AND the episode sun PINNED to
+//   rank-1 (100 lux) in the Complex lab. Unlike lab3_f2dead (which is degraded
+//   only on low-sun episodes because the blinds reach rank 3 at high sun), the
+//   pinned low sun makes the nominal rank-3 goal UNREACHABLE in BOTH zones on
+//   EVERY episode: per-zone ceiling = 25 + spotlight(150) + own-blind(50) +
+//   cross-blind(40) = 265 lux = rank 2. This is the MULTI-SURVIVOR degradation
+//   cell: after both lamps are blacklisted the survivors are Z1Blinds, Z2Blinds
+//   and the Spotlight (3 actuators → 8 probe combos), and BOTH zones degrade to
+//   rank 2. The Spotlight — REDUNDANT and avoided in the clean lab — becomes the
+//   ESSENTIAL best-effort lever; the KG's structural prior should let it re-value
+//   the spotlight and reconverge faster than the tabula-rasa agent. Reuses the
+//   lab3 ont/td/port so the warm-loaded Q-table shape matches.
+lab_profile("lab3_f2dead_lowsun",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
 /* ============================================================
  * adapt_source/2 — maps a FAULTY profile to the clean parent's
  * qtable_suffix, so the Phase-2 adapt agent warm-loads the right
@@ -756,6 +782,8 @@ adapt_source("lab2_f1bdead",   "_lab2").
 adapt_source("lab2_f1binv",    "_lab2").
 // Phase 2.5 — monitor emergency-fallback lab.
 adapt_source("labmon_f1dead",  "_labmon").
+// Phase 2.5B — lab3 multi-survivor degraded cell (both lamps dead + sun pinned).
+adapt_source("lab3_f2dead_lowsun", "_lab3").
 
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.

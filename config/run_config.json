@@ -277,7 +277,7 @@
   },
   "phase2": {
     "description": "Phase 2 fault-detection / blacklist / re-learn (run_phase2_adapt.ps1 + .github/workflows/phase2.yml). Each adapt profile injects one or more component faults into the named parent clean lab, warm-loads that lab's clean Phase-1 Q-table (qtable_final_stereotypes_<bool><clean_source_suffix>.csv), then runs the adapt agent (taskAdapt) which detects each defect via the KG Expected-vs-Actual check, blacklists BOTH polarities of every broken component (iteratively), and re-learns over the survivors. Recovery = reconverge_episode - detect_episode (lower is better; the headline compares ql_true < ql_false). Single-fault (f1*) and multi-fault (f2*) variants span lab1/lab2/lab3 complexities and {dead, inverted} fault modes. Only CAUSES lamps/spotlight are injected; healthy Mediates blinds are excluded from detection. lab1_f1dead is degenerate (single actuator; the blacklist guard preserves the last actuator) so it is a detection-only showcase with recovery=N/A. Parent ports/flows are reused because only one faulty variant runs at a time.",
-    "adapt_profiles": ["lab1_f1dead", "lab2_f1dead", "lab2_f1inv", "lab2_f2dead", "lab2_f2inv", "lab3_f1dead", "lab3_f1inv", "lab3_f2dead", "lab3_f2inv", "lab3_f1dead_z2", "lab3_f1inv_z2", "lab3_f1bdead", "lab3_f1binv", "lab2_f1bdead", "lab2_f1binv", "labmon_f1dead"],
+    "adapt_profiles": ["lab1_f1dead", "lab2_f1dead", "lab2_f1inv", "lab2_f2dead", "lab2_f2inv", "lab3_f1dead", "lab3_f1inv", "lab3_f2dead", "lab3_f2inv", "lab3_f1dead_z2", "lab3_f1inv_z2", "lab3_f1bdead", "lab3_f1binv", "lab2_f1bdead", "lab2_f1binv", "labmon_f1dead", "lab3_f2dead_lowsun"],
     "adapt_modes": ["ql_true", "ql_false"],
     "smoke_episodes": 200,
     "parent_profile": {
@@ -296,7 +296,8 @@
       "lab3_f1binv": "lab3",
       "lab2_f1bdead": "lab2",
       "lab2_f1binv": "lab2",
-      "labmon_f1dead": "labmon"
+      "labmon_f1dead": "labmon",
+      "lab3_f2dead_lowsun": "lab3"
     },
     "simulator_port_map": {
       "lab1_f1dead": 1892,
@@ -314,7 +315,8 @@
       "lab3_f1binv": 1894,
       "lab2_f1bdead": 1893,
       "lab2_f1binv": 1893,
-      "labmon_f1dead": 1899
+      "labmon_f1dead": 1899,
+      "lab3_f2dead_lowsun": 1894
     },
     "simulator_flow_map": {
       "lab1_f1dead": "simulator_flow_lab1_f1dead.json",
@@ -332,7 +334,8 @@
       "lab3_f1binv": "simulator_flow_lab3_f1binv.json",
       "lab2_f1bdead": "simulator_flow_lab2_f1bdead.json",
       "lab2_f1binv": "simulator_flow_lab2_f1binv.json",
-      "labmon_f1dead": "simulator_flow_labmon_f1dead.json"
+      "labmon_f1dead": "simulator_flow_labmon_f1dead.json",
+      "lab3_f2dead_lowsun": "simulator_flow_lab3_f2dead_lowsun.json"
     },
     "qtable_suffix_map": {
       "lab1_f1dead": "_lab1_f1dead",
@@ -350,7 +353,8 @@
       "lab3_f1binv": "_lab3_f1binv",
       "lab2_f1bdead": "_lab2_f1bdead",
       "lab2_f1binv": "_lab2_f1binv",
-      "labmon_f1dead": "_labmon_f1dead"
+      "labmon_f1dead": "_labmon_f1dead",
+      "lab3_f2dead_lowsun": "_lab3_f2dead_lowsun"
     },
     "clean_source_suffix": {
       "lab1_f1dead": "_lab1",
@@ -368,7 +372,8 @@
       "lab3_f1binv": "_lab3",
       "lab2_f1bdead": "_lab2",
       "lab2_f1binv": "_lab2",
-      "labmon_f1dead": "_labmon"
+      "labmon_f1dead": "_labmon",
+      "lab3_f2dead_lowsun": "_lab3"
     },
     "expected_state_vec_dim": {
       "lab1_f1dead": 2,
@@ -386,7 +391,8 @@
       "lab3_f1binv": 8,
       "lab2_f1bdead": 7,
       "lab2_f1binv": 7,
-      "labmon_f1dead": 3
+      "labmon_f1dead": 3,
+      "lab3_f2dead_lowsun": 8
     }
   },
   "phase3": {
