@@ -102,10 +102,13 @@ _WELL_POSED_RECOVERY = (
     "lab3_f1dead_z2", "lab3_f1inv_z2",
     "lab3_f1bdead", "lab3_f1binv",
     "lab2_f1bdead", "lab2_f1binv",
-    # Phase 2.5 — monitor emergency-fallback lab. After the primary lamp is
-    # blacklisted, the only surviving rank-3 path is {Z1Monitor, Z1Backup} =
-    # 375 lux, which is deterministic (no sunshine term), so a recovery-SPEED
-    # contrast is well-posed.
+    # Phase 2.5b — monitor emergency-fallback lab. The primary lamp is the ONLY
+    # rank-3 lever, so once it is blacklisted the nominal goal (rank 3) is
+    # UNREACHABLE. The adapt agent proves this with a deterministic reachability
+    # probe, lowers the EFFECTIVE goal to the closest achievable rank (rank 2 via
+    # the monitor, 25+260=285 lux, sun-independent) and notifies the user. The
+    # recovery-SPEED contrast is well-posed against that effective best-effort
+    # goal: RecoveredGoalRate here measures best-effort (rank-2) attainment.
     "labmon_f1dead",
 )
 
@@ -224,6 +227,10 @@ def collect_arm(rows: list[dict]) -> dict:
     recov_all = [_as_int(r, "ReconvergeEpisode") for r in rows]
     recovery_all = [_as_int(r, "RecoveryEpisodes") for r in rows]
     goalrate_all = [_as_float(r, "RecoveredGoalRate") for r in rows]
+    # Phase 2.5b — graceful-degradation columns (absent on older CSVs -> None).
+    degraded_all = [_as_int(r, "DegradedMode") for r in rows]
+    best_effort_all = [_as_int(r, "BestEffortRank") for r in rows]
+    nominal_all = [_as_int(r, "NominalGoal") for r in rows]
     defects = sorted({(r.get("DefectComponent") or "").strip()
                       for r in rows if (r.get("DefectComponent") or "").strip()})
 
@@ -243,6 +250,16 @@ def collect_arm(rows: list[dict]) -> dict:
         and g is not None and g >= _GOAL_REACHING_THRESHOLD
     ]
 
+    # Phase 2.5b — best-effort degradation summary. A cell is "degraded" when the
+    # adapt agent proved the nominal goal unreachable and lowered the effective
+    # goal. best_effort_rank / nominal_goal report the (modal) ranks involved.
+    degraded_flags = [d for d in degraded_all if d is not None]
+    n_degraded = sum(1 for d in degraded_flags if d == 1)
+    best_efforts = [b for b, d in zip(best_effort_all, degraded_all)
+                    if d == 1 and b is not None]
+    nominals = [n for n in nominal_all if n is not None]
+    _mode = lambda xs: max(set(xs), key=xs.count) if xs else None
+
     return {
         "n_runs": n_runs,
         "defects": defects,
@@ -259,6 +276,11 @@ def collect_arm(rows: list[dict]) -> dict:
         "goal_rate_mean": (sum(goal_rates) / len(goal_rates)) if goal_rates else float("nan"),
         "n_goal_reaching": len(goal_reaching),
         "goal_reaching_rate": (len(goal_reaching) / n_runs) if n_runs else float("nan"),
+        # Phase 2.5b best-effort degradation summary.
+        "n_degraded": n_degraded,
+        "degraded_rate": (n_degraded / n_runs) if n_runs else float("nan"),
+        "best_effort_rank": _mode(best_efforts),
+        "nominal_goal": _mode(nominals),
     }
 
 
@@ -284,6 +306,14 @@ def write_ci_table(per_cell: dict, out_dir: Path, iters: int) -> int:
             "n_goal_reaching": arm["n_goal_reaching"],
             "goal_reaching_rate": round(arm["goal_reaching_rate"], 4)
                 if arm["goal_reaching_rate"] == arm["goal_reaching_rate"] else "",
+            # Phase 2.5b — best-effort degradation (blank when no cell degraded).
+            "degraded_rate": round(arm["degraded_rate"], 4)
+                if arm["degraded_rate"] == arm["degraded_rate"] else "",
+            "n_degraded": arm["n_degraded"],
+            "best_effort_rank": arm["best_effort_rank"]
+                if arm["best_effort_rank"] is not None else "",
+            "nominal_goal": arm["nominal_goal"]
+                if arm["nominal_goal"] is not None else "",
         }
         for metric in _METRICS:
             mean, lo, hi = _bootstrap_ci(

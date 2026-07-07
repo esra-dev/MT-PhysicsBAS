@@ -410,9 +410,78 @@ greedy_eval_episodes(20).
     .print("[Adapt] Blacklisted ", NRemoved, " action(s); action space now = ", AppNow);
     // Re-prime learning over the surviving actions (master plan §3.1).
     warmRestart[artifact_id(QlId)];
-    .print("[Adapt] Warm restart complete — re-learning over surviving components.").
+    .print("[Adapt] Warm restart complete — re-learning over surviving components.");
+    // Phase 2.5b — BEST-EFFORT DEGRADATION. Now that the defective component is
+    // gone, PROVE (deterministically, against the live faulty physics) whether
+    // the nominal goal is still reachable with the surviving actuators. Only if
+    // it is NOT do we lower the target to the closest achievable rank and NOTIFY
+    // the user; if the goal is still reachable this is a no-op and the agent
+    // keeps recovering toward the true goal exactly as before.
+    !assess_reachability(0).
 @on_defect_dup
 +!on_defect(_, _) <- true.   // component already known — ignore.
+
+/* ============================================================
+ * Best-effort degradation (Phase 2.5b)
+ *
+ * After a fault is blacklisted, enumerate the surviving-actuator combinations,
+ * drive the (faulty) lab into each, and record the rank closest to the nominal
+ * goal (argmin |rank − goal|). If the closest achievable rank is BELOW the goal,
+ * the goal is UNREACHABLE: lower the effective goal to that rank and inform the
+ * user (belief + console alert). Otherwise the goal is still reachable → no-op.
+ * ============================================================ */
+@assess_reachability
++!assess_reachability(Zone) <-
+    ?qlearner_artifact(QlId);
+    beginReachabilityProbe(NumCombos)[artifact_id(QlId)];
+    .print("[Adapt] Reachability probe: testing ", NumCombos, " surviving-actuator combination(s).");
+    !probe_combo_loop(Zone, 0, NumCombos);
+    finishReachabilityProbe(Zone, BestRank, Degraded)[artifact_id(QlId)];
+    if (Degraded) {
+        getNominalGoal(Zone, Nominal)[artifact_id(QlId)];
+        +degraded_mode(Zone, BestRank, Nominal);
+        .print("==========================================================");
+        .print("   [DEGRADED] Goal rank ", Nominal, " is UNREACHABLE with the");
+        .print("   components that survive after blacklisting.");
+        .print("   Best achievable illuminance = rank ", BestRank, ".");
+        .print("   The agent will get AS CLOSE AS POSSIBLE (rank ", BestRank, ")");
+        .print("   and operate in DEGRADED mode. *** USER NOTIFIED. ***");
+        .print("==========================================================")
+    } else {
+        .print("[Adapt] Nominal goal still reachable with surviving components — normal recovery.")
+    }.
+
+// Enumerate combinations 0..N-1. For each: realise the combo, let the sim
+// settle, read the achieved rank, record the argmin-distance best.
+@probe_combo_loop_done
++!probe_combo_loop(_, I, N) : I >= N <- true.
+@probe_combo_loop_step
++!probe_combo_loop(Zone, I, N) : I < N <-
+    ?qlearner_artifact(QlId);
+    ?lab_artifact(LabId);
+    ?action_delay_ms(Delay);
+    getProbeCombo(I, ComboActions)[artifact_id(QlId)];
+    !apply_combo(ComboActions);
+    .wait(Delay);
+    readLabStatus(ZL, SR, SK, SV)[artifact_id(LabId)];
+    encodeState(ZL, SR, SK, SV, StateVec)[artifact_id(QlId)];
+    recordProbeRank(StateVec, Zone)[artifact_id(QlId)];
+    !probe_combo_loop(Zone, I + 1, N).
+
+// Realise one combination: execute each surviving actuator's ON/OFF action.
+@apply_combo_done
++!apply_combo([]) <- true.
+@apply_combo_step
++!apply_combo([A | Rest]) <-
+    ?qlearner_artifact(QlId);
+    ?lab_artifact(LabId);
+    ?action_delay_ms(Delay);
+    actionToWoT(A, WotType, WotValue)[artifact_id(QlId)];
+    if (WotType \== "none") {
+        invokeAction(WotType, WotValue)[artifact_id(LabId)]
+    };
+    .wait(Delay);
+    !apply_combo(Rest).
 
 /* ============================================================
  * Finish — save adapted artifacts + the recovery metric, stop MAS.
@@ -438,10 +507,17 @@ greedy_eval_episodes(20).
     !get_reconverge_episode(ReconvergeEp);
     !get_secondary_detect_episode(SecondaryEp);
     !get_defect_label(DefectLabel);
+    // Phase 2.5b: annotate the row with the graceful-degradation status. In a
+    // degraded cell GoalRate is BEST-EFFORT attainment (fraction of greedy
+    // rollouts that reach the closest achievable rank), not nominal-goal rate.
+    getGoalStatus(0, NominalGoal, EffectiveGoal, DegradedFlag)[artifact_id(QlId)];
     !sx_filename("recovery_stereotypes_", UseStereotypes, QtSuffix, ".csv", RecoveryFile);
-    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, SecondaryEp, GoalRate, DefectLabel)[artifact_id(QlId)];
+    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, SecondaryEp, GoalRate, DefectLabel,
+                    NominalGoal, EffectiveGoal, DegradedFlag)[artifact_id(QlId)];
     .print("[Adapt] Recovery metric saved to ", RecoveryFile,
-           " (detect=", DetectEp, " reconverge=", ReconvergeEp, " secondary=", SecondaryEp, " goalRate=", GoalRate, ")");
+           " (detect=", DetectEp, " reconverge=", ReconvergeEp, " secondary=", SecondaryEp,
+           " goalRate=", GoalRate, " nominalGoal=", NominalGoal, " bestEffort=", EffectiveGoal,
+           " degraded=", DegradedFlag, ")");
     if (not detected(_)) {
         .print("[Adapt] NOTE: no fault was detected within the budget.")
     };

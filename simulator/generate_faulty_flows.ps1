@@ -102,9 +102,10 @@ New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f1binv.json' `
 
 # ── Phase 2.5 — MONITOR emergency-fallback lab ───────────────────────────────
 # labmon_f1dead - DEAD primary lamp (kill the +400 lux Z1Light contribution).
-# After blacklisting, the only surviving rank-3 path is {Z1Monitor, Z1Backup}
-# = 375 lux, so the KG-primed agent must fall back on the monitor as an
-# unconventional light source.
+# The lamp is the ONLY rank-3 lever, so once it is blacklisted the goal (rank 3)
+# is UNREACHABLE. The best achievable state is rank 2 via the monitor
+# (25 + 260 = 285 lux). The KG-primed agent must recognise the monitor as a
+# WEAK best-effort fallback, proof-gate the degraded goal, and notify the user.
 New-FaultyFlow 'simulator_flow_labmon.json' 'simulator_flow_labmon_f1dead.json' `
     'Lab_Monitor_Emergency (port 1899)' 'Lab_Monitor_Emergency_F1DEAD (port 1899)' `
     @(,@('z1l   ? 400 : 0', 'z1l   ? 0 : 0'))

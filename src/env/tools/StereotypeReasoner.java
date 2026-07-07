@@ -60,15 +60,6 @@ public class StereotypeReasoner {
                                        //       drawn per tick when this actuator is ON. 0.0 when the
                                        //       KG declares no cost (labs 1-4), which makes the
                                        //       non-fading energy prior in QLearner inert for them.
-        public double rewardEnergyCost = 0.0; // Phase 2.5 (labmon): ws:rewardEnergyCost — a per-tick
-                                       //       cost SUBTRACTED FROM THE Q-REWARD (not the prior) while
-                                       //       this actuator is ON. Distinct from energyCost so it is
-                                       //       self-gating: only labmon declares it, so every other
-                                       //       lab (including lab5, which uses ws:energyCost) is
-                                       //       unaffected. Makes both arms prefer the cheap primary
-                                       //       lamp in the clean lab (so the dead lamp is exercised
-                                       //       and detected) yet still use the costly monitor as the
-                                       //       only survivor path in the emergency.
         public String label;           // human-readable label
 
         public ActionInfo() {
@@ -122,7 +113,7 @@ public class StereotypeReasoner {
      */
     private static final String ACTUATOR_DISCOVERY_QUERY = PREFIXES +
         "SELECT ?comp ?zone ?zoneIdx ?dvLabel ?iv ?ivMinRank " +
-        "       ?wotActionType ?wotStateType ?actionValue ?energyCost ?rewardEnergyCost\n" +
+        "       ?wotActionType ?wotStateType ?actionValue ?energyCost\n" +
         "WHERE {\n" +
         "  ?comp  brick:isLocatedIn             ?zone .\n" +
         "  ?zone  a                             lab:Workstation .\n" +
@@ -144,9 +135,6 @@ public class StereotypeReasoner {
         // Phase 4 (lab5): per-actuator electrical power draw per tick. Absent
         // on labs 1-4, so ?energyCost is unbound there and parsed as 0.0.
         "  OPTIONAL { ?comp ws:energyCost               ?energyCost . }\n" +
-        // Phase 2.5 (labmon): per-actuator cost subtracted from the Q-REWARD
-        // while ON. Absent on every other lab, so self-gating to 0.0.
-        "  OPTIONAL { ?comp ws:rewardEnergyCost         ?rewardEnergyCost . }\n" +
         "}\n" +
         "ORDER BY ?zoneIdx ?wotActionType ?actionValue";
 
@@ -575,9 +563,6 @@ public class StereotypeReasoner {
                 double energyCost = (qs.contains("energyCost") && qs.get("energyCost") != null)
                         ? qs.getLiteral("energyCost").getDouble()
                         : 0.0; // Phase 4 (lab5): absent on labs 1-4 => 0.0
-                double rewardEnergyCost = (qs.contains("rewardEnergyCost") && qs.get("rewardEnergyCost") != null)
-                        ? qs.getLiteral("rewardEnergyCost").getDouble()
-                        : 0.0; // Phase 2.5 (labmon): absent on every other lab => 0.0
 
                 if (wotAction == null) continue;
 
@@ -601,7 +586,6 @@ public class StereotypeReasoner {
                 // per-zone rows that merge into one action (they agree in
                 // practice; max is a safe reducer).
                 if (energyCost > ai.energyCost) ai.energyCost = energyCost;
-                if (rewardEnergyCost > ai.rewardEnergyCost) ai.rewardEnergyCost = rewardEnergyCost;
 
                 LOGGER.fine("  Discovered: " + wotAction + " value=" + actionValue
                           + " zone=" + zoneIdx + " hasIV=" + hasIV

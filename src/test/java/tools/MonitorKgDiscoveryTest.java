@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
  *       {@code hasIV == false}. Its multiple dependent variables (displayed
  *       information + luminiscence) collapse to exactly one lighting action
  *       because the discovery query keeps only the Illuminance-quantity DV.</li>
- *   <li>The reward-side cost {@code ws:rewardEnergyCost} is parsed: the monitor
- *       is costly (4) and the lamp is free (0), so both arms prefer the lamp in
- *       the clean lab.</li>
+ *   <li>Neither actuator declares a KG energy prior ({@code ws:energyCost == 0}):
+ *       the monitor is a WEAK light, distinguished purely by physics (it reaches
+ *       only rank 2), not by any cost signal.</li>
  *   <li>The state vector is length 3 ({@code [Z1Level, Z1Light, Z1Monitor]}) →
  *       16 states, and each actuator toggles a distinct bit.</li>
  * </ul>
@@ -61,16 +61,12 @@ class MonitorKgDiscoveryTest {
         assertFalse(lampOn.hasIV,    "Primary lamp must be a Causes actuator (no IV)");
         assertFalse(monitorOn.hasIV, "Monitor must be a Causes actuator (light is a side-effect, no IV)");
 
-        // No energyCost (KG prior) is declared in this lab — it uses the reward-side cost instead.
+        // No energyCost (KG prior) is declared in this lab — the monitor is a
+        // WEAK light (physics-only), with no cost/prior machinery involved.
         assertEquals(0.0, monitorOn.energyCost, 1e-9,
             "labmon actuators carry no ws:energyCost (energy prior inert)");
-
-        // Reward-side energy cost makes the monitor WASTEFUL and the lamp free,
-        // so both arms prefer the primary lamp in the clean lab.
-        assertEquals(4.0, monitorOn.rewardEnergyCost, 1e-9,
-            "Monitor must carry ws:rewardEnergyCost 4 (wasteful to use for light)");
-        assertEquals(0.0, lampOn.rewardEnergyCost, 1e-9,
-            "Primary lamp must be free (ws:rewardEnergyCost 0) so it is the clean optimum");
+        assertEquals(0.0, lampOn.energyCost, 1e-9,
+            "labmon actuators carry no ws:energyCost (energy prior inert)");
     }
 
     @Test

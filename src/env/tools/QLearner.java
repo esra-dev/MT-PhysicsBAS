@@ -78,16 +78,6 @@ public class QLearner extends Artifact {
     // unaffected even when this is > 0. The run_config "phase4" profile sets
     // stereo.energyPriorWeight=2.0 (override with -Dstereo.energyPriorWeight).
     private static final double ENERGY_PRIOR_WEIGHT = parseDoubleProp("stereo.energyPriorWeight", 0.0);
-    // Phase 2.5 (labmon): weight of the SYMMETRIC pessimistic Q-init bias applied
-    // to any actuator carrying ws:rewardEnergyCost (i.e. the costly monitor).
-    // Applied IDENTICALLY to ql_true and ql_false, so it does NOT bias the
-    // KG-vs-vanilla contrast; it only ensures that the FREE primary lamp is the
-    // clean optimum (so a dead lamp is exercised and DETECTED) instead of the two
-    // one-action rank-3 levers being an entrenchment lottery under the reward
-    // clip. Self-gating: rewardEnergyCost is 0.0 for every lab except labmon, so
-    // this term vanishes everywhere else regardless of the weight.
-    private static final double REWARD_ENERGY_INIT_WEIGHT =
-        parseDoubleProp("reward.energyInitWeight", 12.0);
     // Total episodes used to decay the stereotype prior weight to its floor.
     // S2-3 (audit Step 2): made non-final so it can be coupled to num_episodes
     // at runtime via setPriorDecayEpisodes() / setTrainingBudgetEpisodes().
@@ -194,7 +184,20 @@ public class QLearner extends Artifact {
     // Fields
     // -----------------------------------------------------------------------
     private double[][][] qTables;    // Per-zone decomposed Q-tables [numZones][N_STATES][nActions]
-    private int[]        goal;       // target rank per zone, length = numZones
+    private int[]        goal;       // NOMINAL target rank per zone, length = numZones (source of truth)
+    // Phase 2.5b — best-effort degradation. effectiveGoal starts as a clone of
+    // goal and is LOWERED (only during a faulty-lab adapt run, only after a
+    // reachability probe PROVES the nominal goal is unreachable with the
+    // surviving actuators) to the closest achievable rank. isTerminal and the
+    // Q-reward target read effectiveGoal so the agent optimises toward — and is
+    // rewarded for holding — the best reachable rank instead of being punished
+    // for sitting below an unreachable nominal goal. In clean training and in
+    // reachable-goal recovery, effectiveGoal == goal, so behaviour is identical.
+    private int[]        effectiveGoal;
+    // Reachability-probe scratch state (populated by beginReachabilityProbe).
+    private int[][]      probeSurvivors;  // rows = {onActionIdx, offActionIdx} of each surviving actuator
+    private int          probeBestRank = -1;
+    private int          probeBestDist = Integer.MAX_VALUE;
     private boolean    useStereotypes;
     private boolean    maskStrict = false; // if true, hard masking for ablation (default: soft priors)
     private Random     rng;
@@ -358,6 +361,9 @@ public class QLearner extends Artifact {
                                   Object[] ontologyPaths, double sunshineSatisfactionProb) {
         this.goal = new int[goal.length];
         for (int i = 0; i < goal.length; i++) this.goal[i] = toInt(goal[i]);
+        // Phase 2.5b: effective (best-effort) goal starts equal to the nominal
+        // goal; only a proven-unreachable faulty lab lowers it (setEffectiveGoal).
+        this.effectiveGoal = this.goal.clone();
         this.useStereotypes = useStereotypes;
         // Deterministic-by-default; bench/training agents may override via setSeed().
         // Seed mixes stereo flag so stereotype-on / stereotype-off runs explore
@@ -441,24 +447,6 @@ public class QLearner extends Artifact {
         } else {
             for (double[][] zt : qTables) for (double[] row : zt) Arrays.fill(row, 0.0);
             LOGGER.info("QLearner initialised — STEREOTYPE MODE: OFF (standard zero-init)");
-        }
-
-        // Phase 2.5 (labmon): SYMMETRIC pessimistic Q-init for any actuator that
-        // carries a reward-side energy cost (ws:rewardEnergyCost > 0). Applied to
-        // BOTH arms so it does not bias the KG-vs-vanilla contrast; it only makes
-        // the FREE primary lamp the clean optimum, so the frozen clean policy
-        // exercises the lamp and its death is detected, while the costly monitor
-        // stays a fallback. Self-gating: 0 for every lab that declares no cost.
-        if (REWARD_ENERGY_INIT_WEIGHT > 0.0 && actionInfos != null) {
-            for (int a = 0; a < nActions; a++) {
-                StereotypeReasoner.ActionInfo ai = actionInfos[a];
-                if (ai != null && ai.wotValue && ai.rewardEnergyCost > 0.0) {
-                    double pen = REWARD_ENERGY_INIT_WEIGHT * ai.rewardEnergyCost;
-                    for (int z = 0; z < numZones; z++)
-                        for (int s = 0; s < nStates; s++)
-                            qTables[z][s][a] -= pen;
-                }
-            }
         }
 
         LOGGER.info("  Goal: " + Arrays.toString(this.goal));
@@ -597,7 +585,7 @@ public class QLearner extends Artifact {
                 int slot = zoneLevelIndices[z];
                 int prevLevel = toInt(stateVec[slot]);
                 int nextLevel = toInt(nextStateVec[slot]);
-                int target    = goal[z];
+                int target    = effectiveGoal[z];
                 double phiPrev = -Math.abs(prevLevel - target);
                 double phiNext = -Math.abs(nextLevel - target);
                 double F = gamma * phiNext - phiPrev;
@@ -1456,18 +1444,29 @@ public class QLearner extends Artifact {
      * evaluation episodes the FINAL policy reaches the goal in. It distinguishes
      * a policy that merely STOPPED CHANGING (stable) from one that actually
      * REACHES the goal (goal-reaching), closing the stability≠optimality gap.
+     *
+     * Phase 2.5b: {@code nominalGoal} / {@code bestEffortRank} / {@code degraded}
+     * record graceful degradation. When the nominal goal is proven unreachable
+     * with the surviving actuators, the effective target is lowered to the
+     * closest achievable rank ({@code bestEffortRank}); {@code RankShortfall} =
+     * nominal − best-effort and {@code DegradedMode} = 1 flag the cell so the
+     * recovered goal-rate is read as BEST-EFFORT attainment, not nominal-goal
+     * attainment.
      */
     @OPERATION
     public void saveRecoveryLog(String filename, int detectEp, int reconvergeEp,
                                 int secondaryDetectEp, double recoveredGoalRate,
-                                String blacklistedLabel) {
+                                String blacklistedLabel,
+                                int nominalGoal, int bestEffortRank, boolean degraded) {
         boolean exists = new java.io.File(filename).exists();
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename, true))) {
-            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate");
+            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate,NominalGoal,BestEffortRank,RankShortfall,DegradedMode");
             int rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1;
-            pw.printf("%s,%d,%d,%d,%d,%.4f%n",
+            int shortfall = (nominalGoal >= 0 && bestEffortRank >= 0) ? (nominalGoal - bestEffortRank) : 0;
+            pw.printf("%s,%d,%d,%d,%d,%.4f,%d,%d,%d,%d%n",
                 blacklistedLabel == null ? "" : blacklistedLabel,
-                detectEp, reconvergeEp, rec, secondaryDetectEp, recoveredGoalRate);
+                detectEp, reconvergeEp, rec, secondaryDetectEp, recoveredGoalRate,
+                nominalGoal, bestEffortRank, shortfall, degraded ? 1 : 0);
             LOGGER.info("saveRecoveryLog: appended recovery row to " + filename);
         } catch (IOException e) {
             LOGGER.warning("saveRecoveryLog: failed " + filename + " — " + e.getMessage());
@@ -1569,10 +1568,153 @@ public class QLearner extends Artifact {
     @OPERATION
     public void isTerminal(Object[] stateVec, OpFeedbackParam<Boolean> terminal) {
         boolean t = true;
-        for (int z = 0; z < goal.length; z++) {
-            if (toInt(stateVec[zoneLevelIndices[z]]) != goal[z]) { t = false; break; }
+        // Phase 2.5b: "terminal" means the agent has reached its EFFECTIVE goal —
+        // the nominal goal in the normal case, or the proven best-effort rank in
+        // a degraded (goal-unreachable) faulty lab.
+        for (int z = 0; z < effectiveGoal.length; z++) {
+            if (toInt(stateVec[zoneLevelIndices[z]]) != effectiveGoal[z]) { t = false; break; }
         }
         terminal.set(t);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 2.5b — best-effort degradation (reachability probe + effective goal)
+    // -----------------------------------------------------------------------
+    //
+    // These operations implement graceful degradation for FAULTY labs: after a
+    // dead/inverted component is detected and blacklisted, the agent PROVES
+    // (deterministically, against the live faulty physics) whether the NOMINAL
+    // goal is still reachable with the surviving actuators. If not, the target
+    // is lowered to the CLOSEST achievable rank (argmin |rank − nominalGoal|
+    // over the enumerated surviving-actuator combinations) and the user is
+    // notified. Nothing here runs in clean training or in reachable-goal
+    // recovery (the probe reports "reachable", effectiveGoal stays == goal).
+
+    /**
+     * Nominal (configured) goal rank for a zone — the target the agent tries to
+     * reach before any degradation. Read by the adapt agent to report the
+     * shortfall when it must fall back to a best-effort rank.
+     */
+    @OPERATION
+    public void getNominalGoal(int zone, OpFeedbackParam<Integer> out) {
+        out.set((zone >= 0 && zone < goal.length) ? goal[zone] : -1);
+    }
+
+    /**
+     * Lower (or restore) the EFFECTIVE goal rank for a zone. Called only after a
+     * reachability probe proves the nominal goal unreachable.
+     */
+    @OPERATION
+    public void setEffectiveGoal(int zone, int rank) {
+        if (zone >= 0 && zone < effectiveGoal.length) {
+            effectiveGoal[zone] = rank;
+            LOGGER.warning("setEffectiveGoal: zone " + zone + " effective goal set to rank "
+                + rank + " (nominal " + goal[zone] + ")");
+        }
+    }
+
+    /**
+     * Report the goal status of a zone: nominal rank, effective rank, and whether
+     * the zone is degraded (effective &lt; nominal). Used to annotate the recovery
+     * log after adaptation finishes.
+     */
+    @OPERATION
+    public void getGoalStatus(int zone, OpFeedbackParam<Integer> nominal,
+                              OpFeedbackParam<Integer> effective,
+                              OpFeedbackParam<Boolean> degraded) {
+        int g = (zone >= 0 && zone < goal.length) ? goal[zone] : -1;
+        int e = (zone >= 0 && zone < effectiveGoal.length) ? effectiveGoal[zone] : -1;
+        nominal.set(g);
+        effective.set(e);
+        degraded.set(e < g);
+    }
+
+    /**
+     * Begin a reachability probe over the SURVIVING (non-blacklisted) boolean
+     * actuators. Collects each survivor's ON/OFF action-index pair and resets the
+     * best-so-far tracker. Returns the number of actuator combinations to test
+     * (2^k for k survivors) so the agent can enumerate them via getProbeCombo.
+     */
+    @OPERATION
+    public void beginReachabilityProbe(OpFeedbackParam<Integer> numCombos) {
+        java.util.LinkedHashMap<String, int[]> byType = new java.util.LinkedHashMap<>();
+        for (int a = 0; a < nActions; a++) {
+            StereotypeReasoner.ActionInfo ai = actionInfos[a];
+            if (ai == null || ai.wotActionType == null) continue; // skip DO_NOTHING
+            if (blacklisted[a]) continue;                         // skip blacklisted component
+            int[] pair = byType.computeIfAbsent(ai.wotActionType, k -> new int[]{-1, -1});
+            if (ai.wotValue) pair[0] = a; else pair[1] = a;       // [onIdx, offIdx]
+        }
+        java.util.List<int[]> survivors = new java.util.ArrayList<>();
+        for (int[] pair : byType.values()) {
+            if (pair[0] >= 0 && pair[1] >= 0) survivors.add(pair);
+        }
+        probeSurvivors = survivors.toArray(new int[0][]);
+        probeBestRank  = -1;
+        probeBestDist  = Integer.MAX_VALUE;
+        int k = probeSurvivors.length;
+        // Safety cap: never enumerate more than 2^16 combinations.
+        int combos = (k >= 0 && k <= 16) ? (1 << k) : 1;
+        numCombos.set(combos);
+        LOGGER.info("beginReachabilityProbe: " + k + " surviving actuator(s) → "
+            + combos + " combination(s) to test.");
+    }
+
+    /**
+     * Return the list of action indices that realise combination {@code comboIdx}
+     * of the probe: for each surviving actuator, its ON action-index if the
+     * corresponding bit is set, else its OFF action-index. The agent executes
+     * these (via actionToWoT + invokeAction) to drive the lab into that state.
+     */
+    @OPERATION
+    public void getProbeCombo(int comboIdx, OpFeedbackParam<Object[]> actionList) {
+        int k = (probeSurvivors == null) ? 0 : probeSurvivors.length;
+        Object[] out = new Object[k];
+        for (int j = 0; j < k; j++) {
+            int bit = (comboIdx >> j) & 1;
+            out[j] = (bit == 1) ? probeSurvivors[j][0] : probeSurvivors[j][1];
+        }
+        actionList.set(out);
+    }
+
+    /**
+     * Record the rank a probed combination achieved in {@code zone}. Keeps the
+     * combination whose achieved rank is CLOSEST to the nominal goal (ties broken
+     * toward the higher rank), i.e. argmin |rank − nominalGoal|.
+     */
+    @OPERATION
+    public void recordProbeRank(Object[] stateVec, int zone) {
+        int rank = toInt(stateVec[zoneLevelIndices[zone]]);
+        int dist = Math.abs(rank - goal[zone]);
+        if (dist < probeBestDist || (dist == probeBestDist && rank > probeBestRank)) {
+            probeBestDist = dist;
+            probeBestRank = rank;
+        }
+        LOGGER.fine("recordProbeRank: zone " + zone + " achieved rank " + rank
+            + " (best so far " + probeBestRank + ")");
+    }
+
+    /**
+     * Finish the probe: the best achievable rank is reported. If it is below the
+     * nominal goal, the zone is DEGRADED — the effective goal is lowered to that
+     * best rank and {@code degraded} is set true. Otherwise the nominal goal is
+     * reachable and nothing changes.
+     */
+    @OPERATION
+    public void finishReachabilityProbe(int zone, OpFeedbackParam<Integer> bestRank,
+                                        OpFeedbackParam<Boolean> degraded) {
+        bestRank.set(probeBestRank);
+        boolean deg = probeBestRank >= 0 && probeBestRank < goal[zone];
+        if (deg) {
+            effectiveGoal[zone] = probeBestRank;
+            LOGGER.warning("finishReachabilityProbe: zone " + zone + " NOMINAL goal rank "
+                + goal[zone] + " UNREACHABLE — best-effort rank " + probeBestRank
+                + " (shortfall " + (goal[zone] - probeBestRank) + "). Entering DEGRADED mode.");
+        } else {
+            LOGGER.info("finishReachabilityProbe: zone " + zone + " nominal goal rank "
+                + goal[zone] + " still reachable (best probed rank " + probeBestRank + ").");
+        }
+        degraded.set(deg);
     }
 
     /**
@@ -2234,7 +2376,9 @@ public class QLearner extends Artifact {
         // Zone level is stored at zoneLevelIndices[zoneIdx] in the state vector
         int prevLevel = toInt(prevStateVec[zoneLevelIndices[zoneIdx]]);
         int nextLevel = toInt(nextStateVec[zoneLevelIndices[zoneIdx]]);
-        int target = goal[zoneIdx];
+        // Phase 2.5b: reward toward the EFFECTIVE goal (best-effort rank when the
+        // nominal goal was proven unreachable in a degraded faulty lab).
+        int target = effectiveGoal[zoneIdx];
 
         double  r      = 0.0;
         boolean wasted = false;
@@ -2282,29 +2426,6 @@ public class QLearner extends Artifact {
         // Stagnation penalty when not at goal
         if (actionInfos[action].wotActionType == null && nextLevel != target) {
             r -= 5.0;
-        }
-
-        // Phase 2.5 (labmon): reward-side energy cost. Subtract, ONCE per step
-        // (zone 0 only, so it is not multiplied by the zone count), the per-tick
-        // ws:rewardEnergyCost of every actuator that is ON in the resulting
-        // state. This is SELF-GATING — only the monitor lab declares
-        // ws:rewardEnergyCost, so rewardEnergyCost is 0.0 for every other lab
-        // and this term vanishes. It makes BOTH arms (it is in the reward, not
-        // the KG prior) prefer the cheap primary lamp in the clean lab, so the
-        // dead lamp is actually exercised and detected, while the costly monitor
-        // remains available as the only survivor path in the emergency.
-        if (zoneIdx == 0) {
-            double energyPenalty = 0.0;
-            for (StereotypeReasoner.ActionInfo ai : actionInfos) {
-                if (ai.wotValue && ai.rewardEnergyCost > 0.0
-                        && ai.stateVecBitIndex >= 0
-                        && toInt(nextStateVec[ai.stateVecBitIndex]) == 1) {
-                    energyPenalty += ai.rewardEnergyCost;
-                }
-            }
-            if (energyPenalty > 0.0) {
-                r -= energyPenalty;
-            }
         }
 
         return new RewardResult(r, wasted);

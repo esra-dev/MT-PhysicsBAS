@@ -24,35 +24,43 @@
 #  RESEARCH QUESTION (advisor-aligned):
 #    A computer MONITOR is not a lighting device. Its PRIMARY output is
 #    displayed information; a modest increase in room illuminance is only a
-#    SIDE-EFFECT of the screen being on, and using it that way is WASTEFUL
-#    (it draws a lot of power for the light it gives). We ask whether a
-#    physics/KG-primed agent, when the primary task lamp fails, recognises the
-#    monitor as an UNCONVENTIONAL FALLBACK light source faster than a
-#    tabula-rasa agent.
+#    SIDE-EFFECT of the screen being on. Crucially it is a WEAK light: it cannot
+#    by itself raise the room to the goal illuminance rank. We ask whether a
+#    physics/KG-primed agent, when the primary task lamp fails and the goal
+#    becomes UNREACHABLE, recognises the monitor as an unconventional BEST-EFFORT
+#    fallback light source (getting AS CLOSE AS POSSIBLE to the goal) faster than
+#    a tabula-rasa agent — and correctly NOTIFIES the user of the shortfall.
 #
 #  Single zone, TWO Causes actuators:
-#    - CeilingLight_Z1  primary task lamp     (+400 lux, free)     LampIncandescent
-#    - Monitor_Z1       screen, light side-effect (+290 lux, COSTLY) MonitorStereotype (NEW)
+#    - CeilingLight_Z1  primary task lamp     (+400 lux → rank 3)  LampIncandescent
+#    - Monitor_Z1       screen, light side-effect (+260 lux → rank 2 only, WEAK) MonitorStereotype (NEW)
 #
 #  Physics (simulator_flow_labmon.json, port 1899):
 #     Z1Level = 25 (ambient)
-#            + (Z1Light   ? 400 : 0)     primary lamp (Causes, free)
-#            + (Z1Monitor ? 290 : 0)     monitor light side-effect (Causes, costly)
+#            + (Z1Light   ? 400 : 0)     primary lamp (Causes, reaches rank 3)
+#            + (Z1Monitor ? 260 : 0)     monitor light side-effect (Causes, reaches rank 2 only)
 #  No sunshine, no blinds, no cross-zone: fully DETERMINISTIC.
 #  State vector = [Z1Level(0..3), Z1Light(0/1), Z1Monitor(0/1)]
 #              = 4 * 2 * 2 = 16 states. light_bounds [50,100,300] → rank 3 = >300.
 #
-#  Well-posedness of the EMERGENCY (labmon_f1dead, primary lamp DEAD):
-#    lamp on       → 425 = rank 3  (clean optimum; FREE, so both arms use it)
-#    monitor on    → 315 = rank 3  (the ONLY surviving rank-3 path; COSTLY)
-#  Because BOTH levers reach rank 3 in a single action, they are explored
-#  symmetrically, and the reward-side cost (ws:rewardEnergyCost on the monitor)
-#  makes the FREE lamp the strict clean optimum — so the lamp is on the greedy
-#  path and its death is actually exercised and DETECTED. After the lamp is
-#  blacklisted, the deterministic (sun-independent) monitor path is the only way
-#  back to rank 3, so a recovery-SPEED contrast is well-posed (Tier-1
-#  confirmatory candidate). The monitor is "not something we willingly use" in
-#  the precise sense that it is COSTLY, not that it is weak.
+#  Well-posedness (Phase 2.5b — proof-gated best-effort degradation):
+#    CLEAN lab:
+#      lamp on    → 425 = rank 3  (the ONLY single-action rank-3 lever)
+#      monitor on → 285 = rank 2  (insufficient for the goal)
+#    Because the lamp is the ONLY way to reach the goal, BOTH arms converge to
+#    it with NO cost signal and NO Q-init bias — so the lamp is on the greedy
+#    path and its death is exercised and DETECTED.
+#    FAULTY lab (labmon_f1dead, primary lamp DEAD):
+#      goal rank 3 is now UNREACHABLE. best achievable = rank 2 via the monitor.
+#    After the lamp is blacklisted the adapt agent runs a DETERMINISTIC
+#    reachability probe over the surviving actuators, PROVES rank 3 is
+#    unreachable, lowers the effective goal to the closest achievable rank
+#    (rank 2), NOTIFIES the user, and re-learns toward that best-effort target.
+#    The recovery-SPEED contrast is well-posed against the effective (best-
+#    effort) goal: does the KG-primed agent settle on the monitor fallback and
+#    reach rank 2 faster than the tabula-rasa agent? The monitor is "not
+#    something we willingly use" in the precise sense that it is WEAK — it can
+#    only get us CLOSE to the goal, never all the way — not that it is costly.
 # ===========================================================================
 
 
@@ -81,16 +89,6 @@ ws:hasWoTStateSemanticType  a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
 ws:stateVecIndex   a owl:DatatypeProperty ; rdfs:range xsd:integer .
 ws:stateDomainSize a owl:DatatypeProperty ; rdfs:range xsd:integer .
 ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
-
-# Per-tick cost SUBTRACTED FROM THE Q-REWARD while the actuator is ON (consumed
-# by QLearner.computeZoneReward). Distinct from ws:energyCost (which is a KG
-# PRIOR used only by lab5) so it is self-gating: only this lab declares it, so
-# every other lab is unaffected. It encodes that the monitor is a WASTEFUL way
-# to light a room ("not something we willingly use"): both the KG and the
-# tabula-rasa agent therefore prefer the free primary lamp in the clean lab —
-# so the dead lamp is actually exercised and detected — yet the costly monitor
-# is still the only survivor path in the emergency.
-ws:rewardEnergyCost a owl:DatatypeProperty ; rdfs:range xsd:decimal .
 
 
 # ===========================================================================
@@ -298,7 +296,6 @@ lab:Monitor_Z1 a brick:Luminaire, elem:Actuator ;
     rdfs:label "Computer monitor (display, light side-effect) – Workstation 1" ;
     brick:isLocatedIn lab:Zone1 ;
     elem:hasBehavioralStereotype ws:MonitorStereotype ;
-    ws:rewardEnergyCost 4 ;
     elem:isPartOf      lab:IndoorLightingStream .
 
 lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
