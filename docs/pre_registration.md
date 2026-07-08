@@ -679,4 +679,219 @@ After Phase 1 (KG-acceleration on clean labs) established that ontology priors c
 
 ---
 
+## 9. Addendum — Phase 2 Fault-Detection & Recovery (added 2026-07-08, pre-pooled-re-analysis)
+
+### 9.1 Context and registration timing
+
+Phase 2 (recognize → discard → alert → re-learn) produced results across seven CI iterations
+(runs 27470382799 → 28884717500) during which the recovery instrument, the well-posed cell
+set, and the BH correction family were revised between runs (audit:
+`docs/_audit/12_stats_review.md` §3.1–§3.4). This addendum freezes the hypothesis, every
+metric definition, the tier rules, the analysis set, and exactly one BH-FDR family per
+metric, **before** the single pooled re-analysis over the frozen analysis set is executed.
+
+**Transparency note (per Munafò et al. 2017, same status as §7.1):** this addendum is
+written *after* the per-run results were seen but *before* the pooled seed-paired
+re-analysis is run. Every Phase-2 significance statement in the thesis must cite the pooled
+re-analysis under this §9, and must be labelled **confirmatory-with-post-hoc-registration**.
+The per-run tables published earlier (v5/v6/ext/backfill/labmon/lowsun `analysis/out/`
+artefacts) are history: they remain in the repo but carry no confirmatory claim, because
+(a) their pairing was positional, not seed-keyed, and (b) their BH families differed per run
+(m = 2 → 8 → 0 → 1; `docs/_audit/12_stats_review.md` §3.2–§3.3).
+
+### 9.2 Hypothesis (frozen)
+
+**H-P2 (recovery speed, primary):** After a component fault is detected and blacklisted,
+the KG-primed agent (`ql_true`) re-converges to a goal-reaching policy in **fewer episodes**
+than the tabula-rasa agent (`ql_false`), in every Tier-1 cell.
+
+- As coded: *"The headline Phase-2 claim is: recovery(ql_true) < recovery(ql_false) — the KG
+  prior lets the agent re-align over the surviving components faster than a learner that
+  must rediscover structure from scratch"* (`analysis/phase2_recovery.py` module docstring).
+- Prediction: `mean_diff_true_minus_false < 0` with q ≤ 0.05 (BH within the §9.5 family) for
+  every Tier-1 cell.
+- Falsified per cell if the mean difference is ≥ 0 or q > 0.05.
+
+**Detection latency (secondary, no directional hypothesis):** `DetectEpisode` contrasts are
+reported with full statistics and BH correction within the §9.6 detection family. No
+direction is predicted — instant blacklisting can make either arm detect first depending on
+which arm's greedy policy touches the faulty component earlier. Detection **recall**
+(fraction of runs with `DetectEpisode ≥ 0`) is reported descriptively per arm.
+
+### 9.3 Metric definitions (frozen, as coded)
+
+1. **DetectEpisode** — the adapt episode at which the physics-recheck detector blacklists
+   the defect component; −1 if never detected. Detection success = `DetectEpisode ≥ 0`
+   (`analysis/phase2_recovery.py::collect_arm`, "detected" filter).
+2. **ReconvergeEpisode** — the episode at which the **policy-stability recovery detector**
+   fires: the greedy joint policy (`jointArgmaxAction` over every state, blacklisted actions
+   excluded) has remained identical for `RECOVERY_WINDOW = 50` consecutive episodes after
+   the blacklist (property `fault.recover.window`, default 50 —
+   `src/env/tools/QLearner.java#L330`; detector advance/read:
+   `QLearner.java#L1846-L1867`); −1 if the budget expires first.
+3. **RecoveryEpisodes (primary metric)** = `ReconvergeEpisode − DetectEpisode`, computed
+   only when both are ≥ 0, else −1 ("did not re-converge") —
+   `src/env/tools/QLearner.java#L1464`:
+   `rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1`.
+   Lower is better. Rows with value −1 are excluded from the per-arm success lists and
+   therefore from pairing (`analysis/phase2_recovery.py::collect_arm`, "reconverged" filter).
+4. **RecoveredGoalRate** — fraction of greedy (ε = 0) evaluation episodes in which the FINAL
+   post-recovery policy reaches the (effective) goal; distinguishes a policy that merely
+   *stopped changing* from one that *reaches the goal* (script docstring). For degraded
+   cells (labmon/lowsun) the effective goal is the proof-gated best-effort rank.
+5. **Goal-reaching threshold** = `_GOAL_REACHING_THRESHOLD = 0.5`
+   (`analysis/phase2_recovery.py`): a replica counts as goal-reaching iff it re-converged
+   AND `RecoveredGoalRate ≥ 0.5`; an arm's `goal_reaching_rate` = goal-reaching replicas /
+   n_runs.
+
+### 9.4 Tier rules (frozen)
+
+- **Well-posed set** (recovery-speed contrast *defined*; a deterministic post-fault survivor
+  path exists): the 11 profiles in `_WELL_POSED_RECOVERY`
+  (`analysis/phase2_recovery.py`): `lab3_f1dead`, `lab3_f1inv`, `lab3_f1dead_z2`,
+  `lab3_f1inv_z2`, `lab3_f1bdead`, `lab3_f1binv`, `lab2_f1bdead`, `lab2_f1binv`,
+  `labmon_f1dead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`. All other
+  profiles are **ill-posed** (lone surviving actuator is protected, or the only survivor is
+  sun-gated): reported descriptively, never in the recovery family.
+- **Tier-1 (confirmatory)** = well-posed AND `goal_reaching_rate ≥ 0.5` in **both** arms
+  (`analysis/phase2_recovery.py::classify_recovery_tier`). Only Tier-1 cells enter the
+  recovery BH family.
+- **Tier-2 (descriptive)** = well-posed but not goal-reaching in both arms: full statistics
+  reported, **no q-value** (their number is time-to-stable-but-futile-policy, not recovery).
+- The stratifier (task achievability) is a property of the environment, symmetric across
+  arms, so conditioning on it does not bias the KG-vs-vanilla contrast.
+
+### 9.5 The ONE pooled Tier-1 recovery family (frozen): m = 8
+
+BH-FDR is applied **once**, over exactly these 8 cells (`RecoveryEpisodes`,
+`p_bootstrap` two-sided as input), significance threshold q ≤ 0.05:
+
+| # | Cell | Tier-1 evidence at freeze (goal-reaching ql_true / ql_false) |
+|---|---|---|
+| 1 | `lab3_f1dead` | 0.9 / 1.0 (`phase2_ext_results/analysis/out/phase2_recovery_ci.csv`) |
+| 2 | `lab3_f1dead_z2` | 1.0 / 1.0 (same file) |
+| 3 | `lab3_f1bdead` | 1.0 / 1.0 (same file) |
+| 4 | `lab3_f1binv` | 1.0 / 1.0 (same file) |
+| 5 | `lab2_f1bdead` | 1.0 / 0.9 (same file) |
+| 6 | `labmon_f1dead` | confirmatory (`labmon_ci_results/phase2-consolidated/analysis/out/phase2_recovery_paired.csv`) |
+| 7 | `lab3_f2dead_lowsun` | confirmatory (`docs/PHASE2_5B_LAB3_RESULTS.md`, run 28866807391) |
+| 8 | `labmon2_f2dead_lowsun` | confirmatory (`docs/PHASE2_5_LABMON2_RESULTS.md`, run 28884717500) |
+
+Excluded from the family, frozen as **Tier-2 descriptive**: `lab3_f1inv` (0.1/0.0),
+`lab3_f1inv_z2` (0.0/0.1), `lab2_f1binv` (0.5/0.3 in its run of record, §9.7 —
+below threshold in the vanilla arm; `docs/PHASE1_TO_PHASE2_CHANGES.md` §21.9).
+
+The family is frozen **by enumeration**: m = 8 regardless of what the pooled re-analysis
+shows. If the pooled data reclassifies an enumerated cell's tier, the cell **stays in the
+family** (m unchanged) and the flip is reported as a registered deviation next to the
+realized `recovery_tier` column — cells are not silently removed or added.
+
+### 9.6 Detection family (frozen): m = 8, degenerate rows excluded
+
+Under instant blacklisting, `DetectEpisode` is **identically 0 in both arms for every
+replica** in 10 of the 18 cells (verified on the raw run-of-record CSVs at freeze time):
+`lab1_f1dead`, `lab2_f1dead`, `lab2_f1inv`, `lab2_f2dead`, `lab2_f2inv`, `lab3_f2dead`,
+`lab3_f2inv`, `labmon_f1dead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`. Those rows
+are a constant, not evidence of parity (Δ=0, p=1.0 — `docs/_audit/12_stats_review.md`
+§3.4); they are **excluded from the detection BH family** and reported descriptively.
+
+The detection family is therefore exactly the 8 non-degenerate cells:
+`lab3_f1dead`, `lab3_f1inv`, `lab3_f1dead_z2`, `lab3_f1inv_z2`, `lab3_f1bdead`,
+`lab3_f1binv`, `lab2_f1bdead`, `lab2_f1binv` — m = 8, frozen by enumeration under the same
+no-silent-change rule as §9.5.
+
+### 9.7 Analysis set (frozen): one run of record per cell, seed-keyed pairing
+
+**Replica** = one (run, seed) adapt session; seeds 1–10; both arms of a pair share the
+training seed. **Pairing is by seed key** extracted from the artefact path (the
+`seed<N>` path component, as `analysis/phase4_energy.py::_seed_token` already does for
+Phase 4), never by list position; the `seeds_paired` column records the exact seeds used
+per contrast. Replicas whose metric value is −1 (not detected / not re-converged) drop out
+of that metric's pairs; `n_paired` therefore equals the number of seeds valid in **both**
+arms.
+
+**Run of record per cell** (the latest green run of the final instrument — instant
+blacklist + policy-stability window 50 + `RecoveredGoalRate` certification):
+
+| Cells | Run of record | Local raw data |
+|---|---|---|
+| `lab1_f1dead`, `lab2_f1dead`, `lab2_f1inv`, `lab2_f2dead`, `lab2_f2inv`, `lab3_f2dead`, `lab3_f2inv` | 28590019536 (Phase 2.3, commit `b2adca1`) | `phase2_results_v6/recovery_root/` |
+| `lab3_f1dead`, `lab3_f1inv`, `lab3_f1dead_z2`, `lab3_f1inv_z2`, `lab3_f1bdead`, `lab3_f1binv`, `lab2_f1bdead` | 28745352239 (Phase 2.4, commit `282acc4`) | `phase2_ext_results/recovery_root/` |
+| `lab2_f1binv` | 28750100413 (§21.9 "run of record" backfill) | `phase2_binv_backfill/phase2-consolidated/recovery_root/` |
+| `labmon_f1dead` | 28863439179 (Phase 2.5) | `labmon_ci_results/phase2-consolidated/recovery_root/` |
+| `lab3_f2dead_lowsun` | 28866807391 (Phase 2.5b) | `phase2_lowsun_results/run_28866807391/recovery_root/` |
+| `labmon2_f2dead_lowsun` | 28884717500 (Phase 2.5) | `phase2_lowsun_results/run_28884717500/recovery_root/` |
+
+**Excluded from confirmatory analysis** (reported as history/replication only):
+
+- Runs 27470382799 (v1), 27499405083 (v2), 27507087176 (v3), 27529585379 (v4),
+  27547019772 (v5): superseded instruments — v1 used a goal-based reconvergence criterion
+  (0 % recovery), v2–v5 used counter-based fault detection (DetectEpisode ≈ 3–145) that the
+  advisor-mandated instant blacklist replaced (`docs/_audit/12_stats_review.md` §3.5;
+  `docs/_audit/05_results_index.md` §2.2). Pooling them with instant-blacklist rows would
+  mix instruments inside a cell.
+- Run 28590019536's `lab3_f1dead` / `lab3_f1inv` cells: superseded by 28745352239, whose
+  commit (`282acc4`) added the active KG-driven diagnostic probe to the pre-detection
+  monitoring regime (`git diff b2adca1 282acc4 -- src/env/tools/QLearner.java`,
+  `src/agt/illuminance_controller_agent_adapt.asl`), i.e. the monitoring instrument
+  changed. The v6 cells remain a same-direction independent replication (Δ = −204.9,
+  q = 0.0 for `lab3_f1dead`) and are cited as such, descriptively.
+- Run 28745352239's `lab2_f1binv` cell: superseded by the 28750100413 backfill, declared
+  the run of record in `docs/PHASE1_TO_PHASE2_CHANGES.md` §21.9 (the ext cell lost
+  `ql_false` seed 8 to an infrastructure flake).
+- Repo-root `recovery_stereotypes_*.csv` leftovers: single-row local runs with no CI
+  provenance and (mostly) no paired arm; not part of any registered run.
+
+### 9.8 Statistical protocol (frozen)
+
+| Component | Value |
+|---|---|
+| Primary test | Paired bootstrap on per-seed values, 10 000 resamples, RNG seed 0xC1 (`analysis/sweep_report.py` helpers, unchanged) |
+| p-value entering BH | `p_bootstrap` (two-sided); direction read from the sign of the mean difference |
+| Backup tests | Wilcoxon signed-rank (two-sided), Cliff's δ effect size |
+| BH-FDR families | §9.5 recovery (m = 8) and §9.6 detection (m = 8), applied independently; never recomputed per run |
+| Significance | q ≤ 0.05 |
+| Pairing | seed-keyed within the cell's run of record (§9.7) |
+| n per cell | 10 seeds per arm (before per-metric −1 dropout) |
+
+Single-run CI invocations of `analysis/phase2_recovery.py` (the `phase2.yml` aggregate
+step) cover only a subset of the registered families; they emit `q = nan` with a notice
+and carry **no confirmatory claim**. Only the pooled invocation over the full §9.7 analysis
+set produces the registered q-values.
+
+### 9.9 Registered replication — `lab3_f1dead`, seeds 11–20 (added 2026-07-08, pre-dispatch)
+
+**Trigger (disclosed):** the pooled seed-paired re-analysis under §9.1–§9.8 moved
+`lab3_f1dead` from its published q = 0.028 (positionally paired) to **q = 0.053**
+(`docs/phase2_registered_reanalysis_delta.md` §4–§5) — the only §9.5 family member on the
+wrong side of 0.05. This subsection registers a one-shot replication **before** the run is
+dispatched. The escalation is data-dependent and is reported as such.
+
+**Run specification (frozen):** `phase2.yml` on branch `phase2-instant-blacklist` at the
+commit that introduces this subsection, with inputs
+`adapt_profiles="lab3_f1dead"`, `seeds="11,12,13,14,15,16,17,18,19,20"` (disjoint from
+every prior Phase-2 seed), `run_mode="phase1"`, `adapt_episodes="0"`,
+`publish_results=true`.
+
+**Analysis rule (frozen before data):**
+
+1. On completion, the `phase2-consolidated` artifact is downloaded to
+   `phase2_lab3f1dead_replication/run_<run_id>/` and
+   `_RUN_OF_RECORD["lab3_f1dead"]` in `analysis/phase2_recovery.py` is repointed to its
+   `recovery_root/`. The replication **replaces** run 28745352239 as the cell's run of
+   record; it is **not pooled** with it (the codebase has moved since commit `282acc4` —
+   monitor-stereotype / best-effort-degradation machinery — so same-instrument pooling is
+   not defensible).
+2. The single pooled `--registered` invocation is re-run. The §9.5 family membership and
+   m = 8 are unchanged; only the `lab3_f1dead` p-value entering the family comes from the
+   replication (seed-paired within the run, seeds 11–20).
+3. The superseded ext measurement (Δ = −67.4, q = 0.053) is reported permanently alongside
+   the replication in the thesis, whatever the outcome.
+
+**Decision rule (one-shot):** if the replication shows Δ < 0 with q ≤ 0.05, the cell is
+confirmed. Otherwise the cell is reported as directionally consistent but unsupported, and
+**no further reruns of this cell are permitted** under this registration.
+
+---
+
 *Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*
