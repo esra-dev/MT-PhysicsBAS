@@ -188,9 +188,12 @@ _RUN_OF_RECORD = {
     "lab2_f2inv": "phase2_results_v6/recovery_root",
     "lab3_f2dead": "phase2_results_v6/recovery_root",
     "lab3_f2inv": "phase2_results_v6/recovery_root",
-    # 28745352239 (Phase 2.4, commit 282acc4; supersedes v6's lab3_f1dead/f1inv
+    # 28913465680 (§9.9 registered one-shot replication, seeds 11-20, commit
+    # b9bf4cb; replaces 28745352239 as lab3_f1dead's run of record -- the ext
+    # measurement (delta=-67.4, q=0.053) stays reported alongside per §9.9)
+    "lab3_f1dead": "phase2_lab3f1dead_replication/run_28913465680/recovery_root",
+    # 28745352239 (Phase 2.4, commit 282acc4; supersedes v6's lab3_f1inv
     # -- the probe-augmented monitoring regime changed the instrument)
-    "lab3_f1dead": "phase2_ext_results/recovery_root",
     "lab3_f1inv": "phase2_ext_results/recovery_root",
     "lab3_f1dead_z2": "phase2_ext_results/recovery_root",
     "lab3_f1inv_z2": "phase2_ext_results/recovery_root",

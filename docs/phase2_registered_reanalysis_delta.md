@@ -90,3 +90,30 @@ lowsun cells for the confirmatory Phase-2 claim.
 **Decision (2026-07-08):** option (a) taken — the one-shot replication is registered in
 `docs/pre_registration.md` §9.9 (seeds 11–20, frozen analysis and decision rule) before
 dispatch.
+
+## 6. §9.9 replication outcome (run 28913465680) — `lab3_f1dead` CONFIRMED
+
+The registered replication (CI run
+[`28913465680`](https://github.com/esra-dev/MT-PhysicsBAS/actions/runs/28913465680),
+commit `b9bf4cb` = the §9.9 registration commit, seeds 11–20, conclusion *success*)
+completed with 10/10 detection, 10/10 reconvergence and 10/10 goal-reaching replicas in
+both arms (`RecoveredGoalRate` 0.85–1.0). Raw data:
+`phase2_lab3f1dead_replication/run_28913465680/recovery_root/`. Per the frozen §9.9 rule
+it replaces run 28745352239 as the cell's run of record; the final pooled `--registered`
+analysis gives:
+
+| Cell | Δ (true − false) | 95 % CI | p_wil | δ | q (m = 8) | §9.9 verdict |
+|---|---|---|---|---|---|---|
+| `lab3_f1dead` (seeds 11–20) | **−121.1** (149.4 vs 270.5) | [−201.6, −51.8] | 0.0137 | −0.72 | **0.00027** | **confirmed** (Δ < 0, q ≤ 0.05) |
+
+The superseded measurements remain reported alongside per §9.9: ext seeds 1–10
+Δ = −67.4, q = 0.053 (marginal); v6 seeds 1–10 (pre-probe instrument) Δ = −204.9, q = 0.0.
+Three independent seed sets agree on the direction; the replication makes the registered
+family verdict unanimous.
+
+**Final registered Phase-2 result: all 8 Tier-1 cells significant** (max q = 0.0012,
+`lab3_f1bdead`), every Δ negative (KG-primed recovers faster), δ from −0.47 to −0.92.
+Detection family unchanged: `lab3_f1inv` remains the one significant detection contrast
+(KG slower to detect the inverted lamp, q = 0.0048); `lab3_f1dead`'s detection row now
+comes from the replication (Δ = +1.7, q = 0.437, ns). H-P2 (§9.2) is **confirmed on every
+cell of the frozen family**; no further Phase-2 reruns are permitted under §9.9.
