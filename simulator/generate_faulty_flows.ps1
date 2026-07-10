@@ -28,15 +28,17 @@ New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f1inv.json' `
     'Lab_2_Intermediate (port 1893)' 'Lab_2_Intermediate_F1INV (port 1893)' `
     @(,@('z1l ? 400', 'z1l ? -400'))
 
-# lab3_f1dead - DEAD Z1Light (kill BOTH own-zone 400 and cross-zone 150 spill)
+# lab3_f1dead - DEAD Z1Light (kill BOTH own-zone 400 and cross-zone 100 spill)
+# NOTE: cross-zone lamp bleed is 100 (was 150 before commit ad3cb3b's
+# "intermediate cross-zone bleed" retune; blind cross is 0.30*sun, was 0.40).
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1dead.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1DEAD (port 1894)' `
-    @(@('z1l ? 400', 'z1l ? 0'), @('z1l ? 150', 'z1l ? 0'))
+    @(@('z1l ? 400', 'z1l ? 0'), @('z1l ? 100', 'z1l ? 0'))
 
 # lab3_f1inv - INVERTED Z1Light (negate BOTH contributions)
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1inv.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1INV (port 1894)' `
-    @(@('z1l ? 400', 'z1l ? -400'), @('z1l ? 150', 'z1l ? -150'))
+    @(@('z1l ? 400', 'z1l ? -400'), @('z1l ? 100', 'z1l ? -100'))
 
 # ── MULTI-FAULT variants (several lamps broken at once) ──────────────────────
 # Only CAUSES lamps are injected; the healthy blinds (Mediates) stay untouched.
@@ -51,18 +53,18 @@ New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f2inv.json' `
     'Lab_2_Intermediate (port 1893)' 'Lab_2_Intermediate_F2INV (port 1893)' `
     @(@('z1l ? 400', 'z1l ? -400'), @('z2l ? 400', 'z2l ? -400'))
 
-# lab3_f2dead - BOTH task lamps dead (own 400 + cross-zone 150 spill, both lamps).
+# lab3_f2dead - BOTH task lamps dead (own 400 + cross-zone 100 spill, both lamps).
 # Spotlight (+150 both zones) and blinds survive as recovery levers.
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2dead.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F2DEAD (port 1894)' `
-    @(@('z1l ? 400', 'z1l ? 0'), @('z1l ? 150', 'z1l ? 0'), `
-      @('z2l ? 400', 'z2l ? 0'), @('z2l ? 150', 'z2l ? 0'))
+    @(@('z1l ? 400', 'z1l ? 0'), @('z1l ? 100', 'z1l ? 0'), `
+      @('z2l ? 400', 'z2l ? 0'), @('z2l ? 100', 'z2l ? 0'))
 
-# lab3_f2inv - BOTH task lamps inverted (own 400 + cross-zone 150 spill, both lamps)
+# lab3_f2inv - BOTH task lamps inverted (own 400 + cross-zone 100 spill, both lamps)
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2inv.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F2INV (port 1894)' `
-    @(@('z1l ? 400', 'z1l ? -400'), @('z1l ? 150', 'z1l ? -150'), `
-      @('z2l ? 400', 'z2l ? -400'), @('z2l ? 150', 'z2l ? -150'))
+    @(@('z1l ? 400', 'z1l ? -400'), @('z1l ? 100', 'z1l ? -100'), `
+      @('z2l ? 400', 'z2l ? -400'), @('z2l ? 100', 'z2l ? -100'))
 
 # ── Phase 2 EXTENSION — more well-posed lamp cells + blind (Mediates) faults ──
 # (1) Symmetric Z2-lamp variants double the well-posed lab3 recovery sample.
@@ -70,25 +72,25 @@ New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2inv.json' `
 #     (cross, lab3 only). DEAD zeros it; INVERTED negates it. The adapt agent
 #     catches these on the OPEN action under sun rank >= 2 (QLearner IV-gate).
 
-# lab3_f1dead_z2 - DEAD Z2Light (own 400 + cross-zone 150 spill), symmetric to f1dead
+# lab3_f1dead_z2 - DEAD Z2Light (own 400 + cross-zone 100 spill), symmetric to f1dead
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1dead_z2.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1DEAD_Z2 (port 1894)' `
-    @(@('z2l ? 400', 'z2l ? 0'), @('z2l ? 150', 'z2l ? 0'))
+    @(@('z2l ? 400', 'z2l ? 0'), @('z2l ? 100', 'z2l ? 0'))
 
-# lab3_f1inv_z2 - INVERTED Z2Light (negate own 400 + cross-zone 150), symmetric to f1inv
+# lab3_f1inv_z2 - INVERTED Z2Light (negate own 400 + cross-zone 100), symmetric to f1inv
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1inv_z2.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1INV_Z2 (port 1894)' `
-    @(@('z2l ? 400', 'z2l ? -400'), @('z2l ? 150', 'z2l ? -150'))
+    @(@('z2l ? 400', 'z2l ? -400'), @('z2l ? 100', 'z2l ? -100'))
 
-# lab3_f1bdead - DEAD Z1Blinds (kill own-zone 0.50*sun + cross-zone 0.40*sun)
+# lab3_f1bdead - DEAD Z1Blinds (kill own-zone 0.50*sun + cross-zone 0.30*sun)
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1bdead.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1BDEAD (port 1894)' `
-    @(@('z1b ? 0.50 * sun', 'z1b ? 0'), @('z1b ? 0.40 * sun', 'z1b ? 0'))
+    @(@('z1b ? 0.50 * sun', 'z1b ? 0'), @('z1b ? 0.30 * sun', 'z1b ? 0'))
 
-# lab3_f1binv - INVERTED Z1Blinds (negate own-zone 0.50*sun + cross-zone 0.40*sun)
+# lab3_f1binv - INVERTED Z1Blinds (negate own-zone 0.50*sun + cross-zone 0.30*sun)
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f1binv.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F1BINV (port 1894)' `
-    @(@('z1b ? 0.50 * sun', 'z1b ? -0.50 * sun'), @('z1b ? 0.40 * sun', 'z1b ? -0.40 * sun'))
+    @(@('z1b ? 0.50 * sun', 'z1b ? -0.50 * sun'), @('z1b ? 0.30 * sun', 'z1b ? -0.30 * sun'))
 
 # lab2_f1bdead - DEAD Z1Blinds in the Intermediate lab (own-zone 0.50*sun; no cross-zone)
 New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f1bdead.json' `
@@ -111,7 +113,7 @@ New-FaultyFlow 'simulator_flow_labmon.json' 'simulator_flow_labmon_f1dead.json' 
     @(,@('z1l   ? 400 : 0', 'z1l   ? 0 : 0'))
 
 # ── Phase 2.5B — lab3 MULTI-SURVIVOR DEGRADED cell (KG recovery-speed contrast) ─
-# lab3_f2dead_lowsun - BOTH task lamps dead (own 400 + cross-zone 150 spill) AND
+# lab3_f2dead_lowsun - BOTH task lamps dead (own 400 + cross-zone 100 spill) AND
 # the episode sun PINNED to rank-1 (100 lux) instead of being sampled from
 # {0,100,400,900}. Rationale:
 #   * Killing both lamps alone is NOT robustly degraded: at high sun the blinds
@@ -119,8 +121,8 @@ New-FaultyFlow 'simulator_flow_labmon.json' 'simulator_flow_labmon_f1dead.json' 
 #     lab3_f2dead is degraded only on low-sun episodes — a muddied, sun-conditional
 #     cell. Pinning sun low makes the goal UNREACHABLE every episode.
 #   * With both lamps gone and sun = 100 the per-zone ceiling is
-#     25 + spotlight(150) + own_blind(0.50*100=50) + cross_blind(0.40*100=40)
-#     = 265 lux = rank 2. Both zones DEGRADE to rank 2 (nominal rank 3).
+#     25 + spotlight(150) + own_blind(0.50*100=50) + cross_blind(0.30*100=30)
+#     = 255 lux = rank 2. Both zones DEGRADE to rank 2 (nominal rank 3).
 #   * Survivors after the two lamps are blacklisted = Z1Blinds, Z2Blinds,
 #     Spotlight -> 2^3 = 8 reachability-probe combos, and BOTH zones must be probed.
 #   * The Spotlight is REDUNDANT in the clean lab (150 < 300, never sufficient
@@ -133,8 +135,8 @@ New-FaultyFlow 'simulator_flow_labmon.json' 'simulator_flow_labmon_f1dead.json' 
 #     show.
 New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2dead_lowsun.json' `
     'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F2DEAD_LOWSUN (port 1894)' `
-    @(@('z1l ? 400', 'z1l ? 0'), @('z1l ? 150', 'z1l ? 0'), `
-      @('z2l ? 400', 'z2l ? 0'), @('z2l ? 150', 'z2l ? 0'), `
+    @(@('z1l ? 400', 'z1l ? 0'), @('z1l ? 100', 'z1l ? 0'), `
+      @('z2l ? 400', 'z2l ? 0'), @('z2l ? 100', 'z2l ? 0'), `
       @('sunRanks[Math.floor(Math.random() * sunRanks.length)]', '100'))
 
 # ── Phase 2.5 — labmon2 DUAL-ZONE MULTI-SURVIVOR MONITOR fallback ───────────
