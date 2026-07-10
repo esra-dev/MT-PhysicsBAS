@@ -1,0 +1,137 @@
+observed_at_utc=2026-06-15T15:29:36.1107373Z
+repository=https://github.com/esra-dev/MT-PhysicsBAS.git
+capture_command=./paper_notes/STAGE2_CAPTURE.ps1 -ObservedAtUtc '2026-06-15T15:29:36.1107373Z'
+
+[REFS]
+main	7
+origin/main	6
+feature/qlearning-stereotype-comparison	9
+kg-crosszone-coupling	8
+kg-crosszone-coupling-bump	2
+kg-crosszone-ablation	e
+phase2-fault-detection	9
+origin/results	e
+
+[MERGE_BASES_AGAINST_LOCAL_MAIN]
+main	merge_base=7	main...ref=0
+origin/main	merge_base=7	main...ref=0
+feature/qlearning-stereotype-comparison	merge_base=9	main...ref=3
+kg-crosszone-coupling	merge_base=7	main...ref=0
+kg-crosszone-coupling-bump	merge_base=7	main...ref=0
+kg-crosszone-ablation	merge_base=7	main...ref=0
+phase2-fault-detection	merge_base=7	main...ref=0
+
+[COMMITS]
+985c7a18558b6d5cb96c018a395b0aae6389f410	2aab559a027468b929cdb5bc83fc402519ccefb2	2026-06-15T14:37:28+02:00	esrad	HEAD -> phase2-fault-detection, origin/phase2-fault-detection	fix(phase2): ambiguous-abstain closes lab3_f2inv Spotlight FP race (v4 8->4 -> v5 target 0); add S17/S18 analysis
+2aab559a027468b929cdb5bc83fc402519ccefb2	aa74486d2a748a9f75fca2acc28b1599e594ac10	2026-06-15T08:58:24+02:00	esrad		fix(phase2): primary-detection-time component attribution kills lab3_f2inv Spotlight FP
+aa74486d2a748a9f75fca2acc28b1599e594ac10	f4ac3fe8549eaa4948d6a64b9cb87cf06a623143	2026-06-14T19:48:12+02:00	esrad		Phase 2.2: goal-rate certification + lab3_f2inv spotlight FP fix
+f4ac3fe8549eaa4948d6a64b9cb87cf06a623143	8ff250d8f9664ec0169654161af492e749e81d0e	2026-06-14T14:48:41+02:00	esrad		Phase 2.1: policy-stability recovery criterion (make re-convergence measurable)
+8ff250d8f9664ec0169654161af492e749e81d0e	293bb07df96a2b51fcf9f68adfcd6f0245713682	2026-06-13T16:59:43+02:00	esrad		Phase 2: fault detection/blacklist/re-learn + multi-fault labs + one-run CI
+293bb07df96a2b51fcf9f68adfcd6f0245713682	8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1	2026-06-13T15:40:46+02:00	esrad	kg-crosszone-coupling-bump	Phase 1 final checkpoint: QL/bench agents + dashboard
+e9b9e3529cd71fce3ad9dfe5fa29c64793898b2e	bf8adefacc0f9f738e359079c7619f04427fe565	2026-06-15T11:28:24Z	github-actions[bot]	origin/results	Phase 2 recovery results: run 27529585379 (20260615-112824)
+bf8adefacc0f9f738e359079c7619f04427fe565	105be2b1bb8dc7472ded394c165bd4c76a76935a	2026-06-14T22:19:45Z	github-actions[bot]		Phase 2 recovery results: run 27507087176 (20260614-221944)
+105be2b1bb8dc7472ded394c165bd4c76a76935a	cd30e5d2ed15afabab97589ba2eea53fbf6e6cb0	2026-06-14T17:04:53Z	github-actions[bot]		Phase 2 recovery results: run 27499405083 (20260614-170453)
+cd30e5d2ed15afabab97589ba2eea53fbf6e6cb0	791626314fb47d5324ba3336daed5906ef2e53b1	2026-06-13T18:00:52Z	github-actions[bot]		Phase 2 recovery results: run 27470382799 (20260613-180052)
+791626314fb47d5324ba3336daed5906ef2e53b1		2026-06-11T12:37:42Z	github-actions[bot]		results: results-20260611-123741-phase1_baseline-7ac37a1 (lab1,lab2,lab3 | rule_based,ql_false,ql_true)
+67d90de75a3a14579d9ef6f7a972840e36d912ed	7ac37a10fe3b3c23bc2b54159c40142fd367e821	2026-06-13T17:02:58+02:00	esra-dev	origin/main, origin/HEAD	ci: register Phase 2 workflow (workflow_dispatch) on default branch
+e8d63e09be504f1dc206737ca8feb05299fe1031	c633718766afb0c77f8fabd942f6e0aecdfa923d	2026-06-13T12:58:27+02:00	esrad	origin/kg-crosszone-ablation, kg-crosszone-ablation	ci: retry Node-RED npm install on transient network errors (ECONNRESET)
+c633718766afb0c77f8fabd942f6e0aecdfa923d	8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1	2026-06-13T11:21:04+02:00	esrad		KG-X mechanism ablation: untargeted cross-zone bonus mode (Part B control)
+8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1	866297d54750c91f4595962f9c975d2f1704f629	2026-06-13T10:03:27+02:00	esrad	origin/kg-crosszone-coupling-bump	lab3 sim: bump cross-zone bleed to rank-moving magnitude (lamp 50->150, blind 0.25->0.40*sun)
+866297d54750c91f4595962f9c975d2f1704f629	7629d0f1f5a77e22329ccec159115e4c7ab52cec	2026-06-12T21:56:26+02:00	esrad	origin/kg-crosszone-coupling, kg-crosszone-coupling	docs: add GitHub Actions overnight A/B run command (before=main kg_only, after=feature kg_xzone)
+7629d0f1f5a77e22329ccec159115e4c7ab52cec	7ac37a10fe3b3c23bc2b54159c40142fd367e821	2026-06-12T21:52:15+02:00	esrad		KG cross-zone coupling stereotypes (lab3): Part A (no false rank claim) + Part B (gated exploration prior)
+7ac37a10fe3b3c23bc2b54159c40142fd367e821	55c01063165bf06f53dd6359c20fcb8940af5cc0	2026-06-11T13:08:03+02:00	esrad	tag: results-20260611-123741-phase1_baseline-7ac37a1, tag: results-20260611-114056-phase1_kg_only_ib5-7ac37a1, main	phase1: retry train build-classes download (ETIMEDOUT fix) + add phase1_kg_only_ib5 mode (lab3 init-bonus 15->5 fix)
+55c01063165bf06f53dd6359c20fcb8940af5cc0	7543d15a6e6d36842ffd82f60b488b1a6dde99cd	2026-06-11T11:12:11+02:00	esrad	tag: results-20260611-100516-phase1_kg_only-55c0106	Add Phase-1 factorial run-modes (baseline/kg_only/pbrs_only/full)
+7543d15a6e6d36842ffd82f60b488b1a6dde99cd	e6167304db59c0225b44ea33d501f56caf608b58	2026-06-10T21:56:56+02:00	esrad	tag: results-20260610-214349-phase1-7543d15	Phase 1: clean-lab KG-acceleration ladder (lab1/2/3) + CI workflow + execute_policy single-zone fix
+e6167304db59c0225b44ea33d501f56caf608b58	beaf8eac3137d1bbf255f9e3b68ce94413eea805	2026-06-08T10:36:55+02:00	esrad		fix(sweep): allow paper_h40/paper_h60 in RunMode ValidateSet
+beaf8eac3137d1bbf255f9e3b68ce94413eea805	9b2bc9baf4f9ea142a89a85473257c4b521487c2	2026-06-08T10:25:19+02:00	esrad		feat(sweep): add run_mode input + horizon-ablation profiles; AUC-primary metric fix; n=10 analysis
+9b2bc9baf4f9ea142a89a85473257c4b521487c2	7a3d64cb183ce54010e1692004b1075e04fecf52	2026-06-06T22:27:57+02:00	esrad	tag: results-20260607-232018-paper-9b2bc9b, tag: results-20260607-022258-paper-9b2bc9b	perf(sweep): dev-speed tick for paper mode — 3.2x faster, fits 6h CI limit
+7a3d64cb183ce54010e1692004b1075e04fecf52	466fc89d7dd1feb527c5c6d000c0a27fcde8e5b5	2026-06-06T16:18:02+02:00	esrad		fix(sweep): learning-speed metric + constructive prior + VDN + 10k episodes (SW17-1..8)
+466fc89d7dd1feb527c5c6d000c0a27fcde8e5b5	1ed46a47ab9ceb0b808092d42fcccff000281166	2026-06-05T12:03:30+02:00	esrad	tag: results-20260605-182321-paper-466fc89	CI: harden artifact publish against runner disk exhaustion
+1ed46a47ab9ceb0b808092d42fcccff000281166	e645dda63fa12686711912014eca36e1ec0b6b7d	2026-06-04T23:31:44+02:00	esrad	tag: results-20260605-051258-dev-1ed46a4	fix(analysis): hoist escaped mode labels out of f-string
+e645dda63fa12686711912014eca36e1ec0b6b7d	c498c64b3b0177d3b86264475c071c4c1fdb7ca7 0d76d0517a8a50d563b74e286aef881ff935d529	2026-06-04T23:20:06+02:00	Esra Deveci		Merge pull request #1 from esra-dev/copilot/fix-aggregate-publish-job
+0d76d0517a8a50d563b74e286aef881ff935d529	78cc3541b727bc740741609fcf8f1b881dcd79cd	2026-06-04T21:17:36Z	copilot-swe-agent[bot]	origin/copilot/fix-aggregate-publish-job	Fix f-string backslash SyntaxError in sweep_report.py
+78cc3541b727bc740741609fcf8f1b881dcd79cd	c498c64b3b0177d3b86264475c071c4c1fdb7ca7	2026-06-04T21:16:00Z	copilot-swe-agent[bot]		Initial plan
+c498c64b3b0177d3b86264475c071c4c1fdb7ca7	e34d0e18cb954fcfea01633ec3816c36ebda34da	2026-06-04T13:32:08+02:00	esrad		fix(orchestrator): register custom9 in profile whitelist + simulator port map
+e34d0e18cb954fcfea01633ec3816c36ebda34da	d1063371ce9d8e5a8af939091112e7bda6a8b905	2026-06-03T22:40:02+02:00	esrad		docs+chore: pre-registration §6.5 deviations D6-1..D6-6 + Step-0 sanity probes
+d1063371ce9d8e5a8af939091112e7bda6a8b905	842d5c87c235d96efe5ce97f869c61a4c8d1ede9	2026-06-03T22:39:52+02:00	esrad		chore(bench,sim,config): scenario + simulator + run_config updates for custom2..8
+842d5c87c235d96efe5ce97f869c61a4c8d1ede9	5493b0d770de2560fd0f441c78edc5b38b218ba0	2026-06-03T22:39:44+02:00	esrad		fix(analysis): split confirmatory/exploratory BH families, first-goal aggregation, NaN CI for n<2
+5493b0d770de2560fd0f441c78edc5b38b218ba0	47b62bb2c39378f07e863397430bf4ab1aabdb30	2026-06-03T22:39:36+02:00	esrad		fix(agents): bench anti-stuck belief gate + 250ms inter-step delay + episode banner
+47b62bb2c39378f07e863397430bf4ab1aabdb30	fe12936463ea5334668891f789848b62a415184a	2026-06-03T22:39:28+02:00	esrad		fix(qlearner,reasoner): persist trust+visits sidecars, decay prior at bench load, runtime IV gating
+fe12936463ea5334668891f789848b62a415184a	be4a5181eff5dd61c31cd5d741fcd7f0d536b7c8	2026-06-03T22:39:10+02:00	esrad		feat(lab): scaffold custom9 - clean lab, sun-dependent optimum
+be4a5181eff5dd61c31cd5d741fcd7f0d536b7c8	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8	2026-06-03T22:39:02+02:00	esrad		ci: include custom9 in default sweep profiles + ignore tmp_step0_*
+b303bdf2fe5e4eddf39c6b75232e0be8813edf9f	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8 4713772a4fb889591d7b85cfd366107859378a08 f1abcbef4bcf31be24477b6b4b838f0123bbfac0	2026-05-31T20:18:02+02:00	esrad	refs/stash	On main: pre-worktree-merge: audit step 0 uncommitted changes
+f1abcbef4bcf31be24477b6b4b838f0123bbfac0		2026-05-31T20:18:02+02:00	esrad		untracked files on main: a7479a3 ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+4713772a4fb889591d7b85cfd366107859378a08	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8	2026-05-31T20:18:02+02:00	esrad		index on main: a7479a3 ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+a7479a3b4d9888978ee4fb94867bb6a3a39e46b8	279fce9b7dbd6cfc558a6c7beb064455f27501a2	2026-05-29T01:17:32+02:00	esrad	tag: results-20260603-033116-dev-a7479a3, tag: results-20260602-033135-dev-a7479a3, tag: results-20260601-033234-dev-a7479a3, tag: results-20260531-032949-dev-a7479a3, tag: results-20260530-032716-dev-a7479a3, tag: results-20260529-074448-paper-a7479a3, tag: results-20260529-063335-dev-a7479a3	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+279fce9b7dbd6cfc558a6c7beb064455f27501a2	1bc588753ed6026ed59068d5f5a88aa5e092d2b7	2026-05-28T23:43:47+02:00	esrad		ci(sweep-paper): free ~30GB on aggregate runner before downloading 175 artifacts
+1bc588753ed6026ed59068d5f5a88aa5e092d2b7	1eff940ad67a0d344c2b23b5c40b7924807a268f	2026-05-27T13:55:55+02:00	esrad	tag: results-20260528-062915-dev-1bc5887	fix: use [IO.Path]::GetTempPath() in version_artifacts.ps1 — \C:\Users\esrad\AppData\Local\Temp is null on Linux runners
+1eff940ad67a0d344c2b23b5c40b7924807a268f	c92f943eaea9af81f77b255c34d3acbf6776a3e3	2026-05-26T11:42:14+02:00	esrad		fix(ci): unblock ablation workflow dispatch expression parsing
+c92f943eaea9af81f77b255c34d3acbf6776a3e3	80df875da7813bd5d64be40f14f8e351487dcc59	2026-05-26T10:48:25+02:00	esrad		fix(watchdog): graceful kill when training markers complete but JVM hangs
+80df875da7813bd5d64be40f14f8e351487dcc59	7f90fa7c0ab79931bbef13171b2d2523bec17e77	2026-05-25T19:11:15+02:00	esrad		fix(custom8): create dedicated TD pointing to port 1888
+7f90fa7c0ab79931bbef13171b2d2523bec17e77	ae27ac65299e47fc02b58f102b4904923aacf238	2026-05-25T18:13:41+02:00	esrad		Fix run config learning passthrough and custom8 flow
+ae27ac65299e47fc02b58f102b4904923aacf238	987e2d9eb7b7da247d24c65da4cd97100a9969ef	2026-05-24T13:37:51+02:00	esrad		Add seed-aware paper sweep analysis pipeline
+987e2d9eb7b7da247d24c65da4cd97100a9969ef	9523bb0d17b5b438bbe973e29ce54e72af59a30f	2026-05-24T12:23:13+02:00	esrad		fix(sweep): bump Java 11 → 21 in sweep-paper and sweep-dev workflows
+9523bb0d17b5b438bbe973e29ce54e72af59a30f	a42e4fd49f9ce745532444c7d2f5a10d3c680724	2026-05-23T20:44:05+02:00	esrad		chore(ci): cleanup diagnostics — revert permissions to read, remove debug publish steps and --info --stacktrace flags
+a42e4fd49f9ce745532444c7d2f5a10d3c680724	87db2267007c25bd01f8cfec7f336af94303f5b2	2026-05-23T16:16:54+02:00	esrad		fix(ci): also guard -WindowStyle at line 603 (training Start-Process)
+87db2267007c25bd01f8cfec7f336af94303f5b2	ddb5038f138b583f88a2328fda799ed0667ffd56	2026-05-23T16:13:25+02:00	esrad		fix(ci): tolerate UTF-8 BOM in scenarios JSON; make -WindowStyle Windows-only in run_full_project.ps1
+ddb5038f138b583f88a2328fda799ed0667ffd56	cdc70e4e7184393a71ce18e25a0e29a40aad4fce	2026-05-23T16:08:36+02:00	esrad		ci: capture validate-resources and smoke-training logs to dedicated branches
+cdc70e4e7184393a71ce18e25a0e29a40aad4fce	7daf44581fd7da0623f5f863c527d5dc4d1177d4	2026-05-23T16:04:27+02:00	esrad		ci: bump Java from 11 to 21 (JaCaMo SS2025 requires JVM 21+)
+7daf44581fd7da0623f5f863c527d5dc4d1177d4	8e4721d4933a4e7686da8bc69521f040eb420c77	2026-05-23T16:01:53+02:00	esrad		ci: push compile log to ci-debug-logs branch for diagnostics
+8e4721d4933a4e7686da8bc69521f040eb420c77	93839d233d7b490e18b5ff0fa822879dfef4e7d4	2026-05-23T15:57:06+02:00	esrad		ci: surface gradle failure into job step summary (--info --stacktrace)
+93839d233d7b490e18b5ff0fa822879dfef4e7d4	7cdae107027fcce15aa65311c6b4dfde067fc8de	2026-05-23T15:45:35+02:00	esrad		fix(ci): regenerate Gradle wrapper to match 8.13 (was stale 4.4.1 jar)
+7cdae107027fcce15aa65311c6b4dfde067fc8de	2b3f45488765991346f1578a3d66511b7cfcf4de	2026-05-23T15:27:37+02:00	esrad		fix(ci): include gradle-wrapper.jar so ./gradlew works on Linux runners
+2b3f45488765991346f1578a3d66511b7cfcf4de	3418194cef2c909f0b1c97ad7b1f9b3eb0ddfcad 9cfe38c292983347e08f6b6773243ee40fe5a001	2026-05-22T18:37:22+02:00	esrad		feat: merge qlearning stereotype comparison feature
+9cfe38c292983347e08f6b6773243ee40fe5a001	31f96c9f5a7b1f12fa6c776afb09b832b5452cf4	2026-05-22T18:36:53+02:00	esrad	origin/feature/qlearning-stereotype-comparison, feature/qlearning-stereotype-comparison	docs: add thesis meeting notes 2026-05-22
+31f96c9f5a7b1f12fa6c776afb09b832b5452cf4	7e7101353096b8cc9486b8fff4c0929f553830d0	2026-05-22T18:36:38+02:00	esrad		feat(ci): add parallel sweep workflows and CI-addressable orchestrator params
+7e7101353096b8cc9486b8fff4c0929f553830d0	2a9f1ece5c4c69e6e1bd70c28d65fcffe14eecab	2026-05-22T18:36:13+02:00	esrad		chore(config): update Gradle build script, logging settings, and parallel orchestrator
+2a9f1ece5c4c69e6e1bd70c28d65fcffe14eecab	5324c3595d1f4004dcebb52e3315d450269b8cef	2026-05-22T18:36:00+02:00	esrad		feat(analysis): enhance sweep_report aggregation and visualization
+5324c3595d1f4004dcebb52e3315d450269b8cef	2bc2fea0f4f9ad1ee5b8397e313bed94224ec486	2026-05-22T18:35:50+02:00	esrad		chore(sim): update Node-RED flow tick configurations for custom2-7
+2bc2fea0f4f9ad1ee5b8397e313bed94224ec486	f2deec3dc198d542105ff4ce5075af337b69eb5f	2026-05-22T18:35:40+02:00	esrad		feat(ontology): update weakness-lab TTL interaction models (custom1-7)
+f2deec3dc198d542105ff4ce5075af337b69eb5f	9801d524687f07def08b20c9f82051f0c169f9ff	2026-05-22T18:35:16+02:00	esrad		refactor(core): update Q-learner, stereotype reasoner, agent ASL, and unit tests
+9801d524687f07def08b20c9f82051f0c169f9ff	cc84e301182f6c7541505d29a74b5b60feeca4a5	2026-05-22T18:35:01+02:00	esrad		feat(profile): add custom8 weakness-lab profile, scenarios, and config
+cc84e301182f6c7541505d29a74b5b60feeca4a5	d4fee0d4137d93af56c8c772156aee684890ac2c	2026-05-22T18:34:49+02:00	esrad		feat(source): add Converters helper and system_prop JIA utility
+d4fee0d4137d93af56c8c772156aee684890ac2c	fe0b0723c8f60b228a427e3f5ff1ca9e013115f2	2026-05-22T18:34:38+02:00	esrad		chore(gitignore): exclude training artifacts, results archives, and Python cache
+fe0b0723c8f60b228a427e3f5ff1ca9e013115f2	91272619f4f6538d18988e192c6dee37204c6d4e	2026-05-22T18:34:09+02:00	esrad		chore(build): add gradle.properties to suppress HTML report warnings
+91272619f4f6538d18988e192c6dee37204c6d4e	c714c310009d1574ac7f6177ca82357b92e91a8d	2026-05-12T13:12:05+02:00	esrad		chore: ignore bin/ build outputs; add simulator TODO skeleton
+c714c310009d1574ac7f6177ca82357b92e91a8d	f69991fb64ee0ab065caf523b204356d18acaf9c	2026-05-12T13:11:32+02:00	esrad		docs/build: update README and Gradle build configuration
+f69991fb64ee0ab065caf523b204356d18acaf9c	647fe5628b610d7fa17554169d0446307034285e	2026-05-12T13:11:17+02:00	esrad		feat: add React dashboard for Q-table and weakness visualization
+647fe5628b610d7fa17554169d0446307034285e	e2270c9a728760e6c4a25c841c552a03f4b48b37	2026-05-12T13:10:53+02:00	esrad		chore: add CI workflow, git hooks, automation scripts and run configuration
+e2270c9a728760e6c4a25c841c552a03f4b48b37	1ec2c992125de72436ba843f1e404896ed758c22	2026-05-12T13:10:41+02:00	esrad		feat: add analysis scripts and benchmark scenario configurations
+1ec2c992125de72436ba843f1e404896ed758c22	8893037f1454280cd7a6d2234b08a36e60be53b2	2026-05-12T13:10:23+02:00	esrad		feat: add weakness-lab Node-RED simulator flows and benchmark JaCaMo config
+8893037f1454280cd7a6d2234b08a36e60be53b2	44dc63572ffa59b63f96159b7c67865d00d7ae7b	2026-05-12T13:10:07+02:00	esrad		feat: refine Q-learning agents and artifacts for weakness/benchmark experiments
+44dc63572ffa59b63f96159b7c67865d00d7ae7b	ee9065efecb8758d973aa33c9cca13809eb5593b	2026-05-12T13:09:48+02:00	esrad		feat: add logging bootstrap, HTTP client, validation utilities and unit tests
+ee9065efecb8758d973aa33c9cca13809eb5593b	1c784b37ee20418f6d51f37c898f6aa53f0c7f0a	2026-05-12T13:09:30+02:00	esrad		chore: extend gitignore for runtime logs, analysis outputs and PDFs
+1c784b37ee20418f6d51f37c898f6aa53f0c7f0a	4de049821d9ccec8bab3b4d012776ded9d623dbb	2026-05-08T17:13:12+02:00	esrad	backup/prepush-2026-05-12	docs/config: update project documentation and build settings
+4de049821d9ccec8bab3b4d012776ded9d623dbb	4cc9b7d01408425238ae3a9eeb26c3b9ed892ce8	2026-05-08T17:12:46+02:00	esrad		chore: ignore generated benchmark and qtable artifacts
+4cc9b7d01408425238ae3a9eeb26c3b9ed892ce8	9f72598571602add8ab4802acfe115fdb5f40165	2026-05-08T17:12:26+02:00	esrad		Refactor controller and Q-learning flow with ontology-driven mapping
+9f72598571602add8ab4802acfe115fdb5f40165	a44e1cc9bd5536f663021f63f95bba9712f889eb	2026-04-09T14:12:16+02:00	esrad	backup/prepush-2026-05-08	feat: save Q-tables to CSV files at init and after training
+a44e1cc9bd5536f663021f63f95bba9712f889eb	b812fc698fbc33a1231c4b39cba9cc0bcc3f6195	2026-04-08T17:33:54+02:00	esrad		fix: correct all bugs in QL agent and artifact
+b812fc698fbc33a1231c4b39cba9cc0bcc3f6195	ed6d30c7c67c299cb710228362366395517c6b57	2026-04-08T15:00:18+02:00	esrad		feat: Q-learning agent with stereotype comparison toggle
+ed6d30c7c67c299cb710228362366395517c6b57	7f2b7f8183b27233f55db5c8d095bdbd0a990d59	2026-04-08T13:57:47+02:00	esrad	new-custom-lab-branch	Fixed Spotlight Activation
+7f2b7f8183b27233f55db5c8d095bdbd0a990d59	3418194cef2c909f0b1c97ad7b1f9b3eb0ddfcad	2026-04-07T16:05:38+02:00	esrad	origin/new-custom-lab-branch	Created Custom Lab
+3418194cef2c909f0b1c97ad7b1f9b3eb0ddfcad	85ec22d3f5e69c05e9e143e31602f7b1da0834e1	2026-04-02T15:36:52+02:00	esrad		Fixed Zone, Goal and State matching
+85ec22d3f5e69c05e9e143e31602f7b1da0834e1	2a7978756562127f98addc3b6838fed319b7ab6e	2026-04-02T14:51:54+02:00	esrad		Adjusted Unused Components in Lab, Removed some of the Hardcoding in Agent
+2a7978756562127f98addc3b6838fed319b7ab6e	8e24595fe2d1ff7fc3d9a6612cbb1254dcd3d309	2026-03-26T14:08:26+01:00	esrad		Added Dimmer and Adjusted Naming for Room and Blinds
+8e24595fe2d1ff7fc3d9a6612cbb1254dcd3d309	33b0ddd69fdb743be17f280c0f6841ab18586499	2026-03-25T11:52:02+01:00	esrad		Adjusted Namings according to Meeting Notes and Room Logic updated
+33b0ddd69fdb743be17f280c0f6841ab18586499	e4a5c0c4712daf6909c62c88e97ce800c5b507b8	2026-03-18T15:42:43+01:00	esrad		mini-Cleanup
+e4a5c0c4712daf6909c62c88e97ce800c5b507b8	90284bd2af9786344e9051c5bd79d42766f3e96d	2026-03-18T14:55:16+01:00	esrad		Resolved some Mistakes in the Ontology and Sparql Query
+90284bd2af9786344e9051c5bd79d42766f3e96d	10ae548db73c5c3c11986078fc7f58850586058e	2026-03-18T11:38:49+01:00	esrad		Removed some Mistakes in the lab-ontology
+10ae548db73c5c3c11986078fc7f58850586058e		2026-03-17T16:40:44+01:00	esrad		Replace repository with current local project
+
+[TAGS]
+results-20260528-062915-dev-1bc5887	commit	1bc588753ed6026ed59068d5f5a88aa5e092d2b7		2026-05-27T13:55:55+02:00	fix: use [IO.Path]::GetTempPath() in version_artifacts.ps1 — \C:\Users\esrad\AppData\Local\Temp is null on Linux runners
+results-20260529-063335-dev-a7479a3	commit	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8		2026-05-29T01:17:32+02:00	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+results-20260529-074448-paper-a7479a3	commit	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8		2026-05-29T01:17:32+02:00	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+results-20260530-032716-dev-a7479a3	commit	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8		2026-05-29T01:17:32+02:00	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+results-20260531-032949-dev-a7479a3	commit	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8		2026-05-29T01:17:32+02:00	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+results-20260601-033234-dev-a7479a3	commit	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8		2026-05-29T01:17:32+02:00	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+results-20260602-033135-dev-a7479a3	commit	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8		2026-05-29T01:17:32+02:00	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+results-20260603-033116-dev-a7479a3	commit	a7479a3b4d9888978ee4fb94867bb6a3a39e46b8		2026-05-29T01:17:32+02:00	ci: harden sweeps against transient JitPack timeouts and JVM startup crashes
+results-20260605-051258-dev-1ed46a4	commit	1ed46a47ab9ceb0b808092d42fcccff000281166		2026-06-04T23:32:08+02:00	fix(analysis): hoist escaped mode labels out of f-string
+results-20260605-182321-paper-466fc89	commit	466fc89d7dd1feb527c5c6d000c0a27fcde8e5b5		2026-06-05T12:03:30+02:00	CI: harden artifact publish against runner disk exhaustion
+results-20260607-022258-paper-9b2bc9b	commit	9b2bc9baf4f9ea142a89a85473257c4b521487c2		2026-06-06T22:27:57+02:00	perf(sweep): dev-speed tick for paper mode — 3.2x faster, fits 6h CI limit
+results-20260607-232018-paper-9b2bc9b	commit	9b2bc9baf4f9ea142a89a85473257c4b521487c2		2026-06-06T22:27:57+02:00	perf(sweep): dev-speed tick for paper mode — 3.2x faster, fits 6h CI limit
+results-20260610-214349-phase1-7543d15	commit	7543d15a6e6d36842ffd82f60b488b1a6dde99cd		2026-06-10T21:56:56+02:00	Phase 1: clean-lab KG-acceleration ladder (lab1/2/3) + CI workflow + execute_policy single-zone fix
+results-20260611-100516-phase1_kg_only-55c0106	commit	55c01063165bf06f53dd6359c20fcb8940af5cc0		2026-06-11T11:12:11+02:00	Add Phase-1 factorial run-modes (baseline/kg_only/pbrs_only/full)
+results-20260611-114056-phase1_kg_only_ib5-7ac37a1	commit	7ac37a10fe3b3c23bc2b54159c40142fd367e821		2026-06-11T13:08:03+02:00	phase1: retry train build-classes download (ETIMEDOUT fix) + add phase1_kg_only_ib5 mode (lab3 init-bonus 15->5 fix)
+results-20260611-123741-phase1_baseline-7ac37a1	commit	7ac37a10fe3b3c23bc2b54159c40142fd367e821		2026-06-11T13:08:03+02:00	phase1: retry train build-classes download (ETIMEDOUT fix) + add phase1_kg_only_ib5 mode (lab3 init-bonus 15->5 fix)

@@ -1,0 +1,67 @@
+%% Stage 4R2 data-flow diagram, created 2026-06-17T18:51:33Z.
+%% Current Stage3R2 evidence route is local-sha256:73ade353d433f46a5e8beaec51eb6e542abca16b5ece8f7aa7f9e0dd85d33263:paper_notes/RESEARCH_MODEL.md:L134-L185.
+flowchart LR
+    Advisor["Advisor note\nlocal requirement source"] --> RQ["Research model\nP1, P2, P3 RQs and statuses"]
+    RQ --> ClaimMap["Claim dependency map\nallowed and unsafe claims"]
+
+    subgraph P1["Phase 1 manuscript evidence route"]
+        P1Impl["Clean-lab Jason + QLearner + StereotypeReasoner"]
+        P1Run["GitHub Actions clean sweeps\nselected bumped and replication runs"]
+        P1Rows["PHASE1_TABLES.csv\nStage 6 row-level table"]
+        P1Script["phase1_extract_tables.mjs\nexact Stage 6 command"]
+    end
+
+    subgraph P2["Phase 2 manuscript evidence route"]
+        P2Impl["Adaptive Jason agent + QLearner fault guards"]
+        P2Run["GitHub Actions Phase 2 v5\nrun 27547019772"]
+        P2Rows["PHASE2_TABLES.csv\nStage 8 row-level table"]
+        P2Script["phase2_extract_results.mjs\nexact Stage 8 command"]
+    end
+
+    subgraph P3["Phase 3 runtime and manuscript evidence route"]
+        Config["config/run_config.json\nphase3 profiles and goals"]
+        SlowProfiles["lab_profiles.asl\nlab2_slow and lab3_slow"]
+        Gradle["build.gradle taskDynamics"]
+        Runner["run_phase3_dynamics.ps1"]
+        Workflow[".github/workflows/phase3.yml"]
+        Agent["illuminance_controller_agent_dynamics.asl"]
+        Env["LabEnvironment + Node-RED slow flows"]
+        DynLearn["DynamicsLearner.java"]
+        KG["learned_dynamics.ttl\nws:responseDelay writeback"]
+        DelayCSV["dynamics_delays.csv"]
+        TimeCSV["timebounded_results.csv"]
+        Analyze["analysis/phase3_dynamics.py"]
+        P3Rows["origin/results n10 analysis CSVs"]
+    end
+
+    ClaimMap --> P1Impl
+    ClaimMap --> P2Impl
+    ClaimMap --> Config
+
+    P1Impl --> P1Run
+    P1Run --> P1Rows
+    P1Script --> P1Rows
+
+    P2Impl --> P2Run
+    P2Run --> P2Rows
+    P2Script --> P2Rows
+
+    Config --> Agent
+    SlowProfiles --> Agent
+    Workflow --> Runner
+    Gradle --> Runner
+    Runner --> Agent
+    Agent --> Env
+    Env --> DynLearn
+    Agent --> DynLearn
+    DynLearn --> KG
+    DynLearn --> DelayCSV
+    DynLearn --> TimeCSV
+    DelayCSV --> Analyze
+    TimeCSV --> Analyze
+    Analyze --> P3Rows
+
+    P1Rows --> Ledgers["Ledgers and evidence gaps"]
+    P2Rows --> Ledgers
+    P3Rows --> Ledgers
+    Ledgers --> Notes["ARCHITECTURE_NOTES.md\nStage 4R2 update"]

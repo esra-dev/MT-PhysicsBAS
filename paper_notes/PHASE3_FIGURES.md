@@ -1,0 +1,25 @@
+# Phase 3 Figure Specifications
+
+Stage: `10A`
+Created: `2026-06-18T09:59:42Z`
+Scope: figure specifications only; no rendered figure image was generated.
+
+## Figure Specs
+
+| figure id | product | label | specification | data source |
+|---|---|---|---|---|
+| F-P3-ARCH-1 | MANUSCRIPT_EVIDENCE | [DIRECT] | Pipeline diagram: slow Node-RED lab -> JaCaMo dynamics agent -> controlled actuator probes -> `DynamicsLearner` Welford delay table -> learned `ws:responseDelay` TTL writeback -> deadline-aware BDI planner -> timebounded result CSV -> `analysis/phase3_dynamics.py`. Separate conceptual approach from implementation detail by using two bands: `Probe/KG enrichment` and `Deadline exploitation`. | Method sources: `main@3bb5289c36cb3093228ec0609fe57ec676b1ee53:src/agt/illuminance_controller_agent_dynamics.asl:L207-L247`; `main@3bb5289c36cb3093228ec0609fe57ec676b1ee53:src/env/tools/DynamicsLearner.java:L176-L220`; `main@3bb5289c36cb3093228ec0609fe57ec676b1ee53:src/env/tools/DynamicsLearner.java:L282-L320`; `main@3bb5289c36cb3093228ec0609fe57ec676b1ee53:analysis/phase3_dynamics.py:L48-L51`. |
+| F-P3-METHOD-1 | MANUSCRIPT_EVIDENCE | [DIRECT] | Deadline-planner decision schematic: candidate actuators have `cost`, `learned_delay_sec`, and `believed_delay_sec`; `ql_true` uses learned delay, `ql_false` sets believed delay to zero. Display tight deadline `<60s` and loose deadline `>=60s` with expected actuator class choices. | `main@3bb5289c36cb3093228ec0609fe57ec676b1ee53:src/agt/illuminance_controller_agent_dynamics.asl:L94-L103`; `main@3bb5289c36cb3093228ec0609fe57ec676b1ee53:src/agt/illuminance_controller_agent_dynamics.asl:L428-L443`; `main@3bb5289c36cb3093228ec0609fe57ec676b1ee53:config/run_config.json:L357-L365`. |
+| F-P3-RESULT-1 | MANUSCRIPT_EVIDENCE | [DIRECT] | Delay accuracy dot/interval table: x-axis profiles and modes; y-axis learned slowest delay in ticks; horizontal reference line at ground truth `12` ticks. Annotate maximum relative error `1.77%`. | `origin/results@0372ecd5864fa6555ebfce7d05e05d9aaab96994:phase3/27621106006-20260616-133306/analysis_out/phase3_delay_accuracy.csv:L1-L5`; evidence rows `P3T-015` through `P3T-018`. |
+| F-P3-RESULT-2 | MANUSCRIPT_EVIDENCE | [DIRECT] | Compliance grouped bars: profile x mode on x-axis; bars for overall, tight, and loose compliance. Use direct values: ql_true overall/tight/loose all `1.0`; ql_false overall `0.5`, tight `0.0`, loose `1.0` for both profiles. | `origin/results@0372ecd5864fa6555ebfce7d05e05d9aaab96994:phase3/27621106006-20260616-133306/analysis_out/phase3_compliance_ci.csv:L1-L5`; evidence rows `P3T-020` through `P3T-023`. |
+| F-P3-RESULT-3 | MANUSCRIPT_EVIDENCE | [DIRECT] | Paired effect panel: two headline rows only, `overall_compliance` and `tight_compliance`, faceted by profile. Plot mean difference with CI and annotate `p_wilcoxon=0.001953125`, Cliff's delta `1.0`, `q_BH=0.0`. | `origin/results@0372ecd5864fa6555ebfce7d05e05d9aaab96994:phase3/27621106006-20260616-133306/analysis_out/phase3_compliance_paired.csv:rows 2-5; named columns profile,metric,n_paired,mean_diff_true_minus_false,ci_lo,ci_hi,p_wilcoxon,cliffs_delta,q_bootstrap_bh`; evidence rows `P3T-024` through `P3T-027`. |
+| F-P3-RESULT-4 | MANUSCRIPT_EVIDENCE | [DIRECT] | Energy trade-off panel: paired energy mean difference by profile with CI. Label lower-is-better axis and note that `ql_true_better=False` for energy; pair with compliance panel to prevent unconditioned "energy loss" interpretation. | `origin/results@0372ecd5864fa6555ebfce7d05e05d9aaab96994:phase3/27621106006-20260616-133306/analysis_out/phase3_compliance_paired.csv:rows 8-9; named columns profile,metric,ql_true_mean,ql_false_mean,mean_diff_true_minus_false,ci_lo,ci_hi,lower_is_better,ql_true_better`; evidence row `P3T-029`. |
+| F-P3-AUDIT-1 | AUDIT_HISTORY | [SUPERSEDED] | n=5 -> n=10 supersession strip: show n=5 `p_wilcoxon=0.0625` for headline compliance rows and n=10 `p_wilcoxon=0.001953125`, with point estimates unchanged for overall/tight compliance. Mark n=5 as superseded. | n=5: `origin/results@abc66fcb9bf0be36d7a36ac1608c2049887cc738:phase3/27598417789-20260616-062513/analysis_out/phase3_compliance_paired.csv:L1-L9`; n=10: `origin/results@0372ecd5864fa6555ebfce7d05e05d9aaab96994:phase3/27621106006-20260616-133306/analysis_out/phase3_compliance_paired.csv:L1-L9`; evidence row `P3T-032`. |
+| F-P3-AUDIT-2 | AUDIT_HISTORY;MANUSCRIPT_EVIDENCE | [UNRESOLVED] | Provenance status panel: committed result CSVs, GitHub artifact digest, local tree hash, recomputation status, unresolved dispatch input payload, unresolved ZIP byte identity. | Evidence rows `P3T-008` through `P3T-014`, `P3T-033`, and `P3T-035`. |
+
+## Rendering Notes
+
+- Use only direct or derived values listed in `PHASE3_TABLES.csv`; do not pull numeric values from dirty prose documentation.
+- Mark n=5 material `[SUPERSEDED]` wherever it appears.
+- Mark artifact ZIP identity and exact dispatch input payload `[UNRESOLVED]`.
+- Do not claim actuator-label decisions are bit-identical across all n=10 rows; the raw choice grouping found lab3 `ql_true` loose-goal blind-label splits. Evidence row: `P3T-031`.

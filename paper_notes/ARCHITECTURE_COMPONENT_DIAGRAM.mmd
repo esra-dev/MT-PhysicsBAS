@@ -1,0 +1,83 @@
+%% Stage 4 architecture component diagram.
+%% Evidence locators are in paper_notes/ARCHITECTURE_NOTES.md, sections
+%% "Layer Trace", "Construct to Code Map", and "Output Contracts".
+flowchart TB
+  subgraph AgentLayer["Jason agent layer"]
+    QLAgent["illuminance_controller_agent_ql.asl"]
+    BenchAgent["illuminance_controller_agent_bench.asl"]
+    AdaptAgent["illuminance_controller_agent_adapt.asl"]
+    DynAgent["illuminance_controller_agent_dynamics.asl"]
+    Profiles["lab_profiles.asl"]
+  end
+
+  subgraph JavaLayer["Java and CArtAgO artifact layer"]
+    LabEnv["LabEnvironment"]
+    QLearner["QLearner"]
+    StereoReasoner["StereotypeReasoner"]
+    StereoLearner["StereotypeLearner"]
+    OntologyArtifact["OntologyArtifact"]
+    DynamicsLearner["DynamicsLearner"]
+    BenchLogger["BenchmarkLogger"]
+  end
+
+  subgraph SemanticLayer["Semantic Web artifacts"]
+    BuildingTTL["building_*.ttl ontologies"]
+    TD["interactions-lab*.ttl Thing Descriptions"]
+    LearnedTTL["learned_stereotypes_*.ttl and learned_dynamics_*.ttl"]
+  end
+
+  subgraph SimulatorLayer["Node-RED simulator layer"]
+    CleanFlows["clean lab flows"]
+    FaultFlows["fault-injection flows"]
+    SlowFlows["slow response-delay flows"]
+  end
+
+  subgraph OrchestrationLayer["Orchestration and analysis"]
+    Config["config/run_config.json"]
+    Gradle["Gradle tasks"]
+    PS["PowerShell run scripts"]
+    Workflows["GitHub Actions workflows"]
+    Analysis["Python analysis scripts"]
+  end
+
+  Profiles --> QLAgent
+  Profiles --> BenchAgent
+  Profiles --> AdaptAgent
+  Profiles --> DynAgent
+  Config --> PS
+  Config --> Analysis
+  PS --> Gradle
+  Workflows --> PS
+  Gradle --> QLAgent
+  Gradle --> BenchAgent
+  Gradle --> AdaptAgent
+  Gradle --> DynAgent
+
+  QLAgent --> LabEnv
+  QLAgent --> QLearner
+  QLAgent --> StereoLearner
+  BenchAgent --> LabEnv
+  BenchAgent --> OntologyArtifact
+  BenchAgent --> QLearner
+  BenchAgent --> BenchLogger
+  AdaptAgent --> LabEnv
+  AdaptAgent --> QLearner
+  AdaptAgent --> StereoLearner
+  DynAgent --> LabEnv
+  DynAgent --> QLearner
+  DynAgent --> DynamicsLearner
+
+  QLearner --> StereoReasoner
+  OntologyArtifact --> BuildingTTL
+  StereoReasoner --> BuildingTTL
+  LabEnv --> TD
+  LabEnv --> CleanFlows
+  LabEnv --> FaultFlows
+  LabEnv --> SlowFlows
+  StereoLearner --> LearnedTTL
+  DynamicsLearner --> LearnedTTL
+  LearnedTTL --> OntologyArtifact
+
+  BenchLogger --> Analysis
+  QLearner --> Analysis
+  DynamicsLearner --> Analysis

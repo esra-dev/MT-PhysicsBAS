@@ -1,0 +1,32 @@
+observed_at_utc=2026-06-18T09:05:33Z
+branch=phase3-process-dynamics
+head=eda6ca1ffa026e723ad1a18a2bdb3aed927e7433
+
+## git log --oneline --decorate --all --grep=phase2 --max-count=30
+f0f1bc8 (origin/phase3-process-dynamics) Merge origin/main into phase3-process-dynamics
+2981147 (origin/phase2-fault-detection, phase2-fault-detection) ci(phase2): harden against JitPack flakes - retry adapt dep resolution + run aggregate even if one adapt leg fails
+985c7a1 fix(phase2): ambiguous-abstain closes lab3_f2inv Spotlight FP race (v4 8->4 -> v5 target 0); add S17/S18 analysis
+2aab559 fix(phase2): primary-detection-time component attribution kills lab3_f2inv Spotlight FP
+aa74486 Phase 2.2: goal-rate certification + lab3_f2inv spotlight FP fix
+f4ac3fe Phase 2.1: policy-stability recovery criterion (make re-convergence measurable)
+8ff250d Phase 2: fault detection/blacklist/re-learn + multi-fault labs + one-run CI
+
+## git diff --stat f4ac3fe8549eaa4948d6a64b9cb87cf06a623143 aa74486d2a748a9f75fca2acc28b1599e594ac10 -- phase2 method/result files
+ .github/workflows/phase2.yml                   |  5 +-
+ analysis/phase2_recovery.py                    | 81 +++++++++++++++++++++++---
+ src/agt/illuminance_controller_agent_adapt.asl | 80 ++++++++++++++++++++++++-
+ src/env/tools/QLearner.java                    | 54 +++++++++++++++--
+ 4 files changed, 204 insertions(+), 16 deletions(-)
+
+## git diff --stat aa74486d2a748a9f75fca2acc28b1599e594ac10 985c7a18558b6d5cb96c018a395b0aae6389f410 -- phase2 method/result files
+ src/env/tools/QLearner.java | 106 +++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 100 insertions(+), 6 deletions(-)
+
+## git diff --stat 985c7a18558b6d5cb96c018a395b0aae6389f410 2981147fc4c740d9ce3340be363d010a34937324 -- phase2 method/result files
+ .github/workflows/phase2.yml | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+## git show --stat --oneline --decorate 985c7a18558b6d5cb96c018a395b0aae6389f410 -- phase2 method/result files
+985c7a1 fix(phase2): ambiguous-abstain closes lab3_f2inv Spotlight FP race (v4 8->4 -> v5 target 0); add S17/S18 analysis
+ src/env/tools/QLearner.java | 85 ++++++++++++++++++++++++++++-----------------
+ 1 file changed, 54 insertions(+), 31 deletions(-)

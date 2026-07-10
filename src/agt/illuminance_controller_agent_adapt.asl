@@ -44,7 +44,7 @@ use_stereotypes(true).
 // Adaptation parameters (num_episodes is overridden per-profile at startup).
 num_episodes(2000).
 max_steps_per_episode(20).
-action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms simulator tick
+action_delay_ms(65).      // delay between actions (ms) — exceeds one 50 ms simulator tick
 
 // Phase 2.2 — greedy goal-rate certification. After re-learning, run this many
 // ε=0 evaluation episodes to measure whether the FINAL (recovered) policy

@@ -206,7 +206,7 @@ Every `(profile × stereo × seed)` and `(profile × mode × seed)` cell runs **
    | Input | Default | Notes |
    |---|---|---|
    | `profiles` | `lab4,lab5` | which Phase-4 labs to run |
-   | `seeds` | `1,2,3,4,5,6,7,8,9,10` | 10 seeds give the lab4 efficiency wins and the lab5 `mean_steady_power` result at Wilcoxon p<0.05; the pre-registered lab5 `energy_compliance` primary has ties that need **n = 20** (`1..20`) to cross p<0.05 (it is bootstrap-significant already at n = 10). Use `1,2,3,4,5` for a faster replication. |
+   | `seeds` | `1,2,3,4,5,6,7,8,9,10` | 10 seeds give the lab4 efficiency wins and the lab5 `mean_steady_power` result at Wilcoxon p<0.05; the lab5 `energy_compliance` primary has ties that need **n = 20** (`1..20`) to cross p<0.05 (it is bootstrap-significant already at n = 10). Use `1,2,3,4,5` for a faster replication. |
    | `run_mode` | `phase4` | 3000 episodes, KG arm energy-prior 2.0. `dev` (50 ep) for a quick plumbing check. |
    | `run_llm_baseline` | `true` | also compute the offline LLM baseline |
    | `publish_results` | `true` | push the consolidated outputs to the `results` branch |
@@ -249,6 +249,8 @@ GitHub-hosted runners execute the matrix in parallel, so the wall-clock is domin
 Reading: the general-knowledge LLM proxy *reaches* the goal but, on lab5, complies with the energy budget only **~56%** of the time — it cannot tell the efficient lamp from the inefficient one without the KG. The KG-primed `ql_true` agent is expected to reach **~100%** compliance, which is the quantified "the KG informs the agent better than the LLM's general knowledge" result. On lab4 the LLM eventually discovers the plug via feedback, so the differentiator there is the **redundant-action** count, not goal-rate.
 
 > These LLM numbers are deterministic and reproducible; the `ql_true`/`ql_false` numbers come from the actual CI run and are confirmed with Wilcoxon p-values, bootstrap CIs, and BH-FDR q-values.
+>
+> **Status of the KG-vs-LLM comparison: exploratory (no uncertainty quantification).** The LLM-proxy figures are single deterministic outputs with no seeds, confidence intervals, or significance tests, so this table is illustrative framing only — not a confirmatory statistical result.
 
 ---
 
@@ -256,7 +258,9 @@ Reading: the general-knowledge LLM proxy *reaches* the goal but, on lab5, compli
 
 The confirmatory dispatch was **seeds `1..20`, `run_mode = phase4`** (3000 episodes/seed, 5 benchmark runs/scenario, `stereo.energyPriorWeight = 2.0` for the KG arm), `publish_results = true`. The run completed green end-to-end (202 jobs, 0 failures). All paired tests are `ql_true − ql_false` (KG-primed minus tabula-rasa), Wilcoxon signed-rank with bootstrap CIs and BH-FDR.
 
-**lab5 — energy (pre-registered primary = `energy_compliance`):**
+> **Disclosure — sample-size escalation (n = 10 → 20).** The confirmatory sample was raised from n = 10 to n = 20 **after observing the n = 10 result**, and is therefore data-dependent: `energy_compliance` was already bootstrap-significant at n = 10 (p = 0.043, dispatch `27903687624`) but its two-sided Wilcoxon signed-rank p did not clear 0.05 until n = 20 (the tie-limited signed-rank floor requires the extra replicas). The escalation was thus **triggered by an observed p-value**, not planned in advance; it is reported here as such. Point estimates and directions are unchanged between n = 10 and n = 20 (see the source note below).
+
+**lab5 — energy (primary = `energy_compliance`):**
 
 | Metric | `ql_true` | `ql_false` | Δ (true−false) | 95% CI | Wilcoxon p | Cliff δ | BH q |
 |---|---|---|---|---|---|---|---|
@@ -289,6 +293,8 @@ Four efficiency metrics plus goal-rate are significant after BH correction (`avg
 | lab4 | LLM (general) | 1.00 | 1.00 | 1.56 |
 
 The LLM proxy reaches the goal via general reasoning but, lacking the lab-specific lamp-cost physics encoded in the KG, complies with the lab5 energy budget only ~56% of the time and draws roughly **3× the steady-state power** of the KG-primed agent — the quantified statement that *the KG informs the agent better than the LLM's general knowledge on energy-aware control*.
+
+> **Status of this KG-vs-LLM table: exploratory (no uncertainty quantification).** The `LLM (general)` rows are single deterministic proxy outputs — no seeds, CIs, or significance tests — so the comparison is illustrative framing, not a confirmatory statistical result. Only the within-lab `ql_true` vs `ql_false` tables above carry statistical inference.
 
 > Source artefacts: `analysis/out/phase4_energy_paired.csv`, `phase4_energy_ci.csv`, `paired_tests.csv`, `phase4_llm_summary.csv` in the `phase4-consolidated` artifact of run `27905392725` (also published to the `results` branch). The n = 10 dispatch (`27903687624`) reproduces the same directions; `energy_compliance` is bootstrap-significant at n = 10 (p = 0.043) and crosses the Wilcoxon threshold at n = 20.
 

@@ -421,6 +421,46 @@ gh workflow run phase1.yml --ref kg-crosszone-coupling -f run_mode=phase1_full -
 
 ---
 
+## Source Index
+
+All paths relative to the workspace root.
+
+### §1 — Prediction error table
+
+| Item | Detail |
+|---|---|
+| Tool | `analysis/crosszone_prediction_audit.py --structural-only` |
+| Input ontology | `src/resources/building_3_complex.ttl` |
+| Input simulator | `simulator/simulator_flow_lab3.json` (spill magnitudes: lamp +50 lux, blind 0.25·Sun) |
+| Discretisation bounds | `[50, 100, 300]` lux, 4 ranks, read from `src/resources/building_3_complex.ttl` (`ws:ivRankBound`) |
+| Space enumerated | 32 actuator configs × 4 sun levels × off→on toggles = 256 cross-zone transition pairs |
+| Result (legacy) | 80.5 % cross-zone predictions WRONG (206/256) |
+| Result (fixed) | 0 cross-zone claims when `--secondary-zero` flag is passed |
+
+### Implementation files
+
+| File | Protected? | What changed / role |
+|---|---|---|
+| `src/resources/building_3_complex.ttl` | no | Additive: `ws:connSource`, `ws:connTarget`, `ws:SecondaryCouplingStream`, `ws:PrimaryOpticalCoupling`, `ws:WeakOpticalCoupling`, 8 reified `elem:InternalConnection` instances (4 WEAK cross-zone + 4 PRIMARY same-zone). |
+| `src/env/tools/StereotypeReasoner.java` | **yes (approved)** | `CouplingClass` enum, `couplingClass` field (default PRIMARY), `CROSS_ZONE_FEEDS_QUERY` OPTIONAL join, `discoverCrossZoneFeeds` reader, Part A `getActionPrediction` skip, Part B `CROSS_ZONE_BONUS_MAG` + Rule 6, `buildUntargetedCrossZoneEffects()` (ablation). |
+| `build.gradle` | no | `_httpKeys` += `'stereo.crossZoneBonus'` (JVM system-property forwarding). |
+| `run_full_project.ps1` | no | Forwards `-Pstereo.crossZoneBonus=<cross_zone_bonus>`; `phase1_kg_xzone` added to `[ValidateSet]`. |
+| `run_full_project_parallel.ps1` | no | `phase1_kg_xzone` added to `[ValidateSet]`. |
+| `config/run_config.json` | no | `learning.cross_zone_bonus = 0.0` global default; profile `phase1_kg_xzone` = `phase1_kg_only` + `cross_zone_bonus = 3.0`. |
+| `analysis/crosszone_prediction_audit.py` | no | `--secondary-zero` flag; reads `building_3_complex.ttl` + `simulator_flow_lab3.json`. |
+| `.github/workflows/phase1.yml` | no | Retry loop (5 attempts, backoff) on both "Install Node-RED" steps (commit `e8d63e0`, branch `kg-crosszone-ablation`). |
+
+### GH Actions runs that validated this change
+
+| Run ID | Branch | Profile | Seeds | Result |
+|---|---|---|---|---|
+| `27461188614` | `kg-crosszone-coupling-bump` (`8a98cd8`) | `phase1_kg_xzone` | 1–10 | Part B confirmed; lab2 anchor ✓ |
+| `27462446044` | `kg-crosszone-coupling-bump` (`8a98cd8`) | `phase1_kg_xzone` | 11–20 | Replication ✓ |
+| `27464846574` | `kg-crosszone-ablation` (`e8d63e0`) | `phase1_kg_xzone_rand` | 1–10 | Mechanism ablation ✓ |
+| `27440842780` | `kg-crosszone-coupling` (`866297d`) | `phase1_kg_xzone` | 1–10 | As-is (pre-bump) baseline |
+
+---
+
 ## 9. Honest caveats & limitations
 
 1. **Non‑monotonic system.** Outcomes are not monotone in the hyper‑parameters;

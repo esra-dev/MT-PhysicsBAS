@@ -1,0 +1,1000 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix elem:  <http://w3id.org/elementary#> .
+@prefix hvac:  <http://w3id.org/elementary/hvac#> .
+@prefix qudt:  <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
+@prefix unit:  <http://qudt.org/vocab/unit/> .
+@prefix sosa:  <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:   <http://example.org/was/lab#> .
+@prefix ws:    <http://example.org/was/lab/stereotypes#> .
+
+
+# ===========================================================================
+# Vocabulary Bridges
+# ===========================================================================
+
+brick:feeds    owl:equivalentProperty elem:feeds .
+sosa:observes  owl:equivalentProperty elem:observes .
+
+
+# ===========================================================================
+# Ontology-Driven Properties
+# ===========================================================================
+
+# Rank-transition thresholds for a process variable's discretisation.
+# Read by OntologyArtifact.getDiscretizationBounds and consumed by
+# LabEnvironment for sensor→rank mapping. The values below are the
+# CONTRACTUAL discretisation that bench scenarios assume; runtime
+# calibration is documented but does NOT overwrite these triples
+# (Audit Step 1, finding KG-4).
+ws:rankBound_1 a owl:DatatypeProperty ;
+    rdfs:label "Discretisation threshold rank 0->1" ;
+    rdfs:comment "Raw sensor value above which rank transitions from 0 to 1 for this process variable." ;
+    rdfs:range xsd:decimal .
+
+ws:rankBound_2 a owl:DatatypeProperty ;
+    rdfs:label "Discretisation threshold rank 1->2" ;
+    rdfs:range xsd:decimal .
+
+ws:rankBound_3 a owl:DatatypeProperty ;
+    rdfs:label "Discretisation threshold rank 2->3" ;
+    rdfs:range xsd:decimal .
+
+# Minimum independent-variable rank at which a Mediates mechanism's effect
+# becomes meaningful. Attached to elem:PhysicalMechanism individuals that
+# declare an elem:hasIndependentVariable. The QLearner consumer
+# (StereotypeReasoner) uses this to gate the Q-init penalty for activation
+# actions whose mechanism is currently "starved" of its IV — implementing
+# Ramanathan & Mayer §3.2 Mediates semantics rather than the Causes
+# shortcut. Default (when triple absent) is 1.
+ws:ivMinRank a owl:DatatypeProperty ;
+    rdfs:label "Minimum effective IV rank" ;
+    rdfs:comment "Minimum value of the independent variable's discretised rank at which the mechanism's manipulated variable can produce a non-negligible change in the dependent variable." ;
+    rdfs:range xsd:integer .
+
+# Convenience shortcut for the Causes pattern (Ramanathan & Mayer §3.1):
+# a mechanism whose manipulated variable has a directly-signed effect on
+# its dependent variable, with NO intermediating independent variable.
+# Mediates mechanisms (MV gates IV→DV) MUST NOT use elem:increases — they
+# are correctly expressed via the IV+MV+DV chain alone; the consumer
+# derives the per-state sign from the current IV rank vs ws:ivMinRank.
+elem:increases a owl:ObjectProperty ;
+    rdfs:label "increases (Causes shortcut)" ;
+    rdfs:comment "Shortcut declaring an unconditional positive sign of the mechanism's MV→DV effect. Only valid on Causes mechanisms (no elem:hasIndependentVariable). For Mediates mechanisms, omit this triple and let the consumer derive the sign from the IV rank." .
+
+# Integer index (1-based) used to sort zones deterministically in SPARQL (ORDER BY ws:zoneIndex).
+ws:zoneIndex a owl:DatatypeProperty ;
+    rdfs:label "Zone index" ;
+    rdfs:comment "1-based integer identifying the zone's order in SPARQL results (ORDER BY ws:zoneIndex)." ;
+    rdfs:range xsd:integer .
+
+# Boolean payload value for elem:ComponentAction instances.
+ws:actionValue a owl:DatatypeProperty ;
+    rdfs:label "Action boolean value" ;
+    rdfs:comment "The boolean payload (true/false) for this component action." ;
+    rdfs:range xsd:boolean .
+
+
+# ===========================================================================
+# Ontology Declaration
+# ===========================================================================
+
+lab:WASLabOntology a owl:Ontology ;
+    rdfs:label "WAS Smart Factory Lab – Elementary + Brick Description" ;
+    rdfs:comment """
+        Describes the HSG WAS smart factory lab using the
+        Elementary ontology for component stereotypes and physical mechanisms,
+        interlinked with the Brick ontology for structural/topological
+        descriptions, as proposed by Ramanathan & Mayer (BuildSys 2023).
+    """ .
+
+
+# ===========================================================================
+# 1.  PHYSICAL MECHANISMS  (elem:PhysicalMechanism individuals)
+# ===========================================================================
+
+# --- 1.1  pm_incandescent_light_emission mechanism (light source → indoor illuminance) --------
+
+ws:pm_incandescent_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_incandescent_light_emission" ;
+    rdfs:comment "A light source converts electrical energy into visible light (lux)." ;
+    elem:hasManipulatedVariable elem:electrical_power_input ;
+    elem:hasDependentVariable   elem:luminiscence ;
+    elem:increases              elem:luminiscence ;
+    elem:affectedUpstreamVariable ws:lamp_light_contribution .
+
+# --- 1.2  pm_daylight_ingress / blind-aperture mechanism ----------------------------
+
+ws:pm_daylight_ingress a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_daylight_ingress through blind aperture" ;
+    rdfs:comment """
+        Raising the blinds allows outdoor sunlight (lux) to pass through
+        the window aperture, thereby increasing indoor illuminance.
+        Mediates mechanism (Ramanathan & Mayer §3.2): the outdoor
+        illuminance is the independent variable (IV) and the blind
+        position (up/down) is the manipulated variable (MV) that gates
+        the IV→DV transfer. The effect direction is therefore
+        STATE-DEPENDENT (positive only when sunshine rank ≥ ws:ivMinRank);
+        consequently elem:increases is intentionally NOT asserted here
+        — the consumer derives the sign per-state from the IV rank.
+    """ ;
+    elem:hasIndependentVariable ws:outdoorIlluminance ;
+    elem:hasManipulatedVariable ws:blindApertureRatio ;
+    elem:hasDependentVariable   elem:luminiscence ;
+    ws:ivMinRank                1 ;
+    elem:affectedUpstreamVariable ws:blind_light_contribution .
+
+# --- 1.3  pm_room_luminance_accumulation mechanism ---------------------------
+
+ws:pm_room_luminance_accumulation a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_room_luminance_accumulation" ;
+    rdfs:comment """
+        PASSIVE SUMMATION MECHANISM (no manipulated variable - cannot be actuated).
+        A room spatially accumulates light from multiple sources (lamps and daylight
+        through blinds). Light photons flowing through lamp outlets and blind outlets
+        are received at the room's inlet connection points and combine additively to
+        determine the contained illuminance level within the room space.
+
+        The independent variables represent light contributions from external actuators.
+        These contributions are mapped from upstream actuators' dependent variables
+        (elem:luminiscence) through brick:feeds topology relationships.
+    """ ;
+    # NO elem:hasManipulatedVariable → NOT ACTUATABLE
+    elem:hasIndependentVariable ws:lamp_light_contribution ;
+    elem:hasIndependentVariable ws:blind_light_contribution ;
+    elem:hasDependentVariable   ws:room_contained_luminance .
+
+# --- 1.4  Sensing / measurement mechanism -----------------------------------
+
+ws:illuminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illuminance sensing" ;
+    rdfs:comment "A photo-sensor converts ambient light intensity to a measurable lux signal." ;
+    elem:hasIndependentVariable elem:luminiscence ;
+    elem:hasDependentVariable   ws:sensedIlluminance .
+
+ws:pm_outdoor_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_outdoor_light_emission" ;
+    rdfs:comment "The sun emits outdoor illuminance. Uncontrolled source — no manipulated variable." ;
+    elem:hasDependentVariable   ws:outdoorIlluminance .
+
+ws:outdoorIlluminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Outdoor illuminance sensing" ;
+    rdfs:comment "Weather station photo-sensor converts outdoor sunlight to a lux signal." ;
+    elem:hasIndependentVariable ws:outdoorIlluminance ;
+    elem:hasDependentVariable   ws:sensedOutdoorIlluminance .
+
+
+# ===========================================================================
+# 2.  PROCESS VARIABLES  (elem:ProcessVariable individuals)
+# ===========================================================================
+
+elem:electrical_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to light" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:outdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    rdfs:comment "Uncontrolled IV. The minimum activation rank (ivMinRank) and discretisation thresholds are learned at runtime by the QLearner's IV effectiveness tracker and the LabEnvironment calibration phase respectively." ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:blindApertureRatio a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Blind aperture ratio (open vs. closed)" ;
+    rdfs:comment "Binary: Up (open, ratio≈1) or Down (closed, ratio≈0)." ;
+    elem:dealsWithStuff  ws:MechanicalPosition ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:DimensionlessRatio .
+
+elem:luminiscence a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor illuminance level" ;
+    rdfs:comment "Resultant lux level inside the workstation zone [0, 1000 lux]. Rank thresholds are learned at runtime via the LabEnvironment calibration phase (equal-frequency binning from live observations)." ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor illuminance signal" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "100"^^xsd:decimal ;
+    ws:rankBound_3       "300"^^xsd:decimal .
+
+ws:sensedOutdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed outdoor illuminance signal" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "200"^^xsd:decimal ;
+    ws:rankBound_3       "600"^^xsd:decimal .
+
+# Room illuminance process variables
+
+ws:lamp_light_contribution a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Light contribution from lamps entering room" ;
+    rdfs:comment """
+        Represents the luminous flux from lamps that enters the room space through
+        the room's lamp inlet connection point. This variable receives the value of
+        elem:luminiscence (DV) from lamp components via brick:feeds topology.
+        Connection point: ws:cp_room_lamp_inlet.
+    """ ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:blind_light_contribution a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Light contribution from blinds (daylight) entering room" ;
+    rdfs:comment """
+        Represents the daylight that enters the room space through the blind's
+        aperture and the room's blind inlet connection point. This variable receives
+        the value of elem:luminiscence (DV) from blind components via brick:feeds
+        topology. Connection point: ws:cp_room_blind_inlet.
+    """ ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:room_contained_luminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Contained illuminance within room space" ;
+    rdfs:comment """
+        The accumulated illuminance level inside the room from all sources (lamps
+        and daylight through blinds). This is a passive summation - the room has no
+        manipulated variable and cannot be directly actuated. Sensors located in or
+        fed by the room observe this contained brightness.
+        Connection point: ws:cp_room_contained_luminance.
+    """ ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:contained ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+
+# ===========================================================================
+# 3.  PHYSICAL STUFF  (elem:PhysicalStuff)
+# ===========================================================================
+
+elem:photons a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visible light (photons)" .
+
+# Using Elementary's electrical_power instead of custom definition
+# elem:electrical_power which will be defined in Elementary soon.
+
+ws:MechanicalPosition a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Mechanical position / aperture" .
+
+
+# ===========================================================================
+# 4.  QUANTITIES  (using QUDT quantity kinds aligned with Brick schema)
+# ===========================================================================
+
+# All quantities now use QUDT standard quantity kinds via the qudtqk: prefix
+# - qudtqk:Illuminance for light intensity measurements (lux)
+# - qudtqk:ActivePower for electrical power consumption (watts)
+# - qudtqk:DimensionlessRatio for opening ratios [0,1]
+
+
+# ===========================================================================
+# 5.  STREAM KINDS
+# ===========================================================================
+
+ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor lighting stream" ;
+    rdfs:comment "The flow of visible light that determines indoor illuminance." .
+
+ws:OutdoorSunlightStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Outdoor sunlight stream" ;
+    rdfs:comment "The flow of outdoor sunlight (weather input)." .
+
+
+# ===========================================================================
+# 6.  COMPONENT STEREOTYPES  (elem:Stereotype individuals)
+# ===========================================================================
+
+# --- 6.1  incandescent lamp stereotype -----------------------------------------
+
+ws:LampIncandescentStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Incandescent lamp stereotype" ;
+    rdfs:comment """
+        A binary on/off incandescent lamp converts electrical energy into visible
+        light via the pm_incandescent_light_emission mechanism.  Turning the light ON increases
+        indoor illuminance; turning it OFF removes that contribution.
+        Energy cost: 100 units per activation (see ws:energyCost on instances).
+    """ ;
+    elem:hasPhysicalMechanism ws:pm_incandescent_light_emission ;
+    elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet .
+
+ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of incandescent lamp" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    elem:electrical_power_input .
+
+ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of incandescent lamp" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# --- 6.2  Blind stereotype --------------------------------------------------
+
+ws:BlindStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Window blind stereotype" ;
+    rdfs:comment """
+        A motorised roller blind controls the fraction of outdoor sunlight
+        admitted into the workstation zone.  The blind aperture ratio is the
+        manipulated variable; indoor illuminance is the dependent variable.
+        Energy cost: 5 units per raise action (see ws:energyCost on instances).
+    """ ;
+    elem:hasPhysicalMechanism ws:pm_daylight_ingress ;
+    elem:hasConnectionPoint  ws:cp_blind_outdoor_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_actuator_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_light_outlet .
+
+ws:cp_blind_outdoor_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Outdoor sunlight inlet of blind" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   ws:outdoorIlluminance ;
+    elem:suitableFor           ws:OutdoorSunlightStream .
+
+ws:cp_blind_actuator_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Actuator inlet of blind (Up / Down command)" ;
+    elem:dealsWithStuff ws:MechanicalPosition ;
+    elem:manipulates    ws:blindApertureRatio .
+
+ws:cp_blind_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Indoor light outlet of blind" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# --- 6.3  Light sensor stereotype ------------------------------------------
+
+ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor light sensor stereotype" ;
+    rdfs:comment """
+        A photo-diode sensor measures indoor illuminance [0, 1000 lux]
+        and reports it as a discrete rank (0–3).
+    """ ;
+    elem:hasPhysicalMechanism ws:illuminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet .
+
+ws:cp_lightsensor_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable elem:luminiscence ;
+    elem:suitableFor         ws:IndoorLightingStream .
+
+ws:cp_lightsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:sensedIlluminance .
+
+# --- 6.4  Weather station stereotype ----------------------------------------
+
+ws:WeatherStationStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Weather station (outdoor illuminance sensor) stereotype" ;
+    rdfs:comment """
+        Photo-sensor that measures outdoor sunlight [0, 1500 lux].
+    """ ;
+    elem:hasPhysicalMechanism ws:outdoorIlluminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_ws_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_ws_signal_outlet .
+
+# --- 6.5  Room stereotype ---------------------------------------------------
+
+ws:RoomStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Room stereotype" ;
+    rdfs:comment """
+        A room is a spatial container (Brick:Room) that passively accumulates light
+        from multiple sources through a summation mechanism. The room has:
+
+        - TWO inlet connection points: receive light from lamps and blinds
+        - ONE contained connection point: the accumulated brightness within the room
+        - A PASSIVE physical mechanism: light accumulation without actuation
+          (no manipulated variable → room cannot be controlled directly)
+
+        The brick:feeds topology connects upstream actuators (from workstations) to
+        the room's inlets, and the room to downstream sensors, modeling the flow of
+        luminous flux through the space. The lab room contains two workstations,
+        each with its own lamp, blind, and sensor. All equipment contributes to the
+        overall room contained illuminance.
+
+        NOTE: The room mechanism has ONLY independent variables (inputs) and dependent
+        variable (output). Absence of manipulated variable ensures the room is never
+        returned as an actionable component by SPARQL queries requiring MV. Only the
+        lab:Lab instance has this stereotype; workstations (Zone1, Zone2) are
+        lab:Workstation instances without stereotypes.
+    """ ;
+    elem:hasPhysicalMechanism ws:pm_room_luminance_accumulation ;
+    elem:hasConnectionPoint  ws:cp_room_lamp_inlet ;
+    elem:hasConnectionPoint  ws:cp_room_blind_inlet ;
+    elem:hasConnectionPoint  ws:cp_room_contained_luminance .
+
+ws:cp_ws_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of weather station" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:outdoorIlluminance ;
+    elem:suitableFor         ws:OutdoorSunlightStream .
+
+ws:cp_ws_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of weather station" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:sensedOutdoorIlluminance .
+
+# --- 6.6  Outside (sun) stereotype ------------------------------------------
+
+ws:OutsideStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Outdoor light source (sun) stereotype" ;
+    rdfs:comment """
+        Uncontrolled outdoor light source (the sun). Emits photons as outdoor
+        illuminance. No manipulated variable — cannot be actuated.
+        Feeds both blinds (via their outdoor inlets) and the weather station
+        (via its photon inlet) through the shared OutdoorSunlightStream.
+    """ ;
+    elem:hasPhysicalMechanism ws:pm_outdoor_light_emission ;
+    elem:hasConnectionPoint  ws:cp_outside_light_outlet .
+
+ws:cp_outside_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Outdoor light outlet (sun)" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:outdoorIlluminance ;
+    elem:suitableFor         ws:OutdoorSunlightStream .
+
+# ===========================================================================
+# 6.5 Room stereotype connection points
+# ===========================================================================
+
+ws:cp_room_lamp_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Lamp light inlet to room" ;
+    rdfs:comment "Connection point where light from lamps enters the room space." ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   ws:lamp_light_contribution ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+ws:cp_room_blind_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Blind (daylight) inlet to room" ;
+    rdfs:comment "Connection point where daylight through blinds enters the room space." ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   ws:blind_light_contribution ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+ws:cp_room_contained_luminance a owl:NamedIndividual, elem:ConnectionPoint ;
+    rdfs:label "Contained illuminance within room" ;
+    rdfs:comment "The brightness level contained within the room space." ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   ws:room_contained_luminance ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+
+# ===========================================================================
+# 7.  BUILDING TOPOLOGY (Brick structural description)
+# ===========================================================================
+
+# --- 7.1  Building & floors ------------------------------------------------
+
+lab:SmartFactoryBuilding a brick:Building ;
+    rdfs:label "HSG WAS Smart Factory Lab Building" ;
+    brick:hasPart lab:FactoryFloor .
+
+lab:FactoryFloor a brick:Floor ;
+    rdfs:label "Factory floor" ;
+    brick:hasPart lab:Lab .
+
+# --- 7.2  Lab (Main Room) ---------------------------------------------------
+
+lab:Lab a brick:Room, elem:StreamJoiner, elem:Container ;
+    rdfs:label "Smart Factory Lab (Main Room)" ;
+    rdfs:comment """
+        The main laboratory room containing two workstations. This room accumulates
+        light from all lamps and blinds (via workstations) and provides the overall
+        contained illuminance for the entire lab space.
+    """ ;
+    elem:hasBehavioralStereotype ws:RoomStereotype ;
+    brick:hasPart lab:Zone1 ;
+    brick:hasPart lab:Zone2 .
+
+# --- 7.3  Workstations (Zones within the Lab) -------------------------------
+
+# Custom class for workstations (not defined in Brick 1.4.4)
+lab:Workstation a owl:Class ;
+    rdfs:label "Workstation" ;
+    rdfs:comment """
+        A designated work area within the lab room, associated with task requirements
+        and operator constraints. Each workstation contains its own ceiling lamp,
+        light sensor, and blind.
+    """ ;
+    rdfs:subClassOf brick:Space .
+
+lab:Zone1 a lab:Workstation ;
+    rdfs:label "Workstation 1" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 1 ;
+    rdfs:comment """
+        First workstation in the lab. Contains CeilingLight_Z1, LightSensor_Z1,
+        and Blind_Z1. Control target rank is defined by zone_target(1, Rank) in
+        illuminance_controller_agent.asl.
+    """ .
+
+lab:Zone2 a lab:Workstation ;
+    rdfs:label "Workstation 2" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 2 ;
+    rdfs:comment """
+        Second workstation in the lab. Contains CeilingLight_Z2, LightSensor_Z2,
+        and Blind_Z2. Control target rank is defined by zone_target(2, Rank) in
+        illuminance_controller_agent.asl.
+    """ .
+
+
+# ===========================================================================
+# 8.  COMPONENT INSTANCES (Brick equipment + Elementary stereotype links)
+# ===========================================================================
+
+# Custom equipment class for indoor illuminance sensors (Brick defines Illuminance_Sensor as Point class, not equipment)
+lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
+    rdfs:label "Indoor illuminance sensor equipment" ;
+    rdfs:comment "Physical illuminance sensor device. Note: brick:Illuminance_Sensor is a Point class in Brick 1.4.4." ;
+    rdfs:subClassOf brick:Sensor_Equipment .
+
+# --- 8.1  Incandescent lamps ------------------------------------------------
+
+lab:CeilingLight_Z1 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Incandescent lamp – Workstation 1" ;
+    rdfs:comment "Binary on/off incandescent lamp in workstation 1." ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:CeilingLight_Z2 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Incandescent lamp – Workstation 2" ;
+    rdfs:comment "Binary on/off incandescent lamp in workstation 2." ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+# --- 8.2  Blinds ------------------------------------------------------------
+
+lab:Blind_Z1 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 1" ;
+    rdfs:comment "Motorised roller blind in workstation 1. Actions: Up / Down." ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:Blind_Z2 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 2" ;
+    rdfs:comment "Motorised roller blind in workstation 2. Actions: Up / Down." ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+# --- 8.3  Indoor light sensors ----------------------------------------------
+
+lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 1" ;
+    rdfs:comment "Measures indoor lux in workstation 1. Range: [0, 1000] lux. Reported as ranks 0–3." ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorIlluminance_Z1 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:LightSensor_Z2 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 2" ;
+    rdfs:comment "Measures indoor lux in workstation 2. Range: [0, 1000] lux. Reported as ranks 0–3." ;
+    brick:isLocatedIn lab:Zone2 ;
+    sosa:observes     lab:IndoorIlluminance_Z2 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+# --- 8.4  Weather station ---------------------------------------------------
+
+lab:WeatherStation a brick:Weather_Station, elem:Sensor ;
+    rdfs:label "Outdoor weather station" ;
+    rdfs:comment "Measures outdoor sunlight. Range: [0, 1500] lux. Shared by both zones." ;
+    brick:isLocatedIn lab:SmartFactoryBuilding ;
+    sosa:observes     lab:OutdoorIlluminance ;
+    elem:hasBehavioralStereotype ws:WeatherStationStereotype ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+# --- 8.5  Outdoor light source (sun) ----------------------------------------
+
+lab:Outside a owl:NamedIndividual ;
+    rdfs:label "Outdoor light source (sun)" ;
+    rdfs:comment "Uncontrolled outdoor light source. Produces outdoor illuminance admitted through blinds and measured by the weather station." ;
+    elem:hasBehavioralStereotype ws:OutsideStereotype ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+
+# ===========================================================================
+# 9.  STREAMS (elem:Stream instances)
+# ===========================================================================
+
+lab:IndoorLightingStream a elem:Stream ;
+    rdfs:label "Indoor lighting process stream (shared)" ;
+    elem:hasStreamKind ws:IndoorLightingStream ;
+    rdfs:comment """
+        Shared indoor lighting stream for the entire lab. All four actuators
+        (CeilingLight_Z1, CeilingLight_Z2, Blind_Z1 when raised, Blind_Z2 when raised)
+        contribute to this stream. Each light sensor measures the total illuminance
+        reaching its workstation, including cross-zone spill from the other workstation.
+        A single shared stream instance is required so that cross-zone brick:feeds arcs
+        satisfy Elementary Rule 1 (both endpoints must share the same elem:Stream).
+    """ .
+
+lab:OutdoorSunlightStream a elem:Stream ;
+    rdfs:label "Outdoor sunlight stream (shared)" ;
+    elem:hasStreamKind ws:OutdoorSunlightStream ;
+    rdfs:comment """
+        Outdoor sunlight observed by the WeatherStation feeds both Blind_Z1
+        and Blind_Z2 as the uncontrolled light source.  The same outdoor
+        illuminance affects both zones because the zones are physically close.
+    """ .
+
+
+# ===========================================================================
+# 10.  TOPOLOGICAL CONNECTIONS (brick:feeds relationships)
+#       Interpreted via Elementary inference rules (Section 3.4 of the paper)
+# ===========================================================================
+
+# TOPOLOGY SEMANTICS:
+# brick:feeds models the flow of process variables between components through
+# their connection points. When A brick:feeds B, Elementary infers a connection
+# by matching all four of:
+#   (1) Matching Stream:      both share the same elem:Stream instance
+#   (2) Compatible Direction: elem:OutletConnectionPoint of A → elem:InletConnectionPoint of B
+#   (3) Compatible Stuff:     both CPs share the same elem:dealsWithStuff individual
+#   (4) Matching StreamKind:  both CPs share the same elem:suitableFor StreamKind
+# On match, the DV related to A's outlet CP is inferred to affect the IV
+# related to B's inlet CP.
+
+# OUTDOOR SOURCE (lab:Outside) → WEATHER STATION + BLINDS:
+# lab:Outside (OutsideStereotype) has one outlet CP: ws:cp_outside_light_outlet
+#   dealsWithStuff elem:photons, suitableFor ws:OutdoorSunlightStream
+# lab:WeatherStation inlet CP: ws:cp_ws_photon_inlet
+#   dealsWithStuff elem:photons, suitableFor ws:OutdoorSunlightStream
+# lab:Blind_Z1/Z2 outdoor inlet CP: ws:cp_blind_outdoor_inlet
+#   dealsWithStuff elem:photons, suitableFor ws:OutdoorSunlightStream
+# All share lab:OutdoorSunlightStream → all four rules match.
+lab:Outside          brick:feeds  lab:WeatherStation .
+lab:Outside          brick:feeds  lab:Blind_Z1 .
+lab:Outside          brick:feeds  lab:Blind_Z2 .
+
+# ACTUATORS → SENSORS (direct, no room intermediary):
+# Outlet CPs: ws:cp_light_photon_outlet (lamps) and ws:cp_blind_light_outlet (blinds)
+#   both: dealsWithStuff elem:photons, suitableFor ws:IndoorLightingStream
+# Inlet CP:  ws:cp_lightsensor_photon_inlet (sensors)
+#   both: dealsWithStuff elem:photons, suitableFor ws:IndoorLightingStream
+# All share lab:IndoorLightingStream → all four rules match for every arc below.
+
+# Primary illumination (same zone):
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z1 .
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z2 .
+
+# Cross-zone spill (light from one workstation reaching the other sensor):
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z2 .
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z1 .
+
+
+# ===========================================================================
+# 11.  OBSERVED PROPERTIES (sosa:ObservableProperty)
+# ===========================================================================
+
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 1" ;
+    qudt:hasQuantityKind qudtqk:Illuminance ;
+    rdfs:comment "Lux level in workstation 1 [0, 1000]. Rank 0:<50, Rank 1:50-100, Rank 2:100-300, Rank 3:300-1000." .
+
+lab:IndoorIlluminance_Z2 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 2" ;
+    qudt:hasQuantityKind qudtqk:Illuminance ;
+    rdfs:comment "Lux level in workstation 2 [0, 1000]. Rank 0:<50, Rank 1:50-100, Rank 2:100-300, Rank 3:300-1000." .
+
+lab:OutdoorIlluminance a sosa:ObservableProperty ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    qudt:hasQuantityKind qudtqk:Illuminance ;
+    rdfs:comment "Measured by weather station [0, 1500] lux. Rank 3 (≥300 lux) triggers anti-glare constraint for human operators." .
+
+
+# ===========================================================================
+# CUSTOM LAB EXTENSION
+# Adds: shared Spotlight, per-zone Radiators, per-zone Temperature Sensors
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# A1.  NEW PHYSICAL MECHANISMS
+# ---------------------------------------------------------------------------
+
+ws:pm_spotlight_illumination a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_spotlight_illumination" ;
+    rdfs:comment "A high-power spotlight converts electrical energy into a large amount of visible light (lux). No independent variable — always eligible to activate. Single shared unit illuminates both zones equally." ;
+    elem:hasManipulatedVariable ws:spotlightPowerInput ;
+    elem:hasDependentVariable   elem:luminiscence ;
+    elem:increases              elem:luminiscence ;
+    elem:affectedUpstreamVariable ws:lamp_light_contribution .
+
+ws:pm_electrical_heating a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_electrical_heating" ;
+    rdfs:comment "An electric radiator converts electrical energy into heat, raising the zone's air temperature. The electrical power to the heating element is the manipulated variable; indoor temperature is the dependent variable." ;
+    elem:hasManipulatedVariable ws:heaterPowerInput ;
+    elem:hasDependentVariable   ws:indoorTemperature ;
+    elem:increases              ws:indoorTemperature .
+
+ws:pm_temperature_sensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_temperature_sensing" ;
+    rdfs:comment "A thermistor or thermocouple converts ambient air temperature into a measurable electrical signal." ;
+    elem:hasIndependentVariable ws:indoorTemperature ;
+    elem:hasDependentVariable   ws:sensedIndoorTemperature .
+
+
+# ---------------------------------------------------------------------------
+# A2.  NEW PROCESS VARIABLES
+# ---------------------------------------------------------------------------
+
+ws:spotlightPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Spotlight power switch (on/off)" ;
+    rdfs:comment "Binary manipulated variable that energises or de-energises the shared spotlight." ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:heaterPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Heater power input" ;
+    rdfs:comment "Binary manipulated variable controlling the on/off state of the electric radiator." ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:indoorTemperature a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor air temperature" ;
+    rdfs:comment "Zone air temperature in degrees Celsius. Rank thresholds are learned at runtime via calibration. Typical ranges: cold <18°C (rank 0), comfortable 18-21°C (rank 1), warm 21-24°C (rank 2), hot ≥24°C (rank 3)." ;
+    elem:dealsWithStuff  ws:ThermalEnergy ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:ThermodynamicTemperature .
+
+ws:sensedIndoorTemperature a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor temperature signal" ;
+    rdfs:comment "Electrical output of the temperature sensor — corresponds to the zone air temperature." ;
+    elem:dealsWithStuff  ws:ThermalEnergy ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:ThermodynamicTemperature .
+
+
+# ---------------------------------------------------------------------------
+# A3.  NEW PHYSICAL STUFF
+# ---------------------------------------------------------------------------
+
+ws:ThermalEnergy a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Thermal energy (heat)" .
+
+
+# ---------------------------------------------------------------------------
+# A4.  NEW STREAM KIND
+# ---------------------------------------------------------------------------
+
+ws:IndoorThermalStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor thermal stream" ;
+    rdfs:comment "The flow of thermal energy (heat) that determines indoor air temperature." .
+
+
+# ---------------------------------------------------------------------------
+# A5.  NEW COMPONENT STEREOTYPES
+# ---------------------------------------------------------------------------
+
+ws:SpotlightStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Spotlight stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_spotlight_illumination ;
+    elem:hasConnectionPoint  ws:cp_spotlight_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_spotlight_photon_outlet .
+
+ws:cp_spotlight_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of spotlight" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:spotlightPowerInput .
+
+ws:cp_spotlight_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of spotlight" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+ws:RadiatorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Electric radiator stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_electrical_heating ;
+    elem:hasConnectionPoint  ws:cp_radiator_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_radiator_heat_outlet .
+
+ws:cp_radiator_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of radiator" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:heaterPowerInput .
+
+ws:cp_radiator_heat_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Heat outlet of radiator" ;
+    elem:dealsWithStuff        ws:ThermalEnergy ;
+    elem:isRelatedToVariable   ws:indoorTemperature ;
+    elem:suitableFor           ws:IndoorThermalStream .
+
+ws:TemperatureSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor temperature sensor stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_temperature_sensing ;
+    elem:hasConnectionPoint  ws:cp_tempsensor_thermal_inlet ;
+    elem:hasConnectionPoint  ws:cp_tempsensor_signal_outlet .
+
+ws:cp_tempsensor_thermal_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Thermal inlet of temperature sensor" ;
+    elem:dealsWithStuff      ws:ThermalEnergy ;
+    elem:isRelatedToVariable ws:indoorTemperature ;
+    elem:suitableFor         ws:IndoorThermalStream .
+
+ws:cp_tempsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of temperature sensor" ;
+    elem:dealsWithStuff      ws:ThermalEnergy ;
+    elem:isRelatedToVariable ws:sensedIndoorTemperature .
+
+
+# ---------------------------------------------------------------------------
+# A6.  NEW COMPONENT INSTANCES
+# ---------------------------------------------------------------------------
+
+# Spotlight — shared single unit, located in BOTH zones so SPARQL zone queries
+# find it for each zone independently.
+lab:Spotlight a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Shared high-lux spotlight" ;
+    rdfs:comment "Single spotlight that illuminates both workstation zones equally with +500 lux." ;
+    brick:isLocatedIn lab:Zone1 ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasBehavioralStereotype ws:SpotlightStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:Radiator_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Electric radiator – Workstation 1" ;
+    rdfs:comment "Binary on/off electric radiator in workstation 1." ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:RadiatorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z1 .
+
+lab:Radiator_Z2 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Electric radiator – Workstation 2" ;
+    rdfs:comment "Binary on/off electric radiator in workstation 2." ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasBehavioralStereotype ws:RadiatorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z2 .
+
+lab:TempSensor_Z1 a brick:Temperature_Sensor, elem:Sensor ;
+    rdfs:label "Indoor temperature sensor – Workstation 1" ;
+    rdfs:comment "Measures indoor temperature in workstation 1. Range: [15, 35] °C. Reported as ranks 0–3." ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorTemperature_Z1 ;
+    elem:hasBehavioralStereotype ws:TemperatureSensorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z1 .
+
+lab:TempSensor_Z2 a brick:Temperature_Sensor, elem:Sensor ;
+    rdfs:label "Indoor temperature sensor – Workstation 2" ;
+    rdfs:comment "Measures indoor temperature in workstation 2. Range: [15, 35] °C. Reported as ranks 0–3." ;
+    brick:isLocatedIn lab:Zone2 ;
+    sosa:observes     lab:IndoorTemperature_Z2 ;
+    elem:hasBehavioralStereotype ws:TemperatureSensorStereotype ;
+    elem:isPartOf      lab:IndoorThermalStream_Z2 .
+
+
+# ---------------------------------------------------------------------------
+# A7.  NEW STREAMS
+# ---------------------------------------------------------------------------
+
+lab:IndoorThermalStream_Z1 a elem:Stream ;
+    rdfs:label "Indoor thermal stream – Workstation 1" ;
+    elem:hasStreamKind ws:IndoorThermalStream .
+
+lab:IndoorThermalStream_Z2 a elem:Stream ;
+    rdfs:label "Indoor thermal stream – Workstation 2" ;
+    elem:hasStreamKind ws:IndoorThermalStream .
+
+
+# ---------------------------------------------------------------------------
+# A8.  TOPOLOGICAL CONNECTIONS (heating)
+# ---------------------------------------------------------------------------
+
+lab:Radiator_Z1  brick:feeds  lab:TempSensor_Z1 .
+lab:Radiator_Z2  brick:feeds  lab:TempSensor_Z2 .
+
+
+# ---------------------------------------------------------------------------
+# A9.  NEW OBSERVED PROPERTIES
+# ---------------------------------------------------------------------------
+
+lab:IndoorTemperature_Z1 a sosa:ObservableProperty ;
+    rdfs:label "Indoor temperature – Workstation 1" ;
+    qudt:hasQuantityKind qudtqk:ThermodynamicTemperature .
+
+lab:IndoorTemperature_Z2 a sosa:ObservableProperty ;
+    rdfs:label "Indoor temperature – Workstation 2" ;
+    qudt:hasQuantityKind qudtqk:ThermodynamicTemperature .
+
+
+# ===========================================================================
+# COMPONENT ACTIONS  (elem:ComponentAction instances — Change #12)
+# ===========================================================================
+
+# Each actuator has an ON and OFF action. The agent discovers these via SPARQL
+# and maps them to WoT dispatch using ws:hasWoTActionSemanticType from wot-mappings.ttl.
+
+# --- CeilingLight_Z1 ---
+ws:SetZ1Light_ON  a elem:ComponentAction ;
+    ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Light_OFF a elem:ComponentAction ;
+    ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z1 elem:hasComponentAction ws:SetZ1Light_ON, ws:SetZ1Light_OFF .
+
+# --- CeilingLight_Z2 ---
+ws:SetZ2Light_ON  a elem:ComponentAction ;
+    ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Light_OFF a elem:ComponentAction ;
+    ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z2 elem:hasComponentAction ws:SetZ2Light_ON, ws:SetZ2Light_OFF .
+
+# --- Blind_Z1 ---
+ws:SetZ1Blinds_ON  a elem:ComponentAction ;
+    ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Blinds_OFF a elem:ComponentAction ;
+    ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z1 elem:hasComponentAction ws:SetZ1Blinds_ON, ws:SetZ1Blinds_OFF .
+
+# --- Blind_Z2 ---
+ws:SetZ2Blinds_ON  a elem:ComponentAction ;
+    ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Blinds_OFF a elem:ComponentAction ;
+    ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z2 elem:hasComponentAction ws:SetZ2Blinds_ON, ws:SetZ2Blinds_OFF .
+
+# --- Spotlight ---
+ws:SetSpotlight_ON  a elem:ComponentAction ;
+    ws:actionValue "true"^^xsd:boolean .
+ws:SetSpotlight_OFF a elem:ComponentAction ;
+    ws:actionValue "false"^^xsd:boolean .
+lab:Spotlight elem:hasComponentAction ws:SetSpotlight_ON, ws:SetSpotlight_OFF .
+
+# --- Radiator_Z1 ---
+ws:SetZ1Radiator_ON  a elem:ComponentAction ;
+    ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Radiator_OFF a elem:ComponentAction ;
+    ws:actionValue "false"^^xsd:boolean .
+lab:Radiator_Z1 elem:hasComponentAction ws:SetZ1Radiator_ON, ws:SetZ1Radiator_OFF .
+
+# --- Radiator_Z2 ---
+ws:SetZ2Radiator_ON  a elem:ComponentAction ;
+    ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Radiator_OFF a elem:ComponentAction ;
+    ws:actionValue "false"^^xsd:boolean .
+lab:Radiator_Z2 elem:hasComponentAction ws:SetZ2Radiator_ON, ws:SetZ2Radiator_OFF .
+
+
+# ===========================================================================
+# A6.  RESPONSE DYNAMICS  (intentionally removed — Audit Step 1 / KG-5)
+# ---------------------------------------------------------------------------
+# The previous block declared elem:ResponseDynamic / InstantaneousResponse /
+# DelayedResponse / elem:hasResponseDynamic and tagged three stereotypes as
+# Instantaneous. No Java consumer ever read elem:hasResponseDynamic, and no
+# customN.ttl ever overrode it with DelayedResponse, so the entire block was
+# dead code (Audit Step 1 finding KG-5). Removed to keep the ontology
+# truthful to what the consumer actually uses. If a W3-class lab needs to
+# express a delayed actuator response in the future, reintroduce the block
+# AND wire a SPARQL reader into StereotypeReasoner in the same change.
+# ===========================================================================

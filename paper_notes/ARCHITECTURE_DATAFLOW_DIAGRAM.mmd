@@ -1,0 +1,37 @@
+%% Stage 4 architecture data-flow diagram.
+%% Evidence locators are in paper_notes/ARCHITECTURE_NOTES.md, sections
+%% "Data Flow", "Output Contracts", and "Experiment Records".
+flowchart LR
+  Config["config/run_config.json"]
+  Profiles["lab_profiles.asl"]
+  Workflow["GitHub Actions workflow_dispatch"]
+  RunScripts["PowerShell orchestrators"]
+  GradleTasks["Gradle tasks"]
+  Agent["Jason agent"]
+  Artifacts["CArtAgO artifacts"]
+  TTL["TTL ontologies and learned TTL"]
+  TD["Thing Descriptions"]
+  NodeRED["Node-RED HTTP simulator"]
+  RawOutputs["Raw outputs: CSV, JSONL, TTL"]
+  Analysis["Python analysis"]
+  Summary["analysis/out CSV tables"]
+  Ledgers["paper_notes ledgers"]
+
+  Config --> RunScripts
+  Profiles --> Agent
+  Workflow --> RunScripts
+  RunScripts --> GradleTasks
+  GradleTasks --> Agent
+  Agent --> Artifacts
+  Artifacts --> TTL
+  TTL --> Artifacts
+  Artifacts --> TD
+  TD --> NodeRED
+  Artifacts --> NodeRED
+  NodeRED --> Artifacts
+  Artifacts --> RawOutputs
+  RawOutputs --> Analysis
+  Config --> Analysis
+  Analysis --> Summary
+  Summary --> Ledgers
+  RawOutputs --> Ledgers

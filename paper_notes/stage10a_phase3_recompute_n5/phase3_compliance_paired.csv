@@ -1,0 +1,9 @@
+profile,metric,n_paired,ql_true_mean,ql_false_mean,mean_diff_true_minus_false,ci_lo,ci_hi,lower_is_better,p_bootstrap,p_wilcoxon,cliffs_delta,ql_true_better,q_bootstrap_bh,bh_family_m
+lab2_slow,overall_compliance,5,1.0,0.5,0.5,0.5,0.5,False,0.0,0.0625,1.0,True,0.0,2
+lab3_slow,overall_compliance,5,1.0,0.5,0.5,0.5,0.5,False,0.0,0.0625,1.0,True,0.0,2
+lab2_slow,tight_compliance,5,1.0,0.0,1.0,1.0,1.0,False,0.0,0.0625,1.0,True,0.0,2
+lab3_slow,tight_compliance,5,1.0,0.0,1.0,1.0,1.0,False,0.0,0.0625,1.0,True,0.0,2
+lab2_slow,loose_compliance,5,1.0,1.0,0.0,0.0,0.0,False,1.0,1.0,0.0,False,1.0,2
+lab3_slow,loose_compliance,5,1.0,1.0,0.0,0.0,0.0,False,1.0,1.0,0.0,False,1.0,2
+lab2_slow,total_energy,5,3.4,0.0,3.4,3.0,3.8,True,0.0,0.0625,1.0,False,0.0,2
+lab3_slow,total_energy,5,3.4,0.0,3.4,3.0,3.8,True,0.0,0.0625,1.0,False,0.0,2

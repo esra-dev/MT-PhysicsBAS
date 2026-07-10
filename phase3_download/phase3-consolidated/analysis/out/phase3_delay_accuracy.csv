@@ -1,0 +1,5 @@
+profile,mode,n_actuators,n_instantaneous,n_delayed,slowest_label,slowest_learned_ticks,ground_truth_ticks,abs_err_ticks,rel_err_pct,mean_instant_ticks,mean_delayed_ticks
+lab2_slow,ql_false,4,2,2,SetZ1Blinds=ON,12.125,12,0.125,1.04,1.15,12.1125
+lab2_slow,ql_true,4,2,2,SetZ1Blinds=ON,12.15,12,0.15,1.25,1.1,12.0875
+lab3_slow,ql_false,5,3,2,SetZ1Blinds=ON,12.175,12,0.175,1.46,1.1583,12.1625
+lab3_slow,ql_true,5,3,2,SetZ1Blinds=ON,12.225,12,0.225,1.87,1.1167,12.1125

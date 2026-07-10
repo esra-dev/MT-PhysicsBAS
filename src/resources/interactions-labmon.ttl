@@ -9,10 +9,10 @@
 
 # ============================================================================
 #  LAB "MONITOR" — EMERGENCY FALLBACK Thing Description (port 1899).
-#  Single zone, three Causes actuators: the primary task lamp (SetZ1Light),
-#  a computer monitor whose light is a side-effect (SetZ1Monitor), and a dim
-#  backup lamp (SetZ1Backup). Status carries the zone illuminance level plus
-#  all three actuator booleans. No blinds, no spotlight, no sunshine slot.
+#  Single zone, two Causes actuators: the primary task lamp (SetZ1Light)
+#  and a computer monitor whose light is a side-effect (SetZ1Monitor).
+#  Status carries the zone illuminance level plus both actuator booleans.
+#  No blinds, no spotlight, no sunshine slot.
 # ============================================================================
 
 <urn:mt-esra:interactions-labmon> a td:Thing, eve:Artifact, <https://example.org/was#Lab> ;
