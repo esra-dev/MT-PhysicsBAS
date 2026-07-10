@@ -218,7 +218,8 @@ $TrainProfiles = @(
 )
 # Superset of all known/selectable profiles (used only to validate -OnlyProfiles).
 $KnownProfiles = @(
-    "lab1", "lab2", "lab3", "lab4", "lab5", "labmon", "labmon2"
+    "lab1", "lab2", "lab3", "lab4", "lab5", "labmon", "labmon2",
+    "labmon_infoonly", "labmon_nostereo", "labmon2_infoonly", "labmon2_nostereo"
 )
 
 # Apply -OnlyProfiles filter (parallel orchestrator passes one profile per clone).
@@ -283,6 +284,10 @@ $ProfileQtableSuffix = @{
     lab5 = "_lab5"
     labmon = "_labmon"
     labmon2 = "_labmon2"
+    labmon_infoonly = "_labmon_infoonly"
+    labmon_nostereo = "_labmon_nostereo"
+    labmon2_infoonly = "_labmon2_infoonly"
+    labmon2_nostereo = "_labmon2_nostereo"
 }
 
 # Simulator map: each entry is a profile → (port, flow file) binding
@@ -294,6 +299,12 @@ $Simulators = @(
     [pscustomobject]@{ Profile="lab5"; Port=1898; Flow="simulator_flow_lab5.json" }
     [pscustomobject]@{ Profile="labmon"; Port=1899; Flow="simulator_flow_labmon.json" }
     [pscustomobject]@{ Profile="labmon2"; Port=1900; Flow="simulator_flow_labmon2.json" }
+    # Phase 2.6 KG-silent monitor variants: SAME physics/flows/ports as the
+    # labmon/labmon2 parents — only the agent-side KG (building_*.ttl) differs.
+    [pscustomobject]@{ Profile="labmon_infoonly"; Port=1899; Flow="simulator_flow_labmon.json" }
+    [pscustomobject]@{ Profile="labmon_nostereo"; Port=1899; Flow="simulator_flow_labmon.json" }
+    [pscustomobject]@{ Profile="labmon2_infoonly"; Port=1900; Flow="simulator_flow_labmon2.json" }
+    [pscustomobject]@{ Profile="labmon2_nostereo"; Port=1900; Flow="simulator_flow_labmon2.json" }
 )
 
 # ASL file paths (relative; resolved via Set-Location above)

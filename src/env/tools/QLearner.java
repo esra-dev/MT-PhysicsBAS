@@ -1084,6 +1084,12 @@ public class QLearner extends Artifact {
         StereotypeReasoner.ActionInfo ai = actionInfos[actionIdx];
         if (ai == null || ai.wotActionType == null) return;          // DO_NOTHING — no claim
         if (blacklisted != null && blacklisted[actionIdx]) return;   // already removed
+        // Phase 2.6 (monitor KG-silent variants): a KG-SILENT actuator was
+        // discovered only via its WoT mapping — the stereotype layer makes NO
+        // behavioral claim about it, so there is no Expected-vs-Actual
+        // prediction to falsify. Abstain entirely (also keeps the essential
+        // unmodeled fallback lever safe from a spurious bit-level dead flag).
+        if (ai.kgSilent) return;
         // MEDIATES / IV-gated actuators (blinds, whose lux effect is 0.50·sunshine)
         // are adjudicated CONDITIONALLY (Phase 2 extension). Their zone response
         // is only falsifiable on the OPEN (activation) action and only when the
@@ -1931,8 +1937,11 @@ public class QLearner extends Artifact {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename), 1 << 20);
              PrintWriter pw = new PrintWriter(bw)) {
             StringBuilder row = new StringBuilder(256);
+            // Action-space inversion: columns are keyed by action LABEL (not
+            // positional "aN") so the loader can remap them if the discovery
+            // ordering ever changes again.
             row.append("StateIndex");
-            for (int a = 0; a < nActions; a++) row.append(",a").append(a);
+            for (int a = 0; a < nActions; a++) row.append(',').append(actionInfos[a].label);
             pw.println(row);
             long rowsWritten = 0;
             for (int s = 0; s < nStates; s++) {
@@ -1954,12 +1963,16 @@ public class QLearner extends Artifact {
     private void saveAdaptiveTrustSidecar(String filename) {
         if (actionCalSum == null || actionCalN == null) return;
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("Action,SunBucket,Sum,N");
+            // Action-space inversion: rows are keyed by action LABEL (header
+            // "ActionLabel,...") instead of the positional index (legacy header
+            // "Action,..."), so the loader can remap them safely.
+            pw.println("ActionLabel,SunBucket,Sum,N");
             long rowsWritten = 0;
             for (int a = 0; a < actionCalN.length; a++) {
                 for (int sb = 0; sb < actionCalN[a].length; sb++) {
                     if (actionCalN[a][sb] == 0) continue;
-                    pw.println(a + "," + sb + "," + actionCalSum[a][sb] + "," + actionCalN[a][sb]);
+                    pw.println(actionInfos[a].label + "," + sb + ","
+                             + actionCalSum[a][sb] + "," + actionCalN[a][sb]);
                     rowsWritten++;
                 }
             }
@@ -2259,8 +2272,18 @@ public class QLearner extends Artifact {
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f))) {
             String header = br.readLine();
             if (header == null) return;
-            String[] cols = header.split(",");
-            int numActionCols = cols.length - 1;
+            // Action-space inversion: remap columns by action LABEL. A legacy
+            // positional sidecar (header "StateIndex,a0,a1,...") has no label
+            // matches → mapHeaderToActions returns null and the file is
+            // ignored (correctness over convenience: positional counts cannot
+            // be trusted across a discovery-ordering change). Re-train to
+            // regenerate labeled sidecars.
+            int[] colToAction = mapHeaderToActions(header, filename);
+            if (colToAction == null) {
+                LOGGER.warning("loadVisitCountsSidecar: " + filename + " ignored"
+                    + " (cellMul fade will be inactive at bench)");
+                return;
+            }
             String line;
             long rowsLoaded = 0;
             while ((line = br.readLine()) != null) {
@@ -2269,8 +2292,10 @@ public class QLearner extends Artifact {
                 String[] parts = line.split(",");
                 int stateIdx = Integer.parseInt(parts[0].trim());
                 if (stateIdx < 0 || stateIdx >= nStates) continue;
-                for (int a = 0; a < Math.min(numActionCols, nActions); a++) {
-                    visitCounts[stateIdx][a] = Long.parseLong(parts[a + 1].trim());
+                for (int c = 0; c < colToAction.length && c + 1 < parts.length; c++) {
+                    int a = colToAction[c];
+                    if (a < 0) continue;
+                    visitCounts[stateIdx][a] = Long.parseLong(parts[c + 1].trim());
                 }
                 rowsLoaded++;
             }
@@ -2288,8 +2313,23 @@ public class QLearner extends Artifact {
             return;
         }
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f))) {
-            String header = br.readLine(); // Action,SunBucket,Sum,N
+            String header = br.readLine();
             if (header == null) return;
+            // Action-space inversion: rows are keyed by action LABEL (header
+            // "ActionLabel,SunBucket,Sum,N"). A legacy positional file (header
+            // "Action,SunBucket,Sum,N", rows keyed by index) cannot be trusted
+            // across a discovery-ordering change and is REFUSED — re-train to
+            // regenerate labeled sidecars.
+            if (!header.startsWith("ActionLabel")) {
+                LOGGER.severe("loadAdaptiveTrustSidecar: " + filename + " is a legacy"
+                    + " positional trust sidecar (header '" + header.trim() + "') —"
+                    + " IGNORED after the action-space inversion. Re-train to"
+                    + " regenerate. (calMul adaptive trust will be inactive at bench.)");
+                return;
+            }
+            java.util.Map<String, Integer> byLabel = new java.util.HashMap<>();
+            for (int a = 0; a < nActions; a++) byLabel.put(actionInfos[a].label, a);
+            java.util.Set<String> unknown = new java.util.TreeSet<>();
             String line;
             long rowsLoaded = 0;
             while ((line = br.readLine()) != null) {
@@ -2297,15 +2337,19 @@ public class QLearner extends Artifact {
                 if (line.isEmpty() || line.startsWith("#")) continue;
                 String[] parts = line.split(",");
                 if (parts.length < 4) continue;
-                int a   = Integer.parseInt(parts[0].trim());
-                int sb  = Integer.parseInt(parts[1].trim());
+                Integer a  = byLabel.get(parts[0].trim());
+                if (a == null) { unknown.add(parts[0].trim()); continue; }
+                int sb     = Integer.parseInt(parts[1].trim());
                 double sum = Double.parseDouble(parts[2].trim());
                 long   n   = Long.parseLong(parts[3].trim());
-                if (a < 0 || a >= nActions) continue;
                 if (sb < 0 || sb >= actionCalN[a].length) continue;
                 actionCalSum[a][sb] = sum;
                 actionCalN[a][sb]   = n;
                 rowsLoaded++;
+            }
+            if (!unknown.isEmpty()) {
+                LOGGER.warning("loadAdaptiveTrustSidecar: " + filename
+                    + " — unknown action labels skipped: " + unknown);
             }
             LOGGER.info("loadAdaptiveTrustSidecar: loaded " + rowsLoaded + " rows from " + filename);
         } catch (IOException | NumberFormatException e) {
@@ -2313,12 +2357,68 @@ public class QLearner extends Artifact {
         }
     }
 
+    /**
+     * Action-space inversion: map the action columns of a persisted CSV header
+     * to CURRENT registry indices by action LABEL (e.g. "SetZ1Light=ON"), so
+     * saved artifacts survive any change in discovery ordering. Q-table CSVs
+     * have always carried labels in their header; this makes the loader
+     * actually honour them instead of assuming positional identity.
+     *
+     * @return an array of length numActionCols whose entry c is the current
+     *         action index for CSV column c+1, or -1 when that label no longer
+     *         exists; or {@code null} when NO column label matches — the file
+     *         cannot be safely mapped (a legacy positional sidecar from before
+     *         the inversion, or an artifact of a different lab) and MUST be
+     *         ignored by the caller.
+     */
+    private int[] mapHeaderToActions(String headerLine, String filename) {
+        String[] cols = headerLine.split(",");
+        if (cols.length < 2) {
+            LOGGER.warning("mapHeaderToActions: no action columns in " + filename);
+            return null;
+        }
+        java.util.Map<String, Integer> byLabel = new java.util.HashMap<>();
+        for (int a = 0; a < nActions; a++) byLabel.put(actionInfos[a].label, a);
+        int[] map = new int[cols.length - 1];
+        java.util.List<String> unknown = new java.util.ArrayList<>();
+        int matched = 0;
+        boolean identity = (cols.length - 1 == nActions);
+        for (int c = 1; c < cols.length; c++) {
+            Integer a = byLabel.get(cols[c].trim());
+            map[c - 1] = (a == null) ? -1 : a;
+            if (a == null) { unknown.add(cols[c].trim()); identity = false; }
+            else { matched++; if (a != c - 1) identity = false; }
+        }
+        if (matched == 0) {
+            LOGGER.severe("mapHeaderToActions: NO header label of " + filename
+                + " matches the current action registry — file IGNORED."
+                + " (Legacy positional artifact from before the action-space"
+                + " inversion, or an artifact of a different lab. Re-train to"
+                + " regenerate label-keyed artifacts.)");
+            return null;
+        }
+        boolean[] covered = new boolean[nActions];
+        for (int m : map) if (m >= 0) covered[m] = true;
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        for (int a = 0; a < nActions; a++) if (!covered[a]) missing.add(actionInfos[a].label);
+        if (identity) {
+            LOGGER.info("mapHeaderToActions: " + filename + " — identity mapping ("
+                + matched + " actions)");
+        } else {
+            LOGGER.warning("mapHeaderToActions: " + filename + " — label-remapped "
+                + matched + "/" + (cols.length - 1) + " columns"
+                + (unknown.isEmpty() ? "" : "; unknown columns skipped: " + unknown)
+                + (missing.isEmpty() ? "" : "; actions left at init values: " + missing));
+        }
+        return map;
+    }
+
     private void loadQTableIntoZone(String filename, int zoneIdx) {
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(filename))) {
             String header = br.readLine();
             if (header == null) { LOGGER.warning("loadQTableIntoZone: empty " + filename); return; }
-            String[] cols = header.split(",");
-            int numActionCols = cols.length - 1;
+            int[] colToAction = mapHeaderToActions(header, filename);
+            if (colToAction == null) return;
             String line;
             while ((line = br.readLine()) != null) {
                 line = line.trim();
@@ -2326,8 +2426,10 @@ public class QLearner extends Artifact {
                 String[] parts = line.split(",");
                 int stateIdx = Integer.parseInt(parts[0].trim());
                 if (stateIdx < 0 || stateIdx >= nStates) continue;
-                for (int a = 0; a < Math.min(numActionCols, nActions); a++) {
-                    qTables[zoneIdx][stateIdx][a] = Double.parseDouble(parts[a + 1].trim());
+                for (int c = 0; c < colToAction.length && c + 1 < parts.length; c++) {
+                    int a = colToAction[c];
+                    if (a < 0) continue;
+                    qTables[zoneIdx][stateIdx][a] = Double.parseDouble(parts[c + 1].trim());
                 }
             }
             LOGGER.info("loadQTableIntoZone: loaded " + filename + " → zone " + zoneIdx);
@@ -2340,8 +2442,8 @@ public class QLearner extends Artifact {
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(filename))) {
             String header = br.readLine();
             if (header == null) { LOGGER.warning("loadQTableCombined: empty " + filename); return; }
-            String[] cols = header.split(",");
-            int numActionCols = cols.length - 1;
+            int[] colToAction = mapHeaderToActions(header, filename);
+            if (colToAction == null) return;
             int numZones = qTables.length;
             String line;
             while ((line = br.readLine()) != null) {
@@ -2350,8 +2452,10 @@ public class QLearner extends Artifact {
                 String[] parts = line.split(",");
                 int stateIdx = Integer.parseInt(parts[0].trim());
                 if (stateIdx < 0 || stateIdx >= nStates) continue;
-                for (int a = 0; a < Math.min(numActionCols, nActions); a++) {
-                    double combined = Double.parseDouble(parts[a + 1].trim());
+                for (int c = 0; c < colToAction.length && c + 1 < parts.length; c++) {
+                    int a = colToAction[c];
+                    if (a < 0) continue;
+                    double combined = Double.parseDouble(parts[c + 1].trim());
                     double perZone = combined / numZones;
                     for (int z = 0; z < numZones; z++) {
                         qTables[z][stateIdx][a] = perZone;

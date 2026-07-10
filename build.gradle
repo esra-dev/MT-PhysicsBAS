@@ -378,13 +378,41 @@ task validateTurtle(type: JavaExec, dependsOn: 'classes') {
     args 'src/resources'
 }
 
+// verifyActionRegistry: golden test for the ontology-discovered action
+// registries (action-space inversion audit). Recomputes every lab ontology
+// set's registry with the CURRENT StereotypeReasoner code and compares it to
+// the label-keyed goldens under config/golden_registry. The contract is the
+// action-KEY SET + per-action metadata; action INDICES are informational only
+// (all persisted per-action artifacts are label-remapped on load). Fails the
+// build on any set/metadata difference. Pass -PregistryGolden=<dir> to check
+// against a different golden dir (e.g. config/golden_registry/pre_inversion
+// for the one-time pre-vs-post equivalence audit).
+task verifyActionRegistry(type: JavaExec, dependsOn: 'classes') {
+    description = 'Golden-checks every lab ontology action registry against config/golden_registry.'
+    group = ' MT-Esra'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.RegistryGoldenCheck'
+    args (project.findProperty('registryGolden') ?: 'config/golden_registry')
+}
+
+// dumpActionRegistry: (re)generates the golden registry CSVs. Run ONLY after
+// an INTENDED discovery/ontology change, review the diff, and commit the
+// updated goldens together with the change that caused it.
+task dumpActionRegistry(type: JavaExec, dependsOn: 'classes') {
+    description = 'Regenerates the golden action-registry CSVs under config/golden_registry.'
+    group = ' MT-Esra'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.ActionRegistryDump'
+    args (project.findProperty('registryOut') ?: 'config/golden_registry')
+}
+
 // preflight: lightweight sanity checks before a long sweep. Validates that
 // each requested profile has the expected ttl, ontology, and scenario JSON
 // files, and that simulator ports respond to /health (unless -PskipSimProbe
 // is passed). Run via:
 //   gradlew preflight -Pprofiles=custom2,custom3
 //   gradlew preflight -Pprofiles=custom2 -PskipSimProbe
-task preflight(dependsOn: 'validateTurtle') {
+task preflight(dependsOn: ['validateTurtle', 'verifyActionRegistry']) {
     description = 'Phase 12 #6: validate profiles, scenarios, ontology, and simulator availability.'
     group = ' MT-Esra'
 

@@ -358,15 +358,15 @@ lab_profile("lab5",
             training_params(3000, 0.9970)).
 
 // ── Phase 2.5 MONITOR EMERGENCY-FALLBACK LAB ───────────────────────────────
-//   A single-zone lab with THREE Causes actuators: the primary task lamp, a
-//   computer MONITOR whose light output is only a side-effect (new
-//   ws:MonitorStereotype), and a dim backup lamp. Fully deterministic (no
-//   sunshine, no blinds). Clean optimum = the primary lamp alone (rank 3).
-//   The emergency variant labmon_f1dead kills the primary lamp so the ONLY
-//   surviving rank-3 path is {monitor, backup} (375 lux) — the monitor is the
-//   necessary, unconventional fallback the KG-primed agent should exploit
-//   faster than a tabula-rasa learner. State = [Z1Level, Z1Light, Z1Monitor,
-//   Z1Backup] = 32 states. Port 1899.
+//   A single-zone lab with TWO Causes actuators: the primary task lamp and a
+//   computer MONITOR whose light output is only a side-effect
+//   (ws:MonitorStereotype). Fully deterministic (no sunshine, no blinds).
+//   Clean optimum = the primary lamp alone (rank 3, 425 lux).
+//   The emergency variant labmon_f1dead kills the primary lamp; the monitor
+//   alone reaches rank 2 only (285 lux) — best-effort degradation. The
+//   KG-primed agent should re-value the monitor as the fallback faster than a
+//   tabula-rasa learner. State = [Z1Level, Z1Light, Z1Monitor] = 16 states.
+//   Port 1899.
 lab_profile("labmon",
             td("classpath:interactions-labmon.ttl"),
             ont(["building_6_monitor.ttl"]),
@@ -405,6 +405,86 @@ lab_profile("labmon2",
             sunshine_prob(0.75),
             weakness_flags([]),
             qtable_suffix("_labmon2"),
+            training_params(4000, 0.9975)).
+
+// ── Phase 2.6 KG-SILENT MONITOR VARIANTS (misdocumented / undocumented) ─────
+//   Forks of the monitor labs where the monitor STILL physically brightens the
+//   room (identical simulator flows/ports as labmon / labmon2) but its light
+//   effect is MISSING from the stereotype layer of the KG:
+//     • *_infoonly  (variant A) — the monitor HAS a stereotype, but its only
+//       dependent variable is displayed_information; the elem:luminiscence
+//       side-effect (and the photon outlet) is absent. A MISDOCUMENTED KG.
+//     • *_nostereo  (variant B) — the monitor has NO stereotype at all. An
+//       UNDOCUMENTED component (instance + WoT mapping only).
+//   In both variants the monitor's ON/OFF actions enter the action space via
+//   the KG-SILENT fallback discovery (StereotypeReasoner) with EMPTY
+//   affectedZones: no Q-init endorsement, no fault adjudication, no
+//   Expected-vs-Actual prediction. Both learner arms must discover the
+//   monitor's light effect from reward alone. The research question: when the
+//   task lamp(s) die, do the agents still adopt the unmodeled monitor as the
+//   best-effort fallback, and does the KG-primed arm (priors on everything
+//   EXCEPT the monitor) still adapt better/faster than tabula-rasa?
+//   The parent (fully-modeled) labmon/labmon2 profiles remain untouched, so
+//   full-KG vs misdocumented-KG vs undocumented-KG is a 3-way contrast.
+
+//   labmon_infoonly → CLEAN single-zone parent, info-only monitor stereotype.
+lab_profile("labmon_infoonly",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon_infoonly"),
+            training_params(1500, 0.9950)).
+
+//   labmon_nostereo → CLEAN single-zone parent, monitor without any stereotype.
+lab_profile("labmon_nostereo",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon_nostereo"),
+            training_params(1500, 0.9950)).
+
+//   labmon2_infoonly → CLEAN dual-zone parent, info-only monitor stereotypes.
+lab_profile("labmon2_infoonly",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon2_infoonly"),
+            training_params(4000, 0.9975)).
+
+//   labmon2_nostereo → CLEAN dual-zone parent, monitors without any stereotype.
+lab_profile("labmon2_nostereo",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon2_nostereo"),
             training_params(4000, 0.9975)).
 
 // ── Phase 3 SLOW LADDER (Learning Process Dynamics / response delay) ────────
@@ -771,6 +851,7 @@ lab_profile("labmon_f1dead",
 //   ESSENTIAL best-effort lever; the KG's structural prior should let it re-value
 //   the spotlight and reconverge faster than the tabula-rasa agent. Reuses the
 //   lab3 ont/td/port so the warm-loaded Q-table shape matches.
+// NOTE: scenarios/train_scenarios reused from lab3 (clean parent); lowsun pins training resets only, not benchmark setState overrides.
 lab_profile("lab3_f2dead_lowsun",
             td("classpath:interactions-lab3.ttl"),
             ont(["building_3_complex.ttl"]),
@@ -795,6 +876,7 @@ lab_profile("lab3_f2dead_lowsun",
 //   ESSENTIAL best-effort lever in each zone; the KG's structural prior (Monitor
 //   Causes light) should let it re-value and reconverge faster than tabula-rasa.
 //   Reuses the labmon2 ont/td/port so the warm-loaded Q-table shape matches.
+// NOTE: scenarios/train_scenarios reused from labmon2 (clean parent); lowsun pins training resets only, not benchmark setState overrides.
 lab_profile("labmon2_f2dead_lowsun",
             td("classpath:interactions-labmon2.ttl"),
             ont(["building_7_dualmonitor.ttl"]),
@@ -807,6 +889,77 @@ lab_profile("labmon2_f2dead_lowsun",
             sunshine_prob(0.75),
             weakness_flags([w4]),
             qtable_suffix("_labmon2_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
+//   ── Phase 2.6 — FAULTY cells of the KG-SILENT monitor variants ────────────
+//   Same fault injections (and simulator flows) as labmon_f1dead and
+//   labmon2_f2dead_lowsun, but the agents' KG is the misdocumented (_infoonly)
+//   or undocumented (_nostereo) variant, and they warm-load the Q-table
+//   trained on the MATCHING clean variant. The monitor is now the essential
+//   best-effort lever — but the KG never told either arm it emits light.
+
+//   labmon_infoonly_f1dead → DEAD primary lamp; monitor (KG-silent, info-only
+//   stereotype) is the only surviving lever → best-effort rank 2.
+lab_profile("labmon_infoonly_f1dead",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon_infoonly_f1dead"),
+            training_params(1500, 0.9950)).
+
+//   labmon_nostereo_f1dead → DEAD primary lamp; monitor (KG-silent, no
+//   stereotype) is the only surviving lever → best-effort rank 2.
+lab_profile("labmon_nostereo_f1dead",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon_nostereo_f1dead"),
+            training_params(1500, 0.9950)).
+
+//   labmon2_infoonly_f2dead_lowsun → BOTH lamps dead + sun pinned to rank 1;
+//   the KG-silent monitors are the essential best-effort levers in BOTH zones.
+lab_profile("labmon2_infoonly_f2dead_lowsun",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon2_infoonly_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
+//   labmon2_nostereo_f2dead_lowsun → BOTH lamps dead + sun pinned to rank 1;
+//   the KG-silent monitors are the essential best-effort levers in BOTH zones.
+lab_profile("labmon2_nostereo_f2dead_lowsun",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon2_nostereo_f2dead_lowsun"),
             training_params(4000, 0.9970)).
 
 /* ============================================================
@@ -836,6 +989,12 @@ adapt_source("labmon_f1dead",  "_labmon").
 adapt_source("lab3_f2dead_lowsun", "_lab3").
 // Phase 2.5 — labmon2 dual-zone multi-survivor monitor fallback (both lamps dead + sun pinned).
 adapt_source("labmon2_f2dead_lowsun", "_labmon2").
+// Phase 2.6 — KG-silent monitor variants: each faulty cell warm-loads the
+// Q-table trained on the MATCHING clean variant (same KG, same action space).
+adapt_source("labmon_infoonly_f1dead",         "_labmon_infoonly").
+adapt_source("labmon_nostereo_f1dead",         "_labmon_nostereo").
+adapt_source("labmon2_infoonly_f2dead_lowsun", "_labmon2_infoonly").
+adapt_source("labmon2_nostereo_f2dead_lowsun", "_labmon2_nostereo").
 
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.
