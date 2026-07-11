@@ -256,13 +256,18 @@ jobs:
           merge-multiple: true
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Warm Gradle deps (retry on JitPack flakes)
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
         shell: bash
         run: |
           set +e
           rc=0
           for attempt in 1 2 3; do
-            ./gradlew --no-daemon classes
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph too — taskAdapt then
+            # runs against a fully warm cache. (Run 29115969476 lost one cell to
+            # transient Maven-Central 403s because 'classes' only warms the
+            # compile classpath and taskAdapt itself has no retry.)
+            ./gradlew --no-daemon classes validateTurtle
             rc=$?
             [ $rc -eq 0 ] && break
             if [ $attempt -lt 3 ]; then
@@ -272,6 +277,16 @@ jobs:
             fi
           done
           if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
+      - name: Scrub stray result CSVs from the workspace
+        # Defense-in-depth (run 29115969476 post-mortem): the artifact upload
+        # below globs recovery/metrics/qtable CSVs from the workspace root, and
+        # the aggregate job reconstructs per-seed results first-copy-wins — so
+        # ANY stray file (e.g. accidentally committed local run leftovers)
+        # would shadow another cell's real result. Guarantee a clean slate.
+        shell: bash
+        run: |
+          rm -f recovery_stereotypes_*.csv metrics_adapted_stereotypes_*.csv qtable_adapted_stereotypes_*.csv
+          echo "workspace scrubbed"
       - name: Regenerate faulty Node-RED flows (deterministic from clean flows)
         shell: pwsh
         run: |
@@ -292,10 +307,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: adapt-${{ matrix.profile }}-${{ matrix.mode }}-seed-${{ matrix.seed }}
+          # Scoped to THIS cell's own files (qtable_suffix == "_<profile>"), so
+          # an artifact can never carry another cell's CSVs into the aggregate
+          # (see the scrub step above for the failure mode this prevents).
           path: |
-            recovery_stereotypes_*.csv
-            qtable_adapted_stereotypes_*.csv
-            metrics_adapted_stereotypes_*.csv
+            recovery_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            qtable_adapted_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            metrics_adapted_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
             log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.log
             log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.err.log
             run_phase2_adapt.log

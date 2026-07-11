@@ -49,6 +49,13 @@ benchmark/results.archive_*/
 bench_step_log_*.csv
 benchmark_results_*.csv
 metrics_stereotypes_*.csv
+# Phase 2 adapt runtime artifacts. NEVER commit these: every CI adapt job's
+# artifact upload globs recovery_stereotypes_*.csv from the checkout root, and
+# the aggregate step's first-copy-wins reconstruction would then prefer a
+# stale committed file over the run's real result (contaminated run
+# 29115969476 — 7 cells shadowed by leftovers committed in df53b71).
+recovery_stereotypes_*.csv
+metrics_adapted_stereotypes_*.csv
 coverage_stereotypes_*.csv
 first_goal_stereotypes_*.csv
 learned_stereotypes_*.ttl

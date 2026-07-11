@@ -1458,3 +1458,16 @@ Phase 2.6 KG-silent variants, Phase 3 dynamics). Pre-inversion artifacts are
 retired/archived; §9 registration text stays frozen with a post-registration
 infrastructure-change addendum. Full rationale and runbook:
 `docs/ACTION_SPACE_INVERSION.md`.
+
+**2026-07-11 post-mortem note (runs 29107822998 / 29115969476):** the first
+post-inversion Phase-2 dispatch failed wholesale on a stale fault-flow
+generator pattern (fixed in f6d10eb); the second completed 221/222 jobs but is
+RETIRED: 26 stale local recovery/metrics CSVs had been accidentally committed
+in df53b71, and the aggregate's first-copy-wins reconstruction let them shadow
+7 of 16 cells' real results. Fix: stale CSVs removed from the repo +
+gitignored; adapt jobs now scrub the workspace and upload only their own
+cell's CSVs; the dependency warm-up also resolves the runtime classpath
+(one cell had died to transient Maven-Central 403s). Neither issue affects
+any pre-inversion registered result (the CSVs entered the repo only at
+df53b71). All Phase-2 numbers cited come from re-dispatches at or after the
+fix commit.
