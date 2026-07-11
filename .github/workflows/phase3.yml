@@ -166,13 +166,18 @@ jobs:
           path: build
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Warm Gradle deps (retry on JitPack flakes)
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
         shell: bash
         run: |
           set +e
           rc=0
           for attempt in 1 2 3; do
-            ./gradlew --no-daemon classes
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph too — the dynamics
+            # cell's Gradle tasks then run against a fully warm cache. (Phase-2
+            # run 29115969476 lost a cell to transient Maven-Central 403s
+            # because 'classes' only warms the compile classpath.)
+            ./gradlew --no-daemon classes validateTurtle
             rc=$?
             [ $rc -eq 0 ] && break
             if [ $attempt -lt 3 ]; then

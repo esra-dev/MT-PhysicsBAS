@@ -185,6 +185,27 @@ jobs:
           path: .
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph inside the retry
+            # loop — the cell's Gradle run then starts against a fully warm
+            # cache instead of hitting Maven Central mid-run (Phase-2 run
+            # 29115969476 lost a cell to transient Maven-Central 403s).
+            ./gradlew --no-daemon classes validateTurtle
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
       - name: Show active learning config (sanity)
         run: jq '.learning' config/run_config.json
       - name: Run training cell (with early-failure retry)
@@ -278,6 +299,27 @@ jobs:
           path: .
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph inside the retry
+            # loop — the cell's Gradle run then starts against a fully warm
+            # cache instead of hitting Maven Central mid-run (Phase-2 run
+            # 29115969476 lost a cell to transient Maven-Central 403s).
+            ./gradlew --no-daemon classes validateTurtle
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
       - name: Run benchmark cell (with early-failure retry)
         shell: pwsh
         run: |
