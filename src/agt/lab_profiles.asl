@@ -818,6 +818,31 @@ lab_profile("lab2_f1binv",
             qtable_suffix("_lab2_f1binv"),
             training_params(2000, 0.9960)).
 
+//   ── Phase 2.7 — MULTI-BLIND fault cell (EXPLORATORY, post-registration) ───
+//   lab3_f2bdead → BOTH blinds dead in the Complex lab (own-zone 0.50·sun and
+//   cross-zone 0.30·sun contributions zeroed for each blind). Extends the
+//   iterative multi-fault detect→blacklist→warm-restart loop to the Mediates
+//   class: each dead blind is only falsifiable on the OPEN probe under sun
+//   rank ≥2, so the agent must run the active self-test TWICE and blacklist
+//   iteratively. Survivors (Z1 lamp, Z2 lamp, Spotlight) keep BOTH zones
+//   deterministically rank-3 reachable (25+400+100+150) — the first WELL-POSED
+//   multi-fault cell (the lamp f2* cells leave only sun-gated survivors).
+//   Registered as an EXPLORATORY cell (pre_registration.md §9.11): full
+//   statistics reported, never a member of the frozen §9.5/§9.6 BH families.
+lab_profile("lab3_f2bdead",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f2bdead"),
+            training_params(4000, 0.9970)).
+
 //   labmon_f1dead → DEAD primary lamp in the Monitor emergency-fallback lab.
 //   After the lamp is blacklisted, the ONLY surviving rank-3 path is
 //   {Z1Monitor, Z1Backup} = 375 lux (deterministic, sun-independent). The
@@ -983,6 +1008,8 @@ adapt_source("lab3_f1bdead",   "_lab3").
 adapt_source("lab3_f1binv",    "_lab3").
 adapt_source("lab2_f1bdead",   "_lab2").
 adapt_source("lab2_f1binv",    "_lab2").
+// Phase 2.7 — multi-blind exploratory cell (pre_registration.md §9.11).
+adapt_source("lab3_f2bdead",   "_lab3").
 // Phase 2.5 — monitor emergency-fallback lab.
 adapt_source("labmon_f1dead",  "_labmon").
 // Phase 2.5B — lab3 multi-survivor degraded cell (both lamps dead + sun pinned).

@@ -976,6 +976,53 @@ effect with an action-space asymmetry that the inversion removed. Both instrumen
 results are reported side by side in the thesis; only the post-inversion numbers carry
 confirmatory weight.
 
+### 9.11 Registered exploratory extension — multi-blind cell `lab3_f2bdead` (added 2026-07-12, pre-dispatch)
+
+**Motivation (disclosed):** the "several components broken at once" family
+(`lab2_f2dead/f2inv`, `lab3_f2dead/f2inv`) injects Causes lamps only, and every lamp
+multi-fault cell is either ill-posed (the survivors are sun-gated) or a degraded
+best-effort cell (`*_lowsun`). The §9.10 interpretive commentary reads the post-inversion
+outcome as "structural knowledge pays where recovery requires re-ranking multiple
+surviving actuators." `lab3_f2bdead` — BOTH lab3 blinds dead (own-zone 0.50·sun and
+cross-zone 0.30·sun contributions zeroed for each) — is designed to probe that reading on
+a new configuration: it is (a) the first multi-fault cell in the **Mediates** class,
+requiring two iterations of the active-probe detect→blacklist→warm-restart loop (each
+blind is only falsifiable on the OPEN probe under sun rank ≥ 2), and (b) the first
+**well-posed, full-recovery** multi-fault cell — survivors Z1Light, Z2Light, Spotlight
+keep both zones deterministically rank-3 reachable (25 + 400 own + 100 cross + 150
+spotlight).
+
+**Status (frozen):** EXPLORATORY. Per the §9.5/§9.6 no-silent-change rule the frozen
+families are **unchanged** (recovery m = 8, detection m = 8): `lab3_f2bdead` never enters
+either family and carries **no q-value** (`analysis/phase2_recovery.py` reports its
+paired statistics with `in_registered_family = False`; the same 8 p-values enter each BH
+family as before). The §9.4 well-posed enumeration is amended 11 → 12 by this subsection
+(`_WELL_POSED_RECOVERY` gains the cell; the stratifier remains a property of the
+environment, symmetric across arms). One dispatch only; the outcome is reported whatever
+it is, and no rerun-until-significant is permitted.
+
+**Directional expectation (stated before dispatch; exploratory, non-confirmatory):**
+under the §9.10 binding-constraint reading, recovery here demands re-ranking three
+surviving actuators after two blacklists, so Δ = RecoveryEpisodes(ql_true) −
+RecoveryEpisodes(ql_false) < 0 is expected. A null would instead indicate that the
+warm-started lamp policy already dominates in both arms — the blinds are redundant under
+a goal-only reward (the same redundancy that motivated the active probe), so losing them
+may not force any re-ranking at all. Either outcome is informative commentary on the
+binding-constraint interpretation; neither carries confirmatory weight.
+
+**Run specification (frozen):** `phase2.yml` on branch `kg-crosszone-coupling-mid` at the
+commit that introduces this subsection, with inputs `adapt_profiles="lab3_f2bdead"`,
+`seeds="1,2,3,4,5,6,7,8,9,10"`, `run_mode="phase1"`, `adapt_episodes="0"`,
+`publish_results=true`. Detection is expected at ep ≈ 6–8 per blind (probe-bound, as in
+the f1b* cells); DetectEpisode is reported descriptively only.
+
+**Analysis rule (frozen before data):** on completion the `phase2-consolidated` artifact
+is downloaded to `phase2_f2bdead/run_<run_id>/` (committed to the repo) and
+`_RUN_OF_RECORD["lab3_f2bdead"]` in `analysis/phase2_recovery.py` is pointed at its
+`recovery_root/`; the pooled `--registered` invocation is re-run. The cell's row appears
+in `phase2_recovery_paired.csv` with full statistics and q = nan; every §9.5/§9.6
+q-value is unaffected.
+
 ---
 
 *Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*

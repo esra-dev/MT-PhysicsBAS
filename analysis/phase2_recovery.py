@@ -114,6 +114,17 @@ _WELL_POSED_RECOVERY = (
     "lab3_f1dead_z2", "lab3_f1inv_z2",
     "lab3_f1bdead", "lab3_f1binv",
     "lab2_f1bdead", "lab2_f1binv",
+    # Phase 2.7 — EXPLORATORY multi-blind cell (registered post-hoc amendment,
+    # pre_registration.md §9.11, added 2026-07-12). BOTH lab3 blinds dead (own
+    # 0.50·sun + cross 0.30·sun zeroed each); survivors Z1Light, Z2Light,
+    # Spotlight keep both zones deterministically rank-3 reachable
+    # (25+400+100+150), so a recovery-SPEED contrast is well-posed — the first
+    # well-posed MULTI-fault cell (the lamp f2* cells leave only sun-gated
+    # survivors). NOT a member of the frozen §9.5/§9.6 families
+    # (_REGISTERED_* below unchanged): paired statistics are reported, but
+    # q_bootstrap_bh stays nan by construction — exploratory, no confirmatory
+    # claim.
+    "lab3_f2bdead",
     # Phase 2.5b — monitor emergency-fallback lab. The primary lamp is the ONLY
     # rank-3 lever, so once it is blacklisted the nominal goal (rank 3) is
     # UNREACHABLE. The adapt agent proves this with a deterministic reachability
@@ -225,6 +236,9 @@ _RUN_OF_RECORD = {
     "labmon_nostereo_f1dead": "phase2_postinv/run_29157197853/recovery_root",
     "labmon2_infoonly_f2dead_lowsun": "phase2_postinv/run_29157197853/recovery_root",
     "labmon2_nostereo_f2dead_lowsun": "phase2_postinv/run_29157197853/recovery_root",
+    # Phase 2.7 exploratory multi-blind cell (§9.11): entry added when its
+    # dispatch lands (expected layout: phase2_f2bdead/run_<id>/recovery_root).
+    # Until then the --registered invocation skips lab3_f2bdead with a notice.
 }
 
 # Pre-inversion table (runs of record up to and including §9.9), preserved

@@ -102,6 +102,22 @@ New-FaultyFlow 'simulator_flow_lab2.json' 'simulator_flow_lab2_f1binv.json' `
     'Lab_2_Intermediate (port 1893)' 'Lab_2_Intermediate_F1BINV (port 1893)' `
     @(,@('z1b ? 0.50 * sun', 'z1b ? -0.50 * sun'))
 
+# ── Phase 2.7 — MULTI-BLIND fault cell (several Mediates components at once) ──
+# lab3_f2bdead - BOTH blinds dead in the Complex lab (each blind's own-zone
+# 0.50*sun AND cross-zone 0.30*sun contributions zeroed). The multi-fault
+# family above (f2dead/f2inv) injects CAUSES lamps only; this is its Mediates
+# analogue: TWO IV-gated faults, each only falsifiable on the OPEN probe under
+# sun rank >= 2, so the agent iterates the active self-test + blacklist twice.
+# Survivors (Z1Light, Z2Light, Spotlight) keep BOTH zones deterministically
+# rank-3 reachable (25 + 400 own + 100 cross + 150 spotlight), which makes this
+# the first WELL-POSED multi-fault cell (the lamp f2* cells leave only
+# sun-gated survivors). EXPLORATORY: registered post-hoc as
+# pre_registration.md §9.11 — never a member of the frozen §9.5/§9.6 families.
+New-FaultyFlow 'simulator_flow_lab3.json' 'simulator_flow_lab3_f2bdead.json' `
+    'Lab_3_Complex (port 1894)' 'Lab_3_Complex_F2BDEAD (port 1894)' `
+    @(@('z1b ? 0.50 * sun', 'z1b ? 0'), @('z1b ? 0.30 * sun', 'z1b ? 0'), `
+      @('z2b ? 0.50 * sun', 'z2b ? 0'), @('z2b ? 0.30 * sun', 'z2b ? 0'))
+
 # ── Phase 2.5 — MONITOR emergency-fallback lab ───────────────────────────────
 # labmon_f1dead - DEAD primary lamp (kill the +400 lux Z1Light contribution).
 # The lamp is the ONLY rank-3 lever, so once it is blacklisted the goal (rank 3)
