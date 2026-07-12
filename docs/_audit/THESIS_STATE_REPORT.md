@@ -1548,3 +1548,34 @@ entirely null (§9.10), so the fix's motivation dissolved — the item is droppe
 from the future-work list rather than carried forward. The blind self-test
 (Phase 2.4) is unaffected: it remains load-bearing instrumentation for the
 f1b*/f2b* cells.
+
+## Addendum 2026-07-12c — `lab3_f2bdead` dispatched and closed; binding-constraint forward test NOT confirmed
+
+The §9.11 registered dispatch ran green as run **29187088096** (commit
+`bb6c4e4`, seeds 1–10, 40/40 matrix jobs). Per the frozen analysis rule the
+`phase2-consolidated` artifact is archived at
+`phase2_f2bdead/run_29187088096/recovery_root/`, `_RUN_OF_RECORD` gained the
+cell's entry, and the pooled `--registered` re-run
+(`analysis/out_phase2_registered_postinv/`) added exactly the cell's two rows
+— every §9.5/§9.6 q-value verified byte-identical to the §9.10 record
+(families stay m = 8/8; the cell's q = nan by construction). The cell is
+closed under the one-dispatch rule.
+
+**Realized outcome — the registered directional expectation (Δ < 0) was not
+met.** RecoveryEpisodes 570.0 (ql_true) vs 447.7 (ql_false), Δ = **+122.3**
+(KG slower), 95 % CI [−11.5, +265.3], bootstrap p = 0.076, Cliff's δ = +0.38,
+ns. The machinery performed as designed: both blinds blacklisted in all 20
+replicas (recall 1.0 both arms; KG arm probed descriptively earlier,
+DetectEpisode 3.8 vs 5.8, Δ = −2.0, CI [−3.8, −0.1]); goal-reaching
+certification confirmed (RecoveredGoalRate 0.755 / 0.940, tier confirmatory
+by classification, outside the frozen family). The outcome is the redundancy
+reading with an adverse trend — the survivors are the levers the warm-started
+policy already ranked correctly, reproducing the `lab3_f1dead` (+85.0) /
+`labmon_f1dead` (+22.2) signature. Consequence for the narrative: the §9.10
+binding-constraint reading survives only in a **narrower form** (knowledge
+pays where the fault demotes relied-upon levers and promotes survivors the
+policy had learned to ignore — not wherever several survivors exist), and
+that narrower form is itself now untested going forward. Recorded in
+`pre_registration.md` §9.11 (realized-outcome block),
+`docs/PHASE2_7_MULTIBLIND_FAULT.md`, and `docs/thesis_chapter_phase2.md`
+§2.3/§6.3/§6.4/§8 (limitation 2 upgraded from "pending" to "not confirmed").

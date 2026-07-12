@@ -236,9 +236,9 @@ _RUN_OF_RECORD = {
     "labmon_nostereo_f1dead": "phase2_postinv/run_29157197853/recovery_root",
     "labmon2_infoonly_f2dead_lowsun": "phase2_postinv/run_29157197853/recovery_root",
     "labmon2_nostereo_f2dead_lowsun": "phase2_postinv/run_29157197853/recovery_root",
-    # Phase 2.7 exploratory multi-blind cell (§9.11): entry added when its
-    # dispatch lands (expected layout: phase2_f2bdead/run_<id>/recovery_root).
-    # Until then the --registered invocation skips lab3_f2bdead with a notice.
+    # 29187088096 (Phase 2.7 §9.11 exploratory multi-blind cell, commit
+    # bb6c4e4, seeds 1-10; reported descriptively -- NOT in any frozen family)
+    "lab3_f2bdead": "phase2_f2bdead/run_29187088096/recovery_root",
 }
 
 # Pre-inversion table (runs of record up to and including §9.9), preserved

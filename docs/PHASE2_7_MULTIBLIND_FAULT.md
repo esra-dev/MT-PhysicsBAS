@@ -2,8 +2,11 @@
 
 > **Status:** implemented 2026-07-12; registered as an EXPLORATORY cell in
 > `docs/pre_registration.md` **§9.11** (pre-dispatch). It never enters the
-> frozen §9.5/§9.6 BH families and carries no confirmatory claim. As of this
-> commit the cell has **not yet been dispatched** — no results exist.
+> frozen §9.5/§9.6 BH families and carries no confirmatory claim.
+> **DISPATCHED and CLOSED 2026-07-12** — run of record 29187088096; realized
+> outcome recorded in §9.11 and in "Realized outcome" below. The directional
+> expectation (Δ < 0) was **not** met; per the one-dispatch rule no rerun is
+> permitted.
 
 ## Motivation — two gaps closed by one cell
 
@@ -102,7 +105,38 @@ On completion, per §9.11: download the `phase2-consolidated` artifact to
 `recovery_root/`, and re-run the pooled `--registered` invocation. The cell
 reports full paired statistics with `in_registered_family = False`, q = nan.
 
-## What to look for
+## Realized outcome (run 29187088096, commit `bb6c4e4`, seeds 1–10)
+
+The §9.11 dispatch ran green (40/40 matrix jobs). Artifact archived at
+`phase2_f2bdead/run_29187088096/recovery_root/`; `_RUN_OF_RECORD` repointed;
+pooled `--registered` re-run at `analysis/out_phase2_registered_postinv/`
+(frozen-family q-values verified byte-identical; the script printed the
+expected no-q notice for this cell).
+
+| Metric | ql_true | ql_false | Δ (true − false) | 95 % CI | p | Cliff's δ | q |
+|---|---|---|---|---|---|---|---|
+| RecoveryEpisodes | 570.0 | 447.7 | **+122.3** (KG slower) | [−11.5, +265.3] | 0.076 | +0.38 | nan |
+| DetectEpisode (descr.) | 3.8 | 5.8 | −2.0 | [−3.8, −0.1] | 0.047 | −0.40 | nan |
+
+Against the three pre-stated observables:
+
+1. **Iterative Mediates detection: confirmed.** Both blinds blacklisted in all
+   20 replicas (recall 1.0 both arms); first blacklist at ep 2–8, second at
+   ep 3–87 (probe-bound). The KG arm probed descriptively earlier (Δ = −2.0).
+2. **Recovery contrast: the Δ < 0 expectation was NOT met.** The realized
+   outcome is the redundancy reading, with an adverse (ns) trend: survivors
+   are exactly the levers the warm-started policy already ranks correctly, so
+   both arms pay the generic lab3 re-learning cost and the KG arm's retained
+   priors trend toward overhead — the same pattern as `lab3_f1dead` (+85.0)
+   and `labmon_f1dead` (+22.2). The forward test narrows the §9.10
+   binding-constraint reading: multi-survivor re-ranking is necessary but not
+   sufficient; the advantage requires that the fault promote survivors the
+   warm-started policy had learned to ignore.
+3. **Goal-reaching certification: confirmed.** RecoveredGoalRate 0.755 / 0.940
+   (both ≥ 0.5, reconvergence 1.0 both arms) — the cell classifies
+   confirmatory while remaining outside the frozen family (q = nan).
+
+## What to look for (pre-dispatch text, kept for the record)
 
 1. **Iterative Mediates detection:** both blinds blacklisted, each on its
    first sound probe; recall 1.0 in both arms; user alerted twice.

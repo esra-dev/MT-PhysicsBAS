@@ -60,6 +60,7 @@ metrics_adapted_stereotypes_*.csv
 # runs' phase2-consolidated artifacts) ARE the citable §9.7 data — keep them
 # committable like phase2_results_v6/ etc.
 !phase2_postinv/**
+!phase2_f2bdead/**
 coverage_stereotypes_*.csv
 first_goal_stereotypes_*.csv
 learned_stereotypes_*.ttl

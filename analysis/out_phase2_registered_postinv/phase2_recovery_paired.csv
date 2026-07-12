@@ -7,6 +7,7 @@ lab3_f1bdead,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5
 lab3_f1binv,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,398.5,405.0,-6.5,-138.4075,116.0,0.9288,0.5368,0.845703125,-0.02,True,0.9288,8
 lab2_f1bdead,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,75.6,382.1,-306.5,-439.5,-174.59500000000006,0.0,1.0,0.001953125,-0.92,True,0.0,8
 lab2_f1binv,RecoveryEpisodes,descriptive,False,4,seed1;seed2;seed3;seed10,479.5,323.75,155.75,-44.25,399.0,0.1268,0.0634,0.375,0.375,False,nan,0
+lab3_f2bdead,RecoveryEpisodes,confirmatory,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,570.0,447.7,122.3,-11.502499999999998,265.3,0.0756,0.0378,0.232421875,0.38,False,nan,0
 labmon_f1dead,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,84.5,62.3,22.2,-15.8,57.202499999999965,0.2458,0.1229,0.4296875,0.05,False,0.3277333333333333,8
 lab3_f2dead_lowsun,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,63.5,134.9,-71.4,-102.3025,-41.3,0.0,1.0,0.001953125,-0.84,True,0.0,8
 labmon2_f2dead_lowsun,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,187.1,334.7,-147.6,-230.9025,-61.397500000000036,0.0008,0.9996,0.01953125,-0.76,True,0.0021333333333333334,8
@@ -25,6 +26,7 @@ lab3_f1bdead,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;se
 lab3_f1binv,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,7.4,5.7,1.7,-0.6,4.0,0.1558,0.0779,0.1875,0.27,False,0.656,8
 lab2_f1bdead,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,7.2,6.4,0.8,-0.1,2.1,0.164,0.082,0.359375,0.3,False,0.656,8
 lab2_f1binv,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,7.2,6.0,1.2,-1.0,3.3,0.3,0.15,0.421875,0.24,False,0.7999999999999999,8
+lab3_f2bdead,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,3.8,5.8,-2.0,-3.8,-0.1,0.0468,0.9814,0.078125,-0.4,True,nan,0
 labmon_f1dead,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
 lab3_f2dead_lowsun,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
 labmon2_f2dead_lowsun,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0

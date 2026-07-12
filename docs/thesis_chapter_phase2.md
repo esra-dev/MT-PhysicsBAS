@@ -114,8 +114,8 @@ first well-posed multi-fault cell (survivors Z1 lamp, Z2 lamp, spotlight keep
 both zones deterministically at rank 3). Because the registered families are
 frozen by enumeration, this cell can never enter them: it is reported with
 full paired statistics and no q-value, as a designed probe of the
-binding-constraint reading (§6.4). At the time of writing it has not yet been
-dispatched.
+binding-constraint reading. Its realized outcome — the registered directional
+expectation was not met — is reported in §6.3.
 
 ## 3 The adaptation machinery
 
@@ -369,14 +369,35 @@ which a structural prior has information the Q-table does not.
 Three disciplines back it. First, it is stated in the registration itself as
 disclosed commentary (§9.10), separated from the frozen confirmatory claims.
 Second, it retrodicts the *pre-inversion* collapse pattern (§5.4): the cells
-carried by action-space asymmetry are the ones that fell. Third, it makes a
-falsifiable prediction, which we registered before dispatch (§9.11): the
-exploratory multi-blind cell `lab3_f2bdead` re-creates the multi-survivor
-re-ranking situation in a new configuration (two iterative Mediates
-blacklists, three deterministic survivors), so the reading predicts Δ < 0
-there; a null would instead say the lost blinds were policy-irrelevant in
-both arms. Either outcome is informative, and neither can touch the frozen
-families.
+carried by action-space asymmetry are the ones that fell. Third, it made a
+falsifiable prediction, registered before dispatch (§9.11): the exploratory
+multi-blind cell `lab3_f2bdead` re-creates the multi-survivor re-ranking
+situation in a new configuration (two iterative Mediates blacklists, three
+deterministic survivors), so the reading as first stated predicts Δ < 0
+there, while a null would say the lost blinds were policy-irrelevant in both
+arms.
+
+**The forward test returned its verdict against the prediction** (run
+29187088096, seeds 1–10, q = nan by construction, families untouched at
+m = 8/8): Δ = **+122.3** (570.0 vs 447.7 episodes, KG *slower*), 95 % CI
+[−11.5, +265.3], ns — an adverse trend, not the predicted advantage. The
+machinery itself performed exactly as designed: both blinds were blacklisted
+in all 20 replicas (recall 1.0; the KG arm probed descriptively earlier,
+DetectEpisode 3.8 vs 5.8), and both arms recovered to a goal-reaching policy
+(goal-rate 0.755 / 0.940). What failed is the *strong* form of the reading:
+"multiple survivors to re-rank" is evidently not sufficient. The realized
+pattern is the redundancy outcome — the deterministic survivors (own lamps,
+spotlight) are precisely the levers the warm-started policy already ranked
+correctly, so no re-ranking was actually demanded, both arms paid the generic
+lab3 re-learning cost, and the KG arm's retained priors trended toward
+overhead, reproducing the `lab3_f1dead` (+85.0) and `labmon_f1dead` (+22.2)
+signature. The honest statement of the surviving reading is therefore
+narrower: structural knowledge pays where the fault *demotes levers the
+warm-started policy relied on and promotes survivors it had learned to
+ignore* (`lab2_f1bdead`; the lowsun triage cells, where a clean-lab-redundant
+lever becomes essential) — not wherever several survivors merely exist. We
+report this exactly as registered: one dispatch, outcome recorded whatever it
+is, no rerun.
 
 ### 6.4 Phase 1 and Phase 2 are the same finding
 
@@ -385,11 +406,16 @@ that is real but not required — and Phase 2's selective recovery advantage
 are two sides of one statement: the value of structural knowledge is not a
 property of the knowledge but of the *coupling between knowledge and task*.
 Redundant structure priced into the prior costs episodes (Phase 1, lab3);
-load-bearing structure priced into the prior saves them, in proportion to how
-much re-ranking the fault demands (Phase 2, this section). The
+load-bearing structure priced into the prior saves them (Phase 2, §6.1). The
 `lab3_f2dead_lowsun` cell stages this inversion within a single experiment:
 the identical spotlight triple that was dead weight in the clean lab becomes
-the decisive advantage after the fault.
+the decisive advantage after the fault. The `lab3_f2bdead` verdict (§6.3)
+closes the loop from the other side: a fault that removes *redundant*
+structure — both blinds, in a lab whose lamps already carry the policy —
+converts none of the prior's content into load-bearing knowledge, and the
+Phase-1 lab3 tax duly reappears as an adverse recovery trend. Across both
+phases, the sign of the KG contribution tracks whether the documented
+structure is required by the task at hand, never merely whether it is true.
 
 ## 7 The KG-silent contrast: knowledge content, not machinery
 
@@ -462,8 +488,11 @@ advantage never comes for free from the prior machinery itself).
 2. **H-P2 is not supported as registered.** The universal claim failed; the
    selective claim is an interpretation, registered only as disclosed
    commentary. Its independent support (retrodiction of the collapse pattern,
-   the Phase-2.6 contrast) is descriptive; its one pre-registered forward test
-   (`lab3_f2bdead`, §9.11) is exploratory by construction and pending.
+   the Phase-2.6 contrast) is descriptive; and its one pre-registered forward
+   test (`lab3_f2bdead`, §9.11) **did not confirm the strong form** — the
+   predicted Δ < 0 did not materialize (Δ = +122.3, ns), and the reading
+   survives only in the narrower demote-and-promote formulation of §6.3,
+   which has not itself been forward-tested.
 3. **Exposure, not sensing, sets detection timing** — so detection contrasts
    carry no information about knowledge, and the null detection family should
    not be read as parity of anything except instrumentation.

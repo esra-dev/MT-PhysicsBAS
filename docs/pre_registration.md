@@ -1023,6 +1023,42 @@ is downloaded to `phase2_f2bdead/run_<run_id>/` (committed to the repo) and
 in `phase2_recovery_paired.csv` with full statistics and q = nan; every §9.5/§9.6
 q-value is unaffected.
 
+**Realized outcome (added 2026-07-12, post-run):** the registered dispatch ran green as
+CI run **29187088096** (commit `bb6c4e4` — the commit carrying this subsection — seeds
+1–10, both arms, 40/40 matrix jobs). Per the frozen analysis rule the artifact is
+archived at `phase2_f2bdead/run_29187088096/recovery_root/` (committed),
+`_RUN_OF_RECORD["lab3_f2bdead"]` points at it, and the pooled `--registered` re-run
+(output `analysis/out_phase2_registered_postinv/`) adds exactly the cell's two rows;
+every §9.5/§9.6 q-value is byte-identical to the §9.10 record (verified by diff).
+
+- **RecoveryEpisodes (primary, exploratory):** ql_true 570.0 vs ql_false 447.7,
+  Δ = **+122.3** (KG *slower*), 95 % CI [−11.5, +265.3], bootstrap p = 0.076
+  (two-sided), Wilcoxon p = 0.232, Cliff's δ = +0.38, n = 10 paired, q = nan by
+  construction. **The directional expectation (Δ < 0) was not realized.**
+- **DetectEpisode (descriptive):** ql_true 3.8 vs ql_false 5.8, Δ = −2.0,
+  95 % CI [−3.8, −0.1], bootstrap p = 0.047. Both blinds were detected and
+  blacklisted in **all 20 replicas** (recall 1.0 in both arms; first blacklist at
+  ep 2–8, second at ep 3–87, probe-bound as expected) — the iterative Mediates
+  detect→blacklist→warm-restart loop worked as designed.
+- **Tier:** RecoveredGoalRate 0.755 (ql_true) / 0.940 (ql_false); reconvergence 1.0
+  in both arms. The cell classifies confirmatory, remains outside the frozen family,
+  and the script emitted the expected no-q notice.
+
+*Non-registered interpretive commentary, disclosed:* the outcome falls on the
+**redundancy** side of the two pre-stated readings, with an adverse (ns) trend rather
+than a clean null. Losing both blinds forced no re-ranking the KG could accelerate:
+the deterministic survivors (own lamps + spotlight) are exactly the levers the
+warm-started policy already ranks correctly, so recovery in both arms is dominated by
+generic re-learning of the 2048-state lab3 policy under boosted exploration — the
+same regime as the lab3 lamp-fault cells (`lab3_f1dead` +85.0, `labmon_f1dead`
++22.2), whose adverse-trend pattern this cell reproduces. The forward test therefore
+**narrows** the §9.10 binding-constraint reading: multi-survivor re-ranking is not
+sufficient for a KG advantage — the advantage appears only where the fault demotes
+levers the warm-started policy relied on and promotes survivors it had learned to
+ignore (lab2_f1bdead, the lowsun triage cells), not where the surviving set is the
+already-dominant one. Per the one-dispatch rule this cell is closed; no rerun is
+permitted.
+
 ---
 
 *Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*
