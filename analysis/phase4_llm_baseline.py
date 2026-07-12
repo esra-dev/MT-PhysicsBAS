@@ -42,6 +42,14 @@ exactly — and only — the KG's hidden facts:
         steps the KG-primed agent never pays (it reads ws:powerGates and enables
         the plug first). Differentiator: redundant actions + steps.
 
+  lab4dual: the same feedback discovery, TWICE — each zone's lamp hangs behind
+        its own plug, and general knowledge has no wiring diagram for either.
+
+  lab4chain: the dependency is a DEPTH-2 chain (breaker -> plug -> lamp). The
+        controller tries the unknown enabler switches one feedback round-trip at
+        a time (plug first — the commonsense nearest suspect — then the
+        breaker), so every extra chain level costs another diagnostic step.
+
   lab5: the two lamps are described identically (+400 lux) and their energy cost
         is INVISIBLE in the observable brightness — only ws:energyCost in the KG
         distinguishes them. A general-knowledge agent therefore cannot
@@ -151,9 +159,68 @@ def lab5_levels(s: dict) -> tuple[float, float]:
     return z1, z2
 
 
+def lab4dual_levels(s: dict) -> tuple[float, float]:
+    """lab4dual physics. EACH lamp is AND-gated on its OWN plug."""
+    sun = float(s.get("Sunshine", 0))
+    z1lamp_on = bool(s.get("Z1Light")) and bool(s.get("PlugZ1"))
+    z2lamp_on = bool(s.get("Z2Light")) and bool(s.get("PlugZ2"))
+    z1 = (AMBIENT
+          + (LAMP_PRIMARY if z1lamp_on else 0.0)
+          + (LAMP_CROSS if z2lamp_on else 0.0)
+          + (BLIND_PRIMARY * sun if s.get("Z1Blinds") else 0.0)
+          + (BLIND_CROSS * sun if s.get("Z2Blinds") else 0.0)
+          + (SPOTLIGHT if s.get("Spotlight") else 0.0))
+    z2 = (AMBIENT
+          + (LAMP_PRIMARY if z2lamp_on else 0.0)
+          + (LAMP_CROSS if z1lamp_on else 0.0)
+          + (BLIND_PRIMARY * sun if s.get("Z2Blinds") else 0.0)
+          + (BLIND_CROSS * sun if s.get("Z1Blinds") else 0.0)
+          + (SPOTLIGHT if s.get("Spotlight") else 0.0))
+    return z1, z2
+
+
+def lab4chain_levels(s: dict) -> tuple[float, float]:
+    """lab4chain physics. z1lamp_on = Z1Light AND PlugZ1 AND MasterSwitch."""
+    sun = float(s.get("Sunshine", 0))
+    z1lamp_on = (bool(s.get("Z1Light")) and bool(s.get("PlugZ1"))
+                 and bool(s.get("MasterSwitch")))
+    z2lamp_on = bool(s.get("Z2Light"))
+    z1 = (AMBIENT
+          + (LAMP_PRIMARY if z1lamp_on else 0.0)
+          + (LAMP_CROSS if z2lamp_on else 0.0)
+          + (BLIND_PRIMARY * sun if s.get("Z1Blinds") else 0.0)
+          + (BLIND_CROSS * sun if s.get("Z2Blinds") else 0.0)
+          + (SPOTLIGHT if s.get("Spotlight") else 0.0))
+    z2 = (AMBIENT
+          + (LAMP_PRIMARY if z2lamp_on else 0.0)
+          + (LAMP_CROSS if z1lamp_on else 0.0)
+          + (BLIND_PRIMARY * sun if s.get("Z2Blinds") else 0.0)
+          + (BLIND_CROSS * sun if s.get("Z1Blinds") else 0.0)
+          + (SPOTLIGHT if s.get("Spotlight") else 0.0))
+    return z1, z2
+
+
 def lab4_power(s: dict) -> float:
     """lab4 per-tick energy. (z1lamp_on?1)+(Z2Light?1)+(Spotlight?2)."""
     z1lamp_on = bool(s.get("Z1Light")) and bool(s.get("PlugZ1"))
+    return ((1.0 if z1lamp_on else 0.0)
+            + (1.0 if s.get("Z2Light") else 0.0)
+            + (2.0 if s.get("Spotlight") else 0.0))
+
+
+def lab4dual_power(s: dict) -> float:
+    """lab4dual per-tick energy. (z1lamp_on?1)+(z2lamp_on?1)+(Spotlight?2)."""
+    z1lamp_on = bool(s.get("Z1Light")) and bool(s.get("PlugZ1"))
+    z2lamp_on = bool(s.get("Z2Light")) and bool(s.get("PlugZ2"))
+    return ((1.0 if z1lamp_on else 0.0)
+            + (1.0 if z2lamp_on else 0.0)
+            + (2.0 if s.get("Spotlight") else 0.0))
+
+
+def lab4chain_power(s: dict) -> float:
+    """lab4chain per-tick energy. (z1lamp_on?1)+(Z2Light?1)+(Spotlight?2)."""
+    z1lamp_on = (bool(s.get("Z1Light")) and bool(s.get("PlugZ1"))
+                 and bool(s.get("MasterSwitch")))
     return ((1.0 if z1lamp_on else 0.0)
             + (1.0 if s.get("Z2Light") else 0.0)
             + (2.0 if s.get("Spotlight") else 0.0))
@@ -169,7 +236,11 @@ def lab5_power(s: dict) -> float:
 
 
 # Per-profile actuator vocabulary (the boolean levers the agent may toggle) and
-# the physics/power hooks.
+# the physics/power hooks. `enablers` maps zone -> the "unknown switch" names
+# general knowledge would try, IN ORDER, when the zone's lamp is on but the
+# zone stays dark (feedback-driven dependency discovery: check the plug first,
+# then the breaker). The proxy never reads ws:powerGates — only this
+# commonsense repair order plus live brightness feedback.
 PROFILES = {
     "lab4": {
         "actuators": ["Z1Light", "Z2Light", "Z1Blinds", "Z2Blinds",
@@ -177,6 +248,25 @@ PROFILES = {
         "levels": lab4_levels,
         "power": lab4_power,
         "has_budget": False,
+        "enablers": {1: ["PlugZ1"], 2: []},
+    },
+    "lab4dual": {
+        "actuators": ["Z1Light", "Z2Light", "Z1Blinds", "Z2Blinds",
+                      "Spotlight", "PlugZ1", "PlugZ2"],
+        "levels": lab4dual_levels,
+        "power": lab4dual_power,
+        "has_budget": False,
+        "enablers": {1: ["PlugZ1"], 2: ["PlugZ2"]},
+    },
+    "lab4chain": {
+        "actuators": ["Z1Light", "Z2Light", "Z1Blinds", "Z2Blinds",
+                      "Spotlight", "PlugZ1", "MasterSwitch"],
+        "levels": lab4chain_levels,
+        "power": lab4chain_power,
+        "has_budget": False,
+        # Commonsense repair order: the plug is the nearest suspect, the
+        # breaker the next one up. Each try costs one feedback round-trip.
+        "enablers": {1: ["PlugZ1", "MasterSwitch"], 2: []},
     },
     "lab5": {
         "actuators": ["Z1Eff", "Z1Ineff", "Z2Eff", "Z2Ineff",
@@ -184,6 +274,7 @@ PROFILES = {
         "levels": lab5_levels,
         "power": lab5_power,
         "has_budget": True,
+        "enablers": {1: [], 2: []},
     },
 }
 
@@ -211,7 +302,7 @@ def apply_action(s: dict, action: str) -> dict:
     return ns
 
 
-PROFILES_ALL_ACTS = set(PROFILES["lab4"]["actuators"]) | set(PROFILES["lab5"]["actuators"])
+PROFILES_ALL_ACTS = set().union(*(set(p["actuators"]) for p in PROFILES.values()))
 
 
 # ---------------------------------------------------------------------------
@@ -284,10 +375,10 @@ def general_knowledge_actions(profile: str, scenario: dict, rng: random.Random,
 
 def _zone_levers(profile: str, zone: int):
     """(lamp_candidates, blind) lever names for a zone."""
-    if profile == "lab4":
-        lamp = [f"Z{zone}Light"]
-    else:
+    if profile == "lab5":
         lamp = [f"Z{zone}Eff", f"Z{zone}Ineff"]
+    else:
+        lamp = [f"Z{zone}Light"]
     return lamp, f"Z{zone}Blinds"
 
 
@@ -307,12 +398,16 @@ def _plan_one_toggle(profile: str, s: dict, use_daylight: bool,
         if use_daylight and not s.get(blind):
             return f"Set{blind}=true"
 
-        # 2) lab4 hidden-dependency discovery via feedback: if this zone's lamp
-        #    switch is already ON but the zone is still dark, general knowledge
-        #    says "powered device on but nothing happening -> check the plug".
-        if profile == "lab4" and zone == 1:
-            if s.get("Z1Light") and not s.get("PlugZ1"):
-                return "SetPlugZ1=true"
+        # 2) Hidden-dependency discovery via feedback (lab4/lab4dual/lab4chain):
+        #    if this zone's lamp switch is already ON but the zone is still
+        #    dark, general knowledge says "powered device on but nothing
+        #    happening -> check the unknown switches, nearest first" (the plug,
+        #    then — lab4chain — the breaker). One feedback round-trip per try.
+        enablers = PROFILES[profile].get("enablers", {}).get(zone, [])
+        if enablers and all(s.get(l) for l in lamps):
+            for en in enablers:
+                if not s.get(en):
+                    return f"Set{en}=true"
 
         # 3) Turn on a lamp for this zone. In lab5 the two lamps are
         #    indistinguishable to general knowledge -> unbiased coin (the KG's
@@ -322,9 +417,11 @@ def _plan_one_toggle(profile: str, s: dict, use_daylight: bool,
             choice = off_lamps[0] if len(off_lamps) == 1 else rng.choice(off_lamps)
             return f"Set{choice}={'true'}"
 
-        # 4) lab4: lamp on but plug still off (covers the zone-1 trap directly).
-        if profile == "lab4" and zone == 1 and not s.get("PlugZ1"):
-            return "SetPlugZ1=true"
+        # 4) Lamp already on but an enabler is still off (covers the plug /
+        #    breaker traps directly, whatever the zone).
+        for en in enablers:
+            if not s.get(en):
+                return f"Set{en}=true"
 
         # 5) Last resort: the shared spotlight lifts both zones (+150). General
         #    knowledge knows it costs power, so it is a fallback, not a first
@@ -343,14 +440,16 @@ def _find_sheddable(profile: str, s: dict):
     (they are indistinguishable to it); it can only drop a device that is purely
     redundant. This is why an inefficient-but-sufficient config stays
     non-compliant under general knowledge."""
+    all_enablers = {en for ens in PROFILES[profile].get("enablers", {}).values()
+                    for en in ens}
     powered = []
     if s.get("Spotlight"):
         powered.append("Spotlight")
     for a in PROFILES[profile]["actuators"]:
         if a == "Spotlight" or a.endswith("Blinds"):
             continue
-        if a == "PlugZ1":
-            continue  # enabler, not a light source
+        if a in all_enablers:
+            continue  # enablers (plugs/breaker), not light sources
         if s.get(a):
             powered.append(a)
     for dev in powered:
@@ -542,7 +641,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--out", default="analysis/out",
                         help="output directory (default: analysis/out)")
     parser.add_argument("--profile", action="append", default=None,
-                        help="profile to run (repeatable; default: lab4,lab5)")
+                        help="profile to run (repeatable; default: "
+                             "lab4,lab4dual,lab4chain,lab5)")
     parser.add_argument("--seeds", default="1,2,3,4,5,6,7,8,9,10",
                         help="comma seeds for the general backend's coin flips "
                              "(default: 1..10, matching the QL seed family)")
@@ -561,7 +661,7 @@ def main(argv: list[str]) -> int:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     scen_dir = Path(args.scenarios_dir)
-    profiles = args.profile or ["lab4", "lab5"]
+    profiles = args.profile or ["lab4", "lab4dual", "lab4chain", "lab5"]
     seeds = [int(x) for x in str(args.seeds).split(",") if str(x).strip()]
 
     cache = {}

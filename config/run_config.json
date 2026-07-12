@@ -197,6 +197,8 @@
     "lab5": 1898,
     "labmon": 1899,
     "labmon2": 1900,
+    "lab4dual": 1901,
+    "lab4chain": 1902,
     "labmon_infoonly": 1899,
     "labmon_nostereo": 1899,
     "labmon2_infoonly": 1900,
@@ -219,6 +221,8 @@
     "lab3_slow": "simulator_flow_lab3_slow.json",
     "lab4": "simulator_flow_lab4.json",
     "lab5": "simulator_flow_lab5.json",
+    "lab4dual": "simulator_flow_lab4dual.json",
+    "lab4chain": "simulator_flow_lab4chain.json",
     "labmon": "simulator_flow_labmon.json",
     "labmon2": "simulator_flow_labmon2.json",
     "labmon_infoonly": "simulator_flow_labmon.json",
@@ -243,6 +247,8 @@
     "lab3_slow": "_lab3_slow",
     "lab4": "_lab4",
     "lab5": "_lab5",
+    "lab4dual": "_lab4dual",
+    "lab4chain": "_lab4chain",
     "labmon": "_labmon",
     "labmon2": "_labmon2",
     "labmon_infoonly": "_labmon_infoonly",
@@ -267,6 +273,8 @@
     "lab3_slow": 8,
     "lab4": 9,
     "lab5": 10,
+    "lab4dual": 10,
+    "lab4chain": 10,
     "labmon": 3,
     "labmon2": 9,
     "labmon_infoonly": 3,
@@ -497,8 +505,8 @@
     ]
   },
   "phase4": {
-    "description": "Phase 4 hidden-dependency + energy labs (run via .github/workflows/phase4.yml, reusing run_full_project.ps1 with -OnlyProfiles lab4|lab5 and -RunMode phase4). Two STRICTLY-CLEAN labs extend the Phase-1 clean ladder with KG-encoded knowledge a tabula-rasa learner cannot see: lab4 (smart-plug AND-gate: the Z1 ceiling lamp emits light only when both its switch AND SmartPlug_Z1 are ON; the KG declares ws:powerGates and the reasoner gates the lamp's ON action on the plug state by reusing the IV-gate machinery) and lab5 (two directly-actionable lamps per zone with identical +400 lux output but different ws:energyCost 1 vs 4; energy is NOT in the Q-reward, so only the KG-primed agent — via the non-fading energy prior stereo_energy_prior_weight — prefers the efficient lamp / zero-energy blinds). The headline is the within-lab ql_true (KG-primed) vs ql_false (tabula-rasa) delta on first-goal episode, learning AUC, redundant-action count, goal rate, energy, and (lab5) energy-budget compliance. Statistical treatment mirrors phase1/phase3: paired across seeds (default 1..10), Wilcoxon signed-rank + bootstrap 95% CIs + BH-FDR + Cliff's delta. lab5 compliance is scored at benchmark time from the deterministic steady-state power of the final actuator configuration recorded in bench_step_log_<mode>.csv (power = Z1Eff*1 + Z1Ineff*4 + Z2Eff*1 + Z2Ineff*4 + Spotlight*2); compliant = GoalReached AND power <= energyBudget (per-scenario, default 2). BenchmarkLogger CSV schema is UNCHANGED so Phases 1-3 outputs are untouched.",
-    "phase4_profiles": ["lab4", "lab5"],
+    "description": "Phase 4 hidden-dependency + energy labs (run via .github/workflows/phase4.yml, reusing run_full_project.ps1 with -OnlyProfiles <lab> and -RunMode phase4). Four STRICTLY-CLEAN labs extend the Phase-1 clean ladder with KG-encoded knowledge a tabula-rasa learner cannot see. DEPENDENCY LADDER (cells vary how many components carry a dependency and how deep the chain is): lab4 (ONE smart-plug AND-gate: the Z1 ceiling lamp emits light only when both its switch AND SmartPlug_Z1 are ON; the KG declares ws:powerGates and the reasoner gates the lamp's ON action on the plug state by reusing the IV-gate machinery), lab4dual (TWO parallel plug dependencies: each zone's lamp behind its own plug — two ws:powerGates arcs), lab4chain (DEPTH-2 serial chain: circuit breaker gates the plug, the plug gates the Z1 lamp — two chained ws:powerGates arcs, so the lamp needs breaker AND plug AND switch all ON). ENERGY: lab5 (two directly-actionable lamps per zone with identical +400 lux output but different ws:energyCost 1 vs 4; energy is NOT in the Q-reward, so only the KG-primed agent — via the non-fading energy prior stereo_energy_prior_weight — prefers the efficient lamp / zero-energy blinds). The headline is the within-lab ql_true (KG-primed) vs ql_false (tabula-rasa) delta on first-goal episode, learning AUC, redundant-action count, goal rate, energy, and (lab5) energy-budget compliance. Statistical treatment mirrors phase1/phase3: paired across seeds, Wilcoxon signed-rank + bootstrap 95% CIs + BH-FDR + Cliff's delta. lab5 compliance is scored at benchmark time from the deterministic steady-state power of the final actuator configuration recorded in bench_step_log_<mode>.csv (power = Z1Eff*1 + Z1Ineff*4 + Z2Eff*1 + Z2Ineff*4 + Spotlight*2); compliant = GoalReached AND power <= energyBudget (per-scenario, default 2). The dependency labs carry no energyBudget, so phase4_energy.py collapses their compliance to goal_rate and the learning-speed/redundancy story comes from sweep_report.py. BenchmarkLogger CSV schema is UNCHANGED so Phases 1-3 outputs are untouched.",
+    "phase4_profiles": ["lab4", "lab4dual", "lab4chain", "lab5"],
     "phase4_modes": ["rule_based", "ql_false", "ql_true"],
     "run_mode": "phase4",
     "energy_prior_weight": 2.0,
@@ -506,19 +514,27 @@
     "power_formula": "Z1Eff*1 + Z1Ineff*4 + Z2Eff*1 + Z2Ineff*4 + Spotlight*2",
     "simulator_port_map": {
       "lab4": 1897,
-      "lab5": 1898
+      "lab5": 1898,
+      "lab4dual": 1901,
+      "lab4chain": 1902
     },
     "simulator_flow_map": {
       "lab4": "simulator_flow_lab4.json",
-      "lab5": "simulator_flow_lab5.json"
+      "lab5": "simulator_flow_lab5.json",
+      "lab4dual": "simulator_flow_lab4dual.json",
+      "lab4chain": "simulator_flow_lab4chain.json"
     },
     "qtable_suffix_map": {
       "lab4": "_lab4",
-      "lab5": "_lab5"
+      "lab5": "_lab5",
+      "lab4dual": "_lab4dual",
+      "lab4chain": "_lab4chain"
     },
     "expected_state_vec_dim": {
       "lab4": 9,
-      "lab5": 10
+      "lab5": 10,
+      "lab4dual": 10,
+      "lab4chain": 10
     }
   },
   "dry_run": false

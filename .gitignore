@@ -44,6 +44,11 @@ Desktop.ini
 
 # Generated experiment/runtime artifacts
 .node-red-custom*/
+# Node-RED userDirs are auto-created by run_full_project.ps1 on first start;
+# their bootstrap content (node_modules, lib, backups) must never be committed.
+# Ignoring the dirs does NOT untrack the settings/config subsets already
+# committed for older labs (gitignore has no effect on tracked files).
+.node-red-lab*/
 benchmark/results/
 benchmark/results.archive_*/
 bench_step_log_*.csv

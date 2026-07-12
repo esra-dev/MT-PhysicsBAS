@@ -1579,3 +1579,30 @@ that narrower form is itself now untested going forward. Recorded in
 `pre_registration.md` §9.11 (realized-outcome block),
 `docs/PHASE2_7_MULTIBLIND_FAULT.md`, and `docs/thesis_chapter_phase2.md`
 §2.3/§6.3/§6.4/§8 (limitation 2 upgraded from "pending" to "not confirmed").
+
+## Addendum 2026-07-12d — Phase-4 dependency ladder implemented (lab4dual, lab4chain); §10a supersedure protocol registered
+
+The fourth thesis part (hidden dependencies + energy) was extended on
+`kg-crosszone-coupling-mid`: the Phase-4 lab set grew from {lab4, lab5} to a
+**dependency ladder** — `lab4dual` (both zone lamps behind their own smart
+plug; two parallel `ws:powerGates` arcs; port 1901; `building_8_dualplug.ttl`;
+8192 states) and `lab4chain` (circuit breaker → smart plug → Z1 lamp; two
+CHAINED `ws:powerGates` arcs + new `ws:CircuitBreakerStereotype`; port 1902;
+`building_9_chainplug.ttl`; 8192 states). Ladder axis: 0 (lab3) → 1 (lab4) →
+2-parallel (lab4dual) / depth-2-serial (lab4chain) KG-documented dependencies,
+identical budgets (3000 eps, λ=0.9970). **Zero core-Java changes** — the
+generic power-gate/IV machinery was verified slot-generic and reused; golden
+registries regenerated (2 new files, all 15 pre-existing bit-identical);
+`Phase4KgDiscoveryTest` extended to 4/4 green; `phase4.yml` defaults now
+`lab4,lab4dual,lab4chain,lab5`. The offline LLM proxy was generalized via a
+per-profile enabler map; it reproduces the certified lab4 numbers exactly and
+shows ladder-monotone diagnostic cost (mean redundant 0.375→0.500→0.625). An
+end-to-end lab4chain dev smoke against live Node-RED passed (slot registry
+len=10, both chain gates applied at runtime, label-keyed loads, exit 0).
+Full manifest, registered expectations (seeds 1..20 fixed pre-dispatch,
+primary = benchmark `avg_redundant` per dependency cell; lab5 primary
+unchanged `energy_compliance`), runtime forecasts, and the chain middle-link
+IV-statistics disclosure: `docs/PHASE4_DEPENDENCY_LADDER.md`. Standing duty
+made explicit: **PHASE4.md §10/§10a are pre-inversion and superseded** — the
+first post-inversion Phase-4 dispatch (per ACTION_SPACE_INVERSION.md §6.2) is
+the citable record for lab4/lab5 and the confirmatory record for the ladder.

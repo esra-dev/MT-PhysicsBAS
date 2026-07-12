@@ -1,15 +1,29 @@
 name: Phase 4 (Dependencies + Energy, KG vs LLM framing)
 
 # ──────────────────────────────────────────────────────────────────────────
-# Phase 4 — Hidden DEPENDENCIES and ENERGY-aware goals on two NEW clean labs,
-# plus an offline LLM baseline for the overarching "KG informs the agent
-# better than an LLM's general knowledge" comparison.
+# Phase 4 — Hidden DEPENDENCIES (a 3-cell dependency LADDER) and ENERGY-aware
+# goals on strictly-clean labs, plus an offline LLM baseline for the
+# overarching "KG informs the agent better than an LLM's general knowledge"
+# comparison.
 #
-#   lab4  (smart-plug dependency): the Zone-1 ceiling lamp is wired behind a
-#         smart plug and only emits light when BOTH the lamp switch AND the
-#         plug are ON. The dependency is KNOWN in the knowledge graph
-#         (ws:powerGates / ws:poweredBy) so the KG-primed learner enables the
-#         plug first; a tabula-rasa learner must discover it by trial.
+#   DEPENDENCY LADDER — cells vary how many components carry a power
+#   dependency and how deep the dependency chain is:
+#
+#   lab4      (1 dependency): the Zone-1 ceiling lamp is wired behind a smart
+#             plug and only emits light when BOTH the lamp switch AND the plug
+#             are ON. Documented in the KG via ws:powerGates / ws:poweredBy, so
+#             the KG-primed learner enables the plug first; a tabula-rasa
+#             learner must discover the AND-gate by trial.
+#
+#   lab4dual  (2 parallel dependencies): EACH zone's lamp is behind its OWN
+#             smart plug (two ws:powerGates arcs) — more components with a
+#             dependency at the same time.
+#
+#   lab4chain (depth-2 serial chain): a circuit breaker gates the plug, the
+#             plug gates the Z1 lamp (two CHAINED ws:powerGates arcs), so the
+#             lamp lights only when breaker AND plug AND switch are all ON —
+#             a deeper dependency the KG-primed learner can traverse
+#             breaker->plug->lamp.
 #
 #   lab5  (energy-aware): each zone has two directly-actionable lamps with the
 #         SAME brightness but DIFFERENT energy cost (efficient=1, inefficient=4,
@@ -20,11 +34,13 @@ name: Phase 4 (Dependencies + Energy, KG vs LLM framing)
 #         the Q-reward — compliance is scored at benchmark time.
 #
 # Same setup -> train -> bench -> aggregate DAG as phase1.yml, with Phase-4
-# defaults: profiles lab4,lab5; run_mode phase4 (3000 episodes; the phase4
-# run-mode profile sets stereo.energyPriorWeight=2.0 for the KG arm); seeds
-# 1..10 for confirmatory power (Wilcoxon reaches p<0.05 only at n>=6). Every
-# (profile x stereo x seed) training cell and (profile x mode x seed) benchmark
-# cell runs concurrently, so wall-clock is set by the slowest single cell.
+# defaults: profiles lab4,lab4dual,lab4chain,lab5; run_mode phase4 (3000
+# episodes; the phase4 run-mode profile sets stereo.energyPriorWeight=2.0 for
+# the KG arm — inert on the dependency labs, which declare no ws:energyCost);
+# seeds 1..10 for confirmatory power (Wilcoxon reaches p<0.05 only at n>=6).
+# Every (profile x stereo x seed) training cell and (profile x mode x seed)
+# benchmark cell runs concurrently, so wall-clock is set by the slowest single
+# cell plus runner-concurrency queueing.
 #
 # The aggregate job runs THREE analyses:
 #   * sweep_report.py    -> goal_rate, avg_redundant, first_goal, AUC, energy
@@ -38,9 +54,9 @@ on:
   workflow_dispatch:
     inputs:
       profiles:
-        description: "Comma-separated Phase-4 labs (default lab4,lab5)"
+        description: "Comma-separated Phase-4 labs (default lab4,lab4dual,lab4chain,lab5 = dependency ladder + energy)"
         required: false
-        default: "lab4,lab5"
+        default: "lab4,lab4dual,lab4chain,lab5"
       seeds:
         description: "Comma-separated RNG seeds. Default 1..10 (confirmatory power: Wilcoxon can reach p<0.05 only at n>=6). Use 1,2,3,4,5 for a faster smoke replication."
         required: false
@@ -69,7 +85,7 @@ concurrency:
 
 env:
   RUN_MODE: ${{ github.event.inputs.run_mode || 'phase4' }}
-  PROFILES: ${{ github.event.inputs.profiles || 'lab4,lab5' }}
+  PROFILES: ${{ github.event.inputs.profiles || 'lab4,lab4dual,lab4chain,lab5' }}
   SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5,6,7,8,9,10' }}
 
 jobs:
@@ -614,9 +630,9 @@ jobs:
             echo "**Commit:** \`${{ github.sha }}\`"
             echo ""
             echo "Three analyses run in this job:"
-            echo "1. **sweep_report** -> learning-speed headline (KG ql_true vs tabula-rasa ql_false): auc_goal (PRIMARY, higher_better) favours ql_true; mean_first_goal and redundant actions (lower_better) smaller for ql_true."
-            echo "2. **phase4_energy** -> lab5 energy-budget compliance (the ONE new metric): energy_compliance (higher_better) and mean_steady_power / over_budget_rate (lower_better) favour ql_true."
-            echo "3. **phase4_llm_baseline** -> offline LLM baseline on the SAME scenarios (KG-vs-LLM framing). Compare the KG agent's energy_compliance against the LLM's."
+            echo "1. **sweep_report** -> learning-speed headline (KG ql_true vs tabula-rasa ql_false): auc_goal (PRIMARY, higher_better) favours ql_true; mean_first_goal and redundant actions (lower_better) smaller for ql_true. For the dependency LADDER (lab4 -> lab4dual -> lab4chain) the prediction is that the ql_true advantage GROWS with the number/depth of KG-documented dependencies."
+            echo "2. **phase4_energy** -> lab5 energy-budget compliance (the ONE new metric): energy_compliance (higher_better) and mean_steady_power / over_budget_rate (lower_better) favour ql_true. Dependency labs carry no budget (compliance==goal_rate there)."
+            echo "3. **phase4_llm_baseline** -> offline LLM baseline on the SAME scenarios (KG-vs-LLM framing). Compare the KG agent's energy_compliance against the LLM's; on the ladder, the LLM proxy pays one diagnostic feedback round-trip per unknown enabler switch."
             echo ""
             if [ -f analysis/out/learning_speed_tests.csv ]; then
               echo "## learning_speed_tests.csv (ql_true - ql_false, paired across seeds)"

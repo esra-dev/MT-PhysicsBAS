@@ -45,6 +45,10 @@ public final class ActionRegistryDump {
         ONTOLOGY_SETS.put("lab3_slow", new String[]{"building_3_slow.ttl"});
         ONTOLOGY_SETS.put("lab4",     new String[]{"building_4_smartplug.ttl"});
         ONTOLOGY_SETS.put("lab5",     new String[]{"building_5_energy.ttl"});
+        // Phase-4 dependency-ladder extension (2026-07-12): parallel and
+        // chained power-gate variants of lab4.
+        ONTOLOGY_SETS.put("lab4dual",  new String[]{"building_8_dualplug.ttl"});
+        ONTOLOGY_SETS.put("lab4chain", new String[]{"building_9_chainplug.ttl"});
         ONTOLOGY_SETS.put("labmon",            new String[]{"building_6_monitor.ttl"});
         ONTOLOGY_SETS.put("labmon_infoonly",   new String[]{"building_6_monitor_infoonly.ttl"});
         ONTOLOGY_SETS.put("labmon_nostereo",   new String[]{"building_6_monitor_nostereo.ttl"});

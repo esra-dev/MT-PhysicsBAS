@@ -1,5 +1,15 @@
 # Phase 4 — Hidden Dependencies, Energy-Aware Goals, and the KG-vs-LLM Comparison
 
+> **⚠️ Two updates supersede parts of this document (2026-07-12) — see
+> [PHASE4_DEPENDENCY_LADDER.md](PHASE4_DEPENDENCY_LADDER.md):**
+> 1. **All results in §10/§10a are PRE-INVERSION** (run 27905392725 predates the action-space
+>    inversion of 2026-07-10, [ACTION_SPACE_INVERSION.md](ACTION_SPACE_INVERSION.md) §6.2). They
+>    must not be cited as the Phase-4 numbers; the post-inversion re-run described in the ladder
+>    doc supersedes them. Keep §10a only as a pre-inversion-instrument measurement.
+> 2. **The Phase-4 lab set grew** by the dependency ladder: `lab4dual` (both
+>    lamps behind their own plugs) and `lab4chain` (breaker → plug → lamp, depth-2 chain).
+>    `phase4.yml` defaults now run `lab4,lab4dual,lab4chain,lab5`.
+
 **Project:** MT-Esra (Knowledge-Guided RL for Building Automation)
 **Stack:** JaCaMo (Jason AgentSpeak BDI + CArtAgO) · Q-Learning · Knowledge Graph / Stereotypes · Node-RED labs
 **Branch:** `phase4-dependencies-energy`

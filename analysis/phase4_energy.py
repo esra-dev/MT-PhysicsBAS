@@ -8,6 +8,12 @@ Phase 4 adds two strictly-clean labs to the Phase-1 clean ladder:
     toggles the plug first → reaches goals with fewer redundant actions) is
     already told by sweep_report's goal_rate / avg_redundant. lab4 carries NO
     per-scenario energy budget, so this script reports goal_rate only for it.
+    The dependency-LADDER variants lab4dual (each lamp behind its own plug) and
+    lab4chain (breaker -> plug -> lamp depth-2 chain) are handled identically:
+    no energyBudget in their scenarios => compliance collapses to goal_rate and
+    the learning-speed/redundancy story comes from sweep_report. Profiles are
+    read from run_config phase4.phase4_profiles, so no code change is needed
+    when a ladder cell is added there.
 
   * lab5 (energy) — each zone has TWO directly-actionable lamps with IDENTICAL
     +400 lux output but different ws:energyCost (efficient = 1, inefficient = 4).

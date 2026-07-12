@@ -303,13 +303,20 @@ lab_profile("lab3",
             training_params(3000, 0.9970)).
 
 // ── Phase 4 KNOWLEDGE LADDER (Hidden Dependencies & Energy) ─────────────────
-//   lab4/lab5 extend the Phase-1 clean ladder with KG-encoded knowledge that a
-//   tabula-rasa learner cannot see but a KG-primed learner can exploit. Both are
-//   STRICTLY-CLEAN (no hidden weakness): the simulator physics is fully aligned
-//   with the building_*.ttl, so every difference between ql_true and ql_false is
-//   attributable to the prior knowledge in the Knowledge Graph. weakness_flags is
-//   [] (the bench agent skips weakness fingerprinting). Same discretisation and
-//   pinned-sunshine regime as lab3.
+//   lab4/lab4dual/lab4chain/lab5 extend the Phase-1 clean ladder with KG-encoded
+//   knowledge that a tabula-rasa learner cannot see but a KG-primed learner can
+//   exploit. All are STRICTLY-CLEAN (no hidden weakness): the simulator physics
+//   is fully aligned with the building_*.ttl, so every difference between
+//   ql_true and ql_false is attributable to the prior knowledge in the Knowledge
+//   Graph. weakness_flags is [] (the bench agent skips weakness fingerprinting).
+//   Same discretisation and pinned-sunshine regime as lab3.
+//
+//   DEPENDENCY LADDER — cells vary how many components carry a power
+//   dependency and how deep the dependency chain is:
+//     lab3       0 gated components (Phase-1 anchor)
+//     lab4       1 gated component  (Z1 lamp behind one plug)
+//     lab4dual   2 gated components (BOTH lamps, one plug each)
+//     lab4chain  1 gated component, DEPTH-2 chain (breaker -> plug -> lamp)
 //
 //     lab4 Smart-Plug → lab3 + a hidden POWER dependency: the Z1 ceiling lamp is
 //                       wired through SmartPlug_Z1 (ws:powerGates) and emits light
@@ -317,6 +324,17 @@ lab_profile("lab3",
 //                       KG-primed agent reads ws:powerGates and enables the plug
 //                       first; a tabula-rasa agent must discover the AND-gate by
 //                       trial and error.                                (4096 states)
+//
+//     lab4dual Dual   → lab4 + a SECOND plug: EACH zone's lamp is behind its own
+//                       plug (two independent ws:powerGates arcs). Doubles the
+//                       number of components with a dependency.        (8192 states)
+//
+//     lab4chain Chain → lab4 + an UPSTREAM circuit breaker: breaker gates plug,
+//                       plug gates the Z1 lamp (two CHAINED ws:powerGates arcs;
+//                       the lamp lights only when breaker AND plug AND switch are
+//                       all ON). Deepens the dependency to a 2-level chain the
+//                       KG-primed agent can traverse breaker->plug->lamp.
+//                                                                       (8192 states)
 //
 //     lab5 Energy     → lab3 + two directly-actionable lamps per zone with the
 //                       SAME light output (+400) but different ws:energyCost
@@ -340,6 +358,40 @@ lab_profile("lab4",
             sunshine_prob(0.75),
             weakness_flags([]),
             qtable_suffix("_lab4"),
+            training_params(3000, 0.9970)).
+
+//   lab4dual → DUAL Smart-Plug dependency (port 1901). Two ws:powerGates arcs:
+//   each zone's lamp behind its own plug. Same budget as lab4 so the dependency
+//   ladder (0 -> 1 -> 2 gated components) holds the training budget constant.
+lab_profile("lab4dual",
+            td("classpath:interactions-lab4dual.ttl"),
+            ont(["building_8_dualplug.ttl"]),
+            scenarios("benchmark/scenarios_lab4dual.json"),
+            train_scenarios("benchmark/train_scenarios_lab4dual.json"),
+            sim_port(1901),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab4dual"),
+            training_params(3000, 0.9970)).
+
+//   lab4chain → CHAINED power dependency (port 1902). Two CHAINED ws:powerGates
+//   arcs: breaker -> plug -> Z1 lamp (the lamp needs ALL THREE switches ON).
+//   Same budget as lab4/lab4dual for the ladder contrast.
+lab_profile("lab4chain",
+            td("classpath:interactions-lab4chain.ttl"),
+            ont(["building_9_chainplug.ttl"]),
+            scenarios("benchmark/scenarios_lab4chain.json"),
+            train_scenarios("benchmark/train_scenarios_lab4chain.json"),
+            sim_port(1902),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab4chain"),
             training_params(3000, 0.9970)).
 
 //   lab5 → Energy differentiation (port 1898). Two lamps/zone, ws:energyCost 1 vs 4.

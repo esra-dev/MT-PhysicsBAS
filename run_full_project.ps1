@@ -211,14 +211,16 @@ if ($RunSeed -ne 0) {
 
 # ─── Project layout ───────────────────────────────────────────────────────────
 # Profiles to train/benchmark. Phase 1 clean ladder: lab1/lab2/lab3 by default.
-# Phase 4 adds lab4/lab5 (selected per-cell via -OnlyProfiles by phase4.yml);
-# they are NOT in the default set so a plain phase1 run is unchanged.
+# Phase 4 adds lab4/lab4dual/lab4chain/lab5 (selected per-cell via -OnlyProfiles
+# by phase4.yml); they are NOT in the default set so a plain phase1 run is
+# unchanged.
 $TrainProfiles = @(
     "lab1", "lab2", "lab3"
 )
 # Superset of all known/selectable profiles (used only to validate -OnlyProfiles).
 $KnownProfiles = @(
-    "lab1", "lab2", "lab3", "lab4", "lab5", "labmon", "labmon2",
+    "lab1", "lab2", "lab3", "lab4", "lab4dual", "lab4chain", "lab5",
+    "labmon", "labmon2",
     "labmon_infoonly", "labmon_nostereo", "labmon2_infoonly", "labmon2_nostereo"
 )
 
@@ -281,6 +283,8 @@ $ProfileQtableSuffix = @{
     lab2 = "_lab2"
     lab3 = "_lab3"
     lab4 = "_lab4"
+    lab4dual = "_lab4dual"
+    lab4chain = "_lab4chain"
     lab5 = "_lab5"
     labmon = "_labmon"
     labmon2 = "_labmon2"
@@ -296,6 +300,8 @@ $Simulators = @(
     [pscustomobject]@{ Profile="lab2"; Port=1893; Flow="simulator_flow_lab2.json" }
     [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
     [pscustomobject]@{ Profile="lab4"; Port=1897; Flow="simulator_flow_lab4.json" }
+    [pscustomobject]@{ Profile="lab4dual"; Port=1901; Flow="simulator_flow_lab4dual.json" }
+    [pscustomobject]@{ Profile="lab4chain"; Port=1902; Flow="simulator_flow_lab4chain.json" }
     [pscustomobject]@{ Profile="lab5"; Port=1898; Flow="simulator_flow_lab5.json" }
     [pscustomobject]@{ Profile="labmon"; Port=1899; Flow="simulator_flow_labmon.json" }
     [pscustomobject]@{ Profile="labmon2"; Port=1900; Flow="simulator_flow_labmon2.json" }
