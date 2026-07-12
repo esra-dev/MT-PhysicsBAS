@@ -885,11 +885,14 @@ happens within the first episodes is set by the arms' (legitimately different)
 warm-started clean policies and arm-specific exploration streams — which zone hosts the
 fault flips the sign. Both arms detect within ~4 episodes of a 4000-episode run, and
 RecoveryEpisodes is counted *from* detection, so nothing leaks into the Tier-1 recovery
-family. A uniform fix exists — extend the active self-test from blinds to Causes
+family. A uniform fix existed on paper — extend the active self-test from blinds to Causes
 actuators (toggle each unverified lamp once in a falsifiable state; the `probeVerified`
-scaffolding generalizes), which would pin DetectEpisode to ~0–1 in both arms — but it
-would be a post-registration instrument change, so the +3.0 stands as disclosed and the
-lamp self-test is future work.
+scaffolding generalizes), pinning DetectEpisode to ~0–1 in both arms — but the §9.10
+post-inversion re-run dissolved its motivation before it was ever needed: on the
+capability-equalized instrument every lamp-fault cell detects at episode 0 in both arms
+and the +3.0 contrast did not survive (detection family entirely null). The lamp
+self-test is therefore **dropped**, not carried as future work
+(Addendum 2026-07-12b).
 
 ![Phase 2 detection episodes by cell](figures/p2_detection_bars.png)
 ![Phase 2 recovery episodes by cell](figures/p2_recovery_bars.png)
@@ -1521,3 +1524,27 @@ both labmon2 variants even with the monitor un-modeled; the single-zone
 infoonly and nostereo variants produced identical means, consistent with
 both reducing to the same silent registry) showing the residual advantage
 that survives a silent KG.
+
+## Addendum 2026-07-12b — Phase 2.7 exploratory multi-blind cell registered; lamp self-test note retired
+
+**New exploratory cell `lab3_f2bdead`** (both lab3 blinds dead; own 0.50·sun +
+cross 0.30·sun zeroed for each blind) implemented and registered pre-dispatch
+as `pre_registration.md` §9.11 (`docs/PHASE2_7_MULTIBLIND_FAULT.md`). It closes
+two matrix gaps at once: the multi-fault family previously injected Causes
+lamps only, and no multi-fault cell was well-posed (survivors here — Z1Light,
+Z2Light, Spotlight — keep both zones deterministically rank-3 reachable,
+25+400+100+150). It is also a designed probe of the §9.10 binding-constraint
+reading (three survivors to re-rank after two iterative Mediates blacklists →
+Δ < 0 expected; a null reads as the redundancy hypothesis). The frozen
+§9.5/§9.6 families are unchanged (m = 8/8); the §9.4 well-posed enumeration
+grows 11 → 12 by disclosed amendment; the cell reports full paired statistics
+with q = nan by construction. Not yet dispatched as of this addendum.
+
+**Lamp self-test note retired.** §6.2's "extend the active self-test to Causes
+actuators" fix was future work aimed at the pre-inversion adversarial
+detection cell (`lab3_f1inv` Δ = +3.0). Post-inversion, detection is instant
+(episode 0) in both arms for every lamp-fault cell and the detection family is
+entirely null (§9.10), so the fix's motivation dissolved — the item is dropped
+from the future-work list rather than carried forward. The blind self-test
+(Phase 2.4) is unaffected: it remains load-bearing instrumentation for the
+f1b*/f2b* cells.
