@@ -117,3 +117,16 @@ Detection family unchanged: `lab3_f1inv` remains the one significant detection c
 (KG slower to detect the inverted lamp, q = 0.0048); `lab3_f1dead`'s detection row now
 comes from the replication (Δ = +1.7, q = 0.437, ns). H-P2 (§9.2) is **confirmed on every
 cell of the frozen family**; no further Phase-2 reruns are permitted under §9.9.
+
+## 7. SUPERSEDED (2026-07-12) — action-space inversion re-run
+
+Everything above is the record of the **pre-inversion instrument**. The action-space
+inversion (`docs/ACTION_SPACE_INVERSION.md`) changed the instrument for both arms, every
+cell was re-run on commit `6c727b6` under a registered amendment, and the confirmatory
+result of record is now `pre_registration.md` §9.10: **3 of 8 Tier-1 cells significant**
+(`lab2_f1bdead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`), `lab3_f1dead_z2`
+marginal, two null, two sign-flipped ns (`lab3_f1dead` unsupported under the
+re-instantiated one-shot rule); detection family entirely null (the `lab3_f1inv` +3.0
+contrast did not survive). This document stays as the audit trail of the seed-pairing
+fix and the §9.9 replication on the old instrument; do not cite its §6 verdict as the
+final Phase-2 result.

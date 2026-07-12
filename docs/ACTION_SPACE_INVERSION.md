@@ -200,3 +200,29 @@ would still straddle two code states — scientifically unclean).
 | Pre-inversion `*_visits.csv`, `*_trust.csv`, IV-stats files | REFUSED by loaders (legacy positional) |
 | Pre-inversion benchmark/recovery CSVs | keep archived for comparison, never mix into post-inversion tables |
 | §9 registration text | frozen — addendum only |
+
+## 7. Execution record (2026-07-12) — runbook §6.3 DONE, outcome changed
+
+Commit chain (post history-rewrite SHAs): `6fffd41` + `8c386f8` (inversion) →
+`a9530b9` (fault-flow generator sync with retuned lab3 physics) → `b1630b8`
+(CI hardening: stale-CSV retirement, workspace scrub, cell-scoped artifact
+globs) → `6c727b6` (runtime-classpath warm-up). Retired dispatches:
+29107822998 (generator pattern failure), 29115969476 (aggregate contaminated
+by stale committed CSVs).
+
+Phase-2 campaign, all green on `6c727b6` (2026-07-11): 1A 29148475671,
+1B 29151540231, Run 2 29155539633, Run 3 (Phase 2.6) 29157197853,
+1C 29163456132 (`lab3_f1dead` seeds 11–20). 460/460 cells. Raw data:
+`phase2_postinv/run_<id>/recovery_root/` (recovered from `phase2-consolidated`
+artifacts after a Phase-4 `-OverwriteResultsBranch` publish wiped the
+`results` branch). `_RUN_OF_RECORD` repointed wholesale; pooled output
+`analysis/out_phase2_registered_postinv/`.
+
+**Registered outcome (`pre_registration.md` §9.10):** recovery family 3/8
+significant (`lab2_f1bdead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`),
+1 marginal, 2 null, 2 sign-flipped ns (`labmon_f1dead`, `lab3_f1dead` —
+the latter unsupported under the one-shot rule); detection family entirely
+null. The pre-inversion 8/8 was thus partly action-space asymmetry — the
+inversion did real scientific work. Phase 1 (29105464710) and Phase 3
+(29166356524) post-inversion runs are green; their result extraction is the
+remaining §6.2/§6.4 duty.

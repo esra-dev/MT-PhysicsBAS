@@ -43,7 +43,7 @@ delays back into the KG, and use them to satisfy temporally specified goals.
 |---|---|---|---|
 | 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | lab2: `auc_goal` Δ=+0.01707, 95% CI [0.01264, 0.02262], q=0, Cliff's δ=1.0 (run 27336756264); lab1 = saturated null control | KG acceleration confirmed on lab2; lab1 floor confirmed |
 | 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | `auc_reward` robust win (Δ=+12.66, q≈0, run 28941204656) but `mean_first_goal` *regression* (Δ=+23.95, q=0.011) and `auc_goal` null | Mixed — presented as a characterized weakness that motivates Phase 2 (13_logic_report.md §1) |
-| 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | Registered pooled analysis (`pre_registration.md` §9): **all 8 Tier-1 recovery cells significant**, max q=0.0012, every Δ negative (KG faster), δ −0.47…−0.92 | Confirmatory under the frozen §9 registration |
+| 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | ~~All 8 Tier-1 recovery cells significant~~ **SUPERSEDED by the post-inversion re-run (`pre_registration.md` §9.10, 2026-07-12): 3 of 8 Tier-1 cells significant** (`lab2_f1bdead` −306.5 q≈0, `lab3_f2dead_lowsun` −71.4 q≈0, `labmon2_f2dead_lowsun` −147.6 q=0.0021), 1 marginal (`lab3_f1dead_z2` q=0.066), 2 null, 2 sign-flipped ns; detection family entirely null | Confirmatory under §9 + §9.10; the pre-inversion 8/8 result is reported as a pre-inversion-instrument measurement |
 | 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | Blind delay learned at 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. error, run 27621106006); KG arm meets 6/6 deadline goals vs 3/6 without | Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
 | 4 — energy/dependencies + LLM | Complete but **an extension beyond the advisor's three phases** | lab5 energy compliance Δ=+0.1012 (q≈0), steady power −0.3912 (run 27905392725); LLM baseline exploratory | Clearly labeled extension chapter |
 
@@ -833,7 +833,15 @@ ran): one pooled Tier-1 recovery BH family (m = 8 by enumeration), a detection f
 seed-keyed pairing (fixing an earlier positional-pairing bug), and a pre-registered
 `lab3_f1dead` replication on seeds 11–20 (05_results_index.md §2.2, §2.4).
 
-### 6.2 Registered pooled results (canonical)
+### 6.2 Registered pooled results (pre-inversion instrument — SUPERSEDED as confirmatory)
+
+> **SUPERSEDED 2026-07-12.** Everything in this subsection was measured under the
+> pre-inversion instrument (stereotype-gated action discovery in both arms). The
+> action-space inversion changed the instrument, every cell was re-run on commit
+> `6c727b6`, and the confirmatory result of record is now `pre_registration.md` §9.10
+> — **3 of 8 Tier-1 cells significant**, detection family entirely null. See the
+> Addendum 2026-07-12 at the end of this report. The tables below stay as the
+> pre-inversion-instrument measurement, reported alongside per §9.10.
 
 Tier-1 recovery cells (ql_true − ql_false, seed-paired):
 
@@ -1105,7 +1113,7 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 
 | # | Item | Resolution |
 |---|---|---|
-| 1 | Phase-2 analysis was not confirmatory (positional-pairing bug, BH-family drift, no registration) | **Resolved:** `pre_registration.md` §9 frozen at `b9bf4cb` *before* the pooled re-analysis; `phase2_recovery.py` rewritten to seed-keyed pairing with frozen families; pooled rerun + pre-registered `lab3_f1dead` replication (run 28913465680) → all 8 Tier-1 cells significant. The pairing fix moved exactly one cell across 0.05 pre-replication (`lab3_f1dead` q 0.028 → 0.053), then the replication confirmed it (q = 0.00027) (05_results_index.md §2.4) |
+| 1 | Phase-2 analysis was not confirmatory (positional-pairing bug, BH-family drift, no registration) | **Resolved:** `pre_registration.md` §9 frozen at `b9bf4cb` *before* the pooled re-analysis; `phase2_recovery.py` rewritten to seed-keyed pairing with frozen families; pooled rerun + pre-registered `lab3_f1dead` replication (run 28913465680) → all 8 Tier-1 cells significant. The pairing fix moved exactly one cell across 0.05 pre-replication (`lab3_f1dead` q 0.028 → 0.053), then the replication confirmed it (q = 0.00027) (05_results_index.md §2.4). **2026-07-12: that 8/8 outcome is itself superseded by the post-inversion re-run — 3/8 significant, `pre_registration.md` §9.10** |
 | 2 | Phase-1 headline numbers had no local artefacts; pbrs_only control had failed | **Resolved:** artefacts restored into `phase1_headline_download/` with per-value verification (`PROVENANCE.md`, 68 values ✓); pbrs_only re-dispatched → run 28929859927 success, all contrasts null (negative control passes) (05_results_index.md §1.2) |
 | 3 | lab3 spillage advantage not demonstrated (REQ-26) | **Rerun executed** (28941204656, intermediate bleed, bonus active): KG arm still regresses on rank-moving metrics while `auc_reward` remains a robust win → frozen decision is **REFRAME** (lead with `auc_reward`, disclose all three magnitude runs) (05_results_index.md §1.3) |
 | 7 | lab1's un-modelled `0.10·sun` ambient term broke the "clean lab aligns with KG" premise | **Resolved:** term deleted from the flow and the TTL comment (04_labs_physics.md §6.2). *Caveat:* lab3's own documentary TTL comments/labels are stale in the same way — the header and reified-connection labels (building_3_complex.ttl#L487-L502) still describe `+50` lamp bleed / `0.25·sun`, matching neither the pre-`ad3cb3b` physics (150/0.40) nor the current flow (100/0.30, simulator_flow_lab3.json#L130). No parsed triple is wrong (the KG asserts structure only), but the comments should be refreshed for the same TTL-vs-flow alignment reason. |
@@ -1470,4 +1478,46 @@ cell's CSVs; the dependency warm-up also resolves the runtime classpath
 (one cell had died to transient Maven-Central 403s). Neither issue affects
 any pre-inversion registered result (the CSVs entered the repo only at
 df53b71). All Phase-2 numbers cited come from re-dispatches at or after the
-fix commit.
+fix commit. (Post-history-rewrite SHAs: df53b71 → `8c386f8`, f6d10eb →
+`a9530b9`, 8b4e340 → `b1630b8`.)
+
+## Addendum 2026-07-12 — Post-inversion Phase-2 campaign complete; §9 outcome CHANGED
+
+All five post-inversion Phase-2 dispatches ran green on commit `6c727b6`
+(2026-07-11): **1A** 29148475671 (8 profiles, seeds 1–10), **1B** 29151540231
+(7 profiles, seeds 1–10), **Run 2** 29155539633 (monitor/lowsun cells),
+**Run 3** 29157197853 (Phase-2.6 KG-silent variants), **1C** 29163456132
+(`lab3_f1dead` one-shot replication, fresh seeds 11–20). 460/460 cells
+present. Raw data archived in-repo under `phase2_postinv/run_<id>/recovery_root/`
+(recovered from the `phase2-consolidated` CI artifacts after a Phase-4
+`-OverwriteResultsBranch` publish clobbered the `results` branch);
+`_RUN_OF_RECORD` repointed wholesale (registered amendment, pre-inversion
+table preserved as `_RUN_OF_RECORD_PRE_INVERSION`); pooled `--registered`
+output at `analysis/out_phase2_registered_postinv/`.
+
+**The confirmatory outcome changed** (full registered disclosure:
+`pre_registration.md` §9.10). Recovery family (m = 8): significant KG
+advantage in **3 of 8** cells — `lab2_f1bdead` (Δ = −306.5, q ≈ 0),
+`lab3_f2dead_lowsun` (Δ = −71.4, q ≈ 0), `labmon2_f2dead_lowsun` (Δ = −147.6,
+q = 0.0021); `lab3_f1dead_z2` marginal (Δ = −60.2, q = 0.066);
+`lab3_f1bdead` / `lab3_f1binv` null; `labmon_f1dead` (+22.2) and
+`lab3_f1dead` (+85.0, seeds 11–20) sign-flipped ns — `lab3_f1dead` is
+**unsupported** under the re-instantiated one-shot rule, no further reruns
+permitted. Detection family: entirely null; the pre-inversion adversarial
+`lab3_f1inv` +3.0 (q = 0.0048) did not survive — all lamp-fault cells now
+detect at episode 0 in both arms (realized-degeneracy deviation, cells kept
+in family per §9.5/§9.6). The old lab1_f1dead adverse-reconvergence caveat
+(§10) also dissolved: both arms now reconverge at the 50-episode stability
+floor.
+
+Reading (non-registered commentary): the KG advantage concentrates exactly
+where recovery demands re-ranking multiple surviving actuators (blind+lamp
+survivor cells, multi-actuator triage under pinned low sun) and shrinks or
+vanishes where the pre-inversion advantage was carried by action-space
+asymmetry. The thesis narrative moves from "KG always recovers faster" to
+"structural knowledge pays where it is the binding constraint" — with the
+Phase-2.6 KG-silent contrast (Run 3, descriptive: ql_true ≈ 2× faster in
+both labmon2 variants even with the monitor un-modeled; the single-zone
+infoonly and nostereo variants produced identical means, consistent with
+both reducing to the same silent registry) showing the residual advantage
+that survives a silent KG.

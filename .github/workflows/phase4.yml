@@ -695,8 +695,10 @@ jobs:
             -RunMode ${{ env.RUN_MODE }} `
             -Profiles "${{ env.PROFILES }}" `
             -Modes "rule_based,ql_false,ql_true" `
-            -OverwriteResultsBranch `
             -PublishResults
+            # -OverwriteResultsBranch removed 2026-07-12: force-orphaning wiped
+            # every other workflow's published results (it deleted the five
+            # Phase-2 runs of record on 2026-07-12). Default mode appends.
       - name: Skip publish warning
         if: ${{ env.SKIP_PUBLISH == '1' }}
         shell: bash

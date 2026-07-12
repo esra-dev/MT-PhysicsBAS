@@ -1,5 +1,14 @@
 # Thesis status - notes for our meeting on 09.07
 
+> **Post-meeting update (2026-07-12):** the Phase-2 numbers in §6 below were measured
+> under the pre-inversion instrument and are **superseded** — after the action-space
+> inversion (both arms now share the WoT-contract action space; the KG only enriches),
+> all Phase-2 cells were re-run and the registered outcome changed from 8/8 to **3/8
+> significant Tier-1 cells**. See the addendum at the end of this document and
+> `pre_registration.md` §9.10. The Phase-1/Phase-3 sections still show pre-inversion
+> numbers; green post-inversion re-runs exist (Phase 1: 29105464710, Phase 3:
+> 29166356524) but their tables have not been re-extracted yet.
+
 Here is an overview of where the work stands, with the figures and condition comparisons you asked for. Sections 1–4 describe the system (architecture, knowledge graph, learner, lab physics); sections 5–7 go through the results for the three phases. All headline numbers come from multi-seed CI runs, and I give the run ID next to each results table so everything is traceable.
 
 The short version:
@@ -8,7 +17,7 @@ The short version:
 |---|---|---|
 | 1 - clean labs | Complete | lab2: `auc_goal` Δ=+0.01707, q=0, δ=1.0; lab1 acts as a floor control (all contrasts null) |
 | 1 - lab3 cross-zone | Complete (tested at three spill magnitudes) | `auc_reward` win (Δ=+12.66, q≈0) but a `mean_first_goal` *regression* (Δ=+23.95, q=0.011) - an honest weakness of the prior, and part of what motivates Phase 2 |
-| 2 - fault detect → re-learn | Complete | All 8 Tier-1 recovery cells significant (max q=0.0012), KG faster in every one, δ between −0.47 and −0.92 |
+| 2 - fault detect → re-learn | Complete | ~~All 8 Tier-1 recovery cells significant~~ *(superseded 2026-07-12 — post-inversion: 3/8 significant, see addendum)* |
 | 3 - dynamics learning | Complete | Blind delay learned to ≤1.77% error and written back into the KG; the KG arm then meets 6/6 deadline goals vs 3/6 without |
 
 ---
@@ -214,7 +223,7 @@ If the nominal goal rank becomes unreachable after blacklisting, a deterministic
 
 The analysis for this phase runs under a frozen pre-registration (one pooled Tier-1 recovery family, m = 8; seed-keyed pairing; one run of record per cell), which I wrote and committed before the pooled analysis ran.
 
-### 6.2 Results (seed-paired, BH-corrected, m = 8; n = 10 seeds per cell except lab3_f1binv with n = 9)
+### 6.2 Results (seed-paired, BH-corrected, m = 8; n = 10 seeds per cell except lab3_f1binv with n = 9) — SUPERSEDED, see the 2026-07-12 addendum
 
 | Cell | KG mean (ep) | Baseline mean (ep) | Δ | 95% CI | Cliff's δ | BH q |
 |---|---|---|---|---|---|---|
@@ -292,3 +301,24 @@ The KG arm meets the tight deadlines by spending energy: knowing the blind can't
 2. One methodological point I want to be upfront about: the compliance contrast is deterministic given the learned delay table - ten replicas of a planner that knows the delays contribute the information of one, so p-values would be vacuous here. I therefore report it as a worked demonstration (6/6 vs 3/6 deadline goals met), not as statistical inference. The delay-accuracy numbers, in contrast, do sample real measurement jitter and are statistically sound.
 
 ---
+
+## Addendum (2026-07-12) - action-space inversion changed the Phase-2 outcome
+
+After our meeting I closed a design asymmetry we had discussed: under the old code **both** arms obtained their action space from the stereotype-based SPARQL discovery, so the "tabula-rasa" baseline silently depended on the KG for *what it can do*, not just what it knows. The inversion (commits `6fffd41` + `8c386f8`, equivalence-audited, docs/ACTION_SPACE_INVERSION.md) now enumerates the action space for both arms from the WoT Thing-Description contract alone; the stereotype layer is a pure knowledge overlay. This also updates §3.1 above: actions come from the WoT contract, not "discovered from the KG".
+
+Because this is an instrument change, every Phase-2 cell was re-run wholesale on commit `6c727b6` (runs 29148475671, 29151540231, 29155539633, 29157197853, and 29163456132 = the seeds-11-20 `lab3_f1dead` replication; registered amendment in `pre_registration.md` §9.10; raw data `phase2_postinv/`). The registered outcome changed materially:
+
+| Cell | Δ (KG − baseline) | 95% CI | BH q | Verdict |
+|---|---|---|---|---|
+| lab2_f1bdead | **−306.5** (75.6 vs 382.1) | [−440, −175] | **0** | significant |
+| lab3_f2dead_lowsun | **−71.4** (63.5 vs 134.9) | [−102, −41] | **0** | significant |
+| labmon2_f2dead_lowsun | **−147.6** (187.1 vs 334.7) | [−231, −61] | **0.0021** | significant |
+| lab3_f1dead_z2 | −60.2 | [−120, −4] | 0.066 | marginal |
+| lab3_f1bdead | −90.0 | [−265, +87] | 0.365 | null |
+| lab3_f1binv | −6.5 | [−138, +116] | 0.929 | null |
+| labmon_f1dead | +22.2 | [−16, +57] | 0.328 | sign flipped, ns |
+| lab3_f1dead (seeds 11-20) | +85.0 | [−32, +205] | 0.276 | sign flipped, ns → **unsupported** under the one-shot rule |
+
+The detection family is now entirely null - the one adversarial detection contrast from §6.2 (`lab3_f1inv` +3.0, q=0.0048) disappeared, and every lamp-fault cell detects at episode 0 in both arms. The lab1_f1dead caveat from §6.4(3) also dissolved (both arms reconverge at the 50-episode floor).
+
+How I read this (and would like to discuss): the pre-inversion 8/8 conflated two effects - structural *knowledge* and action-space *access*. With access equalized, the KG advantage survives precisely in the cells where recovery requires re-ranking several surviving actuators (blind-survivor cells, multi-actuator triage under pinned low sun) and disappears where a single obvious lever remains. I think this is a stronger, more defensible thesis claim than the old blanket result, and the Phase-2.6 KG-silent-monitor variants (run 29157197853, descriptive) reinforce it: even with the monitor absent from the KG, the KG arm still recovers ~2× faster in the dual-zone cells (172 vs 370 and 163 vs 364 episodes). Both instruments' numbers stay reported side by side; only the post-inversion ones carry confirmatory weight. Phase 1 (run 29105464710) and Phase 3 (run 29166356524) already have green post-inversion re-runs; their result tables in §5 and §7 still need to be re-extracted from those runs before the same side-by-side reporting is complete there.

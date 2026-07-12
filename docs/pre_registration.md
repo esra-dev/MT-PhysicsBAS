@@ -892,6 +892,90 @@ every prior Phase-2 seed), `run_mode="phase1"`, `adapt_episodes="0"`,
 confirmed. Otherwise the cell is reported as directionally consistent but unsupported, and
 **no further reruns of this cell are permitted** under this registration.
 
+### 9.10 Registered amendment — action-space inversion re-run (added 2026-07-12, post-run; disclosed in full)
+
+**Trigger (disclosed, instrument change):** the action-space inversion
+(`docs/ACTION_SPACE_INVERSION.md`, code commits `6fffd41` + `8c386f8`, follow-up fixes
+`a9530b9`/`b1630b8`/`6c727b6`) changed the instrument for **both** arms: the action space
+is now enumerated from the WoT TD contract alone, and the stereotype layer is a pure
+knowledge-enrichment pass. Under the pre-inversion code, both arms received their action
+space from the stereotype SPARQL discovery — i.e. part of the measured "KG advantage" could
+have been action-space asymmetry rather than knowledge. Because a faulty cell must never
+warm-load a table trained under a different code state, every §9 cell was re-run wholesale
+post-inversion. This subsection registers the re-run, repoints §9.7, and reports the
+realized outcome. The §9.2 hypothesis, §9.3–§9.6 metric/tier/family definitions and the
+§9.8 protocol are **unchanged**; per §9.5 no cell is added to or removed from any family.
+
+**Runs of record (all on commit `6c727b6`, `phase2.yml`, self-contained
+train-clean→adapt pairing, 2026-07-11):**
+
+| Run | CI run ID | Cells | Seeds |
+|---|---|---|---|
+| 1A | 29148475671 | lab1_f1dead, lab2_f1dead, lab2_f1inv, lab2_f2dead, lab2_f2inv, lab3_f1dead*, lab3_f1inv, lab3_f2dead | 1–10 |
+| 1B | 29151540231 | lab3_f2inv, lab3_f1dead_z2, lab3_f1inv_z2, lab3_f1bdead, lab3_f1binv, lab2_f1bdead, lab2_f1binv | 1–10 |
+| 2 | 29155539633 | labmon_f1dead, lab3_f2dead_lowsun, labmon2_f2dead_lowsun | 1–10 |
+| 3 | 29157197853 | labmon_infoonly_f1dead, labmon_nostereo_f1dead, labmon2_infoonly_f2dead_lowsun, labmon2_nostereo_f2dead_lowsun (Phase 2.6; descriptive only, not family members) | 1–10 |
+| 1C | 29163456132 | lab3_f1dead (one-shot replication re-instantiating the §9.9 protocol on the new instrument) | 11–20 |
+
+\* Per the §9.9 structure, `lab3_f1dead`'s run of record is the seeds-11–20 replication
+(Run 1C); the Run-1A seeds-1–10 measurement is reported alongside
+(arm means 492.7 vs 420.0 episodes — same adverse direction, independently observed).
+
+Two earlier post-inversion dispatches are **retired and carry no evidential weight**:
+29107822998 (failed wholesale — stale fault-flow generator patterns, fixed in `a9530b9`)
+and 29115969476 (221/222 jobs green but the aggregate was contaminated by 26 stale
+pre-inversion CSVs accidentally committed at the inversion commit; fixed in `b1630b8`).
+Neither affects any pre-inversion registered result. The `results`-branch copies of the
+runs of record were later clobbered by a Phase-4 publish (`-OverwriteResultsBranch`,
+2026-07-12); the archived raw data was therefore recovered from each run's
+`phase2-consolidated` CI artifact into `phase2_postinv/run_<run_id>/recovery_root/`
+(committed to the repo), and `_RUN_OF_RECORD` in `analysis/phase2_recovery.py` was
+repointed wholesale (pre-inversion table preserved as `_RUN_OF_RECORD_PRE_INVERSION`).
+
+**Realized outcome — §9.5 recovery family (RecoveryEpisodes, ql_true − ql_false, m = 8,
+pooled BH; source `analysis/out_phase2_registered_postinv/phase2_recovery_paired.csv`):**
+
+| Cell | n | ql_true | ql_false | Δ | 95 % CI | Cliff's δ | q | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| `lab2_f1bdead` | 10 | 75.6 | 382.1 | **−306.5** | [−439.5, −174.6] | −0.92 | **0.0000** | significant, KG faster |
+| `lab3_f2dead_lowsun` | 10 | 63.5 | 134.9 | **−71.4** | [−102.3, −41.3] | −0.84 | **0.0000** | significant, KG faster |
+| `labmon2_f2dead_lowsun` | 10 | 187.1 | 334.7 | **−147.6** | [−230.9, −61.4] | −0.76 | **0.0021** | significant, KG faster |
+| `lab3_f1dead_z2` | 9 | 511.1 | 571.3 | −60.2 | [−120.1, −4.3] | −0.28 | 0.0664 | marginal, ns |
+| `lab3_f1bdead` | 10 | 198.1 | 288.1 | −90.0 | [−265.0, +86.5] | −0.33 | 0.365 | ns |
+| `lab3_f1binv` | 10 | 398.5 | 405.0 | −6.5 | [−138.4, +116.0] | −0.02 | 0.929 | ns |
+| `labmon_f1dead` | 10 | 84.5 | 62.3 | +22.2 | [−15.8, +57.2] | +0.05 | 0.328 | ns, sign flipped |
+| `lab3_f1dead` (seeds 11–20) | 9 | 505.0 | 420.0 | +85.0 | [−31.6, +205.1] | +0.43 | 0.276 | ns, sign flipped |
+
+**`lab3_f1dead` §9.9-analog verdict:** the re-instantiated one-shot replication (Run 1C)
+shows Δ > 0 — the cell is **unsupported** on the post-inversion instrument, and no further
+reruns of this cell are permitted. The pre-inversion §9.9 confirmation (Δ = −121.1,
+q = 0.00027) remains reported as a pre-inversion-instrument measurement.
+
+**Realized outcome — §9.6 detection family (DetectEpisode, m = 8):** no significant
+contrast (min q = 0.656). Four family cells (`lab3_f1dead`, `lab3_f1inv`,
+`lab3_f1dead_z2`, `lab3_f1inv_z2`) realized **degenerate 0-vs-0 detection in both arms**
+post-inversion; per the §9.5/§9.6 no-silent-change rule they stay in the family (p = 1,
+reported as a realized-degeneracy deviation from the freeze-time classification). The
+pre-inversion adversarial contrast (`lab3_f1inv` Δ = +3.0, q = 0.0048, KG slower to
+detect) **did not survive the inversion** — detection is now instant in both arms for
+every lamp-fault cell; only the four blind-fault cells detect at ep ≈ 6–7 (probe-bound,
+all null). Realized `recovery_tier` did not flip for any §9.5 family member (all 8
+remained recovery-well-posed); `lab2_f1binv` (Tier-2 descriptive) collapsed to n = 4
+paired seeds.
+
+**Registered conclusion (supersedes §9.9's "confirmed on every cell" as the confirmatory
+claim of record):** on the capability-equalized instrument, H-P2 is supported in **3 of 8**
+family cells (q ≤ 0.05: `lab2_f1bdead`, `lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`),
+marginal in 1 (`lab3_f1dead_z2`), null in 2, and sign-flipped (ns) in 2. Six of eight
+deltas remain negative. *Non-registered interpretive note, disclosed as commentary:* the
+cells that stay significant are exactly those where recovery requires re-ranking
+multiple surviving actuators (blind + lamp survivor, or multi-actuator triage under
+pinned low sun) — i.e. where structural knowledge, not action-space access, is the
+binding constraint; the pre-inversion 8/8 result therefore conflated a real knowledge
+effect with an action-space asymmetry that the inversion removed. Both instruments'
+results are reported side by side in the thesis; only the post-inversion numbers carry
+confirmatory weight.
+
 ---
 
 *Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*

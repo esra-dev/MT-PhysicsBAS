@@ -179,7 +179,57 @@ _METRIC_FAMILY = {
 # instrument (instant blacklist + policy-stability window 50 + RecoveredGoalRate
 # certification). Paths are relative to --root (repo root). Used by
 # --registered; earlier iterations (v1-v5) and superseded cells are history.
+#
+# REGISTERED AMENDMENT (2026-07-12, action-space inversion): the WoT-contract
+# action-space inversion (commits 6fffd41..6c727b6, docs/ACTION_SPACE_INVERSION.md)
+# changed the instrument for BOTH arms, so every cell was re-run post-inversion
+# on commit 6c727b6 and the table below was re-pointed wholesale. Families
+# (§9.5/§9.6) are UNCHANGED. The full pre-inversion table is preserved verbatim
+# as _RUN_OF_RECORD_PRE_INVERSION for audit. Post-inversion runs of record:
+#   29148475671 (Run 1A, 8 profiles, seeds 1-10)
+#   29151540231 (Run 1B, 7 profiles, seeds 1-10)
+#   29155539633 (Run 2, labmon/lowsun confirmatory, seeds 1-10)
+#   29157197853 (Run 3, Phase-2.6 KG-silent variants, seeds 1-10; descriptive
+#                only -- not members of any frozen family)
+#   29163456132 (Run 1C, lab3_f1dead one-shot replication, fresh seeds 11-20;
+#                run of record for lab3_f1dead per the §9.9 protocol, with the
+#                Run-1A seeds-1-10 measurement reported alongside)
+# Local layout: phase2_postinv/run_<id>/recovery_root, recovered from each
+# run's phase2-consolidated artifact (the 'results' branch copies were
+# clobbered by a Phase-4 -OverwriteResultsBranch publish on 2026-07-12).
 _RUN_OF_RECORD = {
+    # 29148475671 (Run 1A, commit 6c727b6)
+    "lab1_f1dead": "phase2_postinv/run_29148475671/recovery_root",
+    "lab2_f1dead": "phase2_postinv/run_29148475671/recovery_root",
+    "lab2_f1inv": "phase2_postinv/run_29148475671/recovery_root",
+    "lab2_f2dead": "phase2_postinv/run_29148475671/recovery_root",
+    "lab2_f2inv": "phase2_postinv/run_29148475671/recovery_root",
+    "lab3_f1inv": "phase2_postinv/run_29148475671/recovery_root",
+    "lab3_f2dead": "phase2_postinv/run_29148475671/recovery_root",
+    # 29163456132 (Run 1C, §9.9 one-shot replication, seeds 11-20)
+    "lab3_f1dead": "phase2_postinv/run_29163456132/recovery_root",
+    # 29151540231 (Run 1B, commit 6c727b6)
+    "lab3_f2inv": "phase2_postinv/run_29151540231/recovery_root",
+    "lab3_f1dead_z2": "phase2_postinv/run_29151540231/recovery_root",
+    "lab3_f1inv_z2": "phase2_postinv/run_29151540231/recovery_root",
+    "lab3_f1bdead": "phase2_postinv/run_29151540231/recovery_root",
+    "lab3_f1binv": "phase2_postinv/run_29151540231/recovery_root",
+    "lab2_f1bdead": "phase2_postinv/run_29151540231/recovery_root",
+    "lab2_f1binv": "phase2_postinv/run_29151540231/recovery_root",
+    # 29155539633 (Run 2, commit 6c727b6)
+    "labmon_f1dead": "phase2_postinv/run_29155539633/recovery_root",
+    "lab3_f2dead_lowsun": "phase2_postinv/run_29155539633/recovery_root",
+    "labmon2_f2dead_lowsun": "phase2_postinv/run_29155539633/recovery_root",
+    # 29157197853 (Run 3, Phase-2.6 KG-silent variants; descriptive only)
+    "labmon_infoonly_f1dead": "phase2_postinv/run_29157197853/recovery_root",
+    "labmon_nostereo_f1dead": "phase2_postinv/run_29157197853/recovery_root",
+    "labmon2_infoonly_f2dead_lowsun": "phase2_postinv/run_29157197853/recovery_root",
+    "labmon2_nostereo_f2dead_lowsun": "phase2_postinv/run_29157197853/recovery_root",
+}
+
+# Pre-inversion table (runs of record up to and including §9.9), preserved
+# verbatim for audit. Superseded 2026-07-12 by the amendment above.
+_RUN_OF_RECORD_PRE_INVERSION = {
     # 28590019536 (Phase 2.3, commit b2adca1)
     "lab1_f1dead": "phase2_results_v6/recovery_root",
     "lab2_f1dead": "phase2_results_v6/recovery_root",

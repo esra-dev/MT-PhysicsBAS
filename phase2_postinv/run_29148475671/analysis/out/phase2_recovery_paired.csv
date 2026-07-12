@@ -1,0 +1,11 @@
+profile,metric,recovery_tier,in_registered_family,n_paired,seeds_paired,ql_true_mean,ql_false_mean,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_bootstrap_one_sided_true_faster,p_wilcoxon,cliffs_delta,ql_true_faster,q_bootstrap_bh,bh_family_m
+lab3_f1dead,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,512.8,976.4,-463.6,-1306.11,155.50499999999994,0.2124,0.8938,1.0,0.28,True,nan,0
+lab3_f1inv,RecoveryEpisodes,descriptive,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,1152.4,963.2,189.2,-202.3125,573.0224999999997,0.339,0.1695,0.431640625,0.32,False,nan,0
+lab1_f1dead,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f1dead,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f1inv,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f2dead,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f2inv,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1dead,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1inv,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f2dead,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0

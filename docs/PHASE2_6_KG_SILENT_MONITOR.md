@@ -172,6 +172,40 @@ No priors, no fault adjudication; learnable by reward only.
    rank 3 unreachable, lower the effective goal to rank 2 and alert the user —
    independent of the KG variant.
 
+## Results (run 29157197853, commit `6c727b6`, seeds 1–10, descriptive — not in any registered family)
+
+Raw data `phase2_postinv/run_29157197853/recovery_root/`; pooled summary in
+`analysis/out_phase2_registered_postinv/`. Mean RecoveryEpisodes (greedy
+goal-rate on the degraded goal in parentheses), 100 % detection and
+reconvergence in every cell:
+
+| Cell | ql_true | ql_false | 3-way comparison (full-KG parent) |
+|---|---|---|---|
+| `labmon_infoonly_f1dead` | 51.3 (1.00) | 71.5 (1.00) | parent `labmon_f1dead`: 84.5 / 62.3 |
+| `labmon_nostereo_f1dead` | 51.3 (1.00) | 71.5 (1.00) | identical to infoonly, see note |
+| `labmon2_infoonly_f2dead_lowsun` | 172.0 (0.90) | 370.2 (0.88) | parent `labmon2_f2dead_lowsun`: 187.1 / 334.7 |
+| `labmon2_nostereo_f2dead_lowsun` | 162.6 (0.88) | 364.0 (0.84) | parent: same |
+
+Readings (hypothesis 2 answered):
+
+- **The ql_true advantage survives a silent KG in the dual-zone cells** —
+  ~2.1–2.2× faster recovery in both labmon2 variants, essentially matching the
+  full-KG parent (1.8×). The advantage there is carried by the residual
+  structural priors on the *stereotyped* survivors and faster elimination of
+  dead-end actions, not by the monitor prior itself.
+- **In the single-zone cells the variants recover *faster* than the full-KG
+  parent's ql_true** (51.3 vs 84.5): with only one zone and one silent lever,
+  the un-primed monitor is found almost immediately by reward alone, while the
+  parent's extra priors buy nothing. The parent's ql_true/ql_false ordering
+  (84.5 vs 62.3, ns) is inverted here (51.3 vs 71.5).
+- **infoonly ≡ nostereo in the single-zone family** (identical means across
+  all seeds): a stereotype whose only DV is `displayed_information` and no
+  stereotype at all reduce to the same silent registry entry, as designed. The
+  labmon2 pair differs only slightly (172.0 vs 162.6), consistent with
+  seed-level noise on top of the same mechanism.
+- Best-effort degradation fired in all cells independent of KG variant
+  (hypothesis 3 confirmed; degraded goal-rates in the table).
+
 ## Files touched
 
 - `src/env/tools/StereotypeReasoner.java` — KG-silent discovery (originally a
