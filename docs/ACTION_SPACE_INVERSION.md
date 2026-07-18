@@ -139,7 +139,15 @@ would still straddle two code states — scientifically unclean).
 
 ### 6.2 Phase 1 — clean-ladder re-run (anchor finding)
 - GitHub Actions → **Phase 1** workflow (`phase1.yml`), defaults
-  (`profiles=lab1,lab2,lab3`, `seeds=1..10`, `run_mode=phase1`).
+  (`profiles=lab1,lab2,lab3`, `seeds=1..10`, `run_mode=phase1_kg_only`).
+- ⚠️ **Correction (2026-07-18).** This step originally said `run_mode=phase1`.
+  That profile has no `learning_overrides`, so it inherits the global
+  `pbrs`+`adaptive_trust` stack and runs **factorial arm D**, not the arm-C
+  headline (`phase1_kg_only`). Following the original wording produced run
+  `29105464710` (archived at `phase1_postinv/`), which is arm-confounded and
+  not a like-for-like §5.2 replacement — see `THESIS_STATE_REPORT.md`,
+  Addendum 2026-07-13. `phase1.yml`'s default `run_mode` is now
+  `phase1_kg_only`, so a defaults dispatch runs the correct arm.
 - This regenerates the headline learning-speed comparison (time-to-goal,
   redundant actions, success) on the post-inversion code and produces fresh
   labeled Q-table artifacts per seed.

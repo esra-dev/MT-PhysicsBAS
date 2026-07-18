@@ -11,8 +11,14 @@ name: Phase 1 (KG acceleration, clean labs)
 # knowledge graph, so any learning-speed gap is attributable to the prior.
 #
 # Same setup -> train -> bench -> aggregate DAG as sweep-paper.yml, but with
-# Phase-1 defaults: profiles lab1,lab2,lab3; run_mode phase1 (3000 episodes,
-# ~3x faster per cell than paper); seeds 1..10 for confirmatory power. Every
+# Phase-1 defaults: profiles lab1,lab2,lab3; run_mode phase1_kg_only (arm C,
+# the headline configuration: KG prior only, PBRS OFF, trust OFF; 3000
+# episodes, ~3x faster per cell than paper); seeds 1..10 for confirmatory
+# power. NOTE the default was run_mode=phase1 until 2026-07-18; that profile
+# has no learning_overrides, silently inherits the global pbrs+trust stack,
+# and therefore runs factorial arm D — exactly the confound that made run
+# 29105464710 non-citable as the headline (THESIS_STATE_REPORT.md, Addendum
+# 2026-07-13). Every
 # (profile x stereo x seed) training cell and (profile x mode x seed)
 # benchmark cell runs concurrently across GitHub-hosted runners, so the
 # wall-clock is set by the slowest single cell, not the cell count.
@@ -30,9 +36,9 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10"
       run_mode:
-        description: "run_config.json profile: phase1 (3000x20, recommended) | phase1_baseline (arm A, KG+PBRS+trust off) | phase1_kg_only (arm C headline, KG prior only) | phase1_pbrs_only (arm B control, PBRS only) | phase1_full (arm D, full stack) | paper (10000x20) | dev (50x20, quick gate)"
+        description: "run_config.json profile: phase1_kg_only (arm C HEADLINE, KG prior only — recommended default) | phase1_baseline (arm A, KG+PBRS+trust off) | phase1_pbrs_only (arm B control, PBRS only) | phase1_full (arm D, full stack) | phase1 (CAUTION: no learning_overrides, inherits global pbrs+trust = arm D) | paper (10000x20) | dev (50x20, quick gate)"
         required: false
-        default: "phase1"
+        default: "phase1_kg_only"
       publish_results:
         description: "Push consolidated results to 'results' branch"
         type: boolean
@@ -47,7 +53,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RUN_MODE: ${{ github.event.inputs.run_mode || 'phase1' }}
+  RUN_MODE: ${{ github.event.inputs.run_mode || 'phase1_kg_only' }}
   PROFILES: ${{ github.event.inputs.profiles || 'lab1,lab2,lab3' }}
   SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5,6,7,8,9,10' }}
 
