@@ -22,10 +22,10 @@
 #  — every coupling term below is faithfully represented in the simulator.
 #
 #  Physics (simulator_flow_lab3.json, port 1894):
-#     Z1Level = 25 + (Z1Light?400:0) + (Z2Light?50:0)
-#                  + (Z1Blinds?0.50*Sun:0) + (Z2Blinds?0.25*Sun:0) + (Spotlight?150:0)
-#     Z2Level = 25 + (Z2Light?400:0) + (Z1Light?50:0)
-#                  + (Z2Blinds?0.50*Sun:0) + (Z1Blinds?0.25*Sun:0) + (Spotlight?150:0)
+#     Z1Level = 25 + (Z1Light?400:0) + (Z2Light?100:0)
+#                  + (Z1Blinds?0.50*Sun:0) + (Z2Blinds?0.30*Sun:0) + (Spotlight?150:0)
+#     Z2Level = 25 + (Z2Light?400:0) + (Z1Light?100:0)
+#                  + (Z2Blinds?0.50*Sun:0) + (Z1Blinds?0.30*Sun:0) + (Spotlight?150:0)
 #  Sunshine sampled once per episode from {0,100,400,900} and PINNED.
 #  State vector = [Z1Level,Z2Level,Z1Light,Z2Light,Z1Blinds,Z2Blinds,Spotlight,Sunshine]
 #                = 4*4*2*2*2*2*2*4 = 2048 states.
@@ -178,7 +178,7 @@ ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
 ws:OutdoorSunlightStream a owl:NamedIndividual, elem:StreamKind ;
     rdfs:label "Outdoor sunlight stream" .
 
-# Sub-rank cross-zone optical coupling (lamp +50 lux / blind 0.25·Sun spill).
+# Sub-rank cross-zone optical coupling (lamp +100 lux / blind 0.30·Sun spill).
 # Distinguishes the weak neighbour-zone bleed from the dominant same-zone
 # IndoorLightingStream above. Consumed by the WeakOpticalCoupling stereotype.
 ws:SecondaryCouplingStream a owl:NamedIndividual, elem:StreamKind ;
@@ -305,8 +305,8 @@ ws:cp_outside_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
 #
 #    • PrimaryOpticalCoupling — dominant same-zone illumination (≈ +400 lux /
 #      0.50·Sun); reliably moves the sensed-illuminance RANK.
-#    • WeakOpticalCoupling    — sub-rank cross-zone spill (≤ +50 lux lamp,
-#      0.25·Sun blind); rarely moves the neighbour's RANK (audit: WRONG ~80% of
+#    • WeakOpticalCoupling    — sub-rank cross-zone spill (+100 lux lamp,
+#      0.30·Sun blind); rarely moves the neighbour's RANK (audit: WRONG ~80% of
 #      the time), so the reasoner makes NO directional rank claim for it.
 # ===========================================================================
 
@@ -465,7 +465,7 @@ lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z2 .
 lab:Blind_Z1         brick:feeds  lab:LightSensor_Z1 .
 lab:Blind_Z2         brick:feeds  lab:LightSensor_Z2 .
 
-# Cross-zone spill (matches the +50 lamp and +0.25*Sun blind bleed terms).
+# Cross-zone spill (matches the +100 lamp and +0.30*Sun blind bleed terms).
 lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z2 .
 lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z1 .
 lab:Blind_Z1         brick:feeds  lab:LightSensor_Z2 .
@@ -484,22 +484,22 @@ lab:Blind_Z2         brick:feeds  lab:LightSensor_Z1 .
 #  same-zone arcs are excluded from the cross-zone query by the zone filter).
 # ---------------------------------------------------------------------------
 ws:conn_CLz1_to_LSz2 a owl:NamedIndividual, elem:InternalConnection ;
-    rdfs:label "Cross-zone spill: CeilingLight_Z1 -> LightSensor_Z2 (+50 lux)" ;
+    rdfs:label "Cross-zone spill: CeilingLight_Z1 -> LightSensor_Z2 (+100 lux)" ;
     ws:connSource lab:CeilingLight_Z1 ; ws:connTarget lab:LightSensor_Z2 ;
     elem:hasStructuralStereotype ws:WeakOpticalCoupling .
 
 ws:conn_CLz2_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
-    rdfs:label "Cross-zone spill: CeilingLight_Z2 -> LightSensor_Z1 (+50 lux)" ;
+    rdfs:label "Cross-zone spill: CeilingLight_Z2 -> LightSensor_Z1 (+100 lux)" ;
     ws:connSource lab:CeilingLight_Z2 ; ws:connTarget lab:LightSensor_Z1 ;
     elem:hasStructuralStereotype ws:WeakOpticalCoupling .
 
 ws:conn_BZ1_to_LSz2 a owl:NamedIndividual, elem:InternalConnection ;
-    rdfs:label "Cross-zone spill: Blind_Z1 -> LightSensor_Z2 (0.25*Sun)" ;
+    rdfs:label "Cross-zone spill: Blind_Z1 -> LightSensor_Z2 (0.30*Sun)" ;
     ws:connSource lab:Blind_Z1 ; ws:connTarget lab:LightSensor_Z2 ;
     elem:hasStructuralStereotype ws:WeakOpticalCoupling .
 
 ws:conn_BZ2_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
-    rdfs:label "Cross-zone spill: Blind_Z2 -> LightSensor_Z1 (0.25*Sun)" ;
+    rdfs:label "Cross-zone spill: Blind_Z2 -> LightSensor_Z1 (0.30*Sun)" ;
     ws:connSource lab:Blind_Z2 ; ws:connTarget lab:LightSensor_Z1 ;
     elem:hasStructuralStereotype ws:WeakOpticalCoupling .
 
