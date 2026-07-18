@@ -47,6 +47,7 @@
       "exec_delay_ms_bench": 100
     },
     "phase1": {
+      "note": "DEFAULT-STACK mode == factorial arm D (KG prior ON, PBRS ON, adaptive-trust ON). The learning_overrides below are value-identical to the inherited global learning block; they are declared EXPLICITLY (2026-07-18) so that no phase1-family profile silently inherits its accelerator stack — silent inheritance is how a defaults dispatch produced the arm-confounded run 29105464710 (THESIS_STATE_REPORT.md, Addendum 2026-07-13). For the arm-C HEADLINE use phase1_kg_only. Phase-2 clean warm-start training also runs this profile (full stack, intentional): do NOT change these values, add a new profile instead.",
       "tick": "0.05",
       "num_episodes": 3000,
       "max_steps_per_episode": 20,
@@ -55,7 +56,11 @@
       "exec_max_steps_ql": 20,
       "bench_runs": 5,
       "exec_max_steps_bench": 20,
-      "exec_delay_ms_bench": 100
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "pbrs",
+        "adaptive_trust": true
+      }
     },
     "phase1_baseline": {
       "note": "Factorial arm A (negative control): KG prior OFF, PBRS OFF, adaptive-trust OFF. KG is zeroed via stereo_prior_scale=0 + stereo_init_bonus=0, which triggers the supported H5 ablation in QLearner (zero Q-init AND zero greedy prior) so the ql_true arm becomes a true no-op overlay (≈ ql_false). Confirms the harness carries no built-in bias. Same timing as phase1.",
@@ -104,6 +109,40 @@
       "exec_delay_ms_bench": 100,
       "learning_overrides": {
         "stereo_init_bonus": 5.0,
+        "reward_shaping": "none",
+        "adaptive_trust": false
+      }
+    },
+    "phase1_kg_only_e750": {
+      "note": "Arm-C prior-decay-horizon sensitivity sweep, LOW point (state report residual flag #1: E = 10000 is the least externally constrained load-bearing constant). Identical to phase1_kg_only except stereo_prior_decay_episodes 10000 -> 750, the auto quarter-budget value QLearner.setTrainingBudgetEpisodes would pick for the 3000-episode phase1 budget (set explicitly so the value never depends on call order). Registered sweep: E in {750, 3000, 10000} on lab2,lab3 x seeds 1..5; the E=10000 point is phase1_kg_only itself (arm-C run of record, seeds 1..5 subset). Epsilon schedule, timing and the arm-C overrides are held fixed so ONLY the decay horizon varies.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "stereo_prior_decay_episodes": 750,
+        "reward_shaping": "none",
+        "adaptive_trust": false
+      }
+    },
+    "phase1_kg_only_e3000": {
+      "note": "Arm-C prior-decay-horizon sensitivity sweep, MID point: identical to phase1_kg_only except stereo_prior_decay_episodes 10000 -> 3000 (= the training budget, so the prior reaches its floor exactly at the end of training). See phase1_kg_only_e750 for the registered sweep design.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "stereo_prior_decay_episodes": 3000,
         "reward_shaping": "none",
         "adaptive_trust": false
       }

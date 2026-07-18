@@ -24,7 +24,27 @@
           "exec_max_steps_ql":     { "type": "integer", "minimum": 0 },
           "bench_runs":            { "type": "integer", "minimum": 0 },
           "exec_max_steps_bench":  { "type": "integer", "minimum": 0 },
-          "exec_delay_ms_bench":   { "type": "integer", "minimum": 0 }
+          "exec_delay_ms_bench":   { "type": "integer", "minimum": 0 },
+          "note":                  { "type": "string" },
+          "learning_overrides":    {
+            "type": "object",
+            "properties": {
+              "reward_clip":                 { "type": "number" },
+              "stereo_prior_scale":          { "type": "number" },
+              "stereo_prior_decay_episodes": { "type": "integer", "minimum": 0 },
+              "stereo_prior_decay_floor":    { "type": "number" },
+              "stereo_prior_redundant":      { "type": "number" },
+              "stereo_prior_iv_unsat":       { "type": "number" },
+              "stereo_init_bonus":           { "type": "number" },
+              "cross_zone_bonus":            { "type": "number" },
+              "stereo_energy_prior_weight":  { "type": "number" },
+              "reward_shaping":              { "enum": ["none", "pbrs"] },
+              "adaptive_trust":              { "type": "boolean" },
+              "adaptive_trust_min_samples":  { "type": "integer", "minimum": 0 },
+              "adaptive_trust_floor":        { "type": "number" }
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }
