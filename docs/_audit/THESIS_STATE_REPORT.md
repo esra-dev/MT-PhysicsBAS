@@ -1201,21 +1201,42 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 
 ### 10.3 Standing adversarial results (disclosed, not fixed — they are findings)
 
+> **Re-adjudicated 2026-07-18** under the like-for-like arm-C run 29639767776
+> (Addendum 2026-07-18b item 3). The 2026-07-13 version of this list encoded the arm-D
+> reading — "first-goal regression no longer supported; the lab3 weakness migrated to a
+> policy-quality penalty; lab1 no longer clean" — which is now **retired**: it was an
+> artifact of the arm-D PBRS+trust stack, not of the inversion.
+
 **Live under the post-inversion instrument** (the ones that must be in the thesis):
 
-- **lab3 benchmark efficiency penalty under the KG prior** — and it *grew* post-inversion:
-  `avg_cycling` +1.21 (δ = 0.99) and `avg_redundant` +1.58 (δ = 0.88), both q ≈ 0, vs
-  +0.325/+0.575 pre-inversion. This is now the durable form of the lab3 weakness
-  (§5.3–5.4, mechanism in §5.4.1; Addendum 2026-07-13).
+- **lab3 first-goal timing regression under the KG prior — significant again under the
+  headline arm.** Arm C (run 29639767776): `mean_first_goal` +67.56 [26.03, 108.95],
+  q = 0.0104, δ = 0.68 (matched pre-inversion arm-C comparator: +23.95, run 28941204656
+  — direction stable across instruments). This item was wrongly listed as *dissolved*
+  here between 2026-07-13 and 2026-07-18: the ns measurement (+25.29, q = 0.632) was
+  arm-D-confounded (§5.2, §5.4 item 3; Addendum 2026-07-18b).
+- **lab3 benchmark cycling penalty under the KG prior** — `avg_cycling` +0.744
+  [0.213, 1.200], q = 0.0154, δ = 0.79 under arm C (pre-inversion +0.325/+0.575 →
+  inversion- and arm-robust). Together with the timing regression this is the durable
+  form of the lab3 weakness under the headline arm: **timing + cycling** (§5.3–5.4,
+  mechanism in §5.4.1). The E-decay sweep shows the two trade off in the prior-decay
+  horizon rather than vanish — shorter E erases the timing tax but buys significant
+  cycling/redundant (and, at E = 3000, goal-rate) penalties; no examined E removes the
+  lab3 tax (Addendum 2026-07-18b item 4).
 - **Phase-2: 5 of 8 registered Tier-1 cells do not show a KG advantage** — 2 null, 1
   marginal, and 2 **sign-flipped** (`labmon_f1dead` +22.2, `lab3_f1dead` +85.0, both ns);
   `lab3_f1dead` is *unsupported* under the one-shot rule (§9.10; Addendum 2026-07-12).
 - **Phase-2.7 `lab3_f2bdead`: the registered directional prediction was NOT met** —
   Δ = +122.3 (KG *slower*), ns; the binding-constraint reading survives only in a narrower
   form, itself now untested (Addendum 2026-07-12c).
-- **lab1 is no longer a perfectly clean floor control under arm D:** `avg_wasted` /
-  `avg_redundant` +0.0225 (q ≈ 0) *against* the KG arm — tiny in magnitude but significant
-  (Addendum 2026-07-13).
+
+**Arm-D-only effects** (real, but properties of the PBRS+trust accelerator stack — cite
+them only when discussing arm D, never as headline-arm facts; Addendum 2026-07-18b item 3):
+
+- **lab3 `avg_redundant` tax:** +1.5775 (q ≈ 0) under arm D shrinks to +0.994 (q = 0.211,
+  ns) under arm C.
+- **lab1 `avg_wasted`/`avg_redundant` blemish:** +0.0225 (q ≈ 0) under arm D; +0.0175
+  (q = 0.369, ns) under arm C — lab1 is a fully clean floor control for the headline arm.
 
 **Dissolved by the post-inversion re-runs — do NOT carry these forward:**
 
@@ -1224,22 +1245,24 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
   both arms (§9.10; Addendum 2026-07-12b).
 - ~~`lab1_f1dead` ql_true recovers slower (177.8 vs 107.2)~~ — both arms now reconverge at
   the 50-episode stability floor (Addendum 2026-07-12).
-- ~~lab3 *first-goal* regression~~ — post-inversion Δ = +25.29 is **no longer significant**
-  (q = 0.632, CI crosses zero). Still directionally slower; do not claim it as an effect.
 - ~~The LLM baseline achieves goals while violating the energy budget~~ — the LLM baseline
   was **removed from Phase-4 scope** on 2026-07-12 (Addendum 2026-07-12d). Out of scope,
   not a finding.
+
+*(The lab3 first-goal regression appeared in this dissolved list from 2026-07-13 to
+2026-07-18; it is moved back to the live list above by the arm-C re-measurement.)*
 
 **Bottom line** (superseding 13_logic_report.md §6): nothing needs to be rebuilt, but the
 *claims* are now narrower than the pre-inversion record suggested. Phase 3 is the
 strongest deliverable and is unchanged by the inversion; Phase 4 (extension) is
 confirmatory with a monotone dependency ladder; Phase 2 is confirmatory but at 3/8 Tier-1
 cells, and its story is "structural knowledge pays where it is the binding constraint,"
-not "the KG always recovers faster"; Phase 1 rests on the lab2 anchor (which replicates
-under both instruments) plus an honest lab3 framing. **The one outstanding experimental
-duty is a post-inversion arm-C (`phase1_kg_only`) re-run** — the existing post-inversion
-Phase-1 run is arm D, so the headline arm has not yet been re-measured like-for-like
-(Addendum 2026-07-13). The remaining work is otherwise presentation: keeping every claim
+not "the KG always recovers faster"; Phase 1 rests on the lab2 anchor — now
+triple-replicated (pre-inversion arm C, post-inversion arm D, post-inversion arm C) and
+robust to the prior-decay horizon — plus an honest lab3 framing (timing + cycling tax
+under the headline arm). The arm-C re-measurement duty registered here on 2026-07-13 was
+**discharged 2026-07-18** (run 29639767776; Addendum 2026-07-18b); no Phase-1
+experimental duty remains open. The remaining work is presentation: keeping every claim
 exactly one notch *below* the evidence, which is what the advisor's original correction
 demanded.
 
@@ -1799,6 +1822,19 @@ run ID updated.
 
 ### Phase 1 — run `29105464710` (commit `8c386f8`, seeds 1–10) ⚠️ **arm D, NOT the arm-C headline**
 
+> **RE-ADJUDICATED 2026-07-18 (Addendum 2026-07-18b item 3) — read before citing the
+> interpretation below.** The arm-C re-run demanded by this addendum executed as run
+> 29639767776 and re-measured every contrast under the headline configuration. Of the
+> numbered items in "What changed": **items 1–2 hold** (lab2 anchor and lab3
+> `auc_reward` replicate under arm C). **Item 3 is retired** — the first-goal downgrade
+> was arm-D-specific; under arm C the lab3 regression is significant again (+67.56,
+> q = 0.0104, δ = 0.68). **Item 4's "migration" framing is retired** — only the
+> `avg_cycling` component persists under arm C (+0.744, q = 0.0154); `avg_redundant`
+> collapses to ns (+0.994, q = 0.211), i.e. PBRS+trust stacking. **Item 5 is retired as
+> a headline statement** — the lab1 blemish vanishes under arm C (+0.0175, q = 0.369).
+> The tables below stand unchanged as the **arm-D sensitivity record**; cite their
+> numbers only as arm-D numbers.
+
 **The confound, stated plainly.** `phase1.yml`'s `run_mode` input selects a
 `run_config.json` profile, and the runbook (§6.2) prescribed *"defaults …
 `run_mode=phase1`"*. But the `phase1` profile carries **no `learning_overrides`**
@@ -2071,4 +2107,10 @@ significant at E = 10000 (+0.744, q = 0.0154) — the ns cell above is the n = 5
   record; its MANIFEST's "do not swap into §5.2" instruction still holds.
 - Anywhere §5.3/§5.4.1 or downstream text asserts the 2026-07-13 "timing penalty
   unsupported / efficiency penalty durable" reading, it must now cite this addendum's
-  arm-C adjudication instead.
+  arm-C adjudication instead. *(Swept 2026-07-18: §10.3 rewritten to the arm-C
+  adjudication — first-goal regression moved back to the live list, redundant tax and
+  lab1 blemish reclassified arm-D-only; re-adjudication banner added to Addendum
+  2026-07-13's Phase-1 section; `MeetingNotes_0907.md` and
+  `phase1_postinv/run_29105464710/MANIFEST.md` flagged as arm-D/superseded records. No
+  other doc carries the retired reading — remaining grep hits are coincidental numerics
+  in archived CSVs.)*

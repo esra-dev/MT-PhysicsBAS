@@ -1,5 +1,13 @@
 # Thesis Meeting - 1307
 
+> **Historical record (meeting of 2026-07-13) — the Phase-1 readings below are
+> superseded.** The arm-C dispatch flagged as outstanding in §5.1 ran on 2026-07-18
+> (run 29639767776, archived at `phase1_postinv/run_29639767776/`) and re-adjudicated
+> the §5 arm-D readings: the lab3 first-goal regression is significant again under
+> arm C (+67.56, q = 0.0104), the lab3 efficiency tax narrows to `avg_cycling`
+> (+0.744, q = 0.0154; `avg_redundant` ns), and the lab1 +0.0225 blemish vanishes
+> (q = 0.369). Every §5 number below is an arm-D number and must be cited as such.
+> Current adjudication: `THESIS_STATE_REPORT.md` §5.2, §10.3, Addendum 2026-07-18b.
 
 | Phase | Status | Headline result |
 |---|---|---|

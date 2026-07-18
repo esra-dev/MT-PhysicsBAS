@@ -18,11 +18,12 @@ run_config profile carries **no `learning_overrides`** and therefore inherits th
 global learning block (`reward_shaping=pbrs`, `adaptive_trust=true`) — i.e. this is
 **factorial arm D (KG prior + PBRS + adaptive trust)**, whereas the pre-inversion
 Phase-1 headline (run `27336756264`) is **arm C** (`phase1_kg_only`: KG prior only).
-It is therefore **not a like-for-like replacement** for the §5.2 headline table; a
-post-inversion **arm-C re-run is still outstanding**
-(`gh workflow run phase1.yml -f run_mode=phase1_kg_only` — see
-`THESIS_STATE_REPORT.md`, Addendum 2026-07-13). The workflow's default `run_mode`
-has since been changed to `phase1_kg_only` to close this footgun.
+It is therefore **not a like-for-like replacement** for the §5.2 headline table. The
+post-inversion arm-C re-run this caveat demanded was **discharged 2026-07-18** as run
+`29639767776` (archived at `phase1_postinv/run_29639767776/`), now the §5.2 headline of
+record — see `THESIS_STATE_REPORT.md`, Addenda 2026-07-13 and 2026-07-18b. The
+workflow's default `run_mode` has since been changed to `phase1_kg_only` to close this
+footgun.
 
 ## Provenance of the archived files
 
@@ -63,8 +64,12 @@ behind the learning-curve PNGs).
 
 ## Standing of this run
 
-Interpreted in `THESIS_STATE_REPORT.md` Addendum 2026-07-13: the **lab2 anchor
-replicates** post-inversion, lab3 `auc_reward` replicates, the lab3 first-goal
-regression does **not** (q = 0.632, ns), and the lab3 efficiency penalty migrates to
-`avg_cycling`/`avg_redundant` — all under the arm-D caveat above. Do **not** swap
-these numbers into the §5.2 (arm-C) table.
+Interpreted in `THESIS_STATE_REPORT.md` Addendum 2026-07-13 and **re-adjudicated under
+the like-for-like arm-C run `29639767776` in Addendum 2026-07-18b**: the **lab2 anchor
+replicates** post-inversion and lab3 `auc_reward` replicates (both arm-robust). The
+2026-07-13 readings that the lab3 first-goal regression "does not survive" (q = 0.632)
+and that the lab3 penalty "migrates" to `avg_cycling`/`avg_redundant` are **retired as
+arm-D-specific**: under arm C the first-goal regression is significant again (+67.56,
+q = 0.0104) and only the cycling component persists (+0.744, q = 0.0154; redundant ns).
+This archive stands as the **arm-D sensitivity record**. Do **not** swap these numbers
+into the §5.2 (arm-C) table.
