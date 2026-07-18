@@ -1868,4 +1868,60 @@ The stale files appear only as inert strays in the artifact root. Phase-3's run 
 
 **Neither run is archived in-repo.** Both were read from live CI artifacts. If they are to
 be cited in the thesis they should be archived the way `phase2_postinv/` and
-`phase4_postinv/` are, since GitHub expires artifacts.
+`phase4_postinv/` are, since GitHub expires artifacts. *(Discharged 2026-07-18: both
+archived — see Addendum 2026-07-18.)*
+
+## Addendum 2026-07-18 — archives committed; arm-C footgun closed at both ends; arm-C re-run dispatched; E-sweep implemented; lab3/lab3_slow TTL doc-drift fixed
+
+**1. Runs of record archived in-repo.** `phase1_postinv/run_29105464710/` (curated per the
+`phase4_postinv/` rule; MANIFEST records artifact id, zip sha256, the
+`df53b71`→`8c386f8` head-SHA equivalence, and the arm-D caveat prominently) and
+`phase3_postinv/run_29166356524/` (full artifact tree — Phase 3 has **no `results`-branch
+tag**, so before this commit the expiring CI artifact was its only off-disk copy).
+End-of-`.gitignore` `!phase*_postinv/**` negations keep the archives committable past the
+runtime-artifact patterns. Committed as `8ff82a8` (P4) and `e631877` (P1/P3), pushed.
+
+**2. The arm-D footgun is closed at both ends.** (a) `phase1.yml`'s `run_mode` default and
+env fallback are now `phase1_kg_only`, and the §6.2 runbook step in
+`ACTION_SPACE_INVERSION.md` is corrected (commit `c1d8f40`). (b) The `phase1` profile in
+`run_config.json` now declares its accelerator stack **explicitly**
+(`learning_overrides: reward_shaping=pbrs, adaptive_trust=true` — value-identical to the
+inherited globals, so Phase-2 warm-start semantics are untouched): no phase1-family
+profile silently inherits its arm anymore. The schema
+(`run_config.schema.json`) now declares `note`/`learning_overrides`, which every factorial
+profile had been carrying in violation of the per-profile `additionalProperties: false`.
+
+**3. The post-inversion arm-C re-run is IN FLIGHT**: run `29639767776`, dispatched
+2026-07-18 with pure defaults on head `e631877` (`phase1_kg_only`, lab1–lab3, seeds 1–10,
+`publish_results=true`). Beyond re-certifying the lab2 anchor like-for-like, this run
+**decides the interpretation of the lab3 efficiency-tax migration** (avg_cycling +1.2125,
+avg_redundant +1.5775 under arm D): if the tax persists under arm C it is an inversion
+effect; if it shrinks/vanishes it was arm-D stacking (PBRS+trust amplification), and the
+§5.4.1 "migrated from timing to policy quality" sentence must be conditioned accordingly.
+Same test applies to the lab1 `avg_wasted` +0.0225 blemish — it may simply vanish under
+arm C.
+
+**4. E-decay sensitivity sweep (residual flag #1) implemented.** New arm-C profiles
+`phase1_kg_only_e750` and `phase1_kg_only_e3000` — clones of `phase1_kg_only` with only
+`stereo_prior_decay_episodes` changed (750 = the auto ¼-budget value, set explicitly;
+3000 = the training budget). Registered design: E ∈ {750, 3000, 10000} on lab2,lab3 ×
+seeds 1..5; the E = 10000 point is the arm-C run of record itself (seeds 1–5 subset) — so
+the sweep costs **two** dispatches, not three. Everything else (ε schedule, timing, arm-C
+overrides) held fixed. ⚠️ Dispatch protocol: `phase1.yml` uses concurrency group `phase1`
+with `cancel-in-progress: false` — GitHub keeps at most one pending run per group and
+**cancels an older pending run when a newer one is queued**, so dispatch each sweep run
+only after the previous phase1-group run has finished.
+
+**5. lab3 TTL doc-drift fixed — and it was worse than flagged.**
+`building_3_complex.ttl`'s comments and reified-connection labels (formula header, stream
+comment, §4b magnitudes, §7 arc comment, four cross-zone `rdfs:label`s) now state the
+actual flow terms **+100 lux / 0.30·Sun** (were 50/0.25). While fixing it,
+`building_3_slow.ttl` turned out doubly stale: its flow actually implements **+150 lux /
+0.40·Sun**, so its header claims "STEADY-STATE identical / only delta is TEMPORAL" were
+**false against the current lab3 flow** (lab3_slow kept an older physics generation when
+lab3 was rebalanced). Labels/comments synced to 150/0.40 and the header now states the
+discrepancy explicitly. Phase-3 claims are unaffected (delays are measured within-lab;
+no cross-lab steady-state comparison exists), but the two flows must never be cited as
+steady-state identical. No parsed triple changed in either file: magnitudes live only in
+annotations (the KG deliberately declares structure, not gain); the reasoner matches the
+`WeakOpticalCoupling` URI, never label text. `validateTurtle` green.
