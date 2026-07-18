@@ -1122,10 +1122,10 @@ Turtle validity is a CI gate (`gradlew validateTurtle`, ci.yml).
 
 | Result | Run ID | Commit | Download / archive folder | Status |
 |---|---|---|---|---|
-| **P1 post-inversion ladder (arm D)** | 29105464710 | `8c386f8` | *(not archived in-repo; `phase1-consolidated` CI artifact — extracted 2026-07-13)* | ⚠️ **arm D (PBRS+trust ON), not the arm-C headline** — see Addendum 2026-07-13 |
+| **P1 post-inversion ladder (arm D)** | 29105464710 | `8c386f8` | `phase1_postinv/run_29105464710/` (curated; MANIFEST has artifact id + sha256) | ⚠️ **arm D (PBRS+trust ON), not the arm-C headline** — see Addendum 2026-07-13 |
 | **P2 post-inversion registered (canonical)** | 29148475671, 29151540231, 29155539633, 29157197853, 29163456132 | `6c727b6` | `phase2_postinv/run_<id>/recovery_root/`; pooled `analysis/out_phase2_registered_postinv/` | Confirmatory; `pre_registration.md` §9.10 (3/8 Tier-1) |
 | P2.7 `lab3_f2bdead` (exploratory) | 29187088096 | `bb6c4e4` | `phase2_f2bdead/run_29187088096/recovery_root/` | Closed; §9.11 prediction NOT met (Δ=+122.3) |
-| **P3 post-inversion (n = 10)** | 29166356524 | `6c727b6` | *(not archived in-repo; `phase3-consolidated` CI artifact — extracted 2026-07-13)* | Replicates pre-inversion (Addendum 2026-07-13) |
+| **P3 post-inversion (n = 10)** | 29166356524 | `6c727b6` | `phase3_postinv/run_29166356524/` (full artifact tree; MANIFEST has artifact id + sha256) | Replicates pre-inversion (Addendum 2026-07-13) |
 | **P4 post-inversion ladder (n = 20)** | 29193486193 | `d336fdf` | `phase4_postinv/run_29193486193/` | Confirmatory; supersedes PHASE4.md §10a |
 
 (Full map incl. superseded Phase-2 iterations v1–v5 and preliminary runs:
