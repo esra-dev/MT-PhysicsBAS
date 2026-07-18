@@ -22,8 +22,12 @@ import cartago.OPERATION;
  *
  * Operations:
  *   • initLearner(numActions, stateVecLen, actionUris, actionValues, actionLabels)
+ *   • initLearner(…, svBits, expectedBits) — Phase 5 overload, enables the
+ *     flip-conditioned admission gate (see below)
  *   • observe(stateBefore, actionIdx, stateAfter)
  *   • saveLearnedStereotypes(filename) — writes Turtle
+ *   • saveRawStats(filename) — Phase 5: dumps the raw Welford accumulators as
+ *     CSV for offline overlay synthesis (tools.OverlaySynthesizer)
  *   • resetStats()
  *   • printStats()
  *
@@ -31,6 +35,18 @@ import cartago.OPERATION;
  *   stereotype.learner.minSamples   (default 30)   — minimum samples per (a,slot)
  *   stereotype.learner.zCutoff      (default 3.0)  — |mean| / SEM must exceed this
  *   stereotype.learner.minEffect    (default 0.05) — |mean| must exceed this (rank units)
+ *
+ * Phase 5 — flip-conditioned admission (gated instrument):
+ *   -Dstereotype.learner.flipConditioned=true (default false, read at
+ *   initLearner time) admits a (state, action, next-state) sample into the
+ *   accumulators ONLY when the action's commanded state-vector bit actually
+ *   flipped to its expected post-action value. This conditions the per-slot Δ
+ *   estimate on real actuation (a redundant ON command on an already-ON device
+ *   contributes no Δ evidence and would otherwise dilute the mean toward 0).
+ *   Requires the 7-argument initLearner overload; with the legacy 5-argument
+ *   init the gate is inert (no svBit metadata → every sample admitted).
+ *   Samples for actions without a commanded bit (DO_NOTHING) are always
+ *   admitted. Both learner arms run the identical instrument.
  *
  * Note: the test is |mean| / SEM (standard error of the mean = stddev / sqrt(n)),
  * which is the correct "is the mean different from zero?" test for an online
@@ -62,6 +78,19 @@ public class StereotypeLearner extends Artifact {
     private boolean[] actionValues = new boolean[0];
     private String[]  actionLabels = new String[0];
 
+    // Phase 5 — per-action commanded-bit metadata (7-arg initLearner overload).
+    // svBits[a] = state-vector slot the action commands (-1 = none/DO_NOTHING);
+    // expectedBits[a] = bit value AFTER a successful command (-1 = unknown).
+    private int[] svBits       = new int[0];
+    private int[] expectedBits = new int[0];
+    // Flip-conditioned admission gate; read from
+    // -Dstereotype.learner.flipConditioned at initLearner time (per instance,
+    // so tests can toggle it), inert unless svBits metadata was supplied.
+    private boolean flipConditioned = false;
+    // Admission counters (diagnostics; dumped by saveRawStats).
+    private long admittedSamples = 0;
+    private long rejectedNoFlip  = 0;
+
     // Welford accumulators per (action, slot)
     private long[][]   count;   // [numActions][stateVecLen]
     private double[][] mean;    // [numActions][stateVecLen]
@@ -82,21 +111,53 @@ public class StereotypeLearner extends Artifact {
                             Object[] uris,
                             Object[] values,
                             Object[] labels) {
+        initLearner(numActionsIn, stateVecLenIn, uris, values, labels,
+                    new Object[0], new Object[0]);
+    }
+
+    /**
+     * Phase 5 overload: additionally seed per-action commanded-bit metadata so
+     * the flip-conditioned admission gate can operate. Back-compatible — the
+     * legacy 5-argument operation delegates here with empty arrays (svBit /
+     * expectedBit default to -1 per action, which keeps the gate inert).
+     *
+     * @param svBitsIn       Object[] of Integer — state-vector slot the action
+     *                       commands (-1 for DO_NOTHING / unknown).
+     * @param expectedBitsIn Object[] of Integer — bit value after a successful
+     *                       command (1=ON, 0=OFF, -1 unknown).
+     */
+    @OPERATION
+    public void initLearner(int numActionsIn,
+                            int stateVecLenIn,
+                            Object[] uris,
+                            Object[] values,
+                            Object[] labels,
+                            Object[] svBitsIn,
+                            Object[] expectedBitsIn) {
         this.numActions  = numActionsIn;
         this.stateVecLen = stateVecLenIn;
         this.actionUris   = new String[numActions];
         this.actionValues = new boolean[numActions];
         this.actionLabels = new String[numActions];
+        this.svBits       = new int[numActions];
+        this.expectedBits = new int[numActions];
         for (int a = 0; a < numActions; a++) {
             actionUris[a]   = (a < uris.length   && uris[a]   != null) ? String.valueOf(uris[a])   : "";
             actionValues[a] = (a < values.length && values[a] != null) && toBoolean(values[a]);
             actionLabels[a] = (a < labels.length && labels[a] != null) ? String.valueOf(labels[a]) : ("action_" + a);
+            svBits[a]       = (a < svBitsIn.length       && svBitsIn[a]       != null) ? toInt(svBitsIn[a])       : -1;
+            expectedBits[a] = (a < expectedBitsIn.length && expectedBitsIn[a] != null) ? toInt(expectedBitsIn[a]) : -1;
         }
+        this.flipConditioned =
+            Boolean.parseBoolean(System.getProperty("stereotype.learner.flipConditioned", "false"));
+        this.admittedSamples = 0;
+        this.rejectedNoFlip  = 0;
         count = new long[numActions][stateVecLen];
         mean  = new double[numActions][stateVecLen];
         m2    = new double[numActions][stateVecLen];
         LOGGER.info("StereotypeLearner: init numActions=" + numActions
-                  + " stateVecLen=" + stateVecLen);
+                  + " stateVecLen=" + stateVecLen
+                  + " flipConditioned=" + flipConditioned);
     }
 
     /**
@@ -107,6 +168,20 @@ public class StereotypeLearner extends Artifact {
     public void observe(Object[] stateBefore, int actionIdx, Object[] stateAfter) {
         if (count == null || actionIdx < 0 || actionIdx >= numActions) return;
         int len = Math.min(stateBefore.length, Math.min(stateAfter.length, stateVecLen));
+        // Phase 5 — flip-conditioned admission: with the gate enabled and a
+        // commanded bit known for this action, admit the sample only if that
+        // bit actually flipped to its expected post-action value. Actions
+        // without a commanded bit (DO_NOTHING) are always admitted.
+        if (flipConditioned && actionIdx < svBits.length && svBits[actionIdx] >= 0) {
+            int bit = svBits[actionIdx];
+            if (bit >= len) { rejectedNoFlip++; return; }
+            int before = toInt(stateBefore[bit]);
+            int after  = toInt(stateAfter[bit]);
+            boolean flipped = before != after
+                && (expectedBits[actionIdx] < 0 || after == expectedBits[actionIdx]);
+            if (!flipped) { rejectedNoFlip++; return; }
+        }
+        admittedSamples++;
         for (int s = 0; s < len; s++) {
             double delta = toInt(stateAfter[s]) - toInt(stateBefore[s]);
             // Welford online update
@@ -191,6 +266,71 @@ public class StereotypeLearner extends Artifact {
         }
     }
 
+    /**
+     * Phase 5 — dump the RAW Welford accumulators (every (action, slot) cell,
+     * no significance gating) plus the action metadata as CSV. This is the
+     * hand-off artifact consumed offline by {@link OverlaySynthesizer}, which
+     * applies the emission gates and synthesizes the learned KG overlay TTL.
+     * The legacy {@link #saveLearnedStereotypes} Turtle dump is unchanged.
+     *
+     * Format (version header + key=value comment lines, then one CSV row per
+     * (action, slot) cell; mean/sd are written with Double.toString for exact
+     * round-trip):
+     * <pre>
+     *   # stereotype_learner_raw_stats_v1
+     *   # numActions=5
+     *   # stateVecLen=3
+     *   # flipConditioned=true
+     *   # admittedSamples=1234
+     *   # rejectedNoFlip=56
+     *   actionIdx,wotActionUri,actionValue,actionLabel,svBit,expectedBit,slot,n,mean,sd
+     * </pre>
+     */
+    @OPERATION
+    public void saveRawStats(String filename) {
+        if (count == null) {
+            LOGGER.warning("saveRawStats: learner not initialised — skipping");
+            return;
+        }
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
+            pw.println("# stereotype_learner_raw_stats_v1");
+            pw.println("# numActions=" + numActions);
+            pw.println("# stateVecLen=" + stateVecLen);
+            pw.println("# flipConditioned=" + flipConditioned);
+            pw.println("# admittedSamples=" + admittedSamples);
+            pw.println("# rejectedNoFlip=" + rejectedNoFlip);
+            pw.println("actionIdx,wotActionUri,actionValue,actionLabel,svBit,expectedBit,slot,n,mean,sd");
+            for (int a = 0; a < numActions; a++) {
+                int svBit  = (a < svBits.length)       ? svBits[a]       : -1;
+                int expBit = (a < expectedBits.length) ? expectedBits[a] : -1;
+                for (int s = 0; s < stateVecLen; s++) {
+                    long n = count[a][s];
+                    double mu  = mean[a][s];
+                    double var = (n > 1) ? (m2[a][s] / (n - 1)) : 0.0;
+                    double sd  = Math.sqrt(Math.max(var, 0.0));
+                    pw.println(a + ","
+                             + actionUris[a] + ","
+                             + actionValues[a] + ","
+                             + actionLabels[a].replace(',', ';') + ","
+                             + svBit + ","
+                             + expBit + ","
+                             + s + ","
+                             + n + ","
+                             + mu + ","
+                             + sd);
+                }
+            }
+            LOGGER.info("saveRawStats: " + (numActions * stateVecLen)
+                      + " cells written to " + filename
+                      + " (flipConditioned=" + flipConditioned
+                      + " admitted=" + admittedSamples
+                      + " rejectedNoFlip=" + rejectedNoFlip + ")");
+        } catch (IOException e) {
+            LOGGER.warning("saveRawStats: failed to write " + filename
+                         + " — " + e.getMessage());
+        }
+    }
+
     /** Reset all Welford accumulators to zero (configuration is preserved). */
     @OPERATION
     public void resetStats() {
@@ -200,6 +340,8 @@ public class StereotypeLearner extends Artifact {
             java.util.Arrays.fill(mean[a], 0.0);
             java.util.Arrays.fill(m2[a],   0.0);
         }
+        admittedSamples = 0;
+        rejectedNoFlip  = 0;
     }
 
     /** Print a short summary of accumulated samples for diagnostics. */
