@@ -757,7 +757,9 @@ prior that promotes it can only charge an exploration tax.**
   analysis and the over-exploration framing are documented; the residual-init-Q toggling
   micro-mechanism is interpretation, consistent with the non-monotone init-bonus
   sensitivity — lowering the bonus 15 → 5 made lab3 *worse*,
-  phase1_xzone_asis_analysis.md §8 — but not separately instrumented.)
+  phase1_xzone_asis_analysis.md §8 — but not separately instrumented.) *(An
+  upgrade-or-drop test of this micro-mechanism is registered pre-data in Addendum
+  2026-07-18c; until it reports, this sentence remains interpretation.)*
 - **Intermediate rerun (100 / 0.30·sun, rank-moving, bonus 3.0).** Here "nothing to learn"
   no longer applies — but by construction of the non-trivialising magnitudes, no
   cross-zone lever can reach rank 3 on its own (0.30·900 = 270 < 300; neighbour-lamp bleed
@@ -2114,3 +2116,175 @@ significant at E = 10000 (+0.744, q = 0.0154) — the ns cell above is the n = 5
   `phase1_postinv/run_29105464710/MANIFEST.md` flagged as arm-D/superseded records. No
   other doc carries the retired reading — remaining grep hits are coincidental numerics
   in archived CSVs.)*
+
+## Addendum 2026-07-18c — REGISTRATION (pre-data): §5.4.1 toggling micro-mechanism test; arm-C seed extension (seeds 11–20)
+
+This addendum registers two pre-specified analyses **before any of their data is
+retrieved, opened, or dispatched**. Commit order is the guarantee: this text is
+committed before `analysis/toggling_micromech_audit.py` exists, before any per-seed
+`bench_step_log_*`, `qtable_*`, or `*_visits.csv` file of run 29639767776 is retrieved
+from the `results` branch or CI artifact, and before the seeds-11–20 dispatch is queued.
+At registration time the only outputs of run 29639767776 that have been inspected are
+the aggregate/episode-level statistics used for Addenda 2026-07-18/18b
+(`learning_speed_tests.csv`, `paired_tests.csv`, `benchmark_results_*.csv` via
+`sweep_report.py`) and the archive/MANIFEST listings; no per-step or per-(s,a) file has
+been opened. All thresholds below were fixed from §5.4.1's existing language ("a
+handful of visits") and generic effect-size conventions, not from data contact.
+One-shot rule: nothing in this registration may be adjusted after data contact; any
+deviation must be labelled a deviation in the reporting addendum.
+
+### 1. Test A — the §5.4.1 residual-init-Q toggling micro-mechanism (upgrade or drop)
+
+**Claim under test** (§5.4.1 headline-run bullet, currently marked "interpretation …
+not separately instrumented"): the arm-C lab3 benchmark cycling tax (`avg_cycling`
++0.744, q = 0.0154, Addendum 2026-07-18b §3) is produced by **init-Q orderings
+surviving into the final greedy policy in rarely-visited states**, yielding on/off/on
+toggling.
+
+**Data (all pre-existing; no new dispatch).** Run of record **29639767776**, lab3
+cells, seeds 1–10, both arms. Per-seed inputs retrieved from the `results` branch (tag
+`results-20260718-102423-phase1_kg_only-e631877`; same content as CI artifact
+`8428536694`, sha256 `4029c693…`): `bench_step_log_ql_{true,false}.csv` (rich schema:
+zone ranks before/after, targets, ActionLabel, SunshineRank, post-action ActuatorState,
+WasMasked, StuckFired), `qtable_final_stereotypes_{true,false}_lab3.csv` (+ per-zone
+files), and `qtable_final_stereotypes_{true,false}_lab3_visits.csv` (per-(state,
+action) training visit counts). The retrieved lab3 subset is committed under
+`phase1_postinv/run_29639767776_toggling_audit/inputs/` for durability. The **initial**
+Q-tables are regenerated at archive head `e631877` via the training-start
+`qtable_initial_*` dump path (or an equivalent headless harness over the same
+`initWithStereotypes` code path); the init landscape is a deterministic,
+seed-independent function of KG + goal + config, so regeneration is faithful to the
+run of record.
+
+**Definitions.**
+
+- **D1 — cycling event** (instrument semantics, `BenchmarkLogger.countReversals`): any
+  actuator state change between consecutive recorded steps, from the second recorded
+  step of an episode onward, read off consecutive `ActuatorState` snapshots in the
+  step log.
+- **D2 — toggle event** (mechanism semantics): a cycling event that returns the
+  flipped actuator to a state it already held earlier in the same episode (the
+  on/off/on pattern §5.4.1 asserts). D2 ⊆ D1; the fraction of the lab3 cycling Δ that
+  is strict toggling is reported descriptively.
+- **D3 — greedy toggle event**: a toggle event whose step has `StuckFired = false` and
+  `WasMasked = false`.
+- **D4 — toggle pair / toggle state**: the (encoded state s, executed action a) of a
+  greedy toggle event, with s reconstructed from the step log (zone ranks before,
+  SunshineRank, previous step's ActuatorState) through the exact `encodeState` slot
+  layout. Pairs are deduplicated within a seed and pooled across seeds (the same (s,a)
+  in two seeds is two realizations, matching the per-seed tables it is scored
+  against).
+
+**Validity gates (all must pass, else INVALID).**
+
+- **G1 — instrument reconciliation**: per episode, D1 flips counted from the step log
+  reproduce the archived `benchmark_results_ql_*.csv` `ActuatorCyclingCount` exactly
+  for ≥ 95% of lab3 episodes per arm (pooled over seeds).
+- **G2 — encoding/selection consistency**: on ≥ 95% of lab3 steps that have a
+  preceding logged step, `StuckFired = false`, `WasMasked = false`, and an ActionLabel
+  that maps onto a Q-table action column (unmappable labels count against the 95%),
+  the executed action's Q-value in that seed's frozen combined table at the
+  reconstructed state equals the row maximum (tie-tolerant match, |Δ| ≤ 1e-9). Both
+  arms, pooled.
+- **G3 — init determinism**: the regenerated `qtable_initial_stereotypes_true_lab3.csv`
+  is bit-identical across two independent regenerations under different JVM seeds.
+- **Minimum data**: ≥ 20 pooled unique KG-arm greedy toggle pairs; fewer →
+  INDETERMINATE ("insufficient toggling to instrument"); §5.4.1 stays interpretation
+  and may not be upgraded.
+
+**Scope gate S1**: > 50% of KG-arm toggle events (D2) are greedy (D3). If S1 fails,
+the cycling tax is dominated by the anti-stuck fallback, not by greedy init-residue —
+outcome **DROPPED** regardless of P1–P3, and §5.4.1 must be rewritten around the
+guard, not the prior.
+
+**Predictions (pooled over seeds 1–10, KG arm, unique greedy toggle pairs).**
+
+- **P1 — rarely visited (necessary condition):** the median per-(s, a) training visit
+  count of KG-arm toggle pairs, scored against the same seed's `_visits.csv`, is
+  **≤ 5** ("a handful", §5.4.1). Disclosed limitation: lab3 training is sparse
+  everywhere (~60k updates over 2048 × 11 cells), so P1 can pass non-discriminatively;
+  identification rests on P2 + P3. Descriptive, non-decisional: the same statistic for
+  non-toggle executed pairs of the same episodes.
+- **P2 — init alignment:** the executed action of a toggle pair lies in the
+  **initial-table argmax set** of its state (argmax of the summed per-zone init table;
+  ties = set membership) at a rate that is (a) ≥ tie-adjusted chance + 0.20 absolute
+  and (b) one-sided Monte-Carlo p < 0.05 under the per-state Bernoulli
+  (chance_s = |argmax set(s)| / 11) null, 100 000 draws, RNG seed 20260718.
+  Tie-adjusted chance = mean of chance_s over the tested pairs.
+- **P3 — tabula-rasa control ("no such alignment"):** at the same KG-arm toggle
+  states, the **same seed's ql_false** frozen table's greedy argmax set (same
+  tie-tolerant semantics) intersects the KG init argmax set at a rate failing at least
+  one P2 criterion (rate < chance + 0.20, or p ≥ 0.05). Control states where the
+  ql_false row has no learned preference (all 11 actions tied) are excluded and their
+  count reported; if > 50% of control states are excluded or < 20 decidable control
+  states remain, P3 is INDETERMINATE. Secondary, descriptive: the ql_false arm's own
+  D2/D3 event counts and StuckFired split.
+
+**Decision rule (pre-committed).**
+
+- **CONFIRMED** — G1–G3 + minimum data pass, S1 passes, P1 and P2 pass, P3 passes
+  (control fails to align). Consequence: the §5.4.1 sentence is upgraded from
+  "interpretation, not separately instrumented" to an instrumented mechanism with
+  these numbers; thesis text may state the mechanism as demonstrated.
+- **CONFIRMED (qualified)** — as above but P3 INDETERMINATE. §5.4.1 may be upgraded
+  only with the explicit qualifier that the tabula-rasa control was undecidable.
+- **DROPPED** — gates pass and any of S1, P1, P2 fails, **or** P3's control aligns at
+  ≥ chance + 0.20 with p < 0.05 (alignment explained by shared task structure, not
+  init residue). Consequence: the residual-init-Q toggling sentence is removed from
+  §5.4.1's causal story and any thesis text; the cycling tax is reported as an
+  observed, mechanism-unresolved contrast; §5.4.1's fix-(a) rationale ("so no residual
+  ordering survives") must be re-derived or cut.
+- **INVALID / INDETERMINATE** — any of G1–G3 fails or the minimum-data rule triggers.
+  §5.4.1 stays exactly as written (interpretation), and the failed instrumentation is
+  disclosed in the reporting addendum.
+
+**Outputs**: `analysis/toggling_micromech_audit.py` (deterministic; no free parameters
+beyond this registration) → per-gate and per-prediction numbers + event tables under
+`phase1_postinv/run_29639767776_toggling_audit/`.
+
+### 2. Plan B — arm-C headline-family seed extension (seeds 11–20)
+
+**Dispatch (registered before queueing):** `phase1.yml`, `run_mode=phase1_kg_only`
+(arm C, pure defaults, E = 10000), `profiles=lab2,lab3`, `seeds=11..20`,
+`publish_results=true`, on the then-current default-branch head (SHA recorded in the
+reporting addendum). lab1 is excluded: it is the clean floor control and fully null
+under arm C (Addendum 2026-07-18b §3), so it adds no decision-relevant cell. Protocol:
+phase1 concurrency group, one run at a time; **verify the results tag after publish**
+(Addendum 2026-07-18b §1 footgun).
+
+**Confirmatory family (m = 3, BH within this family only):**
+
+1. lab2 `auc_goal` — the anchor (n = 10 record: +0.01679, q = 0, δ = 1.0);
+2. lab3 `mean_first_goal` — the timing tax (n = 10 record: +67.56, q = 0.0104);
+3. lab3 `avg_cycling` — the policy-quality tax (n = 10 record: +0.744, q = 0.0154).
+
+**Primary inference**: the **pooled-20 paired bootstrap** — seeds 1–10 from run
+29639767776 merged with seeds 11–20 from the new run; same estimator, deterministic
+bootstrap, and BH machinery as the §5.2 instrument (`sweep_report.py`), recomputed
+locally over the merged per-seed records and archived as `phase1_postinv/run_<newid>/`
+plus `phase1_postinv/pooled20_reanalysis/`. These m = 3 q-values are **not comparable**
+to §5.2's m = 12/42 families (same caveat as the E-sweep, Addendum 2026-07-18b §4).
+**Registered secondary**: the seeds-11–20-only contrast for each of the three cells, as
+a replication / heterogeneity check.
+
+**Reporting rules (pre-committed).**
+
+- Pooled-20 estimates supersede the n = 10 citations for these three contrasts
+  everywhere they are quoted (§5.2 note, §5.4, §10.3, thesis); sign changes or
+  significance losses are reported as-is.
+- "Replicates" (or equivalent) may be claimed for a cell only if the seeds-11–20
+  subset agrees in sign with the seeds-1–10 record; otherwise the pooled result must
+  be described as pooled evidence, not replication. The pooled test is not an
+  independent confirmation of hypotheses formulated on seeds 1–10; the subset contrast
+  is the independent check.
+- No other cell, lab, or metric from the new run acquires confirmatory status; all
+  else is descriptive.
+- Single-shot: seeds 11–20 is the one registered extension; no further seed extension
+  may be dispatched on the basis of this outcome without a fresh registration that
+  discloses this one's result first (no optional stopping).
+
+**Standing duties from this addendum**: (a) run Test A and Plan B only after this
+commit; (b) record both outcomes in a reporting addendum, including gate values and
+any deviations; (c) the §5.4.1 pointer to this registration (added in this commit)
+must be resolved — upgraded, rewritten, or left as interpretation — according to the
+decision rule above, never silently.
