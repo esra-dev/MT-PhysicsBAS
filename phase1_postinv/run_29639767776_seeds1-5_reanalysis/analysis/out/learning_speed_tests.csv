@@ -1,0 +1,9 @@
+profile,metric,metric_tier,direction,censored_frac,n_paired,seeds_paired,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_one_sided_favorable,p_wilcoxon,cliffs_delta,q_bootstrap_bh,bh_family_m
+lab2,auc_goal,primary,higher_better,,5,1;2;3;4;5,0.022240746915638553,0.007635878626208759,0.03684561520506835,0.0,0.0,0.0625,1.0,0.0,8
+lab2,auc_reward,secondary,higher_better,,5,1;2;3;4;5,5.089496498832943,-2.6779259753251097,12.856918972990997,0.1764,0.0882,0.3125,0.36,0.28224,8
+lab2,episodes_to_threshold,secondary_censored,lower_better,0.0,5,1;2;3;4;5,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,8
+lab2,mean_first_goal,secondary,lower_better,,5,1;2;3;4;5,29.504150758145897,8.043171562081715,47.63913520054043,0.0082,0.9959,0.125,0.44,0.0164,8
+lab3,auc_goal,primary,higher_better,,5,1;2;3;4;5,0.002900966988996334,-0.004268089363121041,0.008402800933644539,0.4036,0.2018,0.4375,0.44,0.5381333333333334,8
+lab3,auc_reward,secondary,higher_better,,5,1;2;3;4;5,16.56945648549516,11.972257419139703,21.166655551850614,0.0,0.0,0.0625,1.0,0.0,8
+lab3,episodes_to_threshold,secondary_censored,lower_better,0.0,5,1;2;3;4;5,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,8
+lab3,mean_first_goal,secondary,lower_better,,5,1;2;3;4;5,80.17908809198134,44.30078071869461,118.1122572067658,0.0,1.0,0.0625,0.92,0.0,8
