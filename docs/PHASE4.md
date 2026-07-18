@@ -1,14 +1,21 @@
-# Phase 4 — Hidden Dependencies, Energy-Aware Goals, and the KG-vs-LLM Comparison
+# Phase 4 — Hidden Dependencies and Energy-Aware Goals
 
-> **⚠️ Two updates supersede parts of this document (2026-07-12) — see
+> **⚠️ Three updates supersede parts of this document (2026-07-12) — see
 > [PHASE4_DEPENDENCY_LADDER.md](PHASE4_DEPENDENCY_LADDER.md):**
 > 1. **All results in §10/§10a are PRE-INVERSION** (run 27905392725 predates the action-space
 >    inversion of 2026-07-10, [ACTION_SPACE_INVERSION.md](ACTION_SPACE_INVERSION.md) §6.2). They
->    must not be cited as the Phase-4 numbers; the post-inversion re-run described in the ladder
->    doc supersedes them. Keep §10a only as a pre-inversion-instrument measurement.
+>    must not be cited as the Phase-4 numbers; the post-inversion confirmatory re-run **completed
+>    as run `29193486193`** (seeds 1..20, 402/402 jobs green, 2026-07-12;
+>    [PHASE4_DEPENDENCY_LADDER.md](PHASE4_DEPENDENCY_LADDER.md) §10, run of record
+>    `phase4_postinv/run_29193486193/`) **supersedes them**. Keep §10a only as a
+>    pre-inversion-instrument measurement.
 > 2. **The Phase-4 lab set grew** by the dependency ladder: `lab4dual` (both
 >    lamps behind their own plugs) and `lab4chain` (breaker → plug → lamp, depth-2 chain).
 >    `phase4.yml` defaults now run `lab4,lab4dual,lab4chain,lab5`.
+> 3. **The offline LLM baseline was removed from Phase-4 scope** (2026-07-12): the phase compares
+>    KG-primed vs tabula-rasa Q-learning only. `analysis/phase4_llm_baseline.py` and its workflow
+>    step were deleted; the LLM figures that previously appeared in §10/§10a were exploratory
+>    (no uncertainty quantification) and are no longer part of the record.
 
 **Project:** MT-Esra (Knowledge-Guided RL for Building Automation)
 **Stack:** JaCaMo (Jason AgentSpeak BDI + CArtAgO) · Q-Learning · Knowledge Graph / Stereotypes · Node-RED labs
@@ -19,15 +26,13 @@
 
 ## 1. What changed conceptually
 
-Phase 1 proved that KG-priming **accelerates learning in clean labs**. Phase 2 added **fault detection**, Phase 3 added **temporal-dynamics learning**. Phase 4 adds the two capabilities the advisor asked for and frames the overarching comparison against an LLM:
+Phase 1 proved that KG-priming **accelerates learning in clean labs**. Phase 2 added **fault detection**, Phase 3 added **temporal-dynamics learning**. Phase 4 adds two capabilities:
 
 1. **Hidden dependencies (lab4 — smart plug).** The Zone-1 ceiling lamp is wired behind a *smart plug*. The lamp emits light **only when both its own switch AND the plug are ON**. The dependency is *known in the knowledge graph* (`ws:powerGates` / `ws:poweredBy`). The KG-primed learner enables the plug first; the tabula-rasa learner must discover the dependency by trial and error (and is punished by the no-effect penalty for switching the lamp while the plug is off).
 
 2. **Energy-aware goals (lab5 — efficient vs inefficient lamps).** Each zone has **two directly-actionable lamps with identical brightness (+400 lux) but different energy cost** (efficient = 1 unit/tick, inefficient = 4 units/tick), encoded as `ws:energyCost` in the KG. The goal is energy-aware: *"both zones bright AND steady-state power ≤ budget."* Energy is **not** part of the Q-reward; only the KG-primed agent — through a new **non-fading energy prior** — prefers the efficient lamp (or the zero-energy blinds when daylight suffices). The tabula-rasa agent is energy-blind.
 
-3. **The overarching KG-vs-LLM framing.** An **offline, reproducible LLM baseline** ([analysis/phase4_llm_baseline.py](../analysis/phase4_llm_baseline.py)) plays the same scenarios with a *general-knowledge* controller that sees commonsense device facts (a lamp brightens a room, a blind admits free daylight) but **not** the KG's hidden facts (no wiring diagram, no per-device energy datasheet). This operationalises the thesis claim: *the KG informs the agent better than an LLM is informed by its general knowledge.*
-
-> **The most important comparison remains within-lab `ql_true` vs `ql_false`** (KG-primed vs tabula-rasa Q-learning), measured to statistical significance across seeds. The LLM baseline is the *framing* layer on top.
+> **The comparison is within-lab `ql_true` vs `ql_false`** (KG-primed vs tabula-rasa Q-learning), measured to statistical significance across seeds.
 
 ### Separation of concerns
 
@@ -165,16 +170,6 @@ This is the **only** way the KG-primed agent prefers the efficient lamp, because
 
 It then runs the same statistics as Phase 1/3 — paired bootstrap CIs, Wilcoxon signed-rank, Cliff's delta, BH-FDR — across seeds for `ql_true − ql_false`, writing `phase4_energy_ci.csv` and `phase4_energy_paired.csv`. lab4 (no budget) collapses `energy_compliance` to `goal_rate`.
 
-### 5.2 `analysis/phase4_llm_baseline.py` — the offline LLM baseline
-
-[analysis/phase4_llm_baseline.py](../analysis/phase4_llm_baseline.py) replays the *same* `scenarios_lab4.json` / `scenarios_lab5.json` with a **general-knowledge controller** (an offline LLM proxy) that:
-
-- sees commonsense device facts and live brightness feedback, but **not** the KG's hidden wiring/energy facts;
-- discovers the lab4 plug only by feedback (a "switch did nothing" observation);
-- treats the lab5 efficient and inefficient lamps as **indistinguishable** (an unbiased coin), because brightness alone cannot tell them apart.
-
-It emits `phase4_llm_summary.csv` (mirroring the energy columns) and `phase4_llm_prompts_<profile>.jsonl` (the exact natural-language prompts, for auditing or replay against a real model via `--backend cached --responses <jsonl>`). It is fully offline and deterministic — **never wired to a live API in CI** — so the baseline is reproducible.
-
 ---
 
 ## 6. Regression test
@@ -197,10 +192,9 @@ Both tests pass; the full pre-existing suite stays green (no regressions).
 1. **setup** — compile once, cache `build/classes`, materialise the profile and seed matrices.
 2. **train** — matrix `profile × stereo(true,false) × seed`; each cell runs `run_full_project.ps1 -RunMode phase4 -OnlyProfiles <p> -OnlyStereo <s> -RunSeed <n> -SkipBenchmark`. Uploads the trained Q-tables.
 3. **bench** — matrix `profile × mode(rule_based,ql_false,ql_true) × seed`; benchmarks against the trained Q-tables, uploads `bench_step_log_*` / `benchmark_results_*`.
-4. **aggregate** — reconstructs the `results_seed<N>/<profile>/<mode>/` layout and runs **three** analyses:
+4. **aggregate** — reconstructs the `results_seed<N>/<profile>/<mode>/` layout and runs **two** analyses:
    - `sweep_report.py --seeds-mode` → learning-speed headline (AUC, first-goal, redundant actions, goal rate, energy);
-   - `phase4_energy.py` → lab5 energy-budget compliance;
-   - `phase4_llm_baseline.py` → the offline LLM baseline.
+   - `phase4_energy.py` → lab5 energy-budget compliance.
    It writes a job summary, uploads `phase4-consolidated`, and (optionally) publishes to the `results` branch.
 
 Every `(profile × stereo × seed)` and `(profile × mode × seed)` cell runs **concurrently**, so wall-clock is set by the slowest single cell, not the cell count.
@@ -210,7 +204,7 @@ Every `(profile × stereo × seed)` and `(profile × mode × seed)` cell runs **
 ## 8. How to run it via GitHub Actions
 
 1. Push the `phase4-dependencies-energy` branch (and, if you want it dispatchable from the default branch, merge it so `phase4.yml` is on `main` — GitHub only lists `workflow_dispatch` workflows that exist on the default branch).
-2. In the repo, open **Actions → "Phase 4 (Dependencies + Energy, KG vs LLM framing)" → Run workflow**.
+2. In the repo, open **Actions → "Phase 4 (Dependencies + Energy)" → Run workflow**.
 3. Inputs (all have sensible defaults):
 
    | Input | Default | Notes |
@@ -218,7 +212,6 @@ Every `(profile × stereo × seed)` and `(profile × mode × seed)` cell runs **
    | `profiles` | `lab4,lab5` | which Phase-4 labs to run |
    | `seeds` | `1,2,3,4,5,6,7,8,9,10` | 10 seeds give the lab4 efficiency wins and the lab5 `mean_steady_power` result at Wilcoxon p<0.05; the lab5 `energy_compliance` primary has ties that need **n = 20** (`1..20`) to cross p<0.05 (it is bootstrap-significant already at n = 10). Use `1,2,3,4,5` for a faster replication. |
    | `run_mode` | `phase4` | 3000 episodes, KG arm energy-prior 2.0. `dev` (50 ep) for a quick plumbing check. |
-   | `run_llm_baseline` | `true` | also compute the offline LLM baseline |
    | `publish_results` | `true` | push the consolidated outputs to the `results` branch |
 
 4. Click **Run workflow**.
@@ -236,7 +229,7 @@ GitHub-hosted runners execute the matrix in parallel, so the wall-clock is domin
 | setup | 1 | ~3–6 min | compile + cache |
 | train | 2 labs × 2 stereo × 10 seeds = **40** | ~40–60 min | `phase4` = 3000 episodes; 180-min timeout/cell |
 | bench | 2 labs × 3 modes × 10 seeds = **60** | ~5–15 min | 90-min timeout/cell |
-| aggregate | 1 | ~5–10 min | three analyses + publish |
+| aggregate | 1 | ~5–10 min | two analyses + publish |
 
 **Expected wall-clock:** roughly **1.5–2.5 hours** end-to-end at 10 seeds, subject to runner availability (GitHub free tier limits concurrency, which can serialise some cells). A `seeds = 1,2,3` smoke typically finishes in **under an hour**. A `run_mode = dev` dispatch finishes in **~20–30 minutes**.
 
@@ -248,19 +241,6 @@ GitHub-hosted runners execute the matrix in parallel, so the wall-clock is domin
 
 - **lab4 (dependency):** the KG-primed agent reaches the first goal **sooner** and with **fewer redundant actions** — it enables the plug before switching the lamp, while the tabula-rasa agent wastes actions toggling a dead lamp. Final goal-rate converges to parity (both eventually solve it); the *speed* and *redundancy* gaps are the finding.
 - **lab5 (energy):** the KG-primed agent achieves **higher energy-budget compliance** and **lower steady-state power** at equal goal-rate — it picks the efficient lamp / free daylight, while the tabula-rasa agent is energy-blind and frequently lands on the inefficient lamp.
-
-**KG-vs-LLM framing (offline baseline, current numbers from [analysis/phase4_llm_baseline.py](../analysis/phase4_llm_baseline.py)):**
-
-| Profile | goal_rate | energy_compliance | mean_steady_power | mean_redundant |
-|---|---|---|---|---|
-| lab4 | 1.00 | 1.00 | 1.56 | 0.375 |
-| lab5 | 1.00 | **0.556** | 3.39 | 0.06 |
-
-Reading: the general-knowledge LLM proxy *reaches* the goal but, on lab5, complies with the energy budget only **~56%** of the time — it cannot tell the efficient lamp from the inefficient one without the KG. The KG-primed `ql_true` agent is expected to reach **~100%** compliance, which is the quantified "the KG informs the agent better than the LLM's general knowledge" result. On lab4 the LLM eventually discovers the plug via feedback, so the differentiator there is the **redundant-action** count, not goal-rate.
-
-> These LLM numbers are deterministic and reproducible; the `ql_true`/`ql_false` numbers come from the actual CI run and are confirmed with Wilcoxon p-values, bootstrap CIs, and BH-FDR q-values.
->
-> **Status of the KG-vs-LLM comparison: exploratory (no uncertainty quantification).** The LLM-proxy figures are single deterministic outputs with no seeds, confidence intervals, or significance tests, so this table is illustrative framing only — not a confirmatory statistical result.
 
 ---
 
@@ -293,20 +273,7 @@ The KG-primed agent reaches **higher energy-budget compliance and ~25% lower ste
 
 Four efficiency metrics plus goal-rate are significant after BH correction (`avg_cycling` Δ −0.053 is directional at p = 0.086, the smallest effect). The KG-primed agent enables the smart-plug before switching the lamp, so it spends materially fewer steps and redundant actions than the energy/dependency-blind agent.
 
-**KG-primed Q-learning vs LLM (offline general-knowledge proxy, n = 20):**
-
-| Profile | backend | goal_rate | energy_compliance | mean_steady_power |
-|---|---|---|---|---|
-| lab5 | KG-primed `ql_true` | 0.991 | **0.784** | **1.148** |
-| lab5 | LLM (general) | 1.00 | 0.556 | 3.42 |
-| lab4 | KG-primed `ql_true` | 1.00 | 1.00 | 1.00 |
-| lab4 | LLM (general) | 1.00 | 1.00 | 1.56 |
-
-The LLM proxy reaches the goal via general reasoning but, lacking the lab-specific lamp-cost physics encoded in the KG, complies with the lab5 energy budget only ~56% of the time and draws roughly **3× the steady-state power** of the KG-primed agent — the quantified statement that *the KG informs the agent better than the LLM's general knowledge on energy-aware control*.
-
-> **Status of this KG-vs-LLM table: exploratory (no uncertainty quantification).** The `LLM (general)` rows are single deterministic proxy outputs — no seeds, CIs, or significance tests — so the comparison is illustrative framing, not a confirmatory statistical result. Only the within-lab `ql_true` vs `ql_false` tables above carry statistical inference.
-
-> Source artefacts: `analysis/out/phase4_energy_paired.csv`, `phase4_energy_ci.csv`, `paired_tests.csv`, `phase4_llm_summary.csv` in the `phase4-consolidated` artifact of run `27905392725` (also published to the `results` branch). The n = 10 dispatch (`27903687624`) reproduces the same directions; `energy_compliance` is bootstrap-significant at n = 10 (p = 0.043) and crosses the Wilcoxon threshold at n = 20.
+> Source artefacts: `analysis/out/phase4_energy_paired.csv`, `phase4_energy_ci.csv`, `paired_tests.csv` in the `phase4-consolidated` artifact of run `27905392725` (also published to the `results` branch). The n = 10 dispatch (`27903687624`) reproduces the same directions; `energy_compliance` is bootstrap-significant at n = 10 (p = 0.043) and crosses the Wilcoxon threshold at n = 20.
 
 ---
 
@@ -314,7 +281,7 @@ The LLM proxy reaches the goal via general reasoning but, lacking the lab-specif
 
 After a dispatch completes:
 
-- **Job summary** — the run's **Summary** page renders the key tables inline (`learning_speed_tests.csv`, `paired_tests.csv`, `phase4_energy_paired.csv`, `phase4_energy_ci.csv`, `phase4_llm_summary.csv`, `summary_table_ci.csv`).
+- **Job summary** — the run's **Summary** page renders the key tables inline (`learning_speed_tests.csv`, `paired_tests.csv`, `phase4_energy_paired.csv`, `phase4_energy_ci.csv`, `summary_table_ci.csv`).
 - **`phase4-consolidated` artifact** (Actions → run → Artifacts) — the full `analysis/out/**`, per-seed benchmark trees, Q-tables, learned TTLs, and raw CSVs.
 - **`results` branch** (if `publish_results = true`) — a versioned snapshot published by [scripts/version_artifacts.ps1](../scripts/version_artifacts.ps1).
 
@@ -326,8 +293,6 @@ Key files inside `analysis/out/`:
 | `paired_tests.csv` | redundant-action and same-goal-rate paired tests |
 | `phase4_energy_ci.csv` | per profile/mode compliance + power with 95% CI |
 | `phase4_energy_paired.csv` | `ql_true − ql_false` energy-compliance, Wilcoxon p + Cliff's δ + BH q |
-| `phase4_llm_summary.csv` | offline LLM baseline (goal-rate, compliance, power, redundant) |
-| `phase4_llm_prompts_<profile>.jsonl` | the exact prompts the LLM proxy saw (auditable) |
 | `summary_table_ci.csv` | multi-seed summary with 95% CIs |
 
 ---
@@ -342,9 +307,6 @@ A fast end-to-end plumbing check (no statistics) without GitHub Actions:
 
 # then score the produced flat-layout CSVs:
 python analysis/phase4_energy.py --root . --profile lab5 --out analysis/out
-
-# and the offline LLM baseline (no simulator needed):
-python analysis/phase4_llm_baseline.py --profile lab4 --profile lab5 --emit-prompts
 ```
 
 The full statistical result requires the multi-seed GitHub Actions run in §8.
@@ -358,7 +320,7 @@ The full statistical result requires the multi-seed GitHub Actions run in §8.
 - `src/resources/building_4_smartplug.ttl`, `src/resources/interactions-lab4.ttl`, `simulator/simulator_flow_lab4.json`
 - `src/resources/building_5_energy.ttl`, `src/resources/interactions-lab5.ttl`, `simulator/simulator_flow_lab5.json`
 - `benchmark/scenarios_lab4.json`, `benchmark/train_scenarios_lab4.json`, `benchmark/scenarios_lab5.json`, `benchmark/train_scenarios_lab5.json`
-- `analysis/phase4_energy.py`, `analysis/phase4_llm_baseline.py`
+- `analysis/phase4_energy.py` (`analysis/phase4_llm_baseline.py` was also created here but removed from scope 2026-07-12)
 - `src/test/java/tools/Phase4KgDiscoveryTest.java`
 - `.github/workflows/phase4.yml`
 - `docs/PHASE4.md` (this file)

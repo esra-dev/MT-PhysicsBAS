@@ -105,3 +105,14 @@ bin/
 
 # Research papers / PDFs
 *.pdf
+
+# Local-only working notes — never committed (guards against git add -A / .)
+paper_notes/_private/
+
+# Archived post-inversion runs of record (Phases 1/3/4), downloaded from the
+# CI runs' *-consolidated artifacts — the citable data, same rationale as
+# !phase2_postinv/** above. These negations sit at the END of the file so they
+# override every runtime-artifact pattern above (last matching rule wins).
+!phase1_postinv/**
+!phase3_postinv/**
+!phase4_postinv/**

@@ -41,11 +41,11 @@ delays back into the KG, and use them to satisfy temporally specified goals.
 
 | Phase | Implementation | Headline evidence (canonical run) | Status |
 |---|---|---|---|
-| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | lab2: `auc_goal` Δ=+0.01707, 95% CI [0.01264, 0.02262], q=0, Cliff's δ=1.0 (run 27336756264); lab1 = saturated null control | KG acceleration confirmed on lab2; lab1 floor confirmed |
-| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | `auc_reward` robust win (Δ=+12.66, q≈0, run 28941204656) but `mean_first_goal` *regression* (Δ=+23.95, q=0.011) and `auc_goal` null | Mixed — presented as a characterized weakness that motivates Phase 2 (13_logic_report.md §1) |
+| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Pre-inversion (arm C, run 27336756264):** lab2 `auc_goal` Δ=+0.01707, 95% CI [0.01264, 0.02262], q=0, δ=1.0; lab1 = saturated null control. **Post-inversion (run 29105464710): the anchor replicates** — lab2 `auc_goal` Δ=+0.01924 [0.01480, 0.02357], q=0, δ=1.0 | KG acceleration on lab2 holds under both instruments. ⚠️ **But the post-inversion run is arm D (PBRS+trust ON), not the arm-C headline** — a like-for-like post-inversion arm-C re-run is still OUTSTANDING (Addendum 2026-07-13) |
+| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Pre-inversion:** `auc_reward` robust win (Δ=+12.66, q≈0, run 28941204656) but `mean_first_goal` *regression* (Δ=+23.95, q=0.011) and `auc_goal` null. **Post-inversion (arm D, 29105464710):** `auc_reward` win replicates (Δ=+12.47, q≈0, δ=0.98); the first-goal regression is **no longer significant** (Δ=+25.29, q=0.632); but the benchmark efficiency penalty **grows** (`avg_cycling` +1.21, `avg_redundant` +1.58, both q≈0) | Mixed — still a characterized weakness that motivates Phase 2, but the *timing* penalty is now unsupported and the *efficiency* penalty is the durable one (Addendum 2026-07-13) |
 | 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | ~~All 8 Tier-1 recovery cells significant~~ **SUPERSEDED by the post-inversion re-run (`pre_registration.md` §9.10, 2026-07-12): 3 of 8 Tier-1 cells significant** (`lab2_f1bdead` −306.5 q≈0, `lab3_f2dead_lowsun` −71.4 q≈0, `labmon2_f2dead_lowsun` −147.6 q=0.0021), 1 marginal (`lab3_f1dead_z2` q=0.066), 2 null, 2 sign-flipped ns; detection family entirely null | Confirmatory under §9 + §9.10; the pre-inversion 8/8 result is reported as a pre-inversion-instrument measurement |
-| 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | Blind delay learned at 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. error, run 27621106006); KG arm meets 6/6 deadline goals vs 3/6 without | Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
-| 4 — energy/dependencies + LLM | Complete but **an extension beyond the advisor's three phases** | lab5 energy compliance Δ=+0.1012 (q≈0), steady power −0.3912 (run 27905392725); LLM baseline exploratory | Clearly labeled extension chapter |
+| 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | **Pre-inversion (27621106006):** blind delay 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. err); KG arm meets 6/6 deadline goals vs 3/6. **Post-inversion (29166356524): fully replicates** — 12.11–12.18 ticks (≤1.46% rel. err), 6/6 vs 3/6, lamps/spotlight classified instantaneous in all cells | Unchanged by the inversion. Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
+| 4 — energy + dependency ladder | Complete but **an extension beyond the advisor's three phases**; scope now KG-primed vs tabula-rasa QL only (LLM baseline removed 2026-07-12) | **Post-inversion confirmatory run `29193486193` (n=20):** dependency-ladder primary `avg_redundant` Δ = −0.326 / −0.934 / −1.458 for lab4 / lab4dual / lab4chain (all q≈0, monotone growth); lab5 `energy_compliance` Δ=+0.096 (q≈0), steady power −0.431. Pre-inversion directions replicated; goal-rate parity on lab4/lab5, KG-favorable lift on lab4dual/lab4chain (disclosed) | Clearly labeled extension chapter; supersedes PHASE4.md §10a (Addendum 2026-07-12e; `PHASE4_DEPENDENCY_LADDER.md` §10) |
 
 The dominant remaining risk is presentational, not implementational: the lab3 Phase-1
 result diverges from the advisor's stated expectation and must be led with `auc_reward`
@@ -626,6 +626,13 @@ compliance scoring.
 
 ### 5.2 Headline results (arm C, run 27336756264)
 
+> **PRE-INVERSION INSTRUMENT.** This table (and §5.3) was measured before the action-space
+> inversion. The lab2 anchor **replicates** post-inversion and the lab3 `auc_reward` win
+> **replicates**; the lab3 *first-goal regression does not* (q = 0.632, ns). ⚠️ The
+> post-inversion Phase-1 run (29105464710) is **arm D**, not this arm-C configuration, so
+> it is not a like-for-like replacement — a post-inversion arm-C re-run is still
+> outstanding. Post-inversion numbers and the full caveat: **Addendum 2026-07-13**.
+
 Learning-speed paired tests (ql_true − ql_false, seed-paired, n = 10):
 
 | profile | metric | tier | direction | Δ (true−false) | 95% CI | p_boot | Cliff's δ | BH q |
@@ -684,6 +691,15 @@ m = 12). Benchmark family from the same run: lab3 avg_cycling +0.575 (q≈0) and
 ![Phase 1 xzone-mid lab3 learning curves](figures/p1_xzonemid_lab3_curves.png)
 
 ### 5.4 Findings
+
+> **Amended 2026-07-13 by the post-inversion extraction.** Item 1 (lab2 anchor) **holds**
+> and now replicates under both instruments. Item 2 is **no longer strictly true**: under
+> post-inversion arm D, lab1 `avg_wasted`/`avg_redundant` are +0.0225 against the KG arm
+> (q ≈ 0) — trivial in size but significant, so "all contrasts null" must be narrowed to
+> the learning-speed and goal/step metrics. Item 3 must be **re-split**: the lab3
+> `auc_reward` win and the benchmark efficiency penalty both hold (the latter *grows*), but
+> the *first-goal* regression is **no longer significant** (q = 0.632). See
+> Addendum 2026-07-13.
 
 1. **lab2 is the anchor finding:** the pre-declared primary (`auc_goal`) is a maximal
    effect (δ = 1.0, q = 0) that replicates across the headline run, the xzone family
@@ -967,6 +983,12 @@ assumes zero delay (run_config.json#L443-L451).
 
 ### 7.2 Results (canonical run 27621106006, n = 10 replicas)
 
+> **PRE-INVERSION INSTRUMENT — but fully replicated.** The post-inversion re-run
+> (29166356524, commit `6c727b6`) reproduces every conclusion: delays 12.11–12.18 ticks
+> (≤ 1.46 % rel. err), lamps/spotlight classified instantaneous in all cells, compliance
+> 6/6 vs 3/6. Phase 3 is the one phase the inversion left untouched. See
+> **Addendum 2026-07-13**.
+
 Learned delay vs ground truth (12 ticks = 60 s):
 
 | profile | mode | slowest actuator | learned ticks | truth | rel. err |
@@ -1015,11 +1037,24 @@ the deadline.*
 
 ---
 
-## 8. Phase 4 — Hidden Dependencies + Energy-Aware Goals + LLM Baseline
+## 8. Phase 4 [PRE-INVERSION RECORD — SUPERSEDED] — Hidden Dependencies + Energy-Aware Goals + LLM Baseline
+
+*Current Phase-4 scope and results: Addendum 2026-07-12d/e and
+`PHASE4_DEPENDENCY_LADDER.md` §10. The LLM baseline named in this heading is
+**out of scope** as of 2026-07-12; the heading is kept because it names what run
+`27905392725` actually measured.*
 
 > ⚠️ **This phase is an extension.** It maps to no requirement in the advisor's
 > three-phase redirection and is kept as a clearly labelled extension chapter
 > (13_logic_report.md §1; 04_labs_physics.md §4).
+>
+> **SUPERSEDED 2026-07-12 (see Addendum 2026-07-12e).** Everything in this section is
+> **pre-inversion** (run `27905392725`) and the LLM baseline has been **removed from
+> Phase-4 scope** (Phase 4 now compares KG-primed vs tabula-rasa QL only). The citable
+> post-inversion record is the dependency-ladder confirmatory run `29193486193`
+> (`PHASE4_DEPENDENCY_LADDER.md` §10; run of record `phase4_postinv/run_29193486193/`).
+> The table below stays as a pre-inversion-instrument measurement; do not mix it into
+> the post-inversion tables, and do not cite the `p4_kg_vs_llm.png` figure (out of scope).
 
 **Design:** lab4 tests whether the KG's `ws:powerGates` triple (smart plug AND-gates the
 Z1 lamp) accelerates learning of a hidden dependency; lab5 tests whether a KG
@@ -1081,6 +1116,18 @@ Turtle validity is a CI gate (`gradlew validateTurtle`, ci.yml).
 | **P3 canonical (n = 10)** | 27621106006 | `phase3_download_n10/` | `phase3_dynamics.py` | `docs/PHASE2_TO_PHASE3_CHANGES.md` §19.4 |
 | **P4 canonical (n = 20)** | 27905392725 | `phase4_n20_download/` | `phase4_energy.py`, `phase4_llm_baseline.py`, `sweep_report.py` | `docs/PHASE4.md` §10a |
 
+**⚠️ All rows above are PRE-INVERSION.** After the action-space inversion (Addendum
+2026-07-10) every confirmatory number was re-generated. The post-inversion runs of record
+— **these are the citable ones** — are:
+
+| Result | Run ID | Commit | Download / archive folder | Status |
+|---|---|---|---|---|
+| **P1 post-inversion ladder (arm D)** | 29105464710 | `8c386f8` | *(not archived in-repo; `phase1-consolidated` CI artifact — extracted 2026-07-13)* | ⚠️ **arm D (PBRS+trust ON), not the arm-C headline** — see Addendum 2026-07-13 |
+| **P2 post-inversion registered (canonical)** | 29148475671, 29151540231, 29155539633, 29157197853, 29163456132 | `6c727b6` | `phase2_postinv/run_<id>/recovery_root/`; pooled `analysis/out_phase2_registered_postinv/` | Confirmatory; `pre_registration.md` §9.10 (3/8 Tier-1) |
+| P2.7 `lab3_f2bdead` (exploratory) | 29187088096 | `bb6c4e4` | `phase2_f2bdead/run_29187088096/recovery_root/` | Closed; §9.11 prediction NOT met (Δ=+122.3) |
+| **P3 post-inversion (n = 10)** | 29166356524 | `6c727b6` | *(not archived in-repo; `phase3-consolidated` CI artifact — extracted 2026-07-13)* | Replicates pre-inversion (Addendum 2026-07-13) |
+| **P4 post-inversion ladder (n = 20)** | 29193486193 | `d336fdf` | `phase4_postinv/run_29193486193/` | Confirmatory; supersedes PHASE4.md §10a |
+
 (Full map incl. superseded Phase-2 iterations v1–v5 and preliminary runs:
 05_results_index.md §7.)
 
@@ -1127,7 +1174,7 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 |---|---|---|---|
 | 4 | lab3's mixed result must be framed as the bridge to Phase 2 (complexity → cost of priors → motivates "recheck with physics") | Write the explicit transition — the mechanism and bridge argument are now drafted in §5.4.1; port into the thesis text | Text-only |
 | 5 | Phase-3 compliance significance is vacuous (deterministic planner; ten replicas = one datum) | Report counts (6/6 vs 3/6), delete "p = 0.00195" language, register the family deviation | Text-only |
-| 6 | Phase-4 wording: "pre-registered" without artefact; n = 10 → 20 escalation triggered by an observed p-value; LLM table has no uncertainty | Remove/annotate label, disclose escalation, demote LLM to exploratory | Text + addendum |
+| 6 | Phase-4 wording: "pre-registered" without artefact; n = 10 → 20 escalation triggered by an observed p-value; LLM table has no uncertainty | **Largely resolved 2026-07-12:** the LLM baseline was *removed from Phase-4 scope* (no table, no figure, no uncertainty problem), and the dependency-ladder run `29193486193` now has a genuine pre-dispatch registration artefact (`PHASE4_DEPENDENCY_LADDER.md` §5/§7: seeds 1..20 and primary metric fixed *before* dispatch). **Residual:** the *pre-inversion* lab4/lab5 n=10→20 escalation still needs its one disclosure sentence wherever run `27905392725` is cited | Text (one sentence) |
 | 8 | Wilcoxon tie-floor near ceiling (effective n ≈ 5 in some goal_rate cells) | One Methods paragraph: bootstrap primary, Wilcoxon sensitivity, δ effect size | Text-only |
 | 9 | Instrument hygiene: the `action_delay_ms(65)` vs ">200 ms" comment contradiction is **fixed-in-tree** (the stale comment block was deleted; the line now reads `action_delay_ms(65)` with an "exceeds one 50 ms simulator tick" note at illuminance_controller_agent_ql.asl#L51); `_lowsun` sun-pinning affects training resets only (benchmark scenarios reused from clean parents); labmon_f1dead comment still references a nonexistent "backup lamp / 375 lux" path (lab_profiles.asl#L741-L746) | Commit the delay-comment fix; add written `_lowsun` caveat; delete the stale labmon comment | Small edits |
 | 10 | `lab1_f1inv` missing from the fault matrix | Add the cell (generator exists) or state the structural-coverage argument | One CI cell or one paragraph |
@@ -1137,21 +1184,47 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 
 ### 10.3 Standing adversarial results (disclosed, not fixed — they are findings)
 
-- lab3 first-goal regression and cycling penalty under the KG prior, in all three physics
-  configurations (§5.3–5.4; mechanism and fixability analysis in §5.4.1).
-- KG arm slower to *detect* the inverted lamp in lab3 (`lab3_f1inv` detection q = 0.0048)
-  (§6.2, incl. the sign-flipped mirror cell and the exposure-timing interpretation).
-- `lab1_f1dead` ql_true recovers *slower* than ql_false in the ill-posed single-actuator
-  cell (177.8 vs 107.2 episodes; excluded from the confirmatory family by registration)
-  (20_results_extracted.md §2).
-- The LLM baseline matches goal achievement while violating the energy budget — a scoping
-  statement for what the KG adds, not a defeat of the LLM (§8).
+**Live under the post-inversion instrument** (the ones that must be in the thesis):
 
-**Bottom line** (13_logic_report.md §6): nothing needs to be rebuilt. The system does what
-the advisor asked in all three phases; Phase 3 is the strongest deliverable, Phase 2 is
-confirmatory under the frozen §9 registration, and Phase 1 rests on the lab2 anchor plus
-an honest lab3 framing. The remaining work is presentation: keeping every claim exactly
-one notch *below* the evidence, which is what the advisor's original correction demanded.
+- **lab3 benchmark efficiency penalty under the KG prior** — and it *grew* post-inversion:
+  `avg_cycling` +1.21 (δ = 0.99) and `avg_redundant` +1.58 (δ = 0.88), both q ≈ 0, vs
+  +0.325/+0.575 pre-inversion. This is now the durable form of the lab3 weakness
+  (§5.3–5.4, mechanism in §5.4.1; Addendum 2026-07-13).
+- **Phase-2: 5 of 8 registered Tier-1 cells do not show a KG advantage** — 2 null, 1
+  marginal, and 2 **sign-flipped** (`labmon_f1dead` +22.2, `lab3_f1dead` +85.0, both ns);
+  `lab3_f1dead` is *unsupported* under the one-shot rule (§9.10; Addendum 2026-07-12).
+- **Phase-2.7 `lab3_f2bdead`: the registered directional prediction was NOT met** —
+  Δ = +122.3 (KG *slower*), ns; the binding-constraint reading survives only in a narrower
+  form, itself now untested (Addendum 2026-07-12c).
+- **lab1 is no longer a perfectly clean floor control under arm D:** `avg_wasted` /
+  `avg_redundant` +0.0225 (q ≈ 0) *against* the KG arm — tiny in magnitude but significant
+  (Addendum 2026-07-13).
+
+**Dissolved by the post-inversion re-runs — do NOT carry these forward:**
+
+- ~~KG arm slower to detect the inverted lamp in lab3 (`lab3_f1inv` q = 0.0048)~~ — the
+  detection family is now **entirely null**; every lamp-fault cell detects at episode 0 in
+  both arms (§9.10; Addendum 2026-07-12b).
+- ~~`lab1_f1dead` ql_true recovers slower (177.8 vs 107.2)~~ — both arms now reconverge at
+  the 50-episode stability floor (Addendum 2026-07-12).
+- ~~lab3 *first-goal* regression~~ — post-inversion Δ = +25.29 is **no longer significant**
+  (q = 0.632, CI crosses zero). Still directionally slower; do not claim it as an effect.
+- ~~The LLM baseline achieves goals while violating the energy budget~~ — the LLM baseline
+  was **removed from Phase-4 scope** on 2026-07-12 (Addendum 2026-07-12d). Out of scope,
+  not a finding.
+
+**Bottom line** (superseding 13_logic_report.md §6): nothing needs to be rebuilt, but the
+*claims* are now narrower than the pre-inversion record suggested. Phase 3 is the
+strongest deliverable and is unchanged by the inversion; Phase 4 (extension) is
+confirmatory with a monotone dependency ladder; Phase 2 is confirmatory but at 3/8 Tier-1
+cells, and its story is "structural knowledge pays where it is the binding constraint,"
+not "the KG always recovers faster"; Phase 1 rests on the lab2 anchor (which replicates
+under both instruments) plus an honest lab3 framing. **The one outstanding experimental
+duty is a post-inversion arm-C (`phase1_kg_only`) re-run** — the existing post-inversion
+Phase-1 run is arm D, so the headline arm has not yet been re-measured like-for-like
+(Addendum 2026-07-13). The remaining work is otherwise presentation: keeping every claim
+exactly one notch *below* the evidence, which is what the advisor's original correction
+demanded.
 
 ---
 
@@ -1594,9 +1667,11 @@ identical budgets (3000 eps, λ=0.9970). **Zero core-Java changes** — the
 generic power-gate/IV machinery was verified slot-generic and reused; golden
 registries regenerated (2 new files, all 15 pre-existing bit-identical);
 `Phase4KgDiscoveryTest` extended to 4/4 green; `phase4.yml` defaults now
-`lab4,lab4dual,lab4chain,lab5`. The offline LLM proxy was generalized via a
-per-profile enabler map; it reproduces the certified lab4 numbers exactly and
-shows ladder-monotone diagnostic cost (mean redundant 0.375→0.500→0.625). An
+`lab4,lab4dual,lab4chain,lab5`. **The offline LLM baseline was removed from
+Phase-4 scope in the same change set** (`analysis/phase4_llm_baseline.py`
+deleted, workflow step and input dropped, doc text scrubbed): Phase 4 compares
+KG-primed vs tabula-rasa Q-learning only, which also resolves the report's
+row-4 concern (the LLM table carried no uncertainty quantification). An
 end-to-end lab4chain dev smoke against live Node-RED passed (slot registry
 len=10, both chain gates applied at runtime, label-keyed loads, exit 0).
 Full manifest, registered expectations (seeds 1..20 fixed pre-dispatch,
@@ -1606,3 +1681,191 @@ IV-statistics disclosure: `docs/PHASE4_DEPENDENCY_LADDER.md`. Standing duty
 made explicit: **PHASE4.md §10/§10a are pre-inversion and superseded** — the
 first post-inversion Phase-4 dispatch (per ACTION_SPACE_INVERSION.md §6.2) is
 the citable record for lab4/lab5 and the confirmatory record for the ladder.
+
+## Addendum 2026-07-12e — Phase-4 dependency-ladder confirmatory run of record (run `29193486193`): registered outcomes realized
+
+The confirmatory dispatch registered in Addendum 2026-07-12d
+(`PHASE4_DEPENDENCY_LADDER.md` §5/§7) **executed and closed** as run
+**`29193486193`** on `kg-crosszone-coupling-mid` (head `d336fdf`): seeds **1..20**,
+`run_mode = phase4`, profiles `lab4,lab4dual,lab4chain,lab5`, `publish_results = true`.
+It completed green — **402/402 jobs, 0 failures**, 1 h 44 m — and published to the
+`results` branch as `487d2512e` (`results-20260712-143949-phase4-d336fdf`). Run of
+record archived at `phase4_postinv/run_29193486193/` (registered CSVs + learning
+curves + learned TTLs + IV stats + ladder figure; MANIFEST with artifact
+`sha256:7ebc2cd3…`); the ~713 MB raw per-seed tree stays in the `phase4-consolidated`
+artifact and the `results` branch. This run **supersedes PHASE4.md §10a** (pre-inversion
+`27905392725`) for lab4/lab5 and is the **first, confirmatory** record for
+lab4dual/lab4chain. Full write-up: `PHASE4_DEPENDENCY_LADDER.md` §10.
+
+**Registered expectation → realized outcome** (all `ql_true − ql_false`, seed-paired,
+n = 20, BH-FDR per family):
+
+- **Primary per dependency cell (`avg_redundant`, lower better) — MET, all three.**
+  lab4 Δ −0.326 [−0.557, −0.131]; lab4dual Δ −0.934 [−1.259, −0.609]; lab4chain
+  Δ −1.458 [−1.803, −1.117]; all q ≈ 0. Secondaries `avg_steps`, `avg_wasted`,
+  `avg_dev`, `avg_cycling` significant and correctly signed in every cell.
+- **Ladder prediction (exploratory) — MET.** The three deltas grow monotonically
+  lab4 → lab4dual → lab4chain on `avg_redundant` (0.326 < 0.934 < 1.458), `avg_steps`
+  (0.259 < 0.809 < 1.241), and `avg_wasted` (0.253 < 0.812 < 1.244). Depth beats
+  breadth descriptively (lab4chain > lab4dual on every efficiency metric); the
+  lab4dual-vs-lab4chain ordering was left open in registration. New thesis figure:
+  `docs/_audit/figures/p4_ladder_efficiency_deltas.png`
+  (`analysis/phase4_ladder_figure.py`).
+- **`goal_rate` parity — MET for lab4/lab5; DEVIATION (KG-favorable) for
+  lab4dual/lab4chain, disclosed as such.** Parity held on lab4 (Δ +0.009, ns) and
+  lab5 (Δ +0.006, ns). On the wider/deeper cells the KG arm is *significantly* higher —
+  lab4dual +0.034 (q ≈ 0), lab4chain +0.058 (q ≈ 0) — because the tabula-rasa arm does
+  not always reach rank 3 within the 20-step benchmark cap; the KG arm reaches
+  goal_rate 1.000 in all three dependency cells. This exceeds the registered "parity"
+  expectation in the hypothesis-favorable direction and is reported as a deviation, not
+  folded into the efficiency story.
+- **lab5 primary (`energy_compliance`, higher better) — MET.** Δ +0.096
+  [0.059, 0.134], q ≈ 0 (0.791 vs 0.695); `mean_steady_power` −0.431 (q ≈ 0, ~28 %
+  lower), `over_budget_rate` −0.093 (q ≈ 0), `goal_rate` at parity — the energy win is
+  not bought by sacrificing the goal.
+- **Pre-inversion lab4/lab5 directions replicate — CONFIRMED.** Every pre-inversion
+  sign (run `27905392725`) reproduces post-inversion; lab5 magnitudes near-identical
+  (compliance +0.101 → +0.096, power −0.391 → −0.431, over-budget −0.090 → −0.093);
+  lab4 efficiency magnitudes smaller under the WoT-contract action space but still
+  significant, and lab4 `avg_cycling` strengthens from directional (pre, p = 0.086) to
+  BH-significant (post, q = 0.002).
+- **Characterized boundaries (nulls, as registered, not failures).** No dependency
+  cell is null on the primary metric. lab4 learning-speed sits at the ceiling
+  (`auc_goal` ≈ 0, `mean_first_goal` ns — one shallow gate is easy). lab4chain
+  `mean_first_goal` is null/slightly reversed (+14.0, ns) — exactly the **pre-disclosed
+  chain middle-link IV-statistics conservative bias** (§2.3/§9.2 of the ladder doc):
+  it suppresses first-goal timing while `auc_goal` (δ = 1.0) and all benchmark
+  efficiency metrics stay strongly positive. lab5 goal-speed is at parity by design
+  (its contrast is energy). `auc_reward` favours the KG arm on all four cells (q ≈ 0).
+
+**Net:** the primary hypotheses of the fourth thesis part are confirmed under the
+post-inversion instrument, the ladder's monotone-growth prediction holds, and the two
+honest departures (a KG-favorable goal-rate lift on the harder cells; the disclosed
+chain-timing boundary) are reported as registered rather than smoothed over.
+
+## Addendum 2026-07-13 — Phase-1 & Phase-3 post-inversion results EXTRACTED (§6.2/§6.4 duty discharged); a Phase-1 arm confound found
+
+`ACTION_SPACE_INVERSION.md` §7 closed with one outstanding duty: *"Phase 1 (29105464710)
+and Phase 3 (29166356524) post-inversion runs are green; their result extraction is the
+remaining §6.2/§6.4 duty."* Both artifacts were downloaded from their (still-live)
+`phase1-consolidated` / `phase3-consolidated` CI artifacts and the tables extracted
+verbatim below. **With this, all four phases have post-inversion numbers of record.**
+
+### Phase 3 — run `29166356524` (commit `6c727b6`, n = 10 replicas): FULLY REPLICATES
+
+Learned delay vs ground truth (12 ticks = 60 s); source
+`analysis/out/phase3_delay_accuracy.csv`:
+
+| profile | mode | slowest actuator | learned ticks | rel. err | instant / delayed |
+|---|---|---|---|---|---|
+| lab2_slow | ql_false | SetZ1Blinds=ON | 12.175 | 1.46 % | 2 / 2 |
+| lab2_slow | ql_true | SetZ2Blinds=ON | 12.150 | 1.25 % | 2 / 2 |
+| lab3_slow | ql_false | SetZ1Blinds=ON | 12.1125 | 0.94 % | 3 / 2 |
+| lab3_slow | ql_true | SetZ1Blinds=ON | 12.1625 | 1.35 % | 3 / 2 |
+
+Temporal-goal compliance (counts, not inference — the §7.3 caveat stands); source
+`phase3_compliance_ci.csv`:
+
+| profile | arm | tight met | loose met | overall | total energy | mean actual delay (s) |
+|---|---|---|---|---|---|---|
+| lab2_slow | ql_true | 1.0 | 1.0 | **1.0** | 3.1 | 32.83 |
+| lab2_slow | ql_false | 0.0 | 1.0 | 0.5 | 0.0 | 60.17 |
+| lab3_slow | ql_true | 1.0 | 1.0 | **1.0** | 3.5 | 32.92 |
+| lab3_slow | ql_false | 0.0 | 1.0 | 0.5 | 0.0 | 60.58 |
+
+**Verdict: no change.** Max relative error improves slightly (1.77 % → 1.46 %), the
+6/6-vs-3/6 deadline demonstration is identical, and the KG arm still buys tight-deadline
+compliance with energy (switching to the instantaneous lamp). Phase 3 is the one phase the
+action-space inversion left completely untouched — expected, since the dynamics agent never
+used the stereotype-gated action discovery. §7's conclusions can be cited as-is, with the
+run ID updated.
+
+### Phase 1 — run `29105464710` (commit `8c386f8`, seeds 1–10) ⚠️ **arm D, NOT the arm-C headline**
+
+**The confound, stated plainly.** `phase1.yml`'s `run_mode` input selects a
+`run_config.json` profile, and the runbook (§6.2) prescribed *"defaults …
+`run_mode=phase1`"*. But the `phase1` profile carries **no `learning_overrides`**
+(run_config.json#L49-L59), so it inherits the global `learning` block —
+`reward_shaping: "pbrs"` and `adaptive_trust: true` (run_config.json#L301-L302). The
+`phase1_full` profile's own note confirms it: *"Equivalent to the default phase1 learning
+block"* (#L130). **So run 29105464710 is factorial arm D (KG prior + PBRS + adaptive
+trust), while the pre-inversion Phase-1 headline (§5.2, run 27336756264) is arm C
+(`phase1_kg_only`: KG prior only, PBRS OFF, trust OFF).**
+
+This means the post-inversion Phase-1 run changes **two things at once** relative to the
+headline — the action-space instrument *and* the factorial arm. It is therefore **not** a
+like-for-like re-measurement, and its numbers must not be swapped into the §5.2 table.
+**Outstanding experimental duty: dispatch `phase1.yml` with `run_mode=phase1_kg_only`,
+profiles `lab1,lab2,lab3`, seeds 1–10.** (This is a flaw in the §6.2 runbook, which named
+the wrong profile; corrected here.)
+
+Learning-speed paired tests (ql_true − ql_false, seed-paired, n = 10, BH family m = 12);
+source `analysis/out/learning_speed_tests.csv`:
+
+| profile | metric | tier | Δ (true−false) | 95% CI | Cliff's δ | BH q |
+|---|---|---|---|---|---|---|
+| lab1 | auc_goal | primary | 0 | [0, 0] | 0 | 1 |
+| lab1 | auc_reward | secondary | +0.322 | [−2.02, +2.51] | 0.24 | 1 |
+| lab1 | mean_first_goal | secondary | −1.80 | [−21.6, +17.4] | −0.11 | 1 |
+| **lab2** | **auc_goal** | **primary** | **+0.01924** | **[0.01480, 0.02357]** | **1.0** | **0** |
+| lab2 | auc_reward | secondary | +5.18 | [−0.66, +11.69] | 0.46 | 0.269 |
+| lab2 | mean_first_goal | secondary | −28.18 | [−58.98, +2.56] | −0.36 | 0.269 |
+| lab3 | auc_goal | primary | −0.00245 | [−0.00790, +0.00333] | −0.32 | 0.801 |
+| **lab3** | **auc_reward** | secondary | **+12.47** | **[8.27, 16.59]** | **0.98** | **0** |
+| lab3 | mean_first_goal | secondary | +25.29 *(KG slower)* | [−20.82, +66.13] | 0.42 | **0.632 (ns)** |
+
+Benchmark (execution) contrasts, ql_true vs ql_false, BH family m = 42; source
+`analysis/out/paired_tests.csv`:
+
+| profile | metric | Δ | 95% CI | Cliff's δ | BH q |
+|---|---|---|---|---|---|
+| lab1 | avg_wasted / avg_redundant | **+0.0225** | [+0.0125, +0.0325] | 0.53 | **0** |
+| lab2 | goal_rate | +0.025 | [+0.006, +0.044] | 0.40 | 0.0231 |
+| lab2 | avg_steps | −0.5625 | [−1.025, −0.125] | −0.49 | 0.0134 |
+| lab2 | avg_dev | −1.181 | [−2.294, −0.244] | −0.58 | 0.0134 |
+| lab2 | avg_energy | −1.286 | [−2.164, −0.435] | −0.62 | 0.0044 |
+| lab2 | avg_wasted | −0.570 | [−1.031, −0.133] | −0.53 | 0.0134 |
+| lab2 | avg_redundant | −0.6575 | [−1.253, −0.118] | −0.53 | 0.0231 |
+| lab2 | avg_cycling | −0.0875 | [−0.256, +0.063] | −0.25 | 0.410 (ns) |
+| lab3 | goal_rate | −0.0125 | [−0.038, +0.013] | −0.21 | 0.589 (ns) |
+| lab3 | avg_dev | +0.5125 | [+0.050, +0.963] | 0.67 | 0.056 (marginal) |
+| **lab3** | **avg_cycling** | **+1.2125** | **[+0.950, +1.381]** | **0.99** | **0** |
+| **lab3** | **avg_redundant** | **+1.5775** | **[+1.084, +2.063]** | **0.88** | **0** |
+
+**What changed, and what it means** (interpretation, not registered inference):
+
+1. **The lab2 anchor survives the inversion.** `auc_goal` Δ = +0.01924, q = 0, δ = 1.0 —
+   maximal effect, essentially unchanged from the pre-inversion +0.01707. This is the
+   single most important confirmation in this addendum: the thesis' Phase-1 headline claim
+   does **not** rest on action-space asymmetry. Benchmark lab2 wins also persist (goal_rate,
+   steps, wasted, redundant, energy, deviation).
+2. **The lab3 `auc_reward` win survives** (+12.47, q = 0, δ = 0.98) — the suppressive half
+   of the prior still pays from episode one.
+3. **The lab3 first-goal *regression* does not survive.** Δ = +25.29 is directionally the
+   same but the CI now crosses zero (q = 0.632). The "KG arm is slower to first goal"
+   claim is **no longer statistically supported** and must be downgraded to a directional
+   observation wherever §5.3/§5.4.1 assert it.
+4. **The lab3 *efficiency* penalty grew sharply.** `avg_cycling` +0.325/+0.575
+   (pre-inversion) → **+1.2125** (δ = 0.99), and `avg_redundant` is now +1.5775 (δ = 0.88),
+   both q ≈ 0. So the lab3 weakness did not go away — it **migrated** from a timing penalty
+   to a policy-quality penalty. The §5.4.1 residual-init-Q mechanism ("init-Q orderings
+   survive into the greedy policy in rarely-visited states") predicts exactly this, and the
+   arm-D configuration (PBRS + adaptive trust layered on top of the prior) plausibly
+   amplifies it. **Caveat: arm-confounded — cannot be attributed to the inversion alone.**
+5. **lab1 is no longer a perfectly clean floor control.** `avg_wasted`/`avg_redundant`
+   +0.0225 (q ≈ 0) *against* the KG arm. The magnitude is trivial (one wasted action per
+   ~44 episodes) but it is significant, so the "all lab1 contrasts null" sentence in §5.4
+   item 2 is now **false under arm D** and needs softening (it remains true for `auc_goal`,
+   `mean_first_goal`, `goal_rate`, `avg_steps`, `avg_cycling`).
+
+**Provenance note.** Run 29105464710 sits on `df53b71`/`8c386f8` — the commit implicated in
+the 2026-07-11 stale-CSV post-mortem. That contamination is **not** a concern here: the 26
+stale CSVs were `recovery_*` / `metrics_adapted_*` files for `labmon_f1dead` (a Phase-2
+adapt profile), and Phase-1 aggregation reads the per-seed
+`benchmark/results_seed<N>/lab<X>/` tree, which is complete (10 seeds × 3 labs × 3 modes).
+The stale files appear only as inert strays in the artifact root. Phase-3's run is on
+`6c727b6`, after every fix.
+
+**Neither run is archived in-repo.** Both were read from live CI artifacts. If they are to
+be cited in the thesis they should be archived the way `phase2_postinv/` and
+`phase4_postinv/` are, since GitHub expires artifacts.

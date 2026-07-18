@@ -1,10 +1,8 @@
-name: Phase 4 (Dependencies + Energy, KG vs LLM framing)
+name: Phase 4 (Dependencies + Energy)
 
 # ──────────────────────────────────────────────────────────────────────────
 # Phase 4 — Hidden DEPENDENCIES (a 3-cell dependency LADDER) and ENERGY-aware
-# goals on strictly-clean labs, plus an offline LLM baseline for the
-# overarching "KG informs the agent better than an LLM's general knowledge"
-# comparison.
+# goals on strictly-clean labs.
 #
 #   DEPENDENCY LADDER — cells vary how many components carry a power
 #   dependency and how deep the dependency chain is:
@@ -42,12 +40,10 @@ name: Phase 4 (Dependencies + Energy, KG vs LLM framing)
 # benchmark cell runs concurrently, so wall-clock is set by the slowest single
 # cell plus runner-concurrency queueing.
 #
-# The aggregate job runs THREE analyses:
+# The aggregate job runs TWO analyses:
 #   * sweep_report.py    -> goal_rate, avg_redundant, first_goal, AUC, energy
 #                           (the KG-vs-tabula-rasa learning-speed headline)
 #   * phase4_energy.py    -> lab5 energy-budget compliance (the ONE new metric)
-#   * phase4_llm_baseline.py -> offline LLM baseline on the same scenarios
-#                           (KG-vs-LLM framing; reproducible, no live API)
 # ──────────────────────────────────────────────────────────────────────────
 
 on:
@@ -65,11 +61,6 @@ on:
         description: "run_config.json profile: phase4 (3000x20, KG arm energyPriorWeight=2.0, recommended) | dev (50x20, quick gate)"
         required: false
         default: "phase4"
-      run_llm_baseline:
-        description: "Also compute the offline LLM baseline (analysis/phase4_llm_baseline.py)"
-        type: boolean
-        required: false
-        default: true
       publish_results:
         description: "Push consolidated results to 'results' branch"
         type: boolean
@@ -592,15 +583,6 @@ jobs:
             --scenarios-dir benchmark \
             --out analysis/out \
             --iters 10000
-      - name: Run offline LLM baseline (general-knowledge proxy)
-        if: ${{ github.event.inputs.run_llm_baseline != 'false' }}
-        run: |
-          python analysis/phase4_llm_baseline.py \
-            --scenarios-dir benchmark \
-            --out analysis/out \
-            --seeds "${{ env.SEEDS }}" \
-            --emit-prompts \
-            || echo "phase4_llm_baseline.py: non-fatal failure (offline baseline; will revisit)"
       - name: Run learning curves (multi-seed bands)
         if: always()
         run: |
@@ -629,10 +611,9 @@ jobs:
             echo "**Mode:** \`${{ env.RUN_MODE }}\`"
             echo "**Commit:** \`${{ github.sha }}\`"
             echo ""
-            echo "Three analyses run in this job:"
+            echo "Two analyses run in this job:"
             echo "1. **sweep_report** -> learning-speed headline (KG ql_true vs tabula-rasa ql_false): auc_goal (PRIMARY, higher_better) favours ql_true; mean_first_goal and redundant actions (lower_better) smaller for ql_true. For the dependency LADDER (lab4 -> lab4dual -> lab4chain) the prediction is that the ql_true advantage GROWS with the number/depth of KG-documented dependencies."
             echo "2. **phase4_energy** -> lab5 energy-budget compliance (the ONE new metric): energy_compliance (higher_better) and mean_steady_power / over_budget_rate (lower_better) favour ql_true. Dependency labs carry no budget (compliance==goal_rate there)."
-            echo "3. **phase4_llm_baseline** -> offline LLM baseline on the SAME scenarios (KG-vs-LLM framing). Compare the KG agent's energy_compliance against the LLM's; on the ladder, the LLM proxy pays one diagnostic feedback round-trip per unknown enabler switch."
             echo ""
             if [ -f analysis/out/learning_speed_tests.csv ]; then
               echo "## learning_speed_tests.csv (ql_true - ql_false, paired across seeds)"
@@ -656,12 +637,6 @@ jobs:
               echo "## phase4_energy_ci.csv (per profile/mode, 95% CI)"
               echo '```'
               head -60 analysis/out/phase4_energy_ci.csv
-              echo '```'
-            fi
-            if [ -f analysis/out/phase4_llm_summary.csv ]; then
-              echo "## phase4_llm_summary.csv (offline LLM baseline)"
-              echo '```'
-              head -40 analysis/out/phase4_llm_summary.csv
               echo '```'
             fi
             if [ -f analysis/out/summary_table_ci.csv ]; then
