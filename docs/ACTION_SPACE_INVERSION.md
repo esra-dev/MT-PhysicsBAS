@@ -148,6 +148,13 @@ would still straddle two code states — scientifically unclean).
   not a like-for-like §5.2 replacement — see `THESIS_STATE_REPORT.md`,
   Addendum 2026-07-13. `phase1.yml`'s default `run_mode` is now
   `phase1_kg_only`, so a defaults dispatch runs the correct arm.
+- ✅ **Executed (2026-07-18).** The corrected defaults dispatch ran as
+  **`29639767776`** (head `e631877`, 152/152 green, `run_mode` verified in all
+  60 per-cell `TRAINING_OK.json`), archived at
+  `phase1_postinv/run_29639767776/`, and is now the §5.2 headline of record —
+  the lab2 anchor replicates like-for-like (Δ=+0.01679, q=0, δ=1.0). This
+  closes §6.2. Arm-C adjudication of the arm-D deltas and the E-decay
+  sensitivity sweep: `THESIS_STATE_REPORT.md` Addendum 2026-07-18b.
 - This regenerates the headline learning-speed comparison (time-to-goal,
   redundant actions, success) on the post-inversion code and produces fresh
   labeled Q-table artifacts per seed.
@@ -233,4 +240,7 @@ the latter unsupported under the one-shot rule); detection family entirely
 null. The pre-inversion 8/8 was thus partly action-space asymmetry — the
 inversion did real scientific work. Phase 1 (29105464710) and Phase 3
 (29166356524) post-inversion runs are green; their result extraction is the
-remaining §6.2/§6.4 duty.
+remaining §6.2/§6.4 duty. *(Discharged: extraction 2026-07-13; the §6.2
+arm-confound was then resolved by the arm-C re-run `29639767776` on
+2026-07-18 — see the ✅ entry in §6.2 above. No §6 runbook duty remains open
+for Phases 1–4.)*

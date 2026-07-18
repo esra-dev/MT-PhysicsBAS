@@ -41,8 +41,8 @@ delays back into the KG, and use them to satisfy temporally specified goals.
 
 | Phase | Implementation | Headline evidence (canonical run) | Status |
 |---|---|---|---|
-| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Pre-inversion (arm C, run 27336756264):** lab2 `auc_goal` Δ=+0.01707, 95% CI [0.01264, 0.02262], q=0, δ=1.0; lab1 = saturated null control. **Post-inversion (run 29105464710): the anchor replicates** — lab2 `auc_goal` Δ=+0.01924 [0.01480, 0.02357], q=0, δ=1.0 | KG acceleration on lab2 holds under both instruments. ⚠️ **But the post-inversion run is arm D (PBRS+trust ON), not the arm-C headline** — a like-for-like post-inversion arm-C re-run is still OUTSTANDING (Addendum 2026-07-13) |
-| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Pre-inversion:** `auc_reward` robust win (Δ=+12.66, q≈0, run 28941204656) but `mean_first_goal` *regression* (Δ=+23.95, q=0.011) and `auc_goal` null. **Post-inversion (arm D, 29105464710):** `auc_reward` win replicates (Δ=+12.47, q≈0, δ=0.98); the first-goal regression is **no longer significant** (Δ=+25.29, q=0.632); but the benchmark efficiency penalty **grows** (`avg_cycling` +1.21, `avg_redundant` +1.58, both q≈0) | Mixed — still a characterized weakness that motivates Phase 2, but the *timing* penalty is now unsupported and the *efficiency* penalty is the durable one (Addendum 2026-07-13) |
+| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Post-inversion arm C (run 29639767776, headline of record):** lab2 `auc_goal` Δ=+0.01679 [0.00959, 0.02606], q=0, δ=1.0; lab1 = saturated null control (clean in every contrast under arm C). Anchor replicates across instrument (pre-inversion arm C +0.01707, run 27336756264) and arm (arm D +0.01924, run 29105464710), and is robust to the prior-decay horizon E ∈ {750, 3000, 10000} (E-sweep, n=5) | Arm-C re-run duty DISCHARGED; headline holds like-for-like under the post-inversion instrument (Addendum 2026-07-18b) |
+| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Post-inversion arm C (29639767776):** `auc_reward` win replicates (Δ=+16.62, q≈0, δ=1.0); the first-goal *regression is significant again* (Δ=+67.56, q=0.0104, δ=0.68 — the arm-D ns reading was arm-confounded; matched pre-inversion comparator +23.95, run 28941204656); efficiency tax under arm C = `avg_cycling` +0.744 (q=0.0154) only, `avg_redundant` ns (arm-D stacking). E-sweep: shorter E removes the timing tax but grows the policy-quality tax (Addendum 2026-07-18b) | Characterized weakness motivating Phase 2: under the headline arm the lab3 tax is *timing + cycling*; the Addendum-2026-07-13 "migrated from timing to policy quality" reading is retired as arm-D-specific |
 | 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | ~~All 8 Tier-1 recovery cells significant~~ **SUPERSEDED by the post-inversion re-run (`pre_registration.md` §9.10, 2026-07-12): 3 of 8 Tier-1 cells significant** (`lab2_f1bdead` −306.5 q≈0, `lab3_f2dead_lowsun` −71.4 q≈0, `labmon2_f2dead_lowsun` −147.6 q=0.0021), 1 marginal (`lab3_f1dead_z2` q=0.066), 2 null, 2 sign-flipped ns; detection family entirely null | Confirmatory under §9 + §9.10; the pre-inversion 8/8 result is reported as a pre-inversion-instrument measurement |
 | 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | **Pre-inversion (27621106006):** blind delay 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. err); KG arm meets 6/6 deadline goals vs 3/6. **Post-inversion (29166356524): fully replicates** — 12.11–12.18 ticks (≤1.46% rel. err), 6/6 vs 3/6, lamps/spotlight classified instantaneous in all cells | Unchanged by the inversion. Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
 | 4 — energy + dependency ladder | Complete but **an extension beyond the advisor's three phases**; scope now KG-primed vs tabula-rasa QL only (LLM baseline removed 2026-07-12) | **Post-inversion confirmatory run `29193486193` (n=20):** dependency-ladder primary `avg_redundant` Δ = −0.326 / −0.934 / −1.458 for lab4 / lab4dual / lab4chain (all q≈0, monotone growth); lab5 `energy_compliance` Δ=+0.096 (q≈0), steady power −0.431. Pre-inversion directions replicated; goal-rate parity on lab4/lab5, KG-favorable lift on lab4dual/lab4chain (disclosed) | Clearly labeled extension chapter; supersedes PHASE4.md §10a (Addendum 2026-07-12e; `PHASE4_DEPENDENCY_LADDER.md` §10) |
@@ -624,43 +624,58 @@ compliance scoring.
 - **KG role:** initial-Q penalties/bonuses + fading soft prior (§2.2, §3.4); the blind's
   sunshine threshold and all spill magnitudes are learned, never asserted.
 
-### 5.2 Headline results (arm C, run 27336756264)
+### 5.2 Headline results (arm C, post-inversion run 29639767776)
 
-> **PRE-INVERSION INSTRUMENT.** This table (and §5.3) was measured before the action-space
-> inversion. The lab2 anchor **replicates** post-inversion and the lab3 `auc_reward` win
-> **replicates**; the lab3 *first-goal regression does not* (q = 0.632, ns). ⚠️ The
-> post-inversion Phase-1 run (29105464710) is **arm D**, not this arm-C configuration, so
-> it is not a like-for-like replacement — a post-inversion arm-C re-run is still
-> outstanding. Post-inversion numbers and the full caveat: **Addendum 2026-07-13**.
+> **POST-INVERSION INSTRUMENT, LIKE-FOR-LIKE.** This table is the post-inversion arm-C
+> re-run registered as outstanding in Addendum 2026-07-13, dispatched 2026-07-18 on head
+> `e631877` with pure workflow defaults (`phase1_kg_only`, lab1–lab3, seeds 1–10,
+> 152/152 green). It **supersedes the pre-inversion arm-C table (run 27336756264)** as
+> the headline of record; run of record archived at `phase1_postinv/run_29639767776/`
+> (MANIFEST with artifact id + sha256). ⚠️ lab3 here runs the current intermediate spill
+> physics (100 lux / 0.30·sun, `ad3cb3b`), so the matched *pre-inversion* lab3 comparator
+> is run 28941204656 (§5.3), not 27336756264. The superseded pre-inversion table
+> (run 27336756264: lab2 `auc_goal` +0.01707 [0.01264, 0.02262] q=0, δ=1.0; lab2
+> `mean_first_goal` −32.03 q=0.0702; lab3 `auc_reward` +15.95 q=0; lab3 `mean_first_goal`
+> +42.57 q=0) stays available verbatim in 20_results_extracted.md §1.1 and
+> `phase1_headline_download/kg_only/`. Arm-C adjudication of the arm-D deltas:
+> **Addendum 2026-07-18b**.
 
 Learning-speed paired tests (ql_true − ql_false, seed-paired, n = 10):
 
 | profile | metric | tier | direction | Δ (true−false) | 95% CI | p_boot | Cliff's δ | BH q |
 |---|---|---|---|---|---|---|---|---|
 | lab1 | auc_goal | primary | higher better | 0 | [0, 0] | 1 | 0 | 1 |
-| lab1 | mean_first_goal | secondary | lower better | −11.25 | [−28.35, 5.85] | 0.1954 | −0.23 | 0.335 |
-| **lab2** | **auc_goal** | **primary** | higher better | **+0.01707** | **[0.01264, 0.02262]** | **0** | **1.0** | **0** |
-| lab2 | mean_first_goal | secondary | lower better | −32.03 | [−60.6, −4.4] | 0.0234 | −0.52 | 0.0702 |
-| lab3 | auc_goal | primary | higher better | −0.007019 | [−0.01509, 0.00135] | 0.1032 | −0.45 | 0.2477 |
-| **lab3** | **auc_reward** | secondary | higher better | **+15.95** | **[11.01, 20.84]** | **0** | **0.96** | **0** |
-| lab3 | mean_first_goal | secondary | lower better | **+42.57** (KG slower) | [24.67, 62.59] | 0 | 0.74 | 0 |
+| lab1 | mean_first_goal | secondary | lower better | +5.85 | [−18.15, +29.25] | 0.6214 | 0.24 | 1 |
+| **lab2** | **auc_goal** | **primary** | higher better | **+0.01679** | **[0.00959, 0.02606]** | **0** | **1.0** | **0** |
+| lab2 | mean_first_goal | secondary | lower better | +21.29 | [+1.49, +40.29] | 0.0346 | 0.24 | 0.1038 (ns) |
+| lab3 | auc_goal | primary | higher better | +0.00035 | [−0.00420, +0.00458] | 0.8664 | 0.09 | 1 |
+| **lab3** | **auc_reward** | secondary | higher better | **+16.62** | **[13.06, 19.96]** | **0** | **1.0** | **0** |
+| lab3 | mean_first_goal | secondary | lower better | **+67.56** (KG slower) | [26.03, 108.95] | 0.0026 | 0.68 | **0.0104** |
 
-*Caption — run 27336756264 (`phase1_kg_only`, commit 55c0106, lab3 = original sub-rank
-spill physics 50 lux / 0.25·sun — verified via `git show 55c0106:simulator/simulator_flow_lab3.json`;
-`cross_zone_bonus = 0.0` in this arm); source CSV
-`phase1_headline_download/kg_only/analysis/out/learning_speed_tests.csv`
-(values verbatim from 20_results_extracted.md §1.1; BH family m = 12).*
+*Caption — run 29639767776 (`phase1_kg_only`, commit `e631877`, lab3 = current
+intermediate spill physics 100 lux / 0.30·sun; `cross_zone_bonus = 0.0` in this arm;
+`run_mode` verified in all 60 per-cell `TRAINING_OK.json`); source CSV
+`phase1_postinv/run_29639767776/analysis/out/learning_speed_tests.csv` (BH family m = 12).
+Note the lab2 `mean_first_goal` **sign flip** vs pre-inversion (−32.03 → +21.29): the
+pre-inversion marginal "KG faster to first goal on lab2" does not survive the inversion
+in either direction (ns after BH here and in arm D) and must not be claimed.*
 
-Benchmark (execution) contrasts from the same run: lab2 shows a consistent KG win —
-goal_rate +0.0375 (q=0.0065), avg_steps −0.9563 (q=0), avg_wasted −0.965 (q=0),
-avg_cycling −0.2437 (q=0), avg_redundant −1.209 (q=0); lab1 all null (ceiling); lab3
-null except avg_cycling +0.325 **against** the KG arm (q=0.0199). Source:
-`phase1_headline_download/kg_only/analysis/out/paired_tests.csv` (m = 42;
-20_results_extracted.md §1.1).
+Benchmark (execution) contrasts from the same run: lab2 keeps the KG efficiency win —
+avg_steps −0.594 (q=0.0154), avg_wasted −0.595 (q=0.0106), avg_redundant −0.714
+(q=0.0121), avg_dev −1.494 (q=0.0072), avg_energy −1.365 (q=0) — but goal_rate +0.025
+slips to marginal (q=0.1027; it was q=0.0065 pre-inversion) and avg_cycling −0.119 is
+marginal (q=0.0764). lab1 is a clean floor in every contrast (incl. avg_wasted /
+avg_redundant +0.0175, q=0.369 ns — the arm-D blemish does not appear under arm C).
+lab3 is null except avg_cycling +0.744 **against** the KG arm (q=0.0154, δ=0.79);
+avg_redundant +0.994 is ns (q=0.211). Source:
+`phase1_postinv/run_29639767776/analysis/out/paired_tests.csv` (m = 42).
 
-![Phase 1 kg_only lab1 learning curves](figures/p1_kgonly_lab1_curves.png)
-![Phase 1 kg_only lab2 learning curves](figures/p1_kgonly_lab2_curves.png)
-![Phase 1 kg_only lab3 learning curves](figures/p1_kgonly_lab3_curves.png)
+![Phase 1 kg_only post-inversion lab1 learning curves](figures/p1_kgonly_postinv_lab1_curves.png)
+![Phase 1 kg_only post-inversion lab2 learning curves](figures/p1_kgonly_postinv_lab2_curves.png)
+![Phase 1 kg_only post-inversion lab3 learning curves](figures/p1_kgonly_postinv_lab3_curves.png)
+
+*(Pre-inversion learning-curve figures `p1_kgonly_lab<n>_curves.png` retained on disk for
+the superseded record.)*
 
 ### 5.3 Cross-zone (lab3) investigation and the current-physics rerun
 
@@ -692,14 +707,16 @@ m = 12). Benchmark family from the same run: lab3 avg_cycling +0.575 (q≈0) and
 
 ### 5.4 Findings
 
-> **Amended 2026-07-13 by the post-inversion extraction.** Item 1 (lab2 anchor) **holds**
-> and now replicates under both instruments. Item 2 is **no longer strictly true**: under
-> post-inversion arm D, lab1 `avg_wasted`/`avg_redundant` are +0.0225 against the KG arm
-> (q ≈ 0) — trivial in size but significant, so "all contrasts null" must be narrowed to
-> the learning-speed and goal/step metrics. Item 3 must be **re-split**: the lab3
-> `auc_reward` win and the benchmark efficiency penalty both hold (the latter *grows*), but
-> the *first-goal* regression is **no longer significant** (q = 0.632). See
-> Addendum 2026-07-13.
+> **Amended 2026-07-13 by the post-inversion arm-D extraction; re-adjudicated 2026-07-18
+> under the like-for-like arm-C run 29639767776 (Addendum 2026-07-18b).** Item 1 (lab2
+> anchor) **holds** under both instruments and both arms. Item 2 (lab1 clean floor) is
+> **restored for the headline arm**: the arm-D +0.0225 `avg_wasted`/`avg_redundant`
+> blemish does not appear under arm C (+0.0175, q = 0.369, ns) — the 2026-07-13 narrowing
+> applies to arm D only. Item 3 stands **as originally written**: under arm C the lab3
+> first-goal regression is significant again post-inversion (+67.56, q = 0.0104), so the
+> 2026-07-13 downgrade to "directional observation" was an arm-D artifact, not an
+> inversion effect; the arm-C efficiency tax is confined to `avg_cycling` (+0.744,
+> q = 0.0154), with `avg_redundant` ns (arm-D stacking).
 
 1. **lab2 is the anchor finding:** the pre-declared primary (`auc_goal`) is a maximal
    effect (δ = 1.0, q = 0) that replicates across the headline run, the xzone family
@@ -1899,7 +1916,9 @@ avg_redundant +1.5775 under arm D): if the tax persists under arm C it is an inv
 effect; if it shrinks/vanishes it was arm-D stacking (PBRS+trust amplification), and the
 §5.4.1 "migrated from timing to policy quality" sentence must be conditioned accordingly.
 Same test applies to the lab1 `avg_wasted` +0.0225 blemish — it may simply vanish under
-arm C.
+arm C. *(Resolved — the run completed 152/152 green the same day; adjudication in
+Addendum 2026-07-18b: the cycling tax persists under arm C, the redundant tax and the
+lab1 blemish were arm-D stacking, and the timing regression returns significant.)*
 
 **4. E-decay sensitivity sweep (residual flag #1) implemented.** New arm-C profiles
 `phase1_kg_only_e750` and `phase1_kg_only_e3000` — clones of `phase1_kg_only` with only
@@ -1910,7 +1929,9 @@ the sweep costs **two** dispatches, not three. Everything else (ε schedule, tim
 overrides) held fixed. ⚠️ Dispatch protocol: `phase1.yml` uses concurrency group `phase1`
 with `cancel-in-progress: false` — GitHub keeps at most one pending run per group and
 **cancels an older pending run when a newer one is queued**, so dispatch each sweep run
-only after the previous phase1-group run has finished.
+only after the previous phase1-group run has finished. *(Executed — both sweep runs
+completed 2026-07-18: `29641043465` (E = 750) and `29641899071` (E = 3000), 52/52 green
+each; results and the drafted sensitivity footnote in Addendum 2026-07-18b.)*
 
 **5. lab3 TTL doc-drift fixed — and it was worse than flagged.**
 `building_3_complex.ttl`'s comments and reified-connection labels (formula header, stream
@@ -1925,3 +1946,129 @@ no cross-lab steady-state comparison exists), but the two flows must never be ci
 steady-state identical. No parsed triple changed in either file: magnitudes live only in
 annotations (the KG deliberately declares structure, not gain); the reasoner matches the
 `WeakOpticalCoupling` URI, never label text. `validateTurtle` green.
+
+## Addendum 2026-07-18b — arm-C headline of record lands (run 29639767776): §5.2 swapped; arm-D deltas adjudicated; E-decay sweep executed; all three runs archived
+
+### 1. Verification and archival (the §Addendum-2026-07-18 items 3–4 duties, discharged)
+
+All three dispatches registered in Addendum 2026-07-18 completed green on 2026-07-18 and
+are archived in-repo under the `phase1_postinv/` curation rule (per-seed primary-outcome
+files + `analysis/out`, reproduction internals pruned; MANIFEST with artifact id, zip
+sha256, per-cell `run_mode` verification):
+
+| Run | Config | Head | Jobs | Artifact (id, sha256 prefix) | Archive |
+|---|---|---|---|---|---|
+| **29639767776** | `phase1_kg_only` (arm C), lab1–3 × seeds 1–10 | `e631877` | 152/152 | `8428536694`, `4029c693…` | `phase1_postinv/run_29639767776/` |
+| **29641043465** | `phase1_kg_only_e750`, lab2–3 × seeds 1–5 | `05dd835` | 52/52 | `8428853523`, `0f2b8e2f…` | `phase1_postinv/run_29641043465/` |
+| **29641899071** | `phase1_kg_only_e3000`, lab2–3 × seeds 1–5 | `05dd835` | 52/52 | `8429105063`, `7b107669…` | `phase1_postinv/run_29641899071/` |
+
+`run_mode` was verified in **every** training cell's `TRAINING_OK.json` (60/20/20 cells).
+All three published to the `results` branch (`077541b`/`da7f925`/`628c9a9`, append mode).
+⚠️ **Publish-step footgun found while verifying:** the arm-C run's *tag* push was
+remote-rejected (GitHub refuses App-token pushes of new refs whose tree modifies a
+workflow file when the target commit is no longer a branch tip) while the *branch* push
+succeeded — and the "Aggregate & publish" step still reported **success**. The two sweep
+runs' tags went through because `05dd835` was the branch tip at push time. The missing
+tag `results-20260718-102423-phase1_kg_only-e631877` was created from the local account
+the same day. Standing lesson: **verify results tags after every publish; a green publish
+step does not imply the tag exists.**
+
+A fourth directory, `phase1_postinv/run_29639767776_seeds1-5_reanalysis/`, holds the
+locally recomputed seeds-1–5 / lab2+lab3 restriction of the arm-C run (identical
+`sweep_report.py` invocation, deterministic bootstrap) — the E = 10000 point of the
+sweep, seed- and family-matched to the two dispatched points.
+
+### 2. §5.2 swapped — the arm-C headline is now post-inversion, like-for-like
+
+Run 29639767776 replaces pre-inversion run 27336756264 as the §5.2 table of record. The
+**lab2 anchor now replicates across three measurements**: pre-inversion arm C (+0.01707),
+post-inversion arm D (+0.01924), post-inversion arm C (+0.01679 [0.00959, 0.02606], q=0,
+δ=1.0) — the Phase-1 headline rests on neither the action-space asymmetry nor the arm-D
+accelerator stack. Two honest downgrades are recorded in the new §5.2: lab2
+`mean_first_goal` sign-flips pre→post inversion (−32.03 → +21.29, ns after BH in both
+post-inversion runs) and lab2 benchmark `goal_rate` slips from q=0.0065 to q=0.1027
+(efficiency wins persist: steps/wasted/redundant/dev/energy all q ≤ 0.0154).
+
+### 3. Adjudication of the two arm-D deltas (decision rule registered in Addendum 2026-07-18 item 3)
+
+**lab3 efficiency-tax "migration" — RETIRED as arm-D-specific; the arm-C tax is
+timing + cycling.** Under arm C (n = 10): `mean_first_goal` **+67.56** [26.03, 108.95],
+q = 0.0104, δ = 0.68 — the first-goal regression is *significant again*, so the
+Addendum-2026-07-13 downgrade ("no longer supported", q = 0.632) was an artifact of the
+arm-D accelerator stack, not of the inversion (matched pre-inversion arm-C comparator:
++23.95, run 28941204656 — direction stable, magnitude grows under the WoT-contract
+instrument). Of the arm-D efficiency pair, `avg_cycling` **persists** under arm C
+(+0.744 [0.213, 1.200], q = 0.0154, δ = 0.79; pre-inversion +0.325/+0.575 → inversion-
+robust, arm-robust), while `avg_redundant` (+0.994, q = 0.211, ns) does **not** — the
+arm-D +1.5775 was PBRS+trust stacking. Applying the registered rule: the *cycling*
+component is an inversion-era fact about the arm-C headline; the *redundant* component
+and the *timing-tax suppression* were both arm-D effects. §5.4 item 3 therefore stands
+as originally written, and §5.4.1's mechanism story (init-Q orderings surviving in
+rarely-visited states) fits the arm-C data without the "migration" epicycle.
+
+**lab1 `avg_wasted` blemish — VANISHES under arm C.** +0.0175 [−0.0075, +0.0475],
+q = 0.369 (vs arm-D +0.0225, q ≈ 0). lab1 is a fully clean floor control for the
+headline arm; the "all lab1 contrasts null" sentence is true again for §5.2, with the
+narrowing needed only when discussing arm D.
+
+### 4. E-decay sensitivity sweep (residual flag #1) — executed; the E = 10000 choice does not prop up the headline
+
+Design as registered (item 4): arm C with only `stereo_prior_decay_episodes` varied,
+E ∈ {750, 3000, 10000}, lab2/lab3 × seeds 1–5, n = 5, learning-speed family m = 8,
+benchmark m = 28 (**not comparable to the headline's m = 12/42 q-values**). Δ =
+ql_true − ql_false throughout; sources: the three archives' `learning_speed_tests.csv` /
+`paired_tests.csv`.
+
+| metric | E = 750 | E = 3000 | E = 10000 (seeds 1–5) |
+|---|---|---|---|
+| lab2 `auc_goal` (primary) | **+0.02711** (q=0, δ=1.0) | **+0.01484** (q=0, δ=1.0) | **+0.02224** (q=0, δ=1.0) |
+| lab3 `auc_reward` | **+12.55** (q=0.0016, δ=0.92) | **+17.81** (q=0, δ=1.0) | **+16.57** (q=0, δ=1.0) |
+| lab3 `auc_goal` | −0.0032 (ns) | **−0.00650** (q=0, δ=−0.88) | +0.0029 (ns) |
+| lab3 `mean_first_goal` | +10.10 (ns) | +19.58 (ns) | **+80.18** (q=0, δ=0.92) |
+| lab3 `avg_cycling` | **+0.85** (q≈0, δ=0.96) | **+1.2125** (q≈0, δ=1.0) | +0.675 (ns) |
+| lab3 `avg_redundant` | **+1.48** (q≈0, δ=0.84) | **+2.425** (q≈0, δ=1.0) | +0.388 (ns) |
+| lab3 `goal_rate` | −0.025 (ns) | **−0.05** (q=0.0007, δ=−0.8) | +0.025 (ns) |
+| lab2 `mean_first_goal` | −10.24 (ns) | **−15.51** (q=0.0064) | **+29.50** (q=0.0164) |
+
+Reading: (i) **the headline is E-robust** — lab2 `auc_goal` and lab3 `auc_reward` are
+significant with δ ≥ 0.92 at every E, and the lab2 primary is *largest* at E = 750, so
+the chosen E = 10000 does not inflate the headline. (ii) **The lab3 tax does not vanish
+with E — it moves between metrics**: the long horizon buys a *timing* tax (first goal
++80.2 on this subset) with a mostly-ns benchmark; short horizons erase the timing tax
+but buy a *policy-quality* tax (cycling/redundant q ≈ 0 at both shorter E, plus a
+significant goal_rate deficit at E = 3000). This is mechanistically coherent: a
+still-live late-training prior keeps steering exploration (slower first goal) but also
+keeps correcting init-Q residue in rarely-visited cells (cleaner final policy), and
+vice versa. (iii) Two isolated n = 5 observations are disclosed, not interpreted: the
+lab3 `auc_goal` deficit unique to E = 3000, and the sign-unstable lab2
+`mean_first_goal`. (iv) Caveat: on the full n = 10 arm-C run, lab3 `avg_cycling` *is*
+significant at E = 10000 (+0.744, q = 0.0154) — the ns cell above is the n = 5 subset;
+"mostly-ns benchmark at E = 10000" must not be over-claimed.
+
+**Draft thesis footnote (for the §3.5.1 E entry / hyperparameter table):**
+
+> The prior-decay horizon E = 10 000 was flagged in §[hyperparams] as the value most
+> deserving of sensitivity analysis. A registered sweep re-ran the headline (arm-C)
+> configuration with only E changed — E = 750 (the auto ¼-budget default) and E = 3 000
+> (the lab3 training budget) — on lab2/lab3 × seeds 1–5, with the E = 10 000 run of
+> record recomputed on the same seed subset. The headline contrasts are robust: the lab2
+> primary (auc_goal) and the lab3 auc_reward win are significant with |δ| ≥ 0.92 at all
+> three values, and the lab2 effect is largest at the *shortest* horizon, so the chosen
+> E does not favour the reported result. The lab3 side-effects, however, trade off in E
+> rather than vanishing: at E = 10 000 the KG arm pays a first-goal timing tax with a
+> largely insignificant benchmark-efficiency profile, while at E ≤ 3 000 the timing tax
+> disappears but significant cycling/redundant-action penalties (and, at E = 3 000, a
+> −0.05 goal-rate deficit) appear. No examined value of E removes the lab3 tax or
+> reverses any headline conclusion; E selects *which* tax the KG arm pays, and the
+> reported configuration is the one under which the tax is visible as timing rather
+> than hidden as policy quality. (n = 5 per sweep point; exploratory.)
+
+### 5. Standing duties after this addendum
+
+- The pre-inversion §5.2 numbers survive only as the superseded record
+  (20_results_extracted.md §1.1); never mix them with post-inversion numbers.
+- The arm-D archive `phase1_postinv/run_29105464710/` remains the arm-D sensitivity
+  record; its MANIFEST's "do not swap into §5.2" instruction still holds.
+- Anywhere §5.3/§5.4.1 or downstream text asserts the 2026-07-13 "timing penalty
+  unsupported / efficiency penalty durable" reading, it must now cite this addendum's
+  arm-C adjudication instead.
