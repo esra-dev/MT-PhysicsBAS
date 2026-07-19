@@ -348,13 +348,15 @@ jobs:
           echo "â”€â”€ root-level CSVs â”€â”€"
           ls -1 *.csv *.json *.ttl 2>/dev/null | head -40 || true
           echo "â”€â”€ benchmark/results layout â”€â”€"
-          find benchmark/results -maxdepth 3 -type d 2>/dev/null | sort | head -50 || true      - name: Clean up downloaded artifacts to free disk space
+          find benchmark/results -maxdepth 3 -type d 2>/dev/null | sort | head -50 || true
+      - name: Clean up downloaded artifacts to free disk space
         shell: bash
         run: |
           set -eu
           echo "Disk before cleanup:"; df -h /
           rm -rf _artifacts/ || true
-          echo "Disk after cleanup:"; df -h /      - name: Run sweep analysis
+          echo "Disk after cleanup:"; df -h /
+      - name: Run sweep analysis
         run: python analysis/sweep_report.py --root benchmark/results --out analysis/out
       - name: Aggressive cleanup before publish
         shell: bash
