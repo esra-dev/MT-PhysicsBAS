@@ -1284,3 +1284,26 @@ unfavourable direction, and the state report's exec summary, §5.4 item 1, and
 **Deviation on record:** dispatch 1 (run 29703115983) failed pre-data at
 PowerShell `-RunMode` ValidateSet (fixed in `e664f3f`); no data was produced or
 seen before dispatch 2.
+
+## E.10 RESULTS (appended after run completion)
+
+**Run 29705215235 — success 27/27** (dispatch 2; dispatch 1 = 29705065298
+failed pre-data at the `-OnlyProfiles` KnownProfiles allow-list — second
+harness allow-list gap of the day, both now fixed). Head `08bcd6c` contains
+Addendum 2026-07-19f; tag `results-20260719-222137-phase1_kg_only-08bcd6c`
+verified on origin; archive `phase1_postinv/run_29705215235/` (artifact
+8447910059, sha256 `a754bb68…e590`), 10/10 `TRAINING_OK` guards pass.
+
+**Exploratory result:** lab2noise `auc_goal` Δ = +0.01954 [+0.01274, +0.02878],
+δ = 1.0, sign-consistent with the clean anchor. **Honest design finding: the
+±10% multiplicative noise is structurally sub-threshold** — no achievable lab2
+lux value's ±10% band contains a rank bound (nearest crossings need ≈ ±30%),
+so the noise never reaches the agent's rank observation space and the run is
+effectively a clean-lab2 replicate at n = 5 (which is exactly why δ = 1.0).
+The pilot therefore does NOT license "the anchor survives sensor noise"; it
+instead documents that the discretization absorbs sub-30% multiplicative
+noise by construction. The to-do's actual goal (δ deflation under
+observation-reaching noise) remains open; the identified follow-up is ≥ ~30%
+noise, additive noise scaled to bound gaps, or per-episode sun jitter across
+sunshine-rank bounds. Recorded in the 19f Result note and the archive
+MANIFEST.

@@ -1,0 +1,5 @@
+profile,metric,metric_tier,direction,censored_frac,n_paired,seeds_paired,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_one_sided_favorable,p_wilcoxon,cliffs_delta,q_bootstrap_bh,bh_family_m
+lab2noise,auc_goal,primary,higher_better,,5,1;2;3;4;5,0.019539846615538536,0.012737579193064397,0.02877625875291765,0.0,0.0,0.0625,1.0,0.0,4
+lab2noise,auc_reward,secondary,higher_better,,5,1;2;3;4;5,11.961053684561524,9.857919306435486,14.06418806268756,0.0,0.0,0.0625,1.0,0.0,4
+lab2noise,episodes_to_threshold,secondary_censored,lower_better,0.0,5,1;2;3;4;5,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,4
+lab2noise,mean_first_goal,secondary,lower_better,,5,1;2;3;4;5,-13.204309467971324,-56.51037505463687,38.052993813446484,0.6062,0.3031,0.8125,-0.28,0.8082666666666666,4

@@ -3030,6 +3030,21 @@ documents the expected δ deflation.
   results are quoted only under an "exploratory, n = 5, noisy variant" caption
   and never pooled or compared numerically with clean-lab2 estimates.
 
+**Result (added post-run, same day).** Run 29705215235 (head `08bcd6c`, 27/27
+green; dispatch 1 = 29705065298 failed pre-data at the profile allow-list; tag
+`results-20260719-222137-phase1_kg_only-08bcd6c` verified on origin; archive
+`phase1_postinv/run_29705215235/`): `auc_goal` Δ = +0.01954 [+0.01274,
++0.02878], δ = 1.0 — sign-consistent. **But the pilot failed its purpose for a
+structural reason discovered in analysis:** with bounds [50, 100, 300] and
+lab2's achievable ideal lux lattice {25, 75, 225, 425, 475, 625, 875}, no
+value's ±10% band contains a rank bound (nearest crossings need ≈ ±30%), so
+the injected noise never reaches the agent's rank-level observation space and
+this run is effectively a clean-lab2 replicate (hence δ = 1.0, expected-outcome
+rule (iii) NOT met). **It must not be cited as "the anchor survives sensor
+noise."** A meaningful follow-up needs ≥ ~30% multiplicative noise, additive
+noise scaled to bound gaps, or per-episode sun jitter across sunshine-rank
+bounds — left as an open exploratory item.
+
 ## Addendum 2026-07-19g — REPORT: redundancy-heuristic control arm executed — OUTCOME A: the trivially derivable heuristic reproduces the lab2 anchor
 
 The Addendum-2026-07-19e registration was discharged the same day.
