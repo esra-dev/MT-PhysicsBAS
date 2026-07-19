@@ -41,8 +41,8 @@ delays back into the KG, and use them to satisfy temporally specified goals.
 
 | Phase | Implementation | Headline evidence (canonical run) | Status |
 |---|---|---|---|
-| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Post-inversion arm C (run 29639767776, headline of record):** lab2 `auc_goal` Δ=+0.01679 [0.00959, 0.02606], q=0, δ=1.0; lab1 = saturated null control (clean in every contrast under arm C). Anchor replicates across instrument (pre-inversion arm C +0.01707, run 27336756264) and arm (arm D +0.01924, run 29105464710), and is robust to the prior-decay horizon E ∈ {750, 3000, 10000} (E-sweep, n=5) | Arm-C re-run duty DISCHARGED; headline holds like-for-like under the post-inversion instrument (Addendum 2026-07-18b) |
-| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Post-inversion arm C (29639767776; `cross_zone_bonus = 0` in this arm — the spillage-exploration channel is off, §5.5):** `auc_reward` win replicates (Δ=+16.62, q≈0, δ=1.0); the first-goal *regression is significant again* (Δ=+67.56, q=0.0104, δ=0.68 — the arm-D ns reading was arm-confounded; matched pre-inversion comparator +23.95, run 28941204656); efficiency tax under arm C = `avg_cycling` +0.744 (q=0.0154) only, `avg_redundant` ns (arm-D stacking). E-sweep: shorter E removes the timing tax but grows the policy-quality tax (Addendum 2026-07-18b) | Characterized weakness motivating Phase 2: under the headline arm the lab3 tax is *timing + cycling*; the Addendum-2026-07-13 "migrated from timing to policy quality" reading is retired as arm-D-specific |
+| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Post-inversion arm C (run 29639767776 + registered seed extension 29692725784, pooled n=20):** lab2 `auc_goal` Δ=+0.01877 [0.01366, 0.02418], q=0 (registered m=3 family), δ=1.0 (n=10 record +0.01679 [0.00959, 0.02606]; Addendum 2026-07-19c); lab1 = saturated null control (clean in every contrast under arm C). Anchor replicates across instrument (pre-inversion arm C +0.01707, run 27336756264), arm (arm D +0.01924, run 29105464710), and the registered seeds-11–20 extension (subset +0.02076, δ=1.0), and is robust to the prior-decay horizon E ∈ {750, 3000, 10000} (E-sweep, n=5) | Arm-C re-run duty DISCHARGED; headline holds like-for-like under the post-inversion instrument (Addendum 2026-07-18b) |
+| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Post-inversion arm C (29639767776; `cross_zone_bonus = 0` in this arm — the spillage-exploration channel is off, §5.5):** `auc_reward` win replicates (Δ=+16.62, q≈0, δ=1.0); the first-goal *regression is significant again* (pooled n=20: Δ=+53.30 [26.55, 81.17], q=0 m=3, δ=0.585; n=10 record +67.56, q=0.0104 — Addendum 2026-07-19c; the arm-D ns reading was arm-confounded; matched pre-inversion comparator +23.95, run 28941204656); efficiency tax under arm C = `avg_cycling` +0.7375 pooled n=20 (q=0.0002 m=3; n=10 record +0.744) only, `avg_redundant` ns (arm-D stacking). E-sweep: shorter E removes the timing tax but grows the policy-quality tax (Addendum 2026-07-18b) | Characterized weakness motivating Phase 2: under the headline arm the lab3 tax is *timing + cycling*; the Addendum-2026-07-13 "migrated from timing to policy quality" reading is retired as arm-D-specific |
 | 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | ~~All 8 Tier-1 recovery cells significant~~ **SUPERSEDED by the post-inversion re-run (`pre_registration.md` §9.10, 2026-07-12): 3 of 8 Tier-1 cells significant** (`lab2_f1bdead` −306.5 q≈0, `lab3_f2dead_lowsun` −71.4 q≈0, `labmon2_f2dead_lowsun` −147.6 q=0.0021), 1 marginal (`lab3_f1dead_z2` q=0.066), 2 null, 2 sign-flipped ns; detection family entirely null | Confirmatory under §9 + §9.10; the pre-inversion 8/8 result is reported as a pre-inversion-instrument measurement |
 | 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | **Pre-inversion (27621106006):** blind delay 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. err); KG arm meets 6/6 deadline goals vs 3/6. **Post-inversion (29166356524): fully replicates** — 12.11–12.18 ticks (≤1.46% rel. err), 6/6 vs 3/6, lamps/spotlight classified instantaneous in all cells | Unchanged by the inversion. Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
 | 4 — energy + dependency ladder | Complete but **an extension beyond the advisor's three phases**; scope now KG-primed vs tabula-rasa QL only (LLM baseline removed 2026-07-12) | **Post-inversion confirmatory run `29193486193` (n=20):** dependency-ladder primary `avg_redundant` Δ = −0.326 / −0.934 / −1.458 for lab4 / lab4dual / lab4chain (all q≈0, monotone growth); lab5 `energy_compliance` Δ=+0.096 (q≈0), steady power −0.431. Pre-inversion directions replicated; goal-rate parity on lab4/lab5, KG-favorable lift on lab4dual/lab4chain (disclosed) | Clearly labeled extension chapter; supersedes PHASE4.md §10a (Addendum 2026-07-12e; `PHASE4_DEPENDENCY_LADDER.md` §10) |
@@ -672,6 +672,18 @@ lab3 is null except avg_cycling +0.744 **against** the KG arm (q=0.0154, δ=0.79
 avg_redundant +0.994 is ns (q=0.211). Source:
 `phase1_postinv/run_29639767776/analysis/out/paired_tests.csv` (m = 42).
 
+> **Pooled-20 update (Addendum 2026-07-19c).** The registered seeds-11–20 arm-C
+> extension (run 29692725784, head `02ed6c1`) replicated in-sign, and the
+> registered pooled-20 primary (BH within the m = 3 family only) **supersedes
+> the n = 10 citations for the three registered contrasts** wherever they are
+> quoted: lab2 `auc_goal` **+0.01877** [0.01366, 0.02418] (q = 0, δ = 1.0);
+> lab3 `mean_first_goal` **+53.30** [26.55, 81.17] (q = 0, δ = 0.585); lab3
+> `avg_cycling` **+0.7375** [0.406, 1.038] (q = 0.0002, δ = 0.77). The n = 10
+> tables above stay as the run-29639767776 record (their m = 12/42 q-values are
+> not comparable to the m = 3 family). Source:
+> `phase1_postinv/pooled20_reanalysis/pooled20_registered_family.csv`. All
+> other pooled cells are descriptive only.
+
 ![Phase 1 kg_only post-inversion lab1 learning curves](figures/p1_kgonly_postinv_lab1_curves.png)
 ![Phase 1 kg_only post-inversion lab2 learning curves](figures/p1_kgonly_postinv_lab2_curves.png)
 ![Phase 1 kg_only post-inversion lab3 learning curves](figures/p1_kgonly_postinv_lab3_curves.png)
@@ -723,10 +735,20 @@ m = 12). Benchmark family from the same run: lab3 avg_cycling +0.575 (q≈0) and
 > 2026-07-13 downgrade to "directional observation" was an arm-D artifact, not an
 > inversion effect; the arm-C efficiency tax is confined to `avg_cycling` (+0.744,
 > q = 0.0154), with `avg_redundant` ns (arm-D stacking).
+>
+> **Further amended 2026-07-19 (Addendum 2026-07-19c):** the registered
+> seeds-11–20 extension (run 29692725784) replicates all three registered
+> contrasts in-sign; the pooled-20 estimates are now the citable numbers —
+> lab2 `auc_goal` +0.01877 (q = 0, δ = 1.0), lab3 `mean_first_goal` +53.30
+> (q = 0, δ = 0.585), lab3 `avg_cycling` +0.7375 (q = 0.0002, δ = 0.77); BH
+> within the registered m = 3 family.
 
 1. **lab2 is the anchor finding:** the pre-declared primary (`auc_goal`) is a maximal
    effect (δ = 1.0, q = 0) that replicates across the headline run, the xzone family
-   (incl. independent seeds 11–20), and the current-physics rerun (13_logic_report.md §2.2).
+   (incl. the June seeds-11–20 rerun — a *sighted, unregistered* seed-replication,
+   Addendum 2026-07-19b), the current-physics rerun (13_logic_report.md §2.2), and the
+   **registered** seeds-11–20 arm-C extension (subset +0.02076, δ = 1.0; pooled-20
+   citable value +0.01877, Addendum 2026-07-19c).
 2. **lab1 behaves as a floor control:** a one-lamp 8-state lab converges near-instantly in
    both arms; all contrasts null (20_results_extracted.md §1.1–1.2).
 3. **lab3 is a characterized weakness, not a win:** across all three spill-magnitude
@@ -750,7 +772,8 @@ The lab3 penalties have one consistent causal story across all three physics mag
 prior that promotes it can only charge an exploration tax.** (The post-inversion headline
 measurement — current 100 / 0.30·sun physics with `cross_zone_bonus = 0`, run
 29639767776 — shows the same signature: first-goal +67.56, cycling +0.744, `auc_reward`
-+16.62, §5.2.)
++16.62, §5.2; pooled-20 citable values first-goal +53.30, cycling +0.7375, Addendum
+2026-07-19c.)
 
 - **Original physics (50 / 0.25·sun, sub-rank, bonus off — the superseded pre-inversion
   headline 27336756264 and the as-is control 27440842780; the headline of record
@@ -1239,15 +1262,19 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 **Live under the post-inversion instrument** (the ones that must be in the thesis):
 
 - **lab3 first-goal timing regression under the KG prior — significant again under the
-  headline arm** (measured with `cross_zone_bonus = 0`, §5.5)**.** Arm C (run
-  29639767776): `mean_first_goal` +67.56 [26.03, 108.95],
-  q = 0.0104, δ = 0.68 (matched pre-inversion arm-C comparator: +23.95, run 28941204656
+  headline arm** (measured with `cross_zone_bonus = 0`, §5.5)**.** Arm C, pooled n = 20
+  (runs 29639767776 + registered extension 29692725784, Addendum 2026-07-19c):
+  `mean_first_goal` **+53.30** [26.55, 81.17], q = 0 (m = 3), δ = 0.585 (n = 10 record
+  +67.56 [26.03, 108.95], q = 0.0104, δ = 0.68; seeds-11–20 subset +39.04 — sign-stable;
+  matched pre-inversion arm-C comparator: +23.95, run 28941204656
   — direction stable across instruments). This item was wrongly listed as *dissolved*
   here between 2026-07-13 and 2026-07-18: the ns measurement (+25.29, q = 0.632) was
   arm-D-confounded (§5.2, §5.4 item 3; Addendum 2026-07-18b).
-- **lab3 benchmark cycling penalty under the KG prior** — `avg_cycling` +0.744
-  [0.213, 1.200], q = 0.0154, δ = 0.79 under arm C (pre-inversion +0.325/+0.575 →
-  inversion- and arm-robust). Together with the timing regression this is the durable
+- **lab3 benchmark cycling penalty under the KG prior** — `avg_cycling` **+0.7375**
+  [0.406, 1.038], q = 0.0002 (m = 3), δ = 0.77, pooled n = 20 (n = 10 record +0.744
+  [0.213, 1.200], q = 0.0154, δ = 0.79; seeds-11–20 subset +0.731; Addendum 2026-07-19c)
+  under arm C (pre-inversion +0.325/+0.575 →
+  inversion-, arm- and seed-robust). Together with the timing regression this is the durable
   form of the lab3 weakness under the headline arm: **timing + cycling** (§5.3–5.4,
   mechanism in §5.4.1). The E-decay sweep shows the two trade off in the prior-decay
   horizon rather than vanish — shorter E erases the timing tax but buys significant
@@ -2573,3 +2600,98 @@ Deltas: **T8 − T1 = 8 d 14 h** (registration lags first dispatch); **T8 − T7
 - Wherever the thesis cites the s11–20 replication, item 2 above applies (sighted,
   unregistered seed-replication).
 - Nothing in this addendum changes any statistic; it is provenance only.
+
+---
+
+## Addendum 2026-07-19c — REPORT: Plan B executed — registered arm-C seed extension (seeds 11–20) and pooled-20 primary; all three registered cells CONFIRMED
+
+Plan B of Addendum 2026-07-18c §2 was dispatched and analysed 2026-07-19,
+strictly after the registration commit and after Test A's outcome
+(Addendum 2026-07-19a) was recorded.
+
+### 1. Dispatch record (registration discharged exactly as written)
+
+- **Run `29692725784`**, `phase1.yml` `workflow_dispatch`, created (server-side)
+  2026-07-19 15:23:02 UTC, completed 15:54:03 UTC, **success — 102/102 jobs**.
+- **Inputs:** `run_mode=phase1_kg_only`, `profiles=lab2,lab3`,
+  `seeds=11,…,20`, `publish_results=true` — verbatim the registered dispatch;
+  `run_mode: "phase1_kg_only"` verified in all 40 per-cell `TRAINING_OK.json`.
+- **Head SHA (recorded per registration):**
+  `02ed6c1f1677a26b92fe5425b9e446dccbdbba5b` — the Addendum 2026-07-18c
+  registration commit itself, then the remote tip of
+  `kg-crosszone-coupling-mid`; registration ⊂ dispatched tree by construction
+  (pre-registered-at-dispatch in the Addendum-2026-07-19b sense).
+- **Concurrency protocol respected:** no other phase1-group run in flight at
+  dispatch.
+- **Tag verification (Addendum 2026-07-18b §1 footgun):** CI tag
+  `results-20260719-155358-phase1_kg_only-02ed6c1` **verified on origin via
+  `git ls-remote`** (points at `02ed6c1`); results-branch publish commit
+  `75b3820` (append mode). The 2026-07-18 remote-rejection did not recur
+  because nothing was pushed to the branch while the run was in flight, so the
+  dispatch head was still the branch tip at tag-push time — this "freeze the
+  branch until publish" step is now part of the dispatch protocol.
+- **Archive:** `phase1_postinv/run_29692725784/` (CI artifact `8444359131`,
+  sha256 `3bf6c4a8…f0f5` verified against the GitHub digest; same curation as
+  `run_29639767776/`; no artifact-root convenience copies exist because the
+  aggregate stages those from seed 1, absent in a seeds-11–20 run).
+
+### 2. Like-for-like disclosure (required): `e631877` → `02ed6c1` code delta
+
+The two heads differ by documentation-only commits for this configuration:
+`phase1_kg_only` in `config/run_config.json` is **byte-identical**; simulator
+flows and `analysis/sweep_report.py` are untouched. The only lab3-KG delta is
+the 2026-07-18 sync of stale `building_3_complex.ttl` **comments and
+`rdfs:label` strings** on the reified `ws:conn_*` spill arcs ("+50 lux /
+0.25·Sun" → the actual "+100 lux / 0.30·Sun", §10.1 item 7). Behaviorally
+inert: `CROSS_ZONE_FEEDS_QUERY` (`StereotypeReasoner.java`) selects only
+`connSource`/`connTarget`/`hasStructuralStereotype`; no query consumes those
+labels. The data-generating process is therefore like-for-like with run
+29639767776 (which already ran the 100/0.30 physics).
+
+**Pre-execution data contact:** the workflow's own aggregate step computes and
+displays seeds-11–20 statistics (job summary + `analysis/out`), and these were
+seen before the pooled recomputation was run. No registered choice was open at
+that point — estimator, bootstrap seed, family, and BH scope were frozen in
+the registration, and the pooled pipeline is deterministic — but the ordering
+is disclosed (same class of disclosure as Addendum 2026-07-19a).
+
+### 3. Registered primary — pooled-20 paired bootstrap (m = 3): all three cells significant, original signs
+
+Instrument: `analysis/sweep_report.py` (unchanged since `7543d15`,
+byte-identical at both run heads), CI-identical flags (`--seeds-mode
+--ci-bootstrap-iters 10000`), deterministic RNG `0xC1`; merged
+`results_seed{1..20}/{lab2,lab3}` tree rebuilt from the two sha256-verified CI
+artifacts (the committed archives prune per-seed training metrics). m = 3 BH
+post-step: `analysis/pooled20_registered_family.py` (guards n = 20, seeds
+1–20 exact). Full provenance: `phase1_postinv/pooled20_reanalysis/MANIFEST.md`.
+
+| Registered cell | Δ pooled-20 (ql_true − ql_false) | 95% CI | p_boot | **q (m = 3)** | δ | n = 10 record |
+|---|---|---|---|---|---|---|
+| lab2 `auc_goal` | **+0.018773** | [0.013663, 0.024183] | 0 | **0** | 1.0 | +0.01679, q = 0 |
+| lab3 `mean_first_goal` | **+53.302** | [26.545, 81.165] | 0 | **0** | 0.585 | +67.56, q = 0.0104 |
+| lab3 `avg_cycling` | **+0.7375** | [0.40625, 1.0375] | 0.0002 | **0.0002** | 0.77 | +0.744, q = 0.0154 |
+
+⚠️ m = 3 q-values are not comparable to §5.2's m = 12/42 families (same caveat
+as the E-sweep, Addendum 2026-07-18b §4).
+
+### 4. Registered secondary — seeds-11–20-only subset: sign agreement in all three cells → "replicates" claimable
+
+From run 29692725784's own `analysis/out` (m = 8 / m = 28 over lab2+lab3,
+descriptive): lab2 `auc_goal` **+0.02076** [0.01447, 0.02726] (δ = 1.0); lab3
+`mean_first_goal` **+39.04** [9.56, 72.99] (δ = 0.56); lab3 `avg_cycling`
+**+0.731** [0.344, 1.100] (δ = 0.76). All three agree in sign with the
+seeds-1–10 record, so per the pre-committed rule each cell may be described as
+**replicating**, with the pooled-20 numbers as the citable estimates.
+
+### 5. Reporting-rule execution (supersession applied in this commit)
+
+Pooled-20 estimates now replace the n = 10 citations for the three registered
+contrasts in the **live** sections: executive-summary Phase-1 rows, the §5.2
+pooled-20 note, the §5.4 adjudication banner and item 1, the §5.4.1
+signature parenthetical, and §10.3's two live lab3 items. Dated addenda,
+run MANIFESTs, and meeting notes retain their original numbers as historical
+records. No other cell, lab, or metric from run 29692725784 acquires
+confirmatory status; everything else in the pooled tree is descriptive.
+**Single-shot rule now in force:** seeds 11–20 was the one registered
+extension; any further seed extension requires a fresh registration that
+discloses this outcome first.

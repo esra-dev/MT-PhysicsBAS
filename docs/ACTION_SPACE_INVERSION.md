@@ -154,7 +154,9 @@ would still straddle two code states — scientifically unclean).
   `phase1_postinv/run_29639767776/`, and is now the §5.2 headline of record —
   the lab2 anchor replicates like-for-like (Δ=+0.01679, q=0, δ=1.0). This
   closes §6.2. Arm-C adjudication of the arm-D deltas and the E-decay
-  sensitivity sweep: `THESIS_STATE_REPORT.md` Addendum 2026-07-18b.
+  sensitivity sweep: `THESIS_STATE_REPORT.md` Addendum 2026-07-18b. (The
+  registered seeds-11–20 extension later pooled this to the citable
+  Δ=+0.01877, n=20 — Addendum 2026-07-19c.)
 - This regenerates the headline learning-speed comparison (time-to-goal,
   redundant actions, success) on the post-inversion code and produces fresh
   labeled Q-table artifacts per seed.
