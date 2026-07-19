@@ -56,18 +56,28 @@ function Stats({ labId }) {
   const pick = (m) => rows.find((r) => r.metric === m);
   const auc = pick('auc_goal'); const first = pick('mean_first_goal');
   const sig = auc && +auc.q_bootstrap_bh < 0.05;
+  // Registered pooled-20 primary (m=3 family): supersedes the n=10 citation
+  // for lab2 auc_goal / lab3 mean_first_goal / lab3 avg_cycling.
+  const pooled20 = data.registered_pooled20 || [];
+  const p20 = (prefix) => pooled20.find((r) => (r.cell || '').startsWith(prefix));
+  const aucP = labId === 'lab2' ? p20('lab2 auc_goal') : null;
+  const firstP = labId === 'lab3' ? p20('lab3 mean_first_goal') : null;
   const bench = data.summary_ci.filter((r) => r.profile === labId && r.mode !== 'rule_based');
   const b = (mode, k) => { const r = bench.find((x) => x.mode === mode); return r ? +r[k] : null; };
   return (
     <>
       <div className="tiles">
         <Tile label="learning-speed AUC (goal-rate) Δ true−false — the primary endpoint"
-          value={auc ? (+auc.mean_diff_true_minus_false).toFixed(3) : '–'}
-          delta={auc ? `95% CI [${fmt(+auc.ci_lo, 3)}, ${fmt(+auc.ci_hi, 3)}] · BH q = ${fmt(+auc.q_bootstrap_bh, 4)}${sig ? ' — significant' : ' (no headroom in this trivial lab)'}` : ''}
-          deltaDir={sig ? 'up' : 'flat'} />
+          value={aucP ? (+aucP.mean_diff).toFixed(3) : (auc ? (+auc.mean_diff_true_minus_false).toFixed(3) : '–')}
+          delta={aucP
+            ? `pooled n = 20, registered primary · 95% CI [${fmt(+aucP.ci_lo, 3)}, ${fmt(+aucP.ci_hi, 3)}] · q(m=3) < 1e-4 — n=10 record ${(+auc.mean_diff_true_minus_false).toFixed(3)}`
+            : (auc ? `95% CI [${fmt(+auc.ci_lo, 3)}, ${fmt(+auc.ci_hi, 3)}] · BH q = ${fmt(+auc.q_bootstrap_bh, 4)}${sig ? ' — significant' : ' (no headroom in this trivial lab)'}` : '')}
+          deltaDir={(aucP || sig) ? 'up' : 'flat'} />
         <Tile label="mean first-goal episode Δ true−false (negative = KG reaches the goal earlier)"
-          value={first ? fmt(+first.mean_diff_true_minus_false, 1) : '–'}
-          delta={first ? `95% CI [${fmt(+first.ci_lo, 1)}, ${fmt(+first.ci_hi, 1)}] · q = ${fmt(+first.q_bootstrap_bh, 3)}` : ''}
+          value={firstP ? fmt(+firstP.mean_diff, 1) : (first ? fmt(+first.mean_diff_true_minus_false, 1) : '–')}
+          delta={firstP
+            ? `pooled n = 20, registered · 95% CI [${fmt(+firstP.ci_lo, 1)}, ${fmt(+firstP.ci_hi, 1)}] · q(m=3) < 1e-4 — KG slower; n=10 record ${fmt(+first.mean_diff_true_minus_false, 1)}`
+            : (first ? `95% CI [${fmt(+first.ci_lo, 1)}, ${fmt(+first.ci_hi, 1)}] · q = ${fmt(+first.q_bootstrap_bh, 3)}` : '')}
           deltaDir={first && +first.mean_diff_true_minus_false < 0 && +first.q_bootstrap_bh < 0.05 ? 'up' : 'flat'} />
         <Tile label="final goal-rate (benchmark, both arms)"
           value={`${fmt(100 * b('ql_true', 'goal_rate_mean'), 0)}%`}
@@ -93,7 +103,11 @@ function Stats({ labId }) {
       </div>
       <p className="note">Source: <code>phase1_postinv/run_29639767776</code> — the post-inversion <b>clean KG-only factorial</b>, arm C
         (prior on vs off, shaping off on both arms), 10 paired seeds, bootstrap CIs, BH-FDR. Headline of record per
-        <code> THESIS_STATE_REPORT.md</code> §5.2; supersedes the pre-inversion run 27336756264. lab3 runs the current
+        <code> THESIS_STATE_REPORT.md</code> §5.2; supersedes the pre-inversion run 27336756264. <b>Registered primary =
+        pooled n = 20</b> (seeds 11–20 extension run 29692725784, m = 3 BH family, Addendum 2026-07-19c): lab2 auc_goal
+        +0.0188, lab3 first-goal +53.3 (KG slower), lab3 cycling +0.74 — the tiles above show these pooled values for the
+        registered cells; the benchmark table below is the n = 10 record. At pooled n = 20 the lab3 efficiency tax also
+        broadens descriptively (redundant +1.11, energy +2.60, dev +0.54 — Addendum 2026-07-19d). lab3 runs the current
         spill physics (+100 lux / 0.30·Sun) with <code>cross_zone_bonus = 0</code> — the KG's spillage-exploration
         channel is off in this arm (§5.5).</p>
     </>

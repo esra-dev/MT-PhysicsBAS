@@ -61,12 +61,16 @@ PHASE1_POST_INVERSION_RUNS = {
 PHASE1_HEADLINE_RUN = "29639767776"
 # Golden value: lab2 auc_goal delta of the post-inversion headline run.
 PHASE1_LAB2_AUC_GOAL_PREFIX = "0.0167889"
+# Golden value: lab2 auc_goal delta of the registered pooled-20 primary
+# (Addendum 2026-07-19c; pooled20_registered_family.csv).
+PHASE1_POOLED20_LAB2_AUC_GOAL_PREFIX = "0.0187729"
 
 # Documents that state current truth: every pre-inversion ID / stale magnitude
 # needs a nearby historical marker.
 CURRENT_DOCS = [
     "docs/_audit/THESIS_STATE_REPORT.md",
     "docs/thesis_chapter_phase2.md",
+    "docs/thesis_methods_phase1_registration.md",
 ]
 
 # Historical per-run / draft documents: must open with a provenance banner
@@ -233,6 +237,20 @@ def check_dashboard():
                "lab2 auc_goal delta does not match the post-inversion headline "
                f"run (expected prefix {PHASE1_LAB2_AUC_GOAL_PREFIX}); phase1.json "
                "appears to be built from a superseded source")
+    # Registered pooled-20 primary must be present and match the record
+    # (Addendum 2026-07-19c supersession of the n=10 citations).
+    if "pooled-20" not in json.dumps(prov):
+        report(rel, 1, "b",
+               "_provenance does not name the pooled-20 registered primary "
+               "(Addendum 2026-07-19c)")
+    reg = d.get("registered_pooled20", [])
+    lab2reg = [r for r in reg if str(r.get("cell", "")).startswith("lab2 auc_goal")]
+    if len(reg) != 3 or not lab2reg or not str(lab2reg[0].get("mean_diff", "")) \
+            .startswith(PHASE1_POOLED20_LAB2_AUC_GOAL_PREFIX):
+        report(rel, 1, "b",
+               "registered_pooled20 must hold exactly the 3 registered cells with "
+               f"lab2 auc_goal prefix {PHASE1_POOLED20_LAB2_AUC_GOAL_PREFIX} "
+               "(pooled20_registered_family.csv)")
     # trace JSONs must self-describe as pre-inversion demo material
     for rel2 in ("dashboard/public/data/training.json",
                  "dashboard/public/data/replay_lab3.json"):

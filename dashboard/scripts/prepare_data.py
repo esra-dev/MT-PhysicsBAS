@@ -39,6 +39,13 @@ MODES = ["ql_true", "ql_false", "rule_based"]
 # run 27336756264 (checked by analysis/check_provenance.py).
 PHASE1_RUN_ID = "29639767776"
 PHASE1_SRC = ROOT / "phase1_postinv" / f"run_{PHASE1_RUN_ID}" / "analysis" / "out"
+# Registered pooled-20 primary (Plan B): seeds 1-10 of the run of record merged
+# with the registered seeds-11-20 extension run 29692725784, BH within the
+# registered m=3 family only (THESIS_STATE_REPORT.md Addendum 2026-07-19c).
+# For the three registered cells these are the citable values; the n=10 tables
+# stay as the run-29639767776 record.
+POOLED20_CSV = (ROOT / "phase1_postinv" / "pooled20_reanalysis"
+                / "pooled20_registered_family.csv")
 PHASE1_PROVENANCE = {
     "run_id": PHASE1_RUN_ID,
     "commit": "e631877",
@@ -48,6 +55,13 @@ PHASE1_PROVENANCE = {
     "lab3_physics": "cross-zone spill +100 lux / 0.30*Sun (current; retuned 2026-07-08)",
     "source": "phase1_postinv/run_29639767776/analysis/out",
     "supersedes": "pre-inversion run 27336756264 (phase1_headline_download/kg_only)",
+    "registered_primary": ("pooled-20 (seeds 1-10 run 29639767776 + registered "
+                           "extension seeds 11-20 run 29692725784, head 02ed6c1; "
+                           "BH within the registered m=3 family; "
+                           "THESIS_STATE_REPORT.md Addendum 2026-07-19c)"),
+    "pooled20_source": "phase1_postinv/pooled20_reanalysis/pooled20_registered_family.csv",
+    "n10_role": ("run-of-record descriptive tables; for the three registered "
+                 "cells the citable values are the registered_pooled20 rows"),
 }
 
 # The replay / early-training traces are local single-seed demo recordings
@@ -193,6 +207,7 @@ def build_phase1():
         "learning_speed": read_csv_rows(kg / "learning_speed_tests.csv"),
         "summary_ci": read_csv_rows(kg / "summary_table_ci.csv"),
         "paired": read_csv_rows(kg / "paired_tests.csv"),
+        "registered_pooled20": read_csv_rows(POOLED20_CSV),
     }
     json.dump(obj, open(OUT / "phase1.json", "w"), separators=(",", ":"))
     img = OUT / "img"

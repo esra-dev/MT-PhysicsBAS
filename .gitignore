@@ -116,3 +116,7 @@ paper_notes/_private/
 !phase1_postinv/**
 !phase3_postinv/**
 !phase4_postinv/**
+
+# attic/local_outputs: untracked local working outputs swept from the repo
+# root (2026-07-19 audit D8); never commit
+attic/local_outputs/
