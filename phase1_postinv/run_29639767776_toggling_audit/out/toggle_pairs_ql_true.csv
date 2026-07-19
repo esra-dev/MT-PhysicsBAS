@@ -1,0 +1,14 @@
+seed,state_idx,action_idx,action_label,train_visits,init_argmax_member,chance_s
+1,1442,7,SetZ2Blinds=ON,234,1,0.2727
+1,1450,6,SetZ2Blinds=OFF,234,1,0.2727
+3,1442,7,SetZ2Blinds=ON,158,1,0.2727
+3,1450,6,SetZ2Blinds=OFF,155,1,0.2727
+4,1442,7,SetZ2Blinds=ON,153,1,0.2727
+4,1450,6,SetZ2Blinds=OFF,153,1,0.2727
+6,1442,7,SetZ2Blinds=ON,159,1,0.2727
+6,1450,6,SetZ2Blinds=OFF,159,1,0.2727
+9,1442,7,SetZ2Blinds=ON,126,1,0.2727
+9,1450,6,SetZ2Blinds=OFF,123,1,0.2727
+9,1860,0,SetSpotlight=OFF,424,1,0.2727
+10,1442,7,SetZ2Blinds=ON,190,1,0.2727
+10,1450,6,SetZ2Blinds=OFF,194,1,0.2727

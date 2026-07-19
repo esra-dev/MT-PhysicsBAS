@@ -757,9 +757,15 @@ prior that promotes it can only charge an exploration tax.**
   analysis and the over-exploration framing are documented; the residual-init-Q toggling
   micro-mechanism is interpretation, consistent with the non-monotone init-bonus
   sensitivity — lowering the bonus 15 → 5 made lab3 *worse*,
-  phase1_xzone_asis_analysis.md §8 — but not separately instrumented.) *(An
-  upgrade-or-drop test of this micro-mechanism is registered pre-data in Addendum
-  2026-07-18c; until it reports, this sentence remains interpretation.)*
+  phase1_xzone_asis_analysis.md §8 — but not separately instrumented.) *(The
+  registered upgrade-or-drop test of this micro-mechanism — Addendum 2026-07-18c —
+  reported INDETERMINATE on 2026-07-19: only 13 pooled unique greedy toggle pairs
+  vs the registered minimum of 20, so this sentence remains interpretation and may
+  not be upgraded. Caveat from the disclosed descriptives (Addendum 2026-07-19a):
+  the observed toggling is real, fully greedy, and init-aligned, but concentrated
+  in one heavily-trained Z2-blind 2-cycle (median 159 training visits) — the
+  "rarely-visited cells" clause is not supported by the observed pairs and this
+  sentence must not be quoted without that caveat.)*
 - **Intermediate rerun (100 / 0.30·sun, rank-moving, bonus 3.0).** Here "nothing to learn"
   no longer applies — but by construction of the non-trivialising magnitudes, no
   cross-zone lever can reach rank 3 on its own (0.30·900 = 270 < 300; neighbour-lamp bleed
@@ -2352,3 +2358,104 @@ commit; (b) record both outcomes in a reporting addendum, including gate values 
 any deviations; (c) the §5.4.1 pointer to this registration (added in this commit)
 must be resolved — upgraded, rewritten, or left as interpretation — according to the
 decision rule above, never silently.
+
+## Addendum 2026-07-19a — REPORT: Test A executed — INDETERMINATE (insufficient toggling to instrument); §5.4.1 stays interpretation
+
+Test A of Addendum 2026-07-18c §1 was executed 2026-07-19 by
+`analysis/toggling_micromech_audit.py` (deterministic; MC seed 20260718,
+100 000 draws) over the registered inputs, now committed with full provenance
+under `phase1_postinv/run_29639767776_toggling_audit/` (inputs retrieved from
+CI artifact `8428536694`, sha256 re-verified `4029c693…d29f`; the
+results-branch publish `077541b` carries only root convenience copies for this
+run, so the CI artifact is the per-seed source — a provenance detail, not a
+deviation). Plan B (seeds 11–20) is untouched by this addendum: registered,
+not yet dispatched.
+
+**Pre-execution data contact (required disclosure).** As recorded in Addendum
+2026-07-18b §4 ("Residual-prior quantification (offline; added 2026-07-19)"),
+the residual-prior computation opened the run's **root** visit sidecars (incl.
+lab3 KG) after the registration commit and before this execution. No
+registered threshold or definition was touched; the per-seed files scored
+here were first opened by this execution. The sparser-than-assumed training
+noted there (≈4.7–6.4 k updates vs the registered "~60 k" bound) fed the P1
+non-discrimination caveat — which turned out to be moot: P1 did not pass at
+all (below).
+
+### Validity gates — all pass; the instrumentation itself is fully validated
+
+- **G1 (instrument reconciliation): PASS, exact everywhere.** Step-log-derived
+  D1 flips reproduce `ActuatorCyclingCount` in **800/800** ql_true and
+  **800/800** ql_false episodes (gate ≥95%). 350 zero-step episodes per arm
+  reconcile trivially (0 = 0). Totals cross-check the headline: 1050 vs 455
+  flips → Δavg_cycling = +0.7438 ≈ the registered +0.744.
+- **G2 (encoding/selection consistency): PASS, exact everywhere.** On all
+  **1885/1885** pooled qualifying steps (preceding step exists, StuckFired = 0,
+  WasMasked = 0), the executed action's Q equals the row maximum of that
+  seed's frozen combined table at the reconstructed state (|Δ| ≤ 1e-9);
+  0 unmappable labels. The D4 state reconstruction and label→column mapping
+  are therefore exact end-to-end.
+- **G3 (init determinism): PASS.** Regenerations at archive head `e631877`
+  (headless harness over the unmodified `initWithStereotypes` path; the
+  worktree pin matters — `building_3_complex.ttl` changed at `5d5c170`) are
+  bit-identical under JVM seeds 101 vs 202, and content-identical
+  (LF-normalised) to the run's own archived
+  `qtable_initial_stereotypes_true_lab3*.csv` on the results branch.
+- **Minimum data: FAIL → decision INDETERMINATE.** Only **13** pooled unique
+  KG-arm greedy toggle pairs (registered minimum 20).
+
+**Decision (pre-committed rule): INDETERMINATE — "insufficient toggling to
+instrument". §5.4.1 stays exactly as written (interpretation) and may not be
+upgraded.** The §5.4.1 pointer has been resolved accordingly (standing duty
+(c)); the thesis text may not state the mechanism as demonstrated.
+
+### Disclosed descriptives (non-decisional; first data contact with these files)
+
+The event tables sharpen the picture considerably, in both directions:
+
+- **The cycling tax is toggling-dominated and fully greedy.** ql_true: 1050
+  D1 flips, **545** D2 toggles, 545 D3 (S1 greedy share = 1.0 — the anti-stuck
+  guard never fired; `bench_anti_stuck(false)` is the shipped default).
+  ql_false: 455 / 90 / 90. Strict toggling accounts for **76.5%** of the
+  between-arm flip delta (455/595). (Note: `WasMasked` is identically 0 by
+  construction of the bench logger call, so the D3 mask condition is vacuous
+  in this data — an instrument fact, not a deviation.)
+- **But it is one entrenched loop, not scattered rare-state noise.** The 13
+  pairs collapse to **3 distinct (state, action)** pairs: a Z2-blind 2-cycle —
+  `SetZ2Blinds=ON` at state 1442 ⇄ `SetZ2Blinds=OFF` at 1450 (decoded:
+  z1 = 2, z2 = 3, Z2Light on, sun rank 2; the blind flip crosses no rank
+  boundary) — replicated in 6/10 seeds (540 of 545 toggle events), plus one
+  Spotlight-OFF pair in seed 9. The frozen greedy policy genuinely 2-cycles
+  between these states (G2-exact), burning benchmark steps.
+- **P1 (rarely visited): FAILS on the observed pairs.** Median training
+  visits of toggle pairs = **159** (range 123–424) vs the registered ≤ 5
+  threshold; non-toggle executed pairs of the same episodes: median 194
+  (n = 9). These are heavily-trained cells, not "a handful of visits".
+- **P2 (init alignment): passes.** **13/13** toggle actions lie in the
+  initial-table argmax set of their state (rate 1.0 vs tie-adjusted chance
+  0.2727 + 0.20; MC p = 1.0e-5, add-one convention (1+#≥)/(N+1)).
+- **P3 (tabula-rasa control): control does NOT align** — 1/13 states'
+  ql_false greedy argmax intersects the init argmax set (rate 0.077, p = 0.98;
+  0 states excluded) — but P3 is INDETERMINATE by the registered decidability
+  floor (13 < 20 decidable states).
+
+**Honest reading.** Had the minimum-data gate been met, the pre-committed rule
+would have adjudicated **DROPPED** (P1 fails), and the descriptives show why:
+the §5.4.1 clause "most cells get only a handful of visits, so init-Q
+orderings survive … in rarely-visited states" is contradicted by the observed
+toggle pairs, which sit in heavily-trained cells. What the data *do* show —
+init-aligned (13/13 vs control 1/13), fully greedy, benchmark-realized
+toggling concentrated in one KG-arm-only 2-cycle — is consistent with a
+*different* mechanism (a prior-entrenched learned 2-cycle that the init
+landscape seeded and training reward never punished), but that reading is
+formulated after data contact and carries **no registered status**. Any
+upgraded or rewritten mechanism claim for §5.4.1 or thesis text requires a
+fresh registration that discloses this outcome first. Until then the cycling
+tax is reported as an observed contrast whose registered micro-mechanism test
+was indeterminate, with the descriptive event tables archived.
+
+**Deviations from the registration: none.** Implementation notes (not
+deviations): MC p-values use the add-one convention; the G2 failure table's
+zone-sum diagnostic column went unused (no failures); episode = (ScenarioId,
+RunId); the D2 "already held earlier" check reads the episode's logged
+post-action snapshots (the pre-episode scenario state is not in the log, per
+the registered step-log semantics).
