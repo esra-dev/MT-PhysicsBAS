@@ -99,6 +99,8 @@ jobs:
             }
             if (bad > 0) { console.error(bad, 'invalid file(s)'); process.exit(1); }
           "
+      - name: Phase-1 provenance golden check
+        run: python3 analysis/check_provenance.py
       - name: Build dashboard
         working-directory: dashboard
         run: |

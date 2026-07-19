@@ -33,6 +33,34 @@ TRAIN_DIRS = {
 }
 MODES = ["ql_true", "ql_false", "rule_based"]
 
+# Phase-1 confirmatory source: the post-inversion arm-C run of record
+# (THESIS_STATE_REPORT.md §5.2). Never point this back at
+# phase1_headline_download/ — that archive is the superseded pre-inversion
+# run 27336756264 (checked by analysis/check_provenance.py).
+PHASE1_RUN_ID = "29639767776"
+PHASE1_SRC = ROOT / "phase1_postinv" / f"run_{PHASE1_RUN_ID}" / "analysis" / "out"
+PHASE1_PROVENANCE = {
+    "run_id": PHASE1_RUN_ID,
+    "commit": "e631877",
+    "profile": "phase1_kg_only (factorial arm C: KG prior ON, PBRS OFF, trust OFF)",
+    "instrument": "post-inversion (action-space inversion of 2026-07-10)",
+    "cross_zone_bonus": 0.0,
+    "lab3_physics": "cross-zone spill +100 lux / 0.30*Sun (current; retuned 2026-07-08)",
+    "source": "phase1_postinv/run_29639767776/analysis/out",
+    "supersedes": "pre-inversion run 27336756264 (phase1_headline_download/kg_only)",
+}
+
+# The replay / early-training traces are local single-seed demo recordings
+# from 2026-06-10 — pre-inversion action registry and, for lab3, the original
+# spill physics (+50 lux / 0.25*Sun, superseded 2026-07-08 by +100 / 0.30*Sun).
+# Illustrative only; never confirmatory evidence.
+TRACE_PROVENANCE = {
+    "recorded": "2026-06-10, local single-seed demo traces (benchmark/ tree)",
+    "instrument": "pre-inversion action registry (action-space inversion of 2026-07-10)",
+    "lab3_physics": "original spill +50 lux / 0.25*Sun (superseded 2026-07-08 by +100 / 0.30*Sun)",
+    "role": "illustrative replay only - not confirmatory evidence",
+}
+
 
 def fnum(x):
     try:
@@ -117,6 +145,7 @@ def build_replays():
                     "steps": steps,
                     "outcome": outcomes.get(sid),
                 }
+        lab_obj["_provenance"] = TRACE_PROVENANCE
         replays[lab] = lab_obj
         n = len(lab_obj["scenarios"])
         print(f"replay {lab}: {n} scenarios")
@@ -148,6 +177,7 @@ def build_training():
                 eps.append({"ep": int(p[0]), "steps": int(p[1]),
                             "goal": p[4] == "1", "eps": fnum(p[5])})
             out[lab][arm] = {"episodes": eps, "firstGoal": first_goal}
+    out["_provenance"] = TRACE_PROVENANCE
     json.dump(out, open(OUT / "training.json", "w"), separators=(",", ":"))
     print("training.json written")
 
@@ -157,8 +187,9 @@ def read_csv_rows(path):
 
 
 def build_phase1():
-    kg = ROOT / "phase1_headline_download" / "kg_only" / "analysis" / "out"
+    kg = PHASE1_SRC
     obj = {
+        "_provenance": PHASE1_PROVENANCE,
         "learning_speed": read_csv_rows(kg / "learning_speed_tests.csv"),
         "summary_ci": read_csv_rows(kg / "summary_table_ci.csv"),
         "paired": read_csv_rows(kg / "paired_tests.csv"),

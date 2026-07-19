@@ -402,7 +402,10 @@ is, no rerun.
 ### 6.4 Phase 1 and Phase 2 are the same finding
 
 Phase 1's lab3 result — the KG prior as an exploration *tax* on structure
-that is real but not required — and Phase 2's selective recovery advantage
+that is real but not required (measured under the headline arm with
+`cross_zone_bonus = 0`, the spillage-exploration channel off; the bonus-active
+xzone family reproduces the same tax — `THESIS_STATE_REPORT.md` §5.3–§5.5) —
+and Phase 2's selective recovery advantage
 are two sides of one statement: the value of structural knowledge is not a
 property of the knowledge but of the *coupling between knowledge and task*.
 Redundant structure priced into the prior costs episodes (Phase 1, lab3);

@@ -1,5 +1,13 @@
 # Phase 1 — Mechanism Ablation: Targeted vs Untargeted Cross-Zone Bonus (lab3)
 
+> **PROVENANCE (2026-07-19) — pre-inversion, superseded-physics record.** This run
+> predates the action-space inversion of 2026-07-10 (`docs/ACTION_SPACE_INVERSION.md`),
+> and its **bumped** lab3 spill physics (**+150 lux / 0.40·Sun**) was superseded on
+> 2026-07-08 by the current intermediate magnitudes (**+100 lux / 0.30·Sun**). Quote the
+> numbers below only as pre-inversion, bumped-physics measurements. The Phase-1 headline
+> of record is the post-inversion arm-C run 29639767776
+> (`docs/_audit/THESIS_STATE_REPORT.md` §5.2).
+
 **Run:** GitHub Actions *Phase 1*, workflow `phase1.yml`, run `27464846574`
 **Ref / commit:** `kg-crosszone-ablation` @ `e8d63e0`
 **Profile (`run_mode`):** `phase1_kg_xzone_rand` — KG structural prior **ON** + Part-B

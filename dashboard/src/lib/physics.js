@@ -78,21 +78,23 @@ export const LABS = {
     tagline: 'cross-zone light spill + a shared spotlight trap',
     zones: ['Z1', 'Z2'], targets: { Z1: 3, Z2: 3 },
     actuators: [
-      { id: 'Z1Light', kind: 'lamp', zone: 'Z1', label: 'Lamp', mech: 'Causes +400 (+50 spill)' },
-      { id: 'Z1Blinds', kind: 'blind', zone: 'Z1', label: 'Blind', mech: '0.50·Sun (0.25 spill)' },
-      { id: 'Z2Light', kind: 'lamp', zone: 'Z2', label: 'Lamp', mech: 'Causes +400 (+50 spill)' },
-      { id: 'Z2Blinds', kind: 'blind', zone: 'Z2', label: 'Blind', mech: '0.50·Sun (0.25 spill)' },
+      // current intermediate spill physics (retuned 2026-07-08): lamp +100, blind 0.30·Sun
+      { id: 'Z1Light', kind: 'lamp', zone: 'Z1', label: 'Lamp', mech: 'Causes +400 (+100 spill)' },
+      { id: 'Z1Blinds', kind: 'blind', zone: 'Z1', label: 'Blind', mech: '0.50·Sun (0.30 spill)' },
+      { id: 'Z2Light', kind: 'lamp', zone: 'Z2', label: 'Lamp', mech: 'Causes +400 (+100 spill)' },
+      { id: 'Z2Blinds', kind: 'blind', zone: 'Z2', label: 'Blind', mech: '0.50·Sun (0.30 spill)' },
       { id: 'Spotlight', kind: 'spot', zone: 'shared', label: 'Spotlight', mech: '+150 to BOTH zones' },
     ],
-    crossNote: 'Each lamp leaks +50 lux and each blind 0.25·Sun into the other zone.',
-    formula: 'Z1 = 25 + (Z1Light?400) + (Z2Light?50) + (Z1Blinds?0.50·Sun) + (Z2Blinds?0.25·Sun) + (Spot?150)',
+    crossNote: 'Each lamp leaks +100 lux and each blind 0.30·Sun into the other zone (current physics, retuned 2026-07-08 — rank-moving but never enough for bright on its own).',
+    formula: 'Z1 = 25 + (Z1Light?400) + (Z2Light?100) + (Z1Blinds?0.50·Sun) + (Z2Blinds?0.30·Sun) + (Spot?150)',
     kg: 'The spotlight (+150) can never reach bright (≥300) on its own — the KG-primed agent learns to avoid the tempting-but-useless shared actuator.',
+    traceNote: 'Replay traces below were recorded 2026-06-10 under the original spill physics (+50 lux / 0.25·Sun, retuned 2026-07-08 to +100 / 0.30) and the pre-inversion action registry — illustrative only, not the confirmatory data.',
     compute(s, sun, f = {}) {
-      const z1 = 25 + contrib(s.Z1Light, 400, f.Z1Light) + contrib(s.Z2Light, 50, f.Z2Light)
-        + contrib(s.Z1Blinds, 0.5 * sun, f.Z1Blinds) + contrib(s.Z2Blinds, 0.25 * sun, f.Z2Blinds)
+      const z1 = 25 + contrib(s.Z1Light, 400, f.Z1Light) + contrib(s.Z2Light, 100, f.Z2Light)
+        + contrib(s.Z1Blinds, 0.5 * sun, f.Z1Blinds) + contrib(s.Z2Blinds, 0.3 * sun, f.Z2Blinds)
         + contrib(s.Spotlight, 150, f.Spotlight);
-      const z2 = 25 + contrib(s.Z2Light, 400, f.Z2Light) + contrib(s.Z1Light, 50, f.Z1Light)
-        + contrib(s.Z2Blinds, 0.5 * sun, f.Z2Blinds) + contrib(s.Z1Blinds, 0.25 * sun, f.Z1Blinds)
+      const z2 = 25 + contrib(s.Z2Light, 400, f.Z2Light) + contrib(s.Z1Light, 100, f.Z1Light)
+        + contrib(s.Z2Blinds, 0.5 * sun, f.Z2Blinds) + contrib(s.Z1Blinds, 0.3 * sun, f.Z1Blinds)
         + contrib(s.Spotlight, 150, f.Spotlight);
       return { Z1: z1, Z2: z2 };
     },

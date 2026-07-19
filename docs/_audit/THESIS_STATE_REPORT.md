@@ -42,7 +42,7 @@ delays back into the KG, and use them to satisfy temporally specified goals.
 | Phase | Implementation | Headline evidence (canonical run) | Status |
 |---|---|---|---|
 | 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Post-inversion arm C (run 29639767776, headline of record):** lab2 `auc_goal` Δ=+0.01679 [0.00959, 0.02606], q=0, δ=1.0; lab1 = saturated null control (clean in every contrast under arm C). Anchor replicates across instrument (pre-inversion arm C +0.01707, run 27336756264) and arm (arm D +0.01924, run 29105464710), and is robust to the prior-decay horizon E ∈ {750, 3000, 10000} (E-sweep, n=5) | Arm-C re-run duty DISCHARGED; headline holds like-for-like under the post-inversion instrument (Addendum 2026-07-18b) |
-| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Post-inversion arm C (29639767776):** `auc_reward` win replicates (Δ=+16.62, q≈0, δ=1.0); the first-goal *regression is significant again* (Δ=+67.56, q=0.0104, δ=0.68 — the arm-D ns reading was arm-confounded; matched pre-inversion comparator +23.95, run 28941204656); efficiency tax under arm C = `avg_cycling` +0.744 (q=0.0154) only, `avg_redundant` ns (arm-D stacking). E-sweep: shorter E removes the timing tax but grows the policy-quality tax (Addendum 2026-07-18b) | Characterized weakness motivating Phase 2: under the headline arm the lab3 tax is *timing + cycling*; the Addendum-2026-07-13 "migrated from timing to policy quality" reading is retired as arm-D-specific |
+| 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Post-inversion arm C (29639767776; `cross_zone_bonus = 0` in this arm — the spillage-exploration channel is off, §5.5):** `auc_reward` win replicates (Δ=+16.62, q≈0, δ=1.0); the first-goal *regression is significant again* (Δ=+67.56, q=0.0104, δ=0.68 — the arm-D ns reading was arm-confounded; matched pre-inversion comparator +23.95, run 28941204656); efficiency tax under arm C = `avg_cycling` +0.744 (q=0.0154) only, `avg_redundant` ns (arm-D stacking). E-sweep: shorter E removes the timing tax but grows the policy-quality tax (Addendum 2026-07-18b) | Characterized weakness motivating Phase 2: under the headline arm the lab3 tax is *timing + cycling*; the Addendum-2026-07-13 "migrated from timing to policy quality" reading is retired as arm-D-specific |
 | 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | ~~All 8 Tier-1 recovery cells significant~~ **SUPERSEDED by the post-inversion re-run (`pre_registration.md` §9.10, 2026-07-12): 3 of 8 Tier-1 cells significant** (`lab2_f1bdead` −306.5 q≈0, `lab3_f2dead_lowsun` −71.4 q≈0, `labmon2_f2dead_lowsun` −147.6 q=0.0021), 1 marginal (`lab3_f1dead_z2` q=0.066), 2 null, 2 sign-flipped ns; detection family entirely null | Confirmatory under §9 + §9.10; the pre-inversion 8/8 result is reported as a pre-inversion-instrument measurement |
 | 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | **Pre-inversion (27621106006):** blind delay 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. err); KG arm meets 6/6 deadline goals vs 3/6. **Post-inversion (29166356524): fully replicates** — 12.11–12.18 ticks (≤1.46% rel. err), 6/6 vs 3/6, lamps/spotlight classified instantaneous in all cells | Unchanged by the inversion. Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
 | 4 — energy + dependency ladder | Complete but **an extension beyond the advisor's three phases**; scope now KG-primed vs tabula-rasa QL only (LLM baseline removed 2026-07-12) | **Post-inversion confirmatory run `29193486193` (n=20):** dependency-ladder primary `avg_redundant` Δ = −0.326 / −0.934 / −1.458 for lab4 / lab4dual / lab4chain (all q≈0, monotone growth); lab5 `energy_compliance` Δ=+0.096 (q≈0), steady power −0.431. Pre-inversion directions replicated; goal-rate parity on lab4/lab5, KG-favorable lift on lab4dual/lab4chain (disclosed) | Clearly labeled extension chapter; supersedes PHASE4.md §10a (Addendum 2026-07-12e; `PHASE4_DEPENDENCY_LADDER.md` §10) |
@@ -552,8 +552,10 @@ bleed 0.40 → **0.30**·sun ("rank-moving but non-trivialising": 0.30·900 = 27
 lab3 spill physics history: **50 / 0.25·sun** (original, sub-rank — headline run
 27336756264 and the xzone as-is control 27440842780) → **150 / 0.40·sun** (bumped —
 runs 27461188614, 27462446044, 27464846574, and the Phase-2/3 lab3-derived flows) →
-**100 / 0.30·sun** (intermediate, current — run 28941204656 only)
-(04_labs_physics.md §1.3; phase1_xzone_asis_analysis.md header).
+**100 / 0.30·sun** (intermediate, current — pre-inversion run 28941204656, then every
+post-inversion Phase-1 run: 29105464710 (arm D) and the headline of record 29639767776)
+(all runs cited in this history up to 28941204656 are pre-inversion instrument;
+04_labs_physics.md §1.3; phase1_xzone_asis_analysis.md header).
 
 ### 4.2 Phase 2 — faulty ladder
 
@@ -684,9 +686,13 @@ dedicated run family probed it: as-is control (27440842780), targeted `cross_zon
 bump (27461188614) + seeds 11–20 replication (27462446044), untargeted-bonus ablation
 (27464846574), and — after the physics change to intermediate bleed — run **28941204656**
 (`phase1_xzone_mid/`, `cross_zone_bonus = 3.0`, current 100 / 0.30·sun physics)
-(05_results_index.md §1.3).
+(05_results_index.md §1.3). **All five runs in this family are pre-inversion
+instrument** (Addendum 2026-07-10) with the Part-B exploration bonus active
+(`cross_zone_bonus = 3.0`; untargeted variant in the ablation) — exploratory
+characterization, not headline evidence; the citable lab3 numbers are the
+post-inversion arm-C run 29639767776 (§5.2).
 
-Learning-speed paired tests, run 28941204656 (seed-paired, n = 10):
+Learning-speed paired tests, pre-inversion run 28941204656 (seed-paired, n = 10):
 
 | profile | metric | tier | Δ (true−false) | 95% CI | p_boot | Cliff's δ | BH q |
 |---|---|---|---|---|---|---|---|
@@ -696,8 +702,8 @@ Learning-speed paired tests, run 28941204656 (seed-paired, n = 10):
 | **lab3** | **auc_reward** | secondary | **+12.66** | **[8.762, 16.69]** | **0** | **0.88** | **0** |
 | lab3 | mean_first_goal | secondary | **+23.95** (KG slower) | [7.679, 39.95] | 0.0036 | 0.28 | 0.0108 |
 
-*Caption — run 28941204656 (branch `kg-crosszone-coupling-mid` @ `ad3cb3b`, intermediate
-bleed, `cross_zone_bonus = 3.0`); source CSV
+*Caption — pre-inversion run 28941204656 (branch `kg-crosszone-coupling-mid` @ `ad3cb3b`,
+intermediate bleed, `cross_zone_bonus = 3.0`); source CSV
 `phase1_xzone_mid/analysis/out/learning_speed_tests.csv` (20_results_extracted.md §1.2;
 m = 12). Benchmark family from the same run: lab3 avg_cycling +0.575 (q≈0) and avg_energy
 +2.073 (q=0.0118) against the KG arm; lab2 wins persist —
@@ -724,14 +730,16 @@ m = 12). Benchmark family from the same run: lab3 avg_cycling +0.575 (q≈0) and
 2. **lab1 behaves as a floor control:** a one-lamp 8-state lab converges near-instantly in
    both arms; all contrasts null (20_results_extracted.md §1.1–1.2).
 3. **lab3 is a characterized weakness, not a win:** across all three spill-magnitude
-   configurations the KG arm is *slower to first goal* and null on `auc_goal`, while
+   configurations (headline arm `cross_zone_bonus = 0`; xzone family bonus 3.0 — §5.5)
+   the KG arm is *slower to first goal* and null on `auc_goal`, while
    `auc_reward` is a robust, replicated win — the KG prior collects more reward along the
    way but over-explores the 2048-state space toward the first goal. The frozen
    presentation decision is REFRAME: lead with `auc_reward`, disclose all three magnitude
    runs (14_presentation_rules.md via 05_results_index.md §1.3; 13_logic_report.md §3
    item 3).
 4. **Negative controls close the isolation argument:** arm A (baseline, run 27344626272)
-   and the re-dispatched arm B (pbrs_only, run 28929859927, success 2026-07-08) show the
+   and the re-dispatched arm B (pbrs_only, run 28929859927, success 2026-07-08) — both
+   pre-inversion instrument — show the
    expected nulls; every §§8–20+ headline number is value-verified against local CSVs in
    `phase1_headline_download/PROVENANCE.md` (05_results_index.md §1.2).
 
@@ -739,9 +747,14 @@ m = 12). Benchmark family from the same run: lab3 avg_cycling +0.575 (q≈0) and
 
 The lab3 penalties have one consistent causal story across all three physics magnitudes:
 **the cross-zone structure the KG knows is real but never *required* for the goal, so a
-prior that promotes it can only charge an exploration tax.**
+prior that promotes it can only charge an exploration tax.** (The post-inversion headline
+measurement — current 100 / 0.30·sun physics with `cross_zone_bonus = 0`, run
+29639767776 — shows the same signature: first-goal +67.56, cycling +0.744, `auc_reward`
++16.62, §5.2.)
 
-- **Headline run (50 / 0.25·sun, sub-rank, bonus off).** At the original magnitudes the
+- **Original physics (50 / 0.25·sun, sub-rank, bonus off — the superseded pre-inversion
+  headline 27336756264 and the as-is control 27440842780; the headline of record
+  29639767776 runs the current 100 / 0.30·sun physics, §5.2).** At the original magnitudes the
   spill almost never crosses a boundary of the fixed `[50,100,300]` discretisation; the
   structural audit over the full lab3 transition space found the cross-zone direction
   prediction "wrong" 80.5% of the time *precisely because the rank does not move*
@@ -766,7 +779,8 @@ prior that promotes it can only charge an exploration tax.**
   in one heavily-trained Z2-blind 2-cycle (median 159 training visits) — the
   "rarely-visited cells" clause is not supported by the observed pairs and this
   sentence must not be quoted without that caveat.)*
-- **Intermediate rerun (100 / 0.30·sun, rank-moving, bonus 3.0).** Here "nothing to learn"
+- **Intermediate rerun (100 / 0.30·sun, rank-moving, bonus 3.0; pre-inversion run
+  28941204656).** Here "nothing to learn"
   no longer applies — but by construction of the non-trivialising magnitudes, no
   cross-zone lever can reach rank 3 on its own (0.30·900 = 270 < 300; neighbour-lamp bleed
   +100 likewise), while the own lamp (+400) always can. The fastest route to first goal is
@@ -778,7 +792,7 @@ prior that promotes it can only charge an exploration tax.**
   every magnitude (+14.5 / +12.7 / +14.3, all q ≈ 0, δ 0.80–1.0) because the *suppressive*
   half of the prior — no-effect, redundancy, and IV-unsat avoidance — pays from episode
   one; the two metrics genuinely measure different things.
-- **Bumped run (150 / 0.40·sun).** The penalties vanish (cycling Δ = −0.0375 n.s.,
+- **Bumped run (150 / 0.40·sun, bonus 3.0; pre-inversion).** The penalties vanish (cycling Δ = −0.0375 n.s.,
   `auc_goal` n.s.) but only because the stronger spill trivialises the task — both arms
   sit at the ≈0.99 `auc_goal` ceiling (phase1_xzone_bumped_analysis.md §1). A ceiling
   effect, not a fix.
@@ -1189,9 +1203,9 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 | # | Item | Resolution |
 |---|---|---|
 | 1 | Phase-2 analysis was not confirmatory (positional-pairing bug, BH-family drift, no registration) | **Resolved:** `pre_registration.md` §9 frozen at `b9bf4cb` *before* the pooled re-analysis; `phase2_recovery.py` rewritten to seed-keyed pairing with frozen families; pooled rerun + pre-registered `lab3_f1dead` replication (run 28913465680) → all 8 Tier-1 cells significant. The pairing fix moved exactly one cell across 0.05 pre-replication (`lab3_f1dead` q 0.028 → 0.053), then the replication confirmed it (q = 0.00027) (05_results_index.md §2.4). **2026-07-12: that 8/8 outcome is itself superseded by the post-inversion re-run — 3/8 significant, `pre_registration.md` §9.10** |
-| 2 | Phase-1 headline numbers had no local artefacts; pbrs_only control had failed | **Resolved:** artefacts restored into `phase1_headline_download/` with per-value verification (`PROVENANCE.md`, 68 values ✓); pbrs_only re-dispatched → run 28929859927 success, all contrasts null (negative control passes) (05_results_index.md §1.2) |
-| 3 | lab3 spillage advantage not demonstrated (REQ-26) | **Rerun executed** (28941204656, intermediate bleed, bonus active): KG arm still regresses on rank-moving metrics while `auc_reward` remains a robust win → frozen decision is **REFRAME** (lead with `auc_reward`, disclose all three magnitude runs) (05_results_index.md §1.3) |
-| 7 | lab1's un-modelled `0.10·sun` ambient term broke the "clean lab aligns with KG" premise | **Resolved:** term deleted from the flow and the TTL comment (04_labs_physics.md §6.2). *Caveat:* lab3's own documentary TTL comments/labels are stale in the same way — the header and reified-connection labels (building_3_complex.ttl#L487-L502) still describe `+50` lamp bleed / `0.25·sun`, matching neither the pre-`ad3cb3b` physics (150/0.40) nor the current flow (100/0.30, simulator_flow_lab3.json#L130). No parsed triple is wrong (the KG asserts structure only), but the comments should be refreshed for the same TTL-vs-flow alignment reason. |
+| 2 | Phase-1 headline numbers had no local artefacts; pbrs_only control had failed | **Resolved:** artefacts restored into `phase1_headline_download/` with per-value verification (`PROVENANCE.md`, 68 values ✓); pbrs_only re-dispatched → run 28929859927 (pre-inversion) success, all contrasts null (negative control passes) (05_results_index.md §1.2) |
+| 3 | lab3 spillage advantage not demonstrated (REQ-26) | **Rerun executed** (pre-inversion run 28941204656, intermediate bleed, bonus active): KG arm still regresses on rank-moving metrics while `auc_reward` remains a robust win → frozen decision is **REFRAME** (lead with `auc_reward`, disclose all three magnitude runs) (05_results_index.md §1.3) |
+| 7 | lab1's un-modelled `0.10·sun` ambient term broke the "clean lab aligns with KG" premise | **Resolved:** term deleted from the flow and the TTL comment (04_labs_physics.md §6.2). *Caveat resolved 2026-07-18 (Addendum 2026-07-18):* lab3's documentary TTL comments/labels had the same staleness — they described the superseded `+50` lamp bleed / `0.25·sun` — and were synced to the current flow (100/0.30); `building_3_slow.ttl` was synced to its actual 150/0.40 flow with the steady-state divergence from lab3 now stated in its header. No parsed triple was ever wrong (the KG asserts structure only). |
 
 ### 10.2 Open items (mostly text-level)
 
@@ -1218,7 +1232,8 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 **Live under the post-inversion instrument** (the ones that must be in the thesis):
 
 - **lab3 first-goal timing regression under the KG prior — significant again under the
-  headline arm.** Arm C (run 29639767776): `mean_first_goal` +67.56 [26.03, 108.95],
+  headline arm** (measured with `cross_zone_bonus = 0`, §5.5)**.** Arm C (run
+  29639767776): `mean_first_goal` +67.56 [26.03, 108.95],
   q = 0.0104, δ = 0.68 (matched pre-inversion arm-C comparator: +23.95, run 28941204656
   — direction stable across instruments). This item was wrongly listed as *dissolved*
   here between 2026-07-13 and 2026-07-18: the ns measurement (+25.29, q = 0.632) was
@@ -2103,7 +2118,7 @@ w(s,a) = 0.70 × min(1, 25 / v(s,a)), so a cell keeps more than half strength
 training visit sidecars `qtable_final_*_visits.csv` of (a) the arm-C run of record
 29639767776 — root convenience copies; the per-seed sidecars are pruned from the
 archive, so (a) is a single training cell per lab/arm — and (b) the matched-config
-`phase1_xzone_mid/` run 28941204656 (per-seed sidecars, seeds 1–10; same
+`phase1_xzone_mid/` run 28941204656 (pre-inversion; per-seed sidecars, seeds 1–10; same
 E = 10 000 / 3 000-episode / trust-OFF / PBRS-OFF decay configuration). KG-arm numbers
 (the ql_false counterfactuals are in the CSV; they differ only in visit density):
 

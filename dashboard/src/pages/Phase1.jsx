@@ -91,8 +91,11 @@ function Stats({ labId }) {
           </tbody>
         </table>
       </div>
-      <p className="note">Source: <code>phase1_headline_download/kg_only</code> — the <b>clean KG-only factorial</b> (prior on vs off,
-        shaping off on both arms), 10 paired seeds, bootstrap CIs, BH-FDR. </p>
+      <p className="note">Source: <code>phase1_postinv/run_29639767776</code> — the post-inversion <b>clean KG-only factorial</b>, arm C
+        (prior on vs off, shaping off on both arms), 10 paired seeds, bootstrap CIs, BH-FDR. Headline of record per
+        <code> THESIS_STATE_REPORT.md</code> §5.2; supersedes the pre-inversion run 27336756264. lab3 runs the current
+        spill physics (+100 lux / 0.30·Sun) with <code>cross_zone_bonus = 0</code> — the KG's spillage-exploration
+        channel is off in this arm (§5.5).</p>
     </>
   );
 }
@@ -120,6 +123,7 @@ export default function Phase1() {
 
       <div className="card">
         <Replay lab={lab} />
+        {lab.traceNote && <p className="note">⚠️ {lab.traceNote}</p>}
       </div>
 
       <h2>Did the knowledge accelerate learning?</h2>

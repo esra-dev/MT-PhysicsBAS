@@ -1,5 +1,14 @@
 # KG Cross‑Zone Coupling Stereotypes — Implementation Notes (lab3)
 
+> **PROVENANCE (2026-07-19) — historical implementation notes, pre-retune and
+> pre-inversion.** This document was written when the lab3 spill physics was the
+> original **+50 lux / 0.25·Sun**; those magnitudes were superseded on 2026-07-08 by the
+> current **+100 lux / 0.30·Sun** (the §1 audit percentages and the §Source Index
+> simulator entries describe the then-current state). The GH Actions runs listed in the
+> §Source Index are all pre-inversion instrument (action-space inversion 2026-07-10,
+> `docs/ACTION_SPACE_INVERSION.md`). Current record:
+> `docs/_audit/THESIS_STATE_REPORT.md` §4.1/§5.
+
 **Status:** implemented, compiles, audited. Default behaviour of the headline
 factorial arm is **unchanged** (zero blast radius) until the new lever is
 explicitly enabled.

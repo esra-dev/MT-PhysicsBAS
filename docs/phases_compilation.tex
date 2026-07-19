@@ -49,6 +49,18 @@
 
 \begin{document}
 
+% ---- provenance banner (2026-07-19) ---------------------------------
+\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\footnotesize
+\textbf{PROVENANCE — historical record (pre-inversion, superseded).} Every run ID and
+number in this compilation predates the action-space inversion of 2026-07-10
+(\file{docs/ACTION\_SPACE\_INVERSION.md}) and, for lab3, uses spill physics that was
+retuned on 2026-07-08 (original $+50$\,lux\,/\,$0.25$\,Sun and bumped
+$+150$\,lux\,/\,$0.40$\,Sun; current: $+100$\,lux\,/\,$0.30$\,Sun). Quote nothing here as
+current evidence: the post-inversion runs of record are listed in
+\file{docs/\_audit/THESIS\_STATE\_REPORT.md} §9.1 (Phase-1 headline: arm-C run
+\texttt{29639767776}, measured with \texttt{cross\_zone\_bonus = 0}).}}
+\vspace{4pt}
+
 % =====================================================================
 %  PHASE 1
 % =====================================================================
@@ -73,7 +85,7 @@ ambient \(25\) lux; horizon \(20\) steps; sun \(\in\{0,100,400,900\}\) pinned pe
 \midrule
 \file{lab1} & 1892 & 1 zone, 1 \kw{Causes} lamp. \(Z1=25+0.10\,\text{Sun}+(\text{Light}?400)\); sun a pure distractor & 8 & 1000, .9920\\
 \file{lab2} & 1893 & 2 \emph{independent} zones, lamp \kw{Causes} \,+\, blind \kw{Mediates}(sun). \(\text{Lvl}=25+(\text{Light}?400)+(\text{Blind}?0.5\,\text{Sun})\) & 1024 & 2000, .9960\\
-\file{lab3} & 1894 & + cross-zone spill (+50 lux / \(0.25\,\text{Sun}\)) + shared \kw{spotlight} trap (+150, never enough alone) & 2048 & 3000, .9970\\
+\file{lab3} & 1894 & + cross-zone spill (then +50 lux / \(0.25\,\text{Sun}\); retuned 2026-07-08 to +100 / \(0.30\,\text{Sun}\)) + shared \kw{spotlight} trap (+150, never enough alone) & 2048 & 3000, .9970\\
 \bottomrule
 \end{tabular}
 \end{center}

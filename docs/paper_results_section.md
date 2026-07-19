@@ -1,5 +1,13 @@
 # Results
 
+> **PROVENANCE (2026-07-19) — historical draft (pre-inversion, superseded).** Every run
+> cited in this draft predates the action-space inversion of 2026-07-10
+> (`docs/ACTION_SPACE_INVERSION.md`), and its lab3 numbers were measured under
+> since-superseded spill physics (original +50 lux / 0.25·Sun and bumped +150 lux /
+> 0.40·Sun; retuned 2026-07-08 to the current +100 lux / 0.30·Sun). Do not quote as
+> current evidence — the citable record is `docs/_audit/THESIS_STATE_REPORT.md` §5/§9.1
+> (Phase-1 headline: post-inversion arm-C run 29639767776, `cross_zone_bonus = 0`).
+
 We tested a simple idea: if you give a Q-learning agent some physics knowledge
 about its environment up front (through a knowledge graph), does it learn faster
 and waste fewer actions than the same agent starting from scratch? We checked
