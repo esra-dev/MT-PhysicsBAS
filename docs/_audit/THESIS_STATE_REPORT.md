@@ -2083,6 +2083,59 @@ lab3 `auc_goal` deficit unique to E = 3000, and the sign-unstable lab2
 significant at E = 10000 (+0.744, q = 0.0154) — the ns cell above is the n = 5 subset;
 "mostly-ns benchmark at E = 10000" must not be over-claimed.
 
+**Residual-prior quantification (offline; added 2026-07-19).** How much prior weight
+actually survives to the end of training under the chosen E = 10 000? The episode-level
+component is exact: with the 3 000-episode budget the final training episode selects
+greedily under w_ep = 1 − 3000/10000 = **0.70** of full prior strength (floor 0,
+scale 1, adaptive trust OFF — verified in `config/run_config.json` at both run heads
+`e631877` and `79da114`), versus w_ep **≡ 0** at E ≤ 3 000, where the decay floor is
+reached at (E = 3 000) or long before (E = 750) the end of training. The per-cell
+component (`QLearner.greedyAction` S2-4 fade, code-identical at both heads) is
+w(s,a) = 0.70 × min(1, 25 / v(s,a)), so a cell keeps more than half strength
+(w > 0.5) iff it has v ≤ 34 training visits. Computed by
+`analysis/residual_prior_weight.py` → `analysis/out/residual_prior_weight.csv` from the
+training visit sidecars `qtable_final_*_visits.csv` of (a) the arm-C run of record
+29639767776 — root convenience copies; the per-seed sidecars are pruned from the
+archive, so (a) is a single training cell per lab/arm — and (b) the matched-config
+`phase1_xzone_mid/` run 28941204656 (per-seed sidecars, seeds 1–10; same
+E = 10 000 / 3 000-episode / trust-OFF / PBRS-OFF decay configuration). KG-arm numbers
+(the ql_false counterfactuals are in the CSV; they differ only in visit density):
+
+| cell | states visited | total updates | median per-cell w | % cells w > 0.5 | % visited states w > 0.5 (state-median) | median visits, modal action | states with modal action faded |
+|---|---|---|---|---|---|---|---|
+| armC lab2 | 43 / 1024 | 3 626 | 0.700 | 96.6 | 100 | 17 | 13/43 |
+| armC lab3 | 62 / 2048 | 5 906 | 0.700 | 97.2 | 100 | 18 | 19/62 |
+| xzone lab2 (10 seeds) | 43 (all) | 3 760 [2 988–3 979] | 0.700 (all) | 97.4 [96.4–97.9] | 100 (all) | 18 | 10 [8–14] |
+| xzone lab3 (10 seeds) | 62 (once 61) | 5 926 [4 732–6 446] | 0.700 (all) | 96.8 [96.3–97.7] | 100 (all) | 16 | 20 [15–21] |
+
+(lab1 in the CSV: 1–3 visited states of 8, single faded corridor action, everything
+else at 0.70 — floor control, not quoted in the footnote.)
+
+**The share of benchmark-visited states with w > 0.5 is exactly 100 %** (a state
+scored w > 0.5 when at least half its action cells are, i.e. its state-median). No
+bench step logs are needed for this — they are pruned for the run of record and the
+`trace_bench_*.jsonl` files are empty: 100 % of *training-visited* states pass in
+every cell and every seed, and any state outside the sidecar has v = 0 on all actions,
+i.e. the full w = 0.70 — so the property holds for every possible benchmark corridor.
+The visited-state count is itself structurally stable (lab2: 43 in all 22 cells
+examined; lab3: 62 in 21 of 22, once 61): 3 000 episodes saturate the physically
+reachable manifold, and the fade bites only the exploited corridor — even the *modal*
+(most-visited) action of the median reachable state has ≤ 25 visits, i.e. a fully
+un-faded prior.
+
+Two standing notes. (1) Interpretation guard: w is a *late-training* steering weight;
+at bench, `loadQTable` pins the decay counter (S3b-1) so the bench-time prior weight
+is 0 regardless of E — the residual acts on the benchmark only through what it did to
+the learned Q. (2) Registration 2026-07-18c disclosure: this computation opened the
+run-29639767776 root visit sidecars (incl. lab3 KG) after the Test A registration
+commit (`02ed6c1`) and before Test A executes. No registered threshold or definition
+was touched (one-shot rule intact); the Test A reporting addendum must cite this
+paragraph as pre-execution data contact with the sidecars. Observed in passing,
+relevant to Test A's disclosed P1 limitation: actual lab3 training totals are
+≈ 4.7–6.4 k updates (episodes terminate at goal), not the registered "~60 k" upper
+bound — training is *sparser* than the registration assumed, which strengthens (and
+cannot relax) the registered caveat that P1 may pass non-discriminatively.
+
 **Draft thesis footnote (for the §3.5.1 E entry / hyperparameter table):**
 
 > The prior-decay horizon E = 10 000 was flagged in §[hyperparams] as the value most
@@ -2099,7 +2152,18 @@ significant at E = 10000 (+0.744, q = 0.0154) — the ns cell above is the n = 5
 > −0.05 goal-rate deficit) appear. No examined value of E removes the lab3 tax or
 > reverses any headline conclusion; E selects *which* tax the KG arm pays, and the
 > reported configuration is the one under which the tax is visible as timing rather
-> than hidden as policy quality. (n = 5 per sweep point; exploratory.)
+> than hidden as policy quality. The residual is not marginal: at E = 10 000 the
+> episode-level prior weight is still 1 − 3000/10000 = 0.70 at the end of the
+> 3 000-episode training (versus identically 0 at E ≤ 3 000), and the per-cell visit
+> fade (min(1, 25/v)) retires it only along the exploited corridor. In the run of
+> record's lab2/lab3 KG cells the median end-of-training residual weight per
+> (state, action) cell is 0.70, ≈ 97 % of the cells of training-visited states retain
+> w > 0.5 (i.e. ≤ 34 visits), and 100 % of benchmark-visited states retain w > 0.5 on
+> at least half of their actions — exactly, since never-visited cells carry the full
+> 0.70; only about a quarter to a third of reachable states (13/43 on lab2, 19/62 on
+> lab3; seed ranges 8–14 and 15–21 in the matched 10-seed phase1_kg_xzone run) have
+> even their most-visited action faded below half strength
+> (`analysis/residual_prior_weight.py`). (n = 5 per sweep point; exploratory.)
 
 ### 5. Standing duties after this addendum
 
