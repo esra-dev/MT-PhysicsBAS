@@ -2967,3 +2967,13 @@ tax (mechanistically interesting either way; exploratory).
 
 **One-shot rule:** nothing above may be adjusted after data contact; deviations
 must be labelled deviations in the reporting addendum.
+
+**Dispatch-1 technical failure (noted 2026-07-19, pre-data).** The first dispatch
+(run 29703115983, head `75cd390`, inputs verbatim as registered) failed in every
+training cell at PowerShell parameter validation — `run_full_project.ps1`'s
+`-RunMode [ValidateSet(...)]` had not been extended with the new profile — before
+any training, benchmark, or analysis executed (40/40 train cells failed in
+seconds; aggregate skipped; nothing published; no data produced or seen). The
+ValidateSet fix (both runner scripts) is committed together with this note;
+dispatch 2 with the identical registered inputs is the registered run. No
+registered choice is affected.
