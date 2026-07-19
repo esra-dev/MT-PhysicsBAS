@@ -222,7 +222,7 @@ $TrainProfiles = @(
 )
 # Superset of all known/selectable profiles (used only to validate -OnlyProfiles).
 $KnownProfiles = @(
-    "lab1", "lab2", "lab3", "lab4", "lab4dual", "lab4chain", "lab5",
+    "lab1", "lab2", "lab2noise", "lab3", "lab4", "lab4dual", "lab4chain", "lab5",
     "labmon", "labmon2",
     "labmon_infoonly", "labmon_nostereo", "labmon2_infoonly", "labmon2_nostereo"
 )
