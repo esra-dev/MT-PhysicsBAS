@@ -41,13 +41,18 @@ delays back into the KG, and use them to satisfy temporally specified goals.
 
 | Phase | Implementation | Headline evidence (canonical run) | Status |
 |---|---|---|---|
-| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Post-inversion arm C (run 29639767776 + registered seed extension 29692725784, pooled n=20):** lab2 `auc_goal` Δ=+0.01877 [0.01366, 0.02418], q<10⁻⁴ (registered m=3 family; p_wil=8.8×10⁻⁵), δ=1.0 (n=10 record +0.01679 [0.00959, 0.02606]; Addendum 2026-07-19c); lab1 = saturated null control (clean in every contrast under arm C). Anchor replicates across instrument (pre-inversion arm C +0.01707, run 27336756264), arm (arm D +0.01924, run 29105464710), and the registered seeds-11–20 extension (subset +0.02076, δ=1.0), and is robust to the prior-decay horizon E ∈ {750, 3000, 10000} (E-sweep, n=5) | Arm-C re-run duty DISCHARGED; headline holds like-for-like under the post-inversion instrument (Addendum 2026-07-18b) |
+| 1 — clean labs | Complete: lab1/lab2/lab3 ladder, factorial arms isolating the KG prior | **Post-inversion arm C (run 29639767776 + registered seed extension 29692725784, pooled n=20):** lab2 `auc_goal` Δ=+0.01877 [0.01366, 0.02418], q<10⁻⁴ (registered m=3 family; p_wil=8.8×10⁻⁵), δ=1.0 (n=10 record +0.01679 [0.00959, 0.02606]; Addendum 2026-07-19c); lab1 = saturated null control (clean in every contrast under arm C). Anchor replicates across instrument (pre-inversion arm C +0.01707, run 27336756264), arm (arm D +0.01924, run 29105464710), and the registered seeds-11–20 extension (subset +0.02076, δ=1.0), and is robust to the prior-decay horizon E ∈ {750, 3000, 10000} (E-sweep, n=5). **Attribution (registered control, OUTCOME A — Addendum 2026-07-19g):** an ontology-free redundancy heuristic (run 29703323649) reproduces the anchor — Δ_red=+0.01666 [0.00980, 0.02326], δ=0.94, 99% of the seed-matched arm-C point — so the lab2 anchor is attributable to WoT-derivable redundancy suppression, **not** to physics/mechanism knowledge; the pre-committed decomposition wording is binding | Arm-C re-run duty DISCHARGED; headline holds like-for-like under the post-inversion instrument (Addendum 2026-07-18b) but is re-attributed by the registered redundancy control (Addendum 2026-07-19g) |
 | 1 — lab3 (cross-zone) | Complete, three spill-magnitude configurations run | **Post-inversion arm C (29639767776; `cross_zone_bonus = 0` in this arm — the spillage-exploration channel is off, §5.5):** `auc_reward` win replicates (Δ=+16.62, q<10⁻⁴, δ=1.0 — **outside the registered m=3 family**; internal reward units); the first-goal *regression is significant again* (pooled n=20: Δ=+53.30 [26.55, 81.17], q<10⁻⁴ m=3 (p_wil=1.4×10⁻³), δ=0.585; n=10 record +67.56, q=0.0104 — Addendum 2026-07-19c; the arm-D ns reading was arm-confounded; matched pre-inversion comparator +23.95, run 28941204656); efficiency tax under arm C at pooled n=20 = registered `avg_cycling` +0.7375 (q=0.0002 m=3; n=10 record +0.744) **plus descriptively significant** `avg_redundant` +1.107 (q=0.0064 m=28), `avg_energy` +2.60 (q=0.0029), `avg_dev` +0.54 (q=0.0375) — the n=10 "redundant ns (arm-D stacking)" reading is superseded (Addendum 2026-07-19d). E-sweep: shorter E removes the timing tax but grows the policy-quality tax (Addendum 2026-07-18b) | Characterized weakness motivating Phase 2: under the headline arm the lab3 tax is *timing + cycling + a broader descriptive efficiency tax (redundant/energy/dev at n=20, Addendum 2026-07-19d)*; the Addendum-2026-07-13 "migrated from timing to policy quality" reading is retired as arm-D-specific |
 | 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | ~~All 8 Tier-1 recovery cells significant~~ **SUPERSEDED by the post-inversion re-run (`pre_registration.md` §9.10, 2026-07-12): 3 of 8 Tier-1 cells significant** (`lab2_f1bdead` −306.5 q≈0, `lab3_f2dead_lowsun` −71.4 q≈0, `labmon2_f2dead_lowsun` −147.6 q=0.0021), 1 marginal (`lab3_f1dead_z2` q=0.066), 2 null, 2 sign-flipped ns; detection family entirely null | Confirmatory under §9 + §9.10; the pre-inversion 8/8 result is reported as a pre-inversion-instrument measurement |
 | 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | **Pre-inversion (27621106006):** blind delay 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. err); KG arm meets 6/6 deadline goals vs 3/6. **Post-inversion (29166356524): fully replicates** — 12.11–12.18 ticks (≤1.46% rel. err), 6/6 vs 3/6, lamps/spotlight classified instantaneous in all cells | Unchanged by the inversion. Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
 | 4 — energy + dependency ladder | Complete but **an extension beyond the advisor's three phases**; scope now KG-primed vs tabula-rasa QL only (LLM baseline removed 2026-07-12) | **Post-inversion confirmatory run `29193486193` (n=20):** dependency-ladder primary `avg_redundant` Δ = −0.326 / −0.934 / −1.458 for lab4 / lab4dual / lab4chain (all q≈0, monotone growth); lab5 `energy_compliance` Δ=+0.096 (q≈0), steady power −0.431. Pre-inversion directions replicated; goal-rate parity on lab4/lab5, KG-favorable lift on lab4dual/lab4chain (disclosed) | Clearly labeled extension chapter; supersedes PHASE4.md §10a (Addendum 2026-07-12e; `PHASE4_DEPENDENCY_LADDER.md` §10) |
 
-The dominant remaining risk is presentational, not implementational: the lab3 Phase-1
+The dominant remaining risk is presentational, not implementational — and as of
+2026-07-19 it is **larger than before**: the registered redundancy control (Addendum
+2026-07-19g, Outcome A) re-attributes the lab2 anchor to trivially derivable redundancy
+suppression, so the Phase-1 chapter must be written as a decomposition ("what a
+WoT-derivable heuristic buys" vs "what the ontology adds"), with Phase 2/3 carrying the
+case for the ontology itself. Separately, the lab3 Phase-1
 result diverges from the advisor's stated expectation and must be led with `auc_reward`
 and framed as the bridge to Phase 2, not as a win (13_logic_report.md §6). Wherever
 `auc_reward` is presented it carries the caption **"replicated, outside the registered
@@ -831,14 +836,20 @@ m = 12). Benchmark family from the same run: lab3 avg_cycling +0.575 (q<10⁻⁴
 > efficiency tax is broader than cycling; the lab1 clean-floor clause is
 > untouched (lab1 is not in the pooled tree).
 
-1. **lab2 is the anchor finding:** the pre-declared primary (`auc_goal`) is a unanimous
+1. **lab2 is the anchor finding — now with a registered attribution split:** the
+   pre-declared primary (`auc_goal`) is a unanimous
    effect (δ = 1.0 — every seed pair agrees in sign; q < 10⁻⁴) of modest absolute size
    (+0.0188 ≈ 1.9 points of normalized goal-rate AUC, notation rule 6) that replicates
    across the headline run, the xzone family
    (incl. the June seeds-11–20 rerun — a *sighted, unregistered* seed-replication,
    Addendum 2026-07-19b), the current-physics rerun (13_logic_report.md §2.2), and the
    **registered** seeds-11–20 arm-C extension (subset +0.02076, δ = 1.0; pooled-20
-   citable value +0.01877, Addendum 2026-07-19c).
+   citable value +0.01877, Addendum 2026-07-19c). **But the registered
+   redundancy-heuristic control (Outcome A, Addendum 2026-07-19g) shows an
+   ontology-free "don't set an already-set actuator" prior reproduces 99% of the
+   seed-matched effect (+0.01666, δ = 0.94): the anchor demonstrates the value of
+   action-redundancy suppression, not of physics knowledge, and must be worded as
+   such.**
 2. **lab1 behaves as a floor control:** a one-lamp 8-state lab converges near-instantly in
    both arms; all contrasts null (20_results_extracted.md §1.1–1.2).
 3. **lab3 is a characterized weakness, not a win:** across all three spill-magnitude
@@ -1362,6 +1373,17 @@ Consolidated from 13_logic_report.md §3 (ADJUST items), with post-audit status 
 
 **Live under the post-inversion instrument** (the ones that must be in the thesis):
 
+- **The lab2 anchor is reproduced by an ontology-free redundancy heuristic (registered
+  control, OUTCOME A).** Run 29703323649 (`phase1_redundancy_only`: registry-derived
+  "don't set an already-set actuator" prior only, knowledge layer verifiably off — init
+  tables contain no bonus/IV entries): lab2 `auc_goal` Δ = **+0.01666** [+0.00980,
+  +0.02326], δ = 0.94 — 99% of the seed-matched arm-C point (+0.01679). Per the
+  pre-committed rule the thesis must present the anchor as a decomposition and must
+  not claim the KG prior adds beyond trivially derivable knowledge on lab2. The
+  control also shows a significant lab3 `auc_goal` win (+0.01434, δ = 0.95) with **no
+  timing/cycling/redundant tax** — the taxes are attributable to the knowledge layer,
+  whose unique positive contribution on this record is the lab3 `auc_reward` win
+  (internal units, outside the registered family). Addendum 2026-07-19g.
 - **lab3 first-goal timing regression under the KG prior — significant again under the
   headline arm** (measured with `cross_zone_bonus = 0`, §5.5)**.** Arm C, pooled n = 20
   (runs 29639767776 + registered extension 29692725784, Addendum 2026-07-19c):
@@ -1424,7 +1446,10 @@ confirmatory with a monotone dependency ladder; Phase 2 is confirmatory but at 3
 cells, and its story is "structural knowledge pays where it is the binding constraint,"
 not "the KG always recovers faster"; Phase 1 rests on the lab2 anchor — now
 triple-replicated (pre-inversion arm C, post-inversion arm D, post-inversion arm C) and
-robust to the prior-decay horizon — plus an honest lab3 framing (timing + cycling tax,
+robust to the prior-decay horizon, **but re-attributed by the registered redundancy
+control (Outcome A, Addendum 2026-07-19g): the anchor measures the value of
+WoT-derivable redundancy suppression, and the Phase-1 chapter must say so** — plus an
+honest lab3 framing (timing + cycling tax,
 broadened at pooled n = 20 by descriptive redundant/energy/dev penalties, Addendum
 2026-07-19d, under the headline arm). The arm-C re-measurement duty registered here on 2026-07-13 was
 **discharged 2026-07-18** (run 29639767776; Addendum 2026-07-18b); no Phase-1
@@ -3004,3 +3029,81 @@ documents the expected δ deflation.
   evidence that clean-lab δ = 1.0 reflects determinism, not effect size; (iv)
   results are quoted only under an "exploratory, n = 5, noisy variant" caption
   and never pooled or compared numerically with clean-lab2 estimates.
+
+## Addendum 2026-07-19g — REPORT: redundancy-heuristic control arm executed — OUTCOME A: the trivially derivable heuristic reproduces the lab2 anchor
+
+The Addendum-2026-07-19e registration was discharged the same day.
+
+### 1. Dispatch record
+
+- **Run `29703323649`** (dispatch 2; dispatch 1 failed pre-data, deviation note
+  in 19e), `phase1.yml` `workflow_dispatch`, **success 102/102 jobs**; inputs
+  verbatim as registered (`run_mode=phase1_redundancy_only`,
+  `profiles=lab2,lab3`, `seeds=1,…,10`, publish on).
+- **Head `e664f3f`** contains the 19e registration → registration ⊂ dispatched
+  tree. Results tag `results-20260719-212249-phase1_redundancy_only-e664f3f`
+  **verified on origin** (`git ls-remote`; 18b-footgun protocol followed — the
+  branch was frozen while the run was in flight).
+- `run_mode` verified in all 40 per-cell `TRAINING_OK.json`. Archive:
+  `phase1_postinv/run_29703323649/` (artifact 8447388203, sha256 `47c6c1c4…8399`).
+- **Operational proof the knowledge layer was off:** the archived seed-1 lab2
+  KG-arm initial Q-tables (`verification/`) contain exactly
+  {0.0 ×5120, −50.0 ×4096} per zone — registry redundancy Rule 1 only — versus
+  {−50, 0, +7.5, +15, +22.5} in a normal stereo-mode initial table (constructive
+  bonus + IV wells). No positive init cell exists in the control arm.
+
+### 2. Registered primary — OUTCOME A under the pre-committed rule
+
+lab2 `auc_goal` Δ_red = **+0.016656** [+0.009803, +0.023258], p_boot < 10⁻⁴
+(p_wil = 3.9×10⁻³), δ = 0.94, n = 10 (m = 1, no BH needed). Seed-matched arm-C
+comparator Δ_KG(n=10) = +0.01679 [0.00959, 0.02606]; pooled-20 Δ_KG = +0.01877.
+
+Δ_red is significant and its point estimate is **99.2% of the seed-matched
+Δ_KG** — far above the ⅔ threshold (+0.01119). **Outcome A applies, and its
+pre-committed wording consequence is now binding:**
+
+> The thesis must present the lab2 anchor as a decomposition — a WoT-derivable
+> redundancy heuristic ("do not set an actuator to the state it is already
+> in"), requiring no ontology, captures essentially the entire lab2
+> learning-speed effect; the KG-specific increment beyond that heuristic is
+> ≈ 0 at the seed-matched comparison — and must NOT claim that the KG prior
+> accelerates learning beyond trivially derivable knowledge on lab2.
+
+### 3. Registered secondaries (descriptive) — the control arm also removes the lab3 taxes
+
+All from `phase1_postinv/run_29703323649/analysis/out/` (learning-speed m = 8,
+benchmark m = 28 per-file BH; descriptive):
+
+| cell (ql_true − ql_false) | Δ redundancy-only arm | full KG arm (n = 10 record / pooled-20) |
+|---|---|---|
+| lab3 `auc_goal` | **+0.01434** [+0.00995, +0.01834], q < 10⁻⁴, δ = 0.95 | +0.00035 ns — **null** |
+| lab3 `mean_first_goal` | +1.41 ns — **no timing tax** | **+53.30 tax** (registered, pooled-20) |
+| lab3 `auc_reward` | +0.57 ns — win **not** reproduced | **+16.62 win** (outside registered family) |
+| lab3 `avg_cycling` | +0.0625 (q = 0.059 ns) | **+0.7375 tax** (registered, pooled-20) |
+| lab3 `avg_redundant` | −0.475 ns (favourable direction) | **+1.107 tax** (descriptive, 19d) |
+| lab2 `goal_rate` (bench) | **+0.0375** (q = 0.0056) | +0.028 (descriptive, 19d) |
+| lab3 `goal_rate` (bench) | **+0.031** (q = 0.029) | ns at n = 10; not in pooled tax set |
+
+Reading (descriptive, stated bluntly): the ontology-free redundancy heuristic
+**matches the KG arm's lab2 anchor, adds a significant lab3 `auc_goal`
+improvement the full KG arm does not have, pays none of the lab3
+timing/cycling/redundant taxes, and improves benchmark goal rates in both
+labs.** What the knowledge layer uniquely contributes, on this record, is the
+lab3 `auc_reward` win (internal reward units, outside the registered family) —
+purchased at the cost of the lab3 timing + efficiency taxes. The Phase-1 story
+must be told in this decomposed form; Phase 2's fault-recovery results (where
+stereotype structure is the binding constraint) become the load-bearing
+evidence for the ontology itself.
+
+### 4. Status of claims
+
+- The registered m = 3 pooled-20 family (Addendum 2026-07-19c) is **unchanged**
+  — those numbers remain the confirmatory record of the KG-vs-tabula-rasa
+  contrast.
+- What changes is **attribution**: the lab2 anchor can no longer be attributed
+  to physics/mechanism knowledge; per Outcome A it is attributable to
+  redundancy suppression derivable from the WoT contract alone.
+- Live sections swept in this commit: §0 exec-summary row 1 + bottom-line,
+  §5.4 item 1, §10.3 (new live adversarial item). Single-shot rule: this
+  control ran once; any re-run requires a fresh registration disclosing this
+  outcome.

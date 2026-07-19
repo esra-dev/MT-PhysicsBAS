@@ -1231,3 +1231,56 @@ seed-extension rule is stated in the Methods doc (E.5) §3.
 - `analysis/residual_prior_weight.py` → runs
 - run_config.json + schema: `phase1_redundancy_only` validates structurally
 - `git status` reviewable: only intended modifications + new docs/attic READMEs
+
+## E.14 CI status notes (2026-07-19, discovered during remediation)
+
+- **sweep-dev.yml was an invalid workflow file** (two step headers had lost
+  their newlines, creating duplicate `shell`/`run` keys in one step mapping) —
+  GitHub stamped a failed zero-job workflow run on **every push** since at
+  least 2026-07-18. Fixed and verified: the next push produced no phantom
+  failure. (This failure was attributed to the file path
+  `.github/workflows/sweep-dev.yml` in the Actions list and was easy to
+  mistake for a real CI failure.)
+- **ci.yml's "Smoke training (custom2 / stereo=false / dev)" job is red and
+  was already red on main on 2026-06-21** (runs 27906825298, 27900066648 —
+  same single job failing, all other jobs green). It is an OLD-era custom-lab
+  smoke cell, pre-existing and unrelated to the Phase-1 remediation; the jobs
+  that gate this audit's changes (Build & unit tests; Validate Turtle /
+  scenarios / dashboard build, which runs `check_provenance.py`) are **green**
+  on the remediation head (`75cd390`, ci run 29703116714). Fixing the custom2
+  smoke cell is recorded as a follow-up outside Phase-1 scope.
+
+## E.4 RESULTS (appended after run completion, same day)
+
+**Run 29703323649 (dispatch 2) — success, 102/102 jobs.** Head `e664f3f`
+(registration ⊂ dispatched tree); results tag
+`results-20260719-212249-phase1_redundancy_only-e664f3f` verified on origin;
+artifact 8447388203 (sha256 `47c6c1c4…8399`) archived at
+`phase1_postinv/run_29703323649/` with MANIFEST; `run_mode` verified in all 40
+`TRAINING_OK.json`. Operational proof the knowledge layer was off: the archived
+seed-1 KG-arm initial Q-tables contain exactly {0 ×5120, −50 ×4096} per zone
+(registry redundancy only) versus {−50, 0, +7.5, +15, +22.5} in a normal
+stereo-mode table.
+
+**Registered primary → OUTCOME A.** lab2 `auc_goal` Δ_red = **+0.016656**
+[+0.009803, +0.023258], p_boot < 10⁻⁴ (p_wil = 3.9×10⁻³), δ = 0.94 — **99.2% of
+the seed-matched arm-C point estimate** (+0.01679), far above the ⅔ threshold.
+The pre-committed wording rule is now binding: the thesis presents the lab2
+anchor as a decomposition and does not claim the KG prior adds beyond trivially
+derivable redundancy knowledge on lab2.
+
+**Descriptive secondaries (blunt reading).** The ontology-free control also
+shows a significant lab3 `auc_goal` improvement the full KG arm lacks
+(+0.01434, δ = 0.95 vs +0.00035 ns), pays none of the lab3 taxes (first-goal
++1.4 ns; cycling +0.06 ns; redundant −0.475 ns favourable), does not reproduce
+the lab3 `auc_reward` win (+0.57 ns vs +16.62), and improves benchmark
+goal_rate in both labs (lab2 +0.0375 q = 0.0056; lab3 +0.031 q = 0.029). On
+this record the knowledge layer's unique contribution is the lab3 `auc_reward`
+win (internal units), purchased at the cost of the lab3 timing + efficiency
+taxes. The audit's examiner-question #1 is therefore answered in the
+unfavourable direction, and the state report's exec summary, §5.4 item 1, and
+§10.3 were rewritten accordingly (Addendum 2026-07-19g).
+
+**Deviation on record:** dispatch 1 (run 29703115983) failed pre-data at
+PowerShell `-RunMode` ValidateSet (fixed in `e664f3f`); no data was produced or
+seen before dispatch 2.
