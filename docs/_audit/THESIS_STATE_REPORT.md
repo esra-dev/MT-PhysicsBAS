@@ -814,8 +814,15 @@ dead, the previously redundant spotlight flips to essential, KG arm re-learns 1.
 
 ### 5.5 Phase-1 caveats
 
-- The registration for Phase 1 was written close to, not strictly before, the first runs
-  (post-hoc timing must be disclosed) (13_logic_report.md §5).
+- The Phase-1 registration (`pre_registration.md` §7, commit `ef7aaf2`) was pushed
+  2026-06-19 10:59 UTC — 8.6 days after the first Phase-1 dispatch (run 27305796237,
+  2026-06-10) and 6.0 days after the last June run it retro-governs (ablation
+  27464846574), with the completed xzone analyses already cited in its own text:
+  post-analysis, not merely post-data. All June-2026 Phase-1 results are
+  confirmatory-with-post-hoc-registration; the arm-C run of record 29639767776 was
+  dispatched 29 days post-registration with the frozen registration text contained in
+  its head tree (`e631877`). GH-anchored timeline + canonical thesis disclosure
+  paragraph: Addendum 2026-07-19b (13_logic_report.md §5).
 - Wilcoxon near ceiling has a tie floor (effective n ≈ 5 after zero-dropping in some
   goal_rate cells); the bootstrap is the primary test, Wilcoxon a sensitivity check
   (13_logic_report.md §3 item 8).
@@ -2474,3 +2481,95 @@ zone-sum diagnostic column went unused (no failures); episode = (ScenarioId,
 RunId); the D2 "already held earlier" check reads the episode's logged
 post-action snapshots (the pre-episode scenario state is not in the log, per
 the registered step-log semantics).
+
+---
+
+## Addendum 2026-07-19b — Phase-1 registration-vs-first-dispatch timing reconstructed (GitHub-anchored); canonical thesis disclosure paragraph
+
+Discharges the §5.5 / 13_logic_report.md §5 standing duty ("post-hoc timing must be
+disclosed") with exact figures. **Clock:** GitHub Actions run-creation timestamps
+(`created_at`), assigned server-side at dispatch and not editable afterwards; git
+commit dates are client-set and are used only as corroboration, never as evidence.
+Every run ID below is queryable against origin's run metadata; every cited commit
+hash predates the earliest commit affected by the 2026-07-11 hash changes and is
+unchanged (run `head_sha` values resolve directly).
+
+### 1. Reconstructed timeline (all times UTC, `created_at` unless noted)
+
+| # | event | GH anchor | timestamp |
+|---|---|---|---|
+| T1 | First `phase1.yml` dispatch ever (head `7543d15` — the commit that added the Phase-1 ladder + workflow), main, green | run 27305796237 | 2026-06-10 20:56:14 |
+| T2 | Factorial run-modes run behind the pre-inversion §5.2 table (head `55c0106`), main, green | run 27336756264 | 2026-06-11 09:17:23 |
+| T3 | Further factorial runs, mixed outcomes (heads `55c0106`, `7ac37a1`; 2 green, 2 failed) | runs 27339902999–27347962788 | 2026-06-11 10:15–12:50 |
+| T4 | xzone as-is control (branch `kg-crosszone-coupling` @ `866297d`), green | run 27440842780 | 2026-06-12 20:21:40 |
+| T5 | xzone bumped, seeds 1–10 (branch `kg-crosszone-coupling-bump` @ `8a98cd8`), green; final status update 08:50:23 | run 27461188614 | 2026-06-13 08:06:15 |
+| T6 | xzone replication, seeds 11–20 (same head `8a98cd8`) — queued **16 min after T5 completed** | run 27462446044 | 2026-06-13 09:06:20 |
+| T7 | Mechanism ablation (branch `kg-crosszone-ablation`): failed @ `c633718` 09:59:33, green @ `e8d63e0` | run 27464846574 | 2026-06-13 10:59:44 |
+| **T8** | **§7 Phase-1 registration pushed** (`ef7aaf2` → main; same commit also adds the §8 Phase-3 addendum) | push-triggered runs 27821722610 + 27821723294 | **2026-06-19 10:59:41** |
+| T9 | Post-inversion arm-C headline of record (head `e631877`) | run 29639767776 | 2026-07-18 09:48:01 |
+
+Deltas: **T8 − T1 = 8 d 14 h** (registration lags first dispatch); **T8 − T7 =
+6 d 0 h** (registration lags the last June run it retro-governs); **T9 − T8 =
++29 d** (headline-of-record dispatch follows registration).
+
+### 2. What the record proves beyond §7.1's own transparency note
+
+1. **Post-analysis, not merely post-data.** The `ef7aaf2` tree does *not* contain the
+   three xzone analysis documents (they lived on the side branches and enter the
+   surviving mainline only at `8c386f8`), but the §7 text added by that very commit
+   cites all three documents by name (§7.1) and cites the ablation run ID
+   27464846574 (§7.6). The registration was therefore written with the completed
+   analyses in hand. §7.1's "hypotheses were formed before data analysis began" is
+   author assertion; the commit record cannot support it, and thesis text must not
+   imply otherwise.
+2. **The s11–20 "replication" was dispatched sighted, and unregistered.** T6 was
+   queued 16 minutes after the s1–10 run's final status update; fresh seeds, but the
+   dispatch postdates result availability for s1–10, and no registration existed at
+   T6 either. It is a seed-replication, not an independent pre-registered
+   confirmation, and must be labelled accordingly.
+3. **The current headline of record is pre-registered in the dispatch sense.** Run
+   29639767776's server-recorded `head_sha` is `e631877`, and that commit's tree
+   contains both frozen registration layers: `pre_registration.md` §7
+   (hypothesis/metric/BH families) and this report's Addendum 2026-07-13 (the arm-C
+   re-run registered as an outstanding duty). Registration ⊂ dispatched tree —
+   verifiable by anyone from run metadata plus `git show e631877:docs/...`.
+4. **Corroboration:** `ef7aaf2`'s client-side commit date (2026-06-19 10:57:25 UTC)
+   sits 2 min 16 s before the server-side push anchor — consistent, but the server
+   clock is the evidence.
+
+### 3. Canonical thesis disclosure paragraph (Methods, Phase-1 chapter)
+
+> **Registration timing (Phase 1).** The Phase-1 design addendum (§7 of the
+> pre-registration document: hypotheses H-CL1–H-CL4, primary-metric tiers, and BH
+> families) was committed as `ef7aaf2` and pushed on 2026-06-19 at 10:59 UTC. Timing
+> here is anchored to GitHub Actions run-creation timestamps — assigned server-side
+> at dispatch and not editable afterwards — rather than to git commit dates, which
+> are client-set; the push instant is fixed by the CI runs that push itself
+> triggered (27821722610, 27821723294). By this clock, registration postdates every
+> Phase-1 training run analysed in the pre-inversion analysis documents: the first
+> dispatch of the Phase-1 workflow (run 27305796237, 2026-06-10 20:56 UTC), the
+> factorial-arm run behind the pre-inversion headline table (run 27336756264,
+> 2026-06-11), and the cross-zone as-is, bumped, seeds-11–20, and mechanism-ablation
+> runs (runs 27440842780, 27461188614, 27462446044, 27464846574; 2026-06-12 to
+> 2026-06-13) — a lag of 8.6 days after the first dispatch and 6.0 days after the
+> last of these runs. The addendum's own text moreover cites the completed analysis
+> write-ups, so it postdates not only data collection but the written analyses; the
+> statement that its hypotheses reflect pre-analysis intent rests on author
+> assertion and is not supported by the commit record. All Phase-1 results from the
+> June 2026 runs are therefore reported as confirmatory-with-post-hoc-registration
+> (Munafò et al., 2017) and never as pre-registered. The Phase-1 headline of record
+> stands on different footing: the post-inversion arm-C run 29639767776 was
+> dispatched on 2026-07-18 at 09:48 UTC, 29 days after the §7 hypothesis and metric
+> families were frozen, and the commit it executed (`e631877`, the run's
+> server-recorded head) already contained both the frozen §7 families and the
+> addendum registering that re-run as an outstanding duty — for the headline table,
+> registration verifiably precedes dispatch.
+
+### 4. Consequences / bookkeeping
+
+- §5.5 first caveat bullet updated to the exact figures with a pointer here.
+- 13_logic_report.md §5's "post-hoc registration timing" mandatory disclosure is now
+  quantified; §3's paragraph is the discharge artifact for the thesis.
+- Wherever the thesis cites the s11–20 replication, item 2 above applies (sighted,
+  unregistered seed-replication).
+- Nothing in this addendum changes any statistic; it is provenance only.
