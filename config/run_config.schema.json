@@ -35,6 +35,7 @@
               "stereo_prior_decay_floor":    { "type": "number" },
               "stereo_prior_redundant":      { "type": "number" },
               "stereo_prior_iv_unsat":       { "type": "number" },
+              "stereo_redundancy_only":      { "type": "boolean" },
               "stereo_init_bonus":           { "type": "number" },
               "cross_zone_bonus":            { "type": "number" },
               "stereo_energy_prior_weight":  { "type": "number" },

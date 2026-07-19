@@ -36,7 +36,7 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10"
       run_mode:
-        description: "run_config.json profile: phase1_kg_only (arm C HEADLINE, KG prior only — recommended default) | phase1_baseline (arm A, KG+PBRS+trust off) | phase1_pbrs_only (arm B control, PBRS only) | phase1_full (arm D, full stack) | phase1 (explicit arm-D default stack; Phase-2 warm-start) | phase1_kg_only_e750 / phase1_kg_only_e3000 (arm-C prior-decay E-sweep points; E=10000 = phase1_kg_only itself) | paper (10000x20) | dev (50x20, quick gate)"
+        description: "run_config.json profile: phase1_kg_only (arm C HEADLINE, KG prior only — recommended default) | phase1_baseline (arm A, KG+PBRS+trust off) | phase1_pbrs_only (arm B control, PBRS only) | phase1_full (arm D, full stack) | phase1 (explicit arm-D default stack; Phase-2 warm-start) | phase1_kg_only_e750 / phase1_kg_only_e3000 (arm-C prior-decay E-sweep points; E=10000 = phase1_kg_only itself) | phase1_redundancy_only (audit control arm: registry-only redundancy prior, knowledge layer off — Addendum 2026-07-19e) | paper (10000x20) | dev (50x20, quick gate)"
         required: false
         default: "phase1_kg_only"
       publish_results:

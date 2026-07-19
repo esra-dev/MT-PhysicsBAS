@@ -363,6 +363,25 @@ public class StereotypeReasoner {
     private static final double CROSS_ZONE_BONUS_MAG =
         Double.parseDouble(System.getProperty("stereo.crossZoneBonus", "0.0"));
 
+    /**
+     * AUDIT CONTROL ARM (profile phase1_redundancy_only; registered in
+     * THESIS_STATE_REPORT.md Addendum 2026-07-19e) — ontology-free
+     * redundancy-heuristic mode. Override with -Dstereo.redundancyOnly=true
+     * (default false). When enabled, the ONLY prior signal this reasoner emits
+     * is the redundancy discouragement, which is computed purely from the
+     * WoT-contract action registry plus the current state vector
+     * ({@link #isRedundant}: stateVec[ai.stateVecBitIndex] ==
+     * ai.expectedBitValue — no stereotype/KG triple is consulted; both fields
+     * are assigned in discoverActuators pass 1, before any enrichment).
+     * Everything the knowledge layer adds on top is disabled: the IV-unsat
+     * soft prior, and init Rules 2-6 (IV gate, cross-zone overshoot,
+     * shared-actuator, constructive bonus, cross-zone exploration bonus).
+     * The arm answers: how much of the KG-primed advantage is explained by
+     * trivially derivable "don't set an already-set actuator" knowledge alone?
+     */
+    private static final boolean REDUNDANCY_ONLY =
+        Boolean.parseBoolean(System.getProperty("stereo.redundancyOnly", "false"));
+
 
     // -----------------------------------------------------------------------
     // Ontology loading — injectable for testability (#11 DI refactor)
@@ -1155,7 +1174,8 @@ public class StereotypeReasoner {
             // intentional (redundancy wins over IV gating).
             if (isRedundant(stateVec, i)) {
                 priors[i] = -PRIOR_REDUNDANT_MAG; // soft-discouraged: redundant
-            } else if (ai.wotValue && !isIVSatisfied(stateVec, i)) {
+            } else if (!REDUNDANCY_ONLY && ai.wotValue && !isIVSatisfied(stateVec, i)) {
+                // Knowledge-layer signal — disabled in redundancy-only mode.
                 priors[i] = -PRIOR_IV_UNSAT_MAG;  // soft-discouraged: IV not satisfied
             } else {
                 priors[i] = 0.0;
@@ -1189,6 +1209,14 @@ public class StereotypeReasoner {
             if (stateVec[ai.stateVecBitIndex] == ai.expectedBitValue) {
                 return -100.0 * INIT_PENALTY_SCALE; // Absolute worst — wasted action
             }
+        }
+
+        // AUDIT CONTROL ARM: in redundancy-only mode the knowledge layer is
+        // disabled — only Rule 1 (registry-derived redundancy, above) may
+        // fire; Rules 2-6 (IV gate, cross-zone, shared-actuator, constructive
+        // bonus, cross-zone bonus) are all KG-derived and are skipped.
+        if (REDUNDANCY_ONLY) {
+            return 0.0;
         }
 
         // Rule 2: IV gate (Mediates) — state-dependent hard penalty.

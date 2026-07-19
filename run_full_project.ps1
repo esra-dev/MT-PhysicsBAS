@@ -190,6 +190,9 @@ if ($RunConfig -and $RunConfig.learning) {
     # Audit Step 3b S3b-4: per-action prior magnitudes (redundant / IV-unsat).
     if ($ln.stereo_prior_redundant      -ne $null) { $HttpArgs += "-Pstereo.priorRedundant=$($ln.stereo_prior_redundant)" }
     if ($ln.stereo_prior_iv_unsat       -ne $null) { $HttpArgs += "-Pstereo.priorIVUnsat=$($ln.stereo_prior_iv_unsat)" }
+    # Audit control arm (Addendum 2026-07-19e): registry-only redundancy prior,
+    # knowledge layer disabled (profile phase1_redundancy_only).
+    if ($ln.stereo_redundancy_only      -ne $null) { $HttpArgs += "-Pstereo.redundancyOnly=$($ln.stereo_redundancy_only)" }
     # Research Phase C: constructive optimistic Q-init bonus (H5 ablation sets 0.0).
     if ($ln.stereo_init_bonus           -ne $null) { $HttpArgs += "-Pstereo.initBonus=$($ln.stereo_init_bonus)" }
     # KG-X (Part B): cross-zone structural exploration prior (default 0.0 = OFF).
