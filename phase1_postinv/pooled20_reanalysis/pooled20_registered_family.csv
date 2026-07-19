@@ -1,0 +1,4 @@
+cell,source_file,n_paired,seeds_paired,mean_diff,ci_lo,ci_hi,p_bootstrap,p_wilcoxon,cliffs_delta,q_bootstrap_bh_m3,bh_family_m
+lab2 auc_goal,learning_speed_tests.csv,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,0.0187729243081027,0.013662679226408786,0.024183061020340103,0.0,8.844915021211901e-05,1.0,0.0,3
+lab3 mean_first_goal,learning_speed_tests.csv,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,53.301738106138544,26.545267130805335,81.16545080011886,0.0,0.0014324188232421875,0.585,0.0,3
+lab3 avg_cycling (ql_true - ql_false),paired_tests.csv,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,0.7375,0.40625,1.0375,0.0002,0.0011850647720264731,0.77,0.0002,3
