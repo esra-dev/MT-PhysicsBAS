@@ -1,0 +1,21 @@
+{
+  "tag": "results-20260719-155358-phase1_kg_only-02ed6c1",
+  "utc": "20260719-155358",
+  "runMode": "phase1_kg_only",
+  "profiles": [
+    "lab2",
+    "lab3"
+  ],
+  "bench_modes": [
+    "rule_based",
+    "ql_false",
+    "ql_true"
+  ],
+  "git_sha": "02ed6c1f1677a26b92fe5425b9e446dccbdbba5b",
+  "git_short_sha": "02ed6c1",
+  "git_branch": "kg-crosszone-coupling-mid",
+  "artifact_count": 0,
+  "artifacts": [],
+  "host": null,
+  "user": null
+}
