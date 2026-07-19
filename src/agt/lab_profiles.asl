@@ -286,6 +286,24 @@ lab_profile("lab2",
             qtable_suffix("_lab2"),
             training_params(2000, 0.9960)).
 
+//   lab2noise → EXPLORATORY noise pilot (port 1903, Addendum 2026-07-19f):
+//   identical to lab2 (same KG, bounds, targets, schedule) but the simulator
+//   flow applies ±10% multiplicative sensor noise per tick to both zone
+//   levels. Never mix its results with clean-lab2 numbers.
+lab_profile("lab2noise",
+            td("classpath:interactions-lab2noise.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2noise.json"),
+            train_scenarios("benchmark/train_scenarios_lab2noise.json"),
+            sim_port(1903),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab2noise"),
+            training_params(2000, 0.9960)).
+
 //   lab3 → Complex (port 1894): adds cross-zone coupling + shared spotlight.
 //   Deterministic, leak-free replacement for the custom9s PRNG-tick flow.
 lab_profile("lab3",

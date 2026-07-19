@@ -284,6 +284,7 @@ $ProfileQtableSuffix = @{
     custom9s = "_custom9s"
     lab1 = "_lab1"
     lab2 = "_lab2"
+    lab2noise = "_lab2noise"
     lab3 = "_lab3"
     lab4 = "_lab4"
     lab4dual = "_lab4dual"
@@ -301,6 +302,9 @@ $ProfileQtableSuffix = @{
 $Simulators = @(
     [pscustomobject]@{ Profile="lab1"; Port=1892; Flow="simulator_flow_lab1.json" }
     [pscustomobject]@{ Profile="lab2"; Port=1893; Flow="simulator_flow_lab2.json" }
+    # Exploratory noise pilot (Addendum 2026-07-19f): lab2 physics + per-tick
+    # ±10% multiplicative sensor noise; own port so clean lab2 stays untouched.
+    [pscustomobject]@{ Profile="lab2noise"; Port=1903; Flow="simulator_flow_lab2noise.json" }
     [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
     [pscustomobject]@{ Profile="lab4"; Port=1897; Flow="simulator_flow_lab4.json" }
     [pscustomobject]@{ Profile="lab4dual"; Port=1901; Flow="simulator_flow_lab4dual.json" }

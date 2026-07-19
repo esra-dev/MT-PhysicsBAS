@@ -2977,3 +2977,30 @@ seconds; aggregate skipped; nothing published; no data produced or seen). The
 ValidateSet fix (both runner scripts) is committed together with this note;
 dispatch 2 with the identical registered inputs is the registered run. No
 registered choice is affected.
+
+## Addendum 2026-07-19f — EXPLORATORY: lab2 noise-robustness pilot (`lab2noise`)
+
+**Status: exploratory, declared before dispatch. Nothing in this pilot may be
+promoted to a confirmatory claim.** Purpose (2026-07-19 audit, Part B9/D10): the
+clean labs are deterministic, so every Phase-1 δ is measured under zero
+environment noise — δ = 1.0 unanimity is cheap in a noiseless world. This pilot
+asks only whether the lab2 anchor's *direction* survives measurement noise, and
+documents the expected δ deflation.
+
+- **Environment:** new profile `lab2noise` (port 1903, own flow
+  `simulator_flow_lab2noise.json`): identical to lab2 — same physics constants,
+  KG (`building_2_intermediate.ttl`), bounds, targets, scenario files (copies) —
+  except the simulator applies **±10% multiplicative sensor noise** per zone per
+  tick to the reported levels (`z_reported = z_ideal · (1 + U(−0.10, +0.10))`,
+  fresh draw each update; the clean lab2 flow is untouched). Noise draws use the
+  flow's unseeded `Math.random`, consistent with the existing reset sampling.
+- **Dispatch:** `phase1.yml`, `run_mode = phase1_kg_only` (headline arm C),
+  `profiles = lab2noise`, `seeds = 1,…,5`, publish on.
+- **Reading rules (fixed in advance):** (i) report the ql_true−ql_false
+  `auc_goal` delta with CI and δ; the *only* quantity of interest is
+  sign-consistency with the clean-lab anchor; (ii) an ns result at n = 5 is
+  uninformative, not a refutation (the pilot is powered for direction, not
+  significance); (iii) δ < 1.0 is the expected, documented outcome — cite it as
+  evidence that clean-lab δ = 1.0 reflects determinism, not effect size; (iv)
+  results are quoted only under an "exploratory, n = 5, noisy variant" caption
+  and never pooled or compared numerically with clean-lab2 estimates.
