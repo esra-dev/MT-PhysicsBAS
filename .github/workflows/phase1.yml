@@ -41,7 +41,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: phase1
+  # One queue per registered treatment mode. GitHub retains at most one
+  # pending run per concurrency group, so a shared `phase1` group would cancel
+  # intermediate campaigns when all four registered runs are submitted.
+  group: phase1-${{ github.event.inputs.run_mode || 'phase1_v2_kg_only' }}
   cancel-in-progress: false
 
 env:
@@ -115,6 +118,9 @@ jobs:
     timeout-minutes: 180    # phase1 (3000 eps) ~50 min/cell; 3x safety margin
     strategy:
       fail-fast: false
+      # Four registered workflows run together; 10 cells per workflow keeps
+      # the campaign at the registered ~40-job aggregate concurrency ceiling.
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         stereo:  ["true", "false"]
@@ -226,6 +232,7 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         mode:    ["rule_based", "ql_false", "ql_true"]
