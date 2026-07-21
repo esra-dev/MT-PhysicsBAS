@@ -1,5 +1,12 @@
 # Thesis State Report — Stereotype-Guided Q-Learning in Simulated Labs
 
+> **PHASE 1 EVIDENCE WITHDRAWN (2026-07-21).** All empirical Phase 1 results in this
+> report are historical and protocol-affected, including the pooled-20 headline, the
+> +53.30-episode `mean_first_goal` result, legacy energy results, the redundancy-only
+> control, and baseline/PBRS-only nulls. They are not thesis-final evidence. See
+> `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`. Later-phase material is not
+> withdrawn by this Phase 1 notice.
+
 **Assembled:** 2026-07-08, from the audit notes `docs/_audit/00_inventory.md`, `01_kg.md`,
 `02_qlearning.md`, `03_agents_flow.md`, `04_labs_physics.md`, `05_results_index.md`,
 `20_results_extracted.md`, and the caveats in `13_logic_report.md`.

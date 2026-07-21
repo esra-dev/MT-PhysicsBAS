@@ -1,5 +1,9 @@
 # Pre-Registration of Hypotheses
 
+> **HISTORICAL REGISTRATION.** This document is retained unchanged as the registration
+> history for older protocols. It does not register Phase 1 protocol v2. See
+> `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
 **Project:** MT-Esra — Stereotype-Guided Q-Learning for Smart-Building Lighting Control
 **Author:** Esra D.
 **Date committed:** 2026-05-24

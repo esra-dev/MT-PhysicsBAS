@@ -1,5 +1,10 @@
 # Exploratory run — `lab2noise` robustness pilot (Addendum 2026-07-19f)
 
+> **NO ROBUSTNESS CLAIM (2026-07-21).** This pilot is scheduler-affected and its noise
+> manipulation was observation-subthreshold. It is retained for provenance only and
+> supplies no evidence of noise robustness. See
+> `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
 **EXPLORATORY — nothing here is confirmatory; never pool or compare numerically
 with clean-lab2 estimates (19f reading rule iv).**
 

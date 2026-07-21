@@ -1,5 +1,9 @@
 # Run of record — `phase1_redundancy_only` control arm (registered, Addendum 2026-07-19e)
 
+> **HISTORICAL, PROTOCOL-AFFECTED (2026-07-21).** Retained for provenance only. The
+> scheduler and metric defects in `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`
+> prevent this control from serving as thesis-final evidence.
+
 - **GitHub Actions run:** 29703323649 (`phase1.yml`, `workflow_dispatch`),
   created 2026-07-19 ~20:52 UTC, **success 102/102 jobs**.
 - **Inputs:** `run_mode=phase1_redundancy_only`, `profiles=lab2,lab3`,

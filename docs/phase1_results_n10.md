@@ -1,5 +1,8 @@
 # Phase 1 Results — KG-primed vs. Tabula-rasa Q-Learning (clean labs, n = 10)
 
+> **HISTORICAL, PROTOCOL-AFFECTED (2026-07-21).** These results are not thesis-final
+> evidence. See `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
 **Run:** GitHub Actions "Phase 1 (KG acceleration, clean labs) #1"
 **Commit:** `7543d15a6e6d36842ffd82f60b488b1a6dde99cd` (`main`)
 **Status:** Success — total duration 47 m 43 s, 152 artifacts

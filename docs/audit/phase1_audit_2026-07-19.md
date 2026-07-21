@@ -1,5 +1,12 @@
 # Phase 1 — Complete Critical Audit (2026-07-19)
 
+> **CORRECTION NOTICE (2026-07-21).** Parts A-D and the original result conclusions in
+> this document are not current. A subsequently identified scenario-scheduler defect,
+> invalid legacy first-goal aggregation, and wall-clock energy metric materially affect
+> the Phase 1 evidence. The +53.30-episode `mean_first_goal` interpretation is withdrawn.
+> All existing Phase 1 results are historical/protocol-affected pending protocol-v2
+> reruns. See `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
 **Auditor:** independent read-through of the repository at branch
 `kg-crosszone-coupling-mid`, working tree of 2026-07-19 (last commit `4512ad0`).
 **Scope:** Phase 1 only (the "knowledge-graph acceleration on clean labs" experiment).

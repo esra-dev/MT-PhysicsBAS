@@ -1,5 +1,10 @@
 # Phase-1 Methods — Registration & Disclosure (thesis-ready draft)
 
+> **SUPERSEDED METHODS DRAFT (2026-07-21).** This describes protocol-v1 and must not be
+> used as the final Phase 1 Methods section. Its empirical results and inferential claims
+> are protocol-affected. See `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md` and the
+> forthcoming protocol-v2 correction registration.
+
 **Status:** drop-in Methods subsection for the Phase-1 chapter. Drafted 2026-07-19
 from THESIS_STATE_REPORT.md Addendum 2026-07-19b §3 (the canonical paragraph, quoted
 verbatim in §1 below) plus the three additional disclosures required by the 2026-07-19

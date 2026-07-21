@@ -1,5 +1,12 @@
 # Phase 1 — Plan B **pooled-20 reanalysis** (registered primary, Addendum 2026-07-18c §2)
 
+> **HISTORICAL, PROTOCOL-AFFECTED (2026-07-21).** This archive is retained for
+> provenance but is not thesis-final evidence. The scheduler, first-goal, energy, and
+> inferential defects are documented in
+> `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`. In particular, +53.302 must not
+> be interpreted as a comparable scenario-level learning delay, and zero p/q values are
+> invalid final reporting.
+
 **What this is:** the registered primary inference for the arm-C headline-family
 seed extension — seeds 1–10 (run `29639767776`, head `e631877`) pooled with
 seeds 11–20 (run `29692725784`, head `02ed6c1`), lab2 + lab3, `phase1_kg_only`

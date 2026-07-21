@@ -1,5 +1,9 @@
 # Results
 
+> **PHASE 1 RESULTS WITHDRAWN (2026-07-21).** In addition to the older provenance
+> warning below, every Phase 1 empirical result in this draft is protocol-affected and
+> not thesis-final evidence. See `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
 > **PROVENANCE (2026-07-19) — historical draft (pre-inversion, superseded).** Every run
 > cited in this draft predates the action-space inversion of 2026-07-10
 > (`docs/ACTION_SPACE_INVERSION.md`), and its lab3 numbers were measured under
