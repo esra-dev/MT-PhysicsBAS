@@ -17,6 +17,28 @@ except ImportError:  # direct `python analysis/phase1_v2_registered_family.py`
 EXPECTED_SEEDS = list(range(1, 21))
 
 
+def _decomposition(c_mean: float, r_mean: float) -> dict:
+    """Apply the frozen one-third/two-thirds rule without hiding sign conflicts."""
+    if c_mean == 0:
+        return {
+            "redundancy_share": None,
+            "category": "undefined_arm_c_zero",
+        }
+    proportion = r_mean / c_mean
+    if c_mean * r_mean < 0:
+        category = "opposite_signs_not_reproduction"
+    elif proportion < 1 / 3:
+        category = "less_than_one_third"
+    elif proportion <= 2 / 3:
+        category = "between_one_third_and_two_thirds"
+    else:
+        category = "more_than_two_thirds"
+    return {
+        "redundancy_share": proportion,
+        "category": category,
+    }
+
+
 def _speed(root: Path) -> tuple[dict, dict]:
     seeds = sr.find_seed_roots(root / "benchmark")
     if [seed for seed, _ in seeds] != EXPECTED_SEEDS:
@@ -100,15 +122,7 @@ def main() -> int:
 
     c_mean = rows[0]["mean_paired_difference"]
     r_mean = rows[1]["mean_paired_difference"]
-    proportion = r_mean / c_mean if c_mean != 0 else None
-    if proportion is None:
-        category = "undefined_arm_c_zero"
-    elif proportion < 1 / 3:
-        category = "less_than_one_third"
-    elif proportion <= 2 / 3:
-        category = "between_one_third_and_two_thirds"
-    else:
-        category = "more_than_two_thirds"
+    decomposition = _decomposition(c_mean, r_mean)
 
     args.out.mkdir(parents=True, exist_ok=True)
     csv_path = args.out / "phase1_v2_registered_family.csv"
@@ -121,8 +135,7 @@ def main() -> int:
             "rule": "redundancy share of arm-C lab2 mean effect: <1/3 little; 1/3..2/3 partial; >2/3 most",
             "arm_c_mean_effect": c_mean,
             "redundancy_mean_effect": r_mean,
-            "redundancy_share": proportion,
-            "category": category,
+            **decomposition,
         }, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )

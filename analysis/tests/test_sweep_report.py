@@ -120,6 +120,20 @@ def test_paired_rank_biserial_extremes():
     assert sr._paired_rank_biserial([1, 2], [1, 2]) == 0.0
 
 
+def test_phase1_v2_decomposition_handles_zero_thresholds_and_opposite_signs():
+    from analysis.phase1_v2_registered_family import _decomposition
+
+    assert _decomposition(0.0, 1.0)["category"] == "undefined_arm_c_zero"
+    assert _decomposition(3.0, -1.0)["category"] == \
+        "opposite_signs_not_reproduction"
+    assert _decomposition(-3.0, 1.0)["category"] == \
+        "opposite_signs_not_reproduction"
+    assert _decomposition(3.0, 0.5)["category"] == "less_than_one_third"
+    assert _decomposition(3.0, 1.5)["category"] == \
+        "between_one_third_and_two_thirds"
+    assert _decomposition(3.0, 2.5)["category"] == "more_than_two_thirds"
+
+
 def test_corrected_auc_is_episode_mean():
     assert sr._auc_normalised([0, 1, 1, 0]) == pytest.approx(0.5)
 
