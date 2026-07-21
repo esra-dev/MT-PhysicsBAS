@@ -203,6 +203,7 @@ public class QLearner extends Artifact {
     private Random     rng;
     private int        firstGoalEpisode = -1;
     private int        goalCount        = 0;
+    private String     protocolVersion  = "legacy";
 
     // StereotypeReasoner — always instantiated for structural discovery
     private StereotypeReasoner reasoner;
@@ -244,6 +245,9 @@ public class QLearner extends Artifact {
     // Per-scenario first-goal tracking: map from state-index → first episode number
     private final Map<Integer, Integer> firstGoalByStartState = new java.util.LinkedHashMap<>();
     private int currentEpisodeStartState = -1; // set by beginEpisode(startStateVec)
+    private final FirstGoalPresentationTracker firstGoalPresentations =
+            new FirstGoalPresentationTracker();
+    private int currentEpisodeScenarioId = -1;
 
     // Convergence detection: track max |Q| delta over the last 100 episodes
     private double prevMaxAbsQ      = 0.0;
@@ -365,13 +369,11 @@ public class QLearner extends Artifact {
         // goal; only a proven-unreachable faulty lab lowers it (setEffectiveGoal).
         this.effectiveGoal = this.goal.clone();
         this.useStereotypes = useStereotypes;
-        // Deterministic-by-default; bench/training agents may override via setSeed().
-        // Seed mixes stereo flag so stereotype-on / stereotype-off runs explore
-        // different action sequences (prior fix: identical FirstGoalEpisode bug).
-        // RUN_SEED (sysprop -Drun.seed=N) is XORed in so independent replicas
-        // for confidence-interval analysis explore different trajectories.
-        long baseSeed = 42L ^ (useStereotypes ? 0x5A5A5A5A5A5A5A5AL : 0xA5A5A5A5A5A5A5A5L);
-        if (RUN_SEED != 0L) baseSeed ^= mix64(RUN_SEED);
+        // Protocol v2 uses the same seed-derived stream in both treatment arms.
+        // The streams can diverge after treatment-dependent decisions consume RNG,
+        // but they begin paired and no arm label is mixed into the seed.
+        this.protocolVersion = System.getProperty("phase1.protocolVersion", "legacy");
+        long baseSeed = computeActionSeed(RUN_SEED, useStereotypes, protocolVersion);
         this.rng            = new Random(baseSeed);
 
         // Convert Object[] to String[]
@@ -468,6 +470,16 @@ public class QLearner extends Artifact {
                         ? " (minSamples=" + ADAPTIVE_TRUST_MIN_SAMPLES + " floor=" + ADAPTIVE_TRUST_FLOOR + ")"
                         : "")
                   + " runSeed=" + RUN_SEED);
+    }
+
+    static long computeActionSeed(long runSeed, boolean useStereotypes, String protocolVersion) {
+        long baseSeed = 42L;
+        if (!"phase1-v2".equals(protocolVersion)) {
+            baseSeed ^= useStereotypes
+                    ? 0x5A5A5A5A5A5A5A5AL : 0xA5A5A5A5A5A5A5A5L;
+        }
+        if (runSeed != 0L) baseSeed ^= mix64(runSeed);
+        return baseSeed;
     }
 
     /**
@@ -1786,6 +1798,7 @@ public class QLearner extends Artifact {
         episodeWastedByPenalty  = 0;
         episodeWastedByNoEffect = 0;
         currentEpisodeStartState = -1;
+        currentEpisodeScenarioId = -1;
         episodeMaxBellmanDelta = 0.0;
         currentEpisodeNum++;
     }
@@ -1805,8 +1818,34 @@ public class QLearner extends Artifact {
         episodeWastedByPenalty  = 0;
         episodeWastedByNoEffect = 0;
         currentEpisodeStartState = stateVecToIndex(startStateVec);
+        currentEpisodeScenarioId = -1;
         episodeMaxBellmanDelta = 0.0;
         currentEpisodeNum++;
+    }
+
+    /** Configure the complete ordered scenario set before protocol-v2 training. */
+    @OPERATION
+    public void configureTrainingScenarios(Object[] orderedScenarioIds) {
+        List<Integer> ids = new ArrayList<>();
+        for (Object id : orderedScenarioIds) ids.add(toInt(id));
+        firstGoalPresentations.configure(ids);
+        LOGGER.info("configureTrainingScenarios: " + ids);
+    }
+
+    /** Begin a settled, scenario-aware protocol-v2 episode. */
+    @OPERATION
+    public void beginEpisodeForScenario(int scenarioId, Object[] startStateVec,
+                                        boolean terminalAtStart) {
+        episodeCumRewardZ1 = 0;
+        episodeCumRewardZ2 = 0;
+        episodeSteps = 0;
+        episodeWastedByPenalty = 0;
+        episodeWastedByNoEffect = 0;
+        currentEpisodeStartState = stateVecToIndex(startStateVec);
+        currentEpisodeScenarioId = scenarioId;
+        episodeMaxBellmanDelta = 0.0;
+        currentEpisodeNum++;
+        firstGoalPresentations.begin(scenarioId, terminalAtStart);
     }
 
     /**
@@ -1823,8 +1862,12 @@ public class QLearner extends Artifact {
             goalReached ? 1.0 : 0.0,
             epsilon,
             episodeWastedByPenalty,
-            episodeWastedByNoEffect
+            episodeWastedByNoEffect,
+            currentEpisodeScenarioId
         });
+        if (currentEpisodeScenarioId >= 0) {
+            firstGoalPresentations.end(goalReached);
+        }
         // Update convergence detector: use max per-step Bellman delta from this episode
         convergenceCount = (episodeMaxBellmanDelta < CONVERGENCE_THRESHOLD) ? convergenceCount + 1 : 0;
     }
@@ -1879,11 +1922,21 @@ public class QLearner extends Artifact {
     @OPERATION
     public void saveMetrics(String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("Episode,Steps,RewardZ1,RewardZ2,GoalReached,Epsilon,WastedByPenalty,WastedByNoEffect");
+            if ("phase1-v2".equals(protocolVersion)) {
+                pw.println("Episode,Steps,RewardZ1,RewardZ2,GoalReached,Epsilon,WastedByPenalty,WastedByNoEffect,ScenarioId");
+            } else {
+                pw.println("Episode,Steps,RewardZ1,RewardZ2,GoalReached,Epsilon,WastedByPenalty,WastedByNoEffect");
+            }
             for (double[] m : episodeMetrics) {
-                pw.printf("%d,%d,%.2f,%.2f,%d,%.6f,%d,%d%n",
-                    (int) m[0], (int) m[1], m[2], m[3], (int) m[4], m[5],
-                    (int) m[6], (int) m[7]);
+                if ("phase1-v2".equals(protocolVersion)) {
+                    pw.printf("%d,%d,%.2f,%.2f,%d,%.6f,%d,%d,%d%n",
+                        (int) m[0], (int) m[1], m[2], m[3], (int) m[4], m[5],
+                        (int) m[6], (int) m[7], (int) m[8]);
+                } else {
+                    pw.printf("%d,%d,%.2f,%.2f,%d,%.6f,%d,%d%n",
+                        (int) m[0], (int) m[1], m[2], m[3], (int) m[4], m[5],
+                        (int) m[6], (int) m[7]);
+                }
             }
             pw.println();
             pw.println("# Summary");
@@ -2117,14 +2170,27 @@ public class QLearner extends Artifact {
     @OPERATION
     public void saveFirstGoalPerScenario(String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("StartStateIndex,FirstGoalEpisode");
-            for (Map.Entry<Integer, Integer> entry : firstGoalByStartState.entrySet()) {
-                pw.println(entry.getKey() + "," + entry.getValue());
+            if ("phase1-v2".equals(protocolVersion)) {
+                pw.println("ProtocolVersion,ScenarioId,Presentations,FirstSuccessPresentation,Censored,AnalysisPresentation,TerminalAtStartPresentations");
+                for (FirstGoalPresentationTracker.Record record : firstGoalPresentations.records()) {
+                    String first = record.firstSuccessPresentation == null
+                            ? "" : String.valueOf(record.firstSuccessPresentation);
+                    pw.println("phase1-v2," + record.scenarioId + "," + record.presentations
+                            + "," + first + "," + record.censored() + ","
+                            + record.analysisValue() + ","
+                            + record.terminalAtStartPresentations);
+                }
+            } else {
+                pw.println("StartStateIndex,FirstGoalEpisode");
+                for (Map.Entry<Integer, Integer> entry : firstGoalByStartState.entrySet()) {
+                    pw.println(entry.getKey() + "," + entry.getValue());
+                }
             }
             pw.println();
-            pw.println("# TotalDistinctStartStates," + firstGoalByStartState.size());
-            LOGGER.info("saveFirstGoalPerScenario: " + firstGoalByStartState.size()
-                       + " entries → " + filename);
+            int count = "phase1-v2".equals(protocolVersion)
+                    ? firstGoalPresentations.records().size() : firstGoalByStartState.size();
+            pw.println("# TotalScenarioRows," + count);
+            LOGGER.info("saveFirstGoalPerScenario: " + count + " entries → " + filename);
         } catch (IOException e) {
             LOGGER.warning("saveFirstGoalPerScenario: failed to write " + filename
                           + " — " + e.getMessage());

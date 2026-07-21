@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import re
 import sys
@@ -80,12 +81,11 @@ def summarise_benchmark(csv_path: Path) -> dict:
 
     avg_wasted = sum(_col(r, "WastedSteps") for r in rows) / n
     avg_cycling = sum(_col(r, "ActuatorCyclingCount") for r in rows) / n
-    return {
+    result = {
         "scenarios": n,
         "goal_rate": goals / n,
         "avg_steps": sum(float(r["Steps"]) for r in rows) / n,
         "avg_dev": sum(float(r["CumIlluminanceDeviation"]) for r in rows) / n,
-        "avg_energy": sum(float(r["TotalEnergyCost"]) for r in rows) / n,
         "avg_wasted": avg_wasted,
         # "Redundant actions avoided" (advisor-requested primary efficiency
         # metric). avg_cycling counts actuator toggles that revert a recent
@@ -96,6 +96,14 @@ def summarise_benchmark(csv_path: Path) -> dict:
         "avg_cycling": avg_cycling,
         "avg_redundant": avg_wasted + avg_cycling,
     }
+    if "PolicyEnergyCost" in rows[0]:
+        result["avg_policy_energy"] = sum(_col(r, "PolicyEnergyCost") for r in rows) / n
+        result["avg_legacy_wallclock_energy"] = sum(
+            _col(r, "LegacyWallClockTotalEnergyCost") for r in rows) / n
+    else:
+        legacy_energy = sum(_col(r, "TotalEnergyCost") for r in rows) / n
+        result["avg_energy"] = legacy_energy
+    return result
 
 
 def count_weaknesses(jsonl_path: Path) -> Counter:
@@ -283,8 +291,8 @@ def plot_fire_density(out_dir: Path, density: dict, plt):
 # run_full_project_parallel.ps1 -Seeds 1,2,3,4,5 produces a sibling directory
 # benchmark/results_seed<N> per seed. This function discovers them, summarises
 # each (profile, mode) cell per seed, then aggregates with a non-parametric
-# bootstrap to get mean ± 95% CI. No assumption of normality (seed counts as
-# low as 3 are fine with bootstrap).
+# bootstrap to get mean ± 95% CI. Bootstrap output is estimation-only; it is
+# never used as a protocol-v2 hypothesis-test p-value.
 # ---------------------------------------------------------------------------
 
 # Metrics carried through the multi-seed CI aggregation and paired tests.
@@ -292,8 +300,9 @@ def plot_fire_density(out_dir: Path, density: dict, plt):
 # "Redundant actions avoided" family (Phase-1 clean-lab amendment); they are
 # additive, so older 5-metric trees still aggregate and the paired-test BH
 # family size (recorded per row as bh_family_m) self-adjusts.
-_METRIC_KEYS = ("goal_rate", "avg_steps", "avg_dev", "avg_energy",
-                "avg_wasted", "avg_cycling", "avg_redundant")
+_METRIC_KEYS = ("goal_rate", "avg_steps", "avg_dev", "avg_energy", "avg_policy_energy",
+                 "avg_legacy_wallclock_energy",
+                 "avg_wasted", "avg_cycling", "avg_redundant")
 
 
 def find_seed_roots(parent: Path) -> list[tuple[int, Path]]:
@@ -364,6 +373,8 @@ def aggregate_seeds(seed_roots: list[tuple[int, Path]],
                 if k in summ:
                     per_seed[(prof, mode)][k].append(float(summ[k]))
 
+    present_keys = [key for key in _METRIC_KEYS
+                    if any(key in metrics for metrics in per_seed.values())]
     rows = []
     for (prof, mode), metrics in sorted(per_seed.items()):
         row = {
@@ -371,7 +382,7 @@ def aggregate_seeds(seed_roots: list[tuple[int, Path]],
             "mode": mode,
             "n_seeds": seed_count[(prof, mode)],
         }
-        for k in _METRIC_KEYS:
+        for k in present_keys:
             vals = metrics.get(k, [])
             mean, lo, hi = _bootstrap_ci(vals, iters=iters)
             row[f"{k}_mean"]  = mean
@@ -393,14 +404,15 @@ def aggregate_seeds(seed_roots: list[tuple[int, Path]],
 
 
 # ---------------------------------------------------------------------------
-# Paired statistical tests across seeds (research extension; pre-registered).
+# Paired statistical tests across seeds.
 #
 # For each profile x metric and each compared mode pair (typically
 # ql_true vs ql_false and ql_true vs rule_based), pair the per-seed values
 # by seed id and report:
-#   - paired bootstrap mean-difference 95% CI and two-sided p-value
-#   - Wilcoxon signed-rank two-sided p-value (scipy if available)
-#   - Cliff's delta effect size
+#   - paired bootstrap mean-difference 95% CI (estimation only)
+#   - exact two-sided paired sign-flip and sign tests
+#   - matched-pairs rank-biserial effect size
+#   - Cliff's delta, explicitly labelled as unpaired descriptive context
 #   - Benjamini-Hochberg q-values across the (profile x metric x pair) family
 # Output: paired_tests.csv under out_dir.
 # ---------------------------------------------------------------------------
@@ -492,6 +504,110 @@ def _paired_bootstrap_diff(a: list[float], b: list[float],
         return (mean, lo, hi, min(1.0, 2.0 * p_one_anchor), p_one_pos, p_one_neg)
 
 
+def _paired_signflip_p(a: list[float], b: list[float],
+                       mc_iters: int = 1_000_000) -> float:
+    """Two-sided paired randomisation test of a zero mean difference.
+
+    All 2^n sign assignments are enumerated for n<=20. Above 20, a fixed-seed
+    one-million-draw Monte Carlo estimate uses the plus-one correction, so the
+    returned p-value can never be zero.
+    """
+    if len(a) != len(b) or len(a) < 2:
+        return float("nan")
+    diffs = [float(x) - float(y) for x, y in zip(a, b) if float(x) != float(y)]
+    if not diffs:
+        return 1.0
+    observed = abs(sum(diffs))
+    tolerance = 1e-12
+    n = len(diffs)
+    if n <= 20:
+        total = 1 << n
+        try:
+            # Vectorise in bounded chunks. This preserves exact enumeration
+            # while avoiding an O(n*2^n) Python loop for every metric.
+            import numpy as np  # type: ignore
+            values = np.asarray(diffs, dtype=float)
+            extreme = 0
+            chunk = 65_536
+            bit_positions = np.arange(n, dtype=np.uint64)
+            for start in range(0, total, chunk):
+                masks = np.arange(start, min(start + chunk, total), dtype=np.uint64)
+                bits = ((masks[:, None] >> bit_positions) & 1).astype(np.int8)
+                signs = (bits * 2 - 1).astype(float)
+                signed_sums = signs @ values
+                extreme += int(np.count_nonzero(
+                    np.abs(signed_sums) + tolerance >= observed))
+            return extreme / total
+        except Exception:
+            # Gray-code enumeration changes one sign per assignment, reducing
+            # the stdlib fallback to O(2^n).
+            signed_sum = -sum(diffs)
+            extreme = int(abs(signed_sum) + tolerance >= observed)
+            previous_gray = 0
+            for index in range(1, total):
+                gray = index ^ (index >> 1)
+                changed = gray ^ previous_gray
+                bit = changed.bit_length() - 1
+                if gray & changed:
+                    signed_sum += 2.0 * diffs[bit]
+                else:
+                    signed_sum -= 2.0 * diffs[bit]
+                if abs(signed_sum) + tolerance >= observed:
+                    extreme += 1
+                previous_gray = gray
+            return extreme / total
+
+    import random
+    rng = random.Random(0x51F1F)
+    extreme = 0
+    for _ in range(mc_iters):
+        signed_sum = sum(value if rng.getrandbits(1) else -value for value in diffs)
+        if abs(signed_sum) + tolerance >= observed:
+            extreme += 1
+    return (extreme + 1) / (mc_iters + 1)
+
+
+def _exact_sign_test_p(a: list[float], b: list[float]) -> float:
+    """Exact two-sided binomial sign test; ties are removed."""
+    signs = [1 if x > y else -1 for x, y in zip(a, b) if x != y]
+    n = len(signs)
+    if n == 0:
+        return 1.0
+    k = min(sum(s > 0 for s in signs), sum(s < 0 for s in signs))
+    tail = sum(math.comb(n, i) for i in range(k + 1)) / (2 ** n)
+    return min(1.0, 2.0 * tail)
+
+
+def _paired_rank_biserial(a: list[float], b: list[float]) -> float:
+    """Matched-pairs rank-biserial correlation; zeros are removed."""
+    diffs = [float(x) - float(y) for x, y in zip(a, b) if float(x) != float(y)]
+    if not diffs:
+        return 0.0
+    order = sorted(range(len(diffs)), key=lambda i: abs(diffs[i]))
+    ranks = [0.0] * len(diffs)
+    pos = 0
+    while pos < len(order):
+        end = pos + 1
+        while end < len(order) and abs(diffs[order[end]]) == abs(diffs[order[pos]]):
+            end += 1
+        average_rank = ((pos + 1) + end) / 2.0
+        for j in range(pos, end):
+            ranks[order[j]] = average_rank
+        pos = end
+    positive = sum(rank for rank, diff in zip(ranks, diffs) if diff > 0)
+    negative = sum(rank for rank, diff in zip(ranks, diffs) if diff < 0)
+    return (positive - negative) / (positive + negative)
+
+
+def _median(values: list[float]) -> float:
+    ordered = sorted(values)
+    n = len(ordered)
+    if not n:
+        return float("nan")
+    mid = n // 2
+    return ordered[mid] if n % 2 else (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
 def _wilcoxon_p(a: list[float], b: list[float]) -> float:
     if len(a) != len(b) or len(a) < 2:
         return float("nan")
@@ -541,22 +657,20 @@ def _bh_qvalues(pvalues: list[float]) -> list[float]:
 
 def paired_tests(seed_roots: list[tuple[int, Path]],
                  out_dir: Path,
-                 iters: int = 10000) -> int:
+                 iters: int = 10000,
+                 protocol_version: str = "legacy") -> int:
     """Write paired_tests.csv with per (profile, metric, mode_a vs mode_b) rows.
 
-    Audit Step 6 S6-1: rows carry a ``family`` column (``confirmatory`` /
-    ``exploratory``). BH q-values are computed **independently per family** so
-    the confirmatory denominator matches pre-reg §2 (7 profiles × 5 metrics
-    × 2 mode-pairs = 70) and the exploratory pair (ql_false vs rule_based)
-    cannot inflate m for the confirmatory tests.
-    Audit Step 6 S6-2: ``p_bootstrap_one_sided_positive`` and
-    ``p_bootstrap_one_sided_negative`` are reported alongside the legacy
-    two-sided ``p_bootstrap`` so pre-reg §3 (H1/H2 one-sided) can be tested
-    directly without re-resampling.
+    This general table is descriptive for protocol v2. The separately
+    registered m=5 family is built by phase1_v2_registered_family.py. Here,
+    bootstrap is used only for confidence intervals and inference comes from
+    two-sided paired sign-flip/sign tests.
     """
     per_metric = _collect_per_seed_values(seed_roots)
 
     def _family_of(mode_a: str, mode_b: str) -> str:
+        if protocol_version == "phase1-v2":
+            return "descriptive"
         return ("confirmatory"
                 if (mode_a, mode_b) in _CONFIRMATORY_PAIRS
                 else "exploratory")
@@ -576,11 +690,14 @@ def paired_tests(seed_roots: list[tuple[int, Path]],
                     continue
                 a = [by_cell[ka][s] for s in seeds_common]
                 b = [by_cell[kb][s] for s in seeds_common]
-                (mean_d, lo, hi, p_boot,
-                 p_one_pos, p_one_neg) = _paired_bootstrap_diff(
-                    a, b, iters=iters)
-                p_wil = _wilcoxon_p(a, b)
+                (mean_d, lo, hi, _p_boot,
+                 _p_one_pos, _p_one_neg) = _paired_bootstrap_diff(
+                     a, b, iters=iters)
+                p_signflip = _paired_signflip_p(a, b)
+                p_sign = _exact_sign_test_p(a, b)
+                rank_biserial = _paired_rank_biserial(a, b)
                 delta = _cliffs_delta(a, b)
+                diffs = [x - y for x, y in zip(a, b)]
                 family = _family_of(mode_a, mode_b)
                 row_idx = len(rows)
                 rows.append({
@@ -592,17 +709,18 @@ def paired_tests(seed_roots: list[tuple[int, Path]],
                     "n_paired": len(seeds_common),
                     "seeds_paired": ";".join(str(s) for s in seeds_common),
                     "mean_diff": mean_d,
+                    "median_diff": _median(diffs),
                     "ci_lo": lo,
                     "ci_hi": hi,
-                    "p_bootstrap": p_boot,
-                    "p_bootstrap_one_sided_positive": p_one_pos,
-                    "p_bootstrap_one_sided_negative": p_one_neg,
-                    "p_wilcoxon": p_wil,
-                    "cliffs_delta": delta,
+                    "p_signflip_two_sided": p_signflip,
+                    "p_sign_exact_two_sided": p_sign,
+                    "paired_rank_biserial": rank_biserial,
+                    "cliffs_delta_unpaired_descriptive": delta,
                 })
-                family_pvals[family].append((row_idx, p_boot))
+                family_pvals[family].append((row_idx, p_signflip))
 
-    # BH per family (pre-reg §2 step 5: family size 70 for confirmatory).
+    # BH within the labelled general-analysis family. For protocol v2 this is
+    # descriptive; the confirmatory m=5 correction is produced separately.
     for rows_in_family in family_pvals.values():
         if not rows_in_family:
             continue
@@ -610,10 +728,10 @@ def paired_tests(seed_roots: list[tuple[int, Path]],
         ps = [p for _, p in rows_in_family]
         qs = _bh_qvalues(ps)
         for i, q in zip(idxs, qs):
-            rows[i]["q_bootstrap_bh"] = q
+            rows[i]["q_signflip_bh"] = q
             rows[i]["bh_family_m"] = len(idxs)
     for r in rows:
-        r.setdefault("q_bootstrap_bh", float("nan"))
+        r.setdefault("q_signflip_bh", float("nan"))
         r.setdefault("bh_family_m", 0)
 
     out_path = out_dir / "paired_tests.csv"
@@ -630,8 +748,9 @@ def paired_tests(seed_roots: list[tuple[int, Path]],
 
 
 # ── H2 (episodes-to-first-goal, PBRS on vs off) — Audit Step 6 S6-3 ──
-def _read_first_goal_mean(path: Path) -> float | None:
-    """Mean of FirstGoalEpisode column in a first_goal_stereotypes_*.csv.
+def _read_first_goal_details(path: Path, require_v2: bool = False
+                             ) -> tuple[float, tuple[int, ...]] | None:
+    """Read a legacy first-goal mean or protocol-v2 presentation mean.
 
     The file has header `StartStateIndex,FirstGoalEpisode` and may carry
     trailing `# ...` comment lines (see QLearner.java L1282+). Returns the
@@ -641,10 +760,28 @@ def _read_first_goal_mean(path: Path) -> float | None:
     if not path.is_file():
         return None
     vals: list[float] = []
+    scenario_ids: list[int] = []
     try:
         with path.open(encoding="utf-8") as fh:
             reader = csv.DictReader(fh)
+            fields = set(reader.fieldnames or [])
+            is_v2 = {"ProtocolVersion", "ScenarioId", "Presentations",
+                     "Censored", "AnalysisPresentation"}.issubset(fields)
+            if require_v2 and not is_v2:
+                raise ValueError(f"Corrected analysis rejects legacy first-goal file: {path}")
             for row in reader:
+                if is_v2:
+                    protocol = (row.get("ProtocolVersion") or "").strip()
+                    if not protocol or protocol.startswith("#"):
+                        continue
+                    if protocol != "phase1-v2":
+                        raise ValueError(f"Unexpected first-goal protocol {protocol!r}: {path}")
+                    scenario_id = int((row.get("ScenarioId") or "").strip())
+                    if scenario_id in scenario_ids:
+                        raise ValueError(f"Duplicate first-goal scenario {scenario_id}: {path}")
+                    scenario_ids.append(scenario_id)
+                    vals.append(float((row.get("AnalysisPresentation") or "").strip()))
+                    continue
                 idx = (row.get("StartStateIndex") or "").strip()
                 if not idx or idx.startswith("#"):
                     continue
@@ -659,12 +796,17 @@ def _read_first_goal_mean(path: Path) -> float | None:
         return None
     if not vals:
         return None
-    return sum(vals) / len(vals)
+    return sum(vals) / len(vals), tuple(scenario_ids)
+
+
+def _read_first_goal_mean(path: Path, require_v2: bool = False) -> float | None:
+    details = _read_first_goal_details(path, require_v2=require_v2)
+    return None if details is None else details[0]
 
 
 def _collect_first_goal_by_cell(seed_roots: list[tuple[int, Path]],
                                 stereo: bool) -> dict:
-    """Return {profile: {seed: mean_first_goal_episode}}.
+    """Return {profile: {seed: legacy mean_first_goal_episode}}.
 
     The first-goal CSV is a *training* artefact, archived by
     ``run_full_project.ps1`` under ``<profile>/training_stereo_<stereo>/`` (the
@@ -760,28 +902,30 @@ def aggregate_first_goal(seed_roots: list[tuple[int, Path]],
             continue
         a = [on[prof][s] for s in seeds_common]
         b = [off[prof][s] for s in seeds_common]
-        (mean_d, lo, hi, p_boot,
-         p_one_pos, p_one_neg) = _paired_bootstrap_diff(a, b, iters=iters)
-        p_wil = _wilcoxon_p(a, b)
+        (mean_d, lo, hi, _p_boot,
+         _p_one_pos, _p_one_neg) = _paired_bootstrap_diff(a, b, iters=iters)
+        p_signflip = _paired_signflip_p(a, b)
         delta = _cliffs_delta(a, b)
+        diffs = [x - y for x, y in zip(a, b)]
         wrows.append({
             "profile": prof,
             "n_paired": len(seeds_common),
             "seeds_paired": ";".join(str(s) for s in seeds_common),
             "mean_diff_on_minus_off": mean_d,
+            "median_diff_on_minus_off": _median(diffs),
             "ci_lo": lo,
             "ci_hi": hi,
-            "p_bootstrap": p_boot,
-            "p_bootstrap_one_sided_negative": p_one_neg,
-            "p_wilcoxon": p_wil,
-            "cliffs_delta": delta,
+            "p_signflip_two_sided": p_signflip,
+            "p_sign_exact_two_sided": _exact_sign_test_p(a, b),
+            "paired_rank_biserial": _paired_rank_biserial(a, b),
+            "cliffs_delta_unpaired_descriptive": delta,
         })
-        ps.append(p_wil)
+        ps.append(p_signflip)
 
     if wrows:
         qs = _bh_qvalues(ps)
         for r, q in zip(wrows, qs):
-            r["q_wilcoxon_bh"] = q
+            r["q_signflip_bh"] = q
             r["bh_family_m"] = len(qs)
         cols = list(wrows[0].keys())
         with wilc_path.open("w", encoding="utf-8", newline="") as fh:
@@ -809,8 +953,8 @@ def aggregate_first_goal(seed_roots: list[tuple[int, Path]],
 #   * episodes_to_threshold — first episode at which the trailing rolling goal
 #                             rate reaches THRESHOLD. Lower ⇒ faster. Right-
 #                             censored at the training horizon when never hit.
-#   * mean_first_goal       — mean FirstGoalEpisode across start states (reuses
-#                             the first-goal CSV). Lower ⇒ faster.
+#   * mean_first_goal_presentations — protocol-v2 mean across every declared
+#                             scenario, with unsolved scenarios censored at N+1.
 # The stereotype effect is the *paired* (stereo=True − stereo=False) contrast
 # within the same seed, reusing the same bootstrap / Wilcoxon / Cliff's-delta /
 # BH machinery as paired_tests(). This is the comparison the empty
@@ -821,6 +965,7 @@ _LEARNING_SPEED_DIRECTION = {
     "auc_reward": "higher_better",
     "episodes_to_threshold": "lower_better",
     "mean_first_goal": "lower_better",
+    "mean_first_goal_presentations": "lower_better",
 }
 
 # Pre-declared metric tier (Sweep-18 amendment; see pre_registration §6.6).
@@ -838,6 +983,7 @@ _LEARNING_SPEED_TIER = {
     "auc_reward": "secondary",
     "episodes_to_threshold": "secondary_censored",
     "mean_first_goal": "secondary",
+    "mean_first_goal_presentations": "corrected_primary",
 }
 
 
@@ -885,12 +1031,10 @@ def _auc_normalised(series: list[float]) -> float:
     n = len(series)
     if n == 0:
         return float("nan")
-    if n == 1:
-        return float(series[0])
-    area = 0.0
-    for i in range(n - 1):
-        area += 0.5 * (series[i] + series[i + 1])
-    return area / (n - 1)
+    # Protocol-v2 treats each episode as one equal-width observation. This
+    # right-step (rectangular) AUC is exactly the arithmetic mean; for a binary
+    # goal series it is exactly the proportion of all scheduled episodes solved.
+    return sum(float(value) for value in series) / n
 
 
 def _episodes_to_threshold(goals: list[float], window: int,
@@ -917,7 +1061,8 @@ def _episodes_to_threshold(goals: list[float], window: int,
 def _collect_learning_speed_by_cell(seed_roots: list[tuple[int, Path]],
                                     stereo: bool,
                                     window: int,
-                                    thresh: float) -> dict:
+                                    thresh: float,
+                                    protocol_version: str = "legacy") -> dict:
     """Return {profile: {seed: {metric: value}}} for one stereotype arm.
 
     Reads ``<seed_root>/<profile>/training_stereo_<stereo>/`` (training
@@ -956,9 +1101,15 @@ def _collect_learning_speed_by_cell(seed_roots: list[tuple[int, Path]],
             }
             fg_path = (fg_dir
                        / f"first_goal_stereotypes_{stag}_{prof}.csv")
-            fg_mean = _read_first_goal_mean(fg_path)
-            if fg_mean is not None:
-                cell["mean_first_goal"] = fg_mean
+            fg_details = _read_first_goal_details(
+                fg_path, require_v2=protocol_version == "phase1-v2")
+            if fg_details is not None:
+                fg_mean, scenario_ids = fg_details
+                if protocol_version == "phase1-v2":
+                    cell["mean_first_goal_presentations"] = fg_mean
+                    cell["_first_goal_scenario_ids"] = scenario_ids
+                else:
+                    cell["mean_first_goal"] = fg_mean
             out[prof][seed] = cell
     return out
 
@@ -967,20 +1118,21 @@ def learning_speed_tests(seed_roots: list[tuple[int, Path]],
                          out_dir: Path,
                          iters: int = 10000,
                          window: int = 100,
-                         thresh: float = 0.5) -> int:
+                         thresh: float = 0.5,
+                         protocol_version: str = "legacy") -> int:
     """Write learning_speed_table.csv + learning_speed_tests.csv.
 
-    PRIMARY outcome: the paired (stereo=True − stereo=False) contrast per
-    profile for each learning-speed metric, using the same paired bootstrap,
-    Wilcoxon, Cliff's-delta and BH machinery as paired_tests(). A
-    ``direction`` column and a ``p_one_sided_favorable`` column make the
-    directional hypothesis (faster learning under stereotypes) testable
-    without re-resampling: for higher-is-better metrics the favourable tail is
-    P(boots ≤ 0); for lower-is-better metrics it is P(boots ≥ 0).
+    For protocol v2, bootstrap is used only for confidence intervals and all
+    tests are two-sided paired sign-flip/sign tests. The registered m=5 family
+    is assembled separately by phase1_v2_registered_family.py.
     """
-    on = _collect_learning_speed_by_cell(seed_roots, True, window, thresh)
-    off = _collect_learning_speed_by_cell(seed_roots, False, window, thresh)
-    metrics = list(_LEARNING_SPEED_DIRECTION.keys())
+    on = _collect_learning_speed_by_cell(
+        seed_roots, True, window, thresh, protocol_version)
+    off = _collect_learning_speed_by_cell(
+        seed_roots, False, window, thresh, protocol_version)
+    metrics = ["auc_goal", "auc_reward", "episodes_to_threshold",
+               "mean_first_goal_presentations"] if protocol_version == "phase1-v2" \
+        else ["auc_goal", "auc_reward", "episodes_to_threshold", "mean_first_goal"]
     profiles = sorted(set(on.keys()) | set(off.keys()))
 
     # Per-condition descriptive table (mean + bootstrap CI across seeds).
@@ -1029,14 +1181,17 @@ def learning_speed_tests(seed_roots: list[tuple[int, Path]],
                 continue
             a = [on_cells[s][metric] for s in seeds_common]   # stereo on
             b = [off_cells[s][metric] for s in seeds_common]  # stereo off
-            (mean_d, lo, hi, p_boot,
-             p_one_pos, p_one_neg) = _paired_bootstrap_diff(a, b, iters=iters)
-            p_wil = _wilcoxon_p(a, b)
+            if metric == "mean_first_goal_presentations":
+                for seed in seeds_common:
+                    if on_cells[seed].get("_first_goal_scenario_ids") != \
+                            off_cells[seed].get("_first_goal_scenario_ids"):
+                        raise ValueError(
+                            f"First-goal scenario rows differ between arms: {prof} seed={seed}")
+            (mean_d, lo, hi, _p_boot,
+             _p_one_pos, _p_one_neg) = _paired_bootstrap_diff(a, b, iters=iters)
+            p_signflip = _paired_signflip_p(a, b)
             delta = _cliffs_delta(a, b)
             direction = _LEARNING_SPEED_DIRECTION[metric]
-            # Favourable tail: higher_better ⇒ H_A μ_diff>0 ⇒ evidence against
-            # is P(boots≤0)=p_one_pos; lower_better ⇒ H_A μ_diff<0 ⇒ p_one_neg.
-            p_fav = p_one_pos if direction == "higher_better" else p_one_neg
             # Censoring fraction: only meaningful for episodes_to_threshold.
             # Counts (arm,seed) cells right-censored at the horizon over the
             # paired seeds; a high value means the contrast is degenerate and
@@ -1059,20 +1214,22 @@ def learning_speed_tests(seed_roots: list[tuple[int, Path]],
                 "n_paired": len(seeds_common),
                 "seeds_paired": ";".join(str(s) for s in seeds_common),
                 "mean_diff_true_minus_false": mean_d,
+                "median_diff_true_minus_false": _median(
+                    [x - y for x, y in zip(a, b)]),
                 "ci_lo": lo,
                 "ci_hi": hi,
-                "p_bootstrap": p_boot,
-                "p_one_sided_favorable": p_fav,
-                "p_wilcoxon": p_wil,
-                "cliffs_delta": delta,
+                "p_signflip_two_sided": p_signflip,
+                "p_sign_exact_two_sided": _exact_sign_test_p(a, b),
+                "paired_rank_biserial": _paired_rank_biserial(a, b),
+                "cliffs_delta_unpaired_descriptive": delta,
             })
-            ps.append(p_boot)
+            ps.append(p_signflip)
 
     tests_path = out_dir / "learning_speed_tests.csv"
     if rows:
         qs = _bh_qvalues(ps)
         for r, q in zip(rows, qs):
-            r["q_bootstrap_bh"] = q
+            r["q_signflip_bh"] = q
             r["bh_family_m"] = len(qs)
         cols = list(rows[0].keys())
         with tests_path.open("w", encoding="utf-8", newline="") as fh:
@@ -1124,7 +1281,7 @@ def write_latex_table(summary_csv: Path, out_tex: Path) -> bool:
 def write_paired_latex_table(paired_csv: Path, out_tex: Path) -> bool:
     """Render paired_tests.csv as a LaTeX tabular with BH q-values (S6-7).
 
-    Columns: Profile, Metric, A vs B, family, n, mean diff [CI], p_boot,
+    Columns: Profile, Metric, A vs B, family, n, mean diff [CI], p_signflip,
     q_BH. Only emits the confirmatory family by default to keep the table
     paper-sized.
     """
@@ -1150,11 +1307,11 @@ def write_paired_latex_table(paired_csv: Path, out_tex: Path) -> bool:
         except (TypeError, ValueError, KeyError):
             cell = "--"
         try:
-            p = f"{float(r['p_bootstrap']):.4f}"
+            p = f"{float(r['p_signflip_two_sided']):.4f}"
         except (TypeError, ValueError, KeyError):
             p = "--"
         try:
-            q = f"{float(r['q_bootstrap_bh']):.4f}"
+            q = f"{float(r['q_signflip_bh']):.4f}"
         except (TypeError, ValueError, KeyError):
             q = "--"
         mode_a = r["mode_a"].replace("_", "\\_")
@@ -1205,7 +1362,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--speed-threshold", type=float, default=0.5,
                         help="rolling goal-rate threshold defining 'learned' "
                              "for the episodes-to-threshold metric "
-                             "(default 0.5)")
+                              "(default 0.5)")
+    parser.add_argument("--protocol-version", choices=("legacy", "phase1-v2"),
+                        default="legacy",
+                        help="Require corrected schemas and reject legacy first-goal "
+                             "files when set to phase1-v2")
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out)
@@ -1229,7 +1390,8 @@ def main(argv: list[str]) -> int:
                   f"({args.ci_bootstrap_iters} bootstrap iters)")
             print(f"sweep_report: summary_table_ci.csv written to {out_dir.resolve()}")
             n_pairs = paired_tests(seed_roots, out_dir,
-                                   iters=args.ci_bootstrap_iters)
+                                   iters=args.ci_bootstrap_iters,
+                                   protocol_version=args.protocol_version)
             print(f"sweep_report: wrote {n_pairs} paired-test rows "
                   f"to paired_tests.csv")
             # Audit Step 6 S6-3: H2 episodes-to-first-goal aggregation.
@@ -1241,18 +1403,20 @@ def main(argv: list[str]) -> int:
                     print(f"sweep_report: --first-goal-root {ab_parent} "
                           f"contains no results_seed*/ — H2 wilcoxon skipped",
                           file=sys.stderr)
-            n_fg = aggregate_first_goal(seed_roots,
-                                        ablation_roots or None,
-                                        out_dir,
-                                        iters=args.ci_bootstrap_iters)
-            print(f"sweep_report: wrote {n_fg} first-goal table rows "
-                  f"(H2; ablation_roots={len(ablation_roots)})")
+            if args.protocol_version == "legacy":
+                n_fg = aggregate_first_goal(seed_roots,
+                                            ablation_roots or None,
+                                            out_dir,
+                                            iters=args.ci_bootstrap_iters)
+                print(f"sweep_report: wrote {n_fg} legacy first-goal table rows "
+                      f"(H2; ablation_roots={len(ablation_roots)})")
             # PRIMARY outcome: learning-speed stereotype contrast
             # (ql_true vs ql_false), paired per seed across the same tree.
             n_ls = learning_speed_tests(seed_roots, out_dir,
                                         iters=args.ci_bootstrap_iters,
                                         window=args.speed_window,
-                                        thresh=args.speed_threshold)
+                                        thresh=args.speed_threshold,
+                                        protocol_version=args.protocol_version)
             print(f"sweep_report: wrote {n_ls} learning-speed test rows "
                   f"to learning_speed_tests.csv "
                   f"(window={args.speed_window}, "

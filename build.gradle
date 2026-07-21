@@ -240,7 +240,7 @@ def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries
                  'stereo.energyPriorWeight',
                  // Research extensions: PBRS, adaptive trust, per-run seed.
                  'reward.shaping','stereo.adaptiveTrust','stereo.adaptiveTrust.minSamples','stereo.adaptiveTrust.floor',
-                 'run.seed',
+                 'run.seed','phase1.protocolVersion',
                  // Phase 3 process-dynamics: probe cadence / hold window / sample
                  // budget + DynamicsLearner thresholds. Read by the dynamics agent
                  // (tools.jia.system_prop_num) and by tools.DynamicsLearner

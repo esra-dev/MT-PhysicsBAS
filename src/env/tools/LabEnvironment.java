@@ -52,6 +52,14 @@ public class LabEnvironment extends Artifact {
     private WotInputValidator validator;
     /** When true, all simulator-mutating operations short-circuit (#12). */
     private volatile boolean dryRun = false;
+    /** Protocol-v2 invariant: scenario lookup never falls back to a random reset. */
+    private int scenarioFallbackCount = 0;
+
+    private ScenarioCatalog loadScenarioCatalog(java.nio.file.Path path) throws IOException {
+        return "phase1-v2".equals(System.getProperty("phase1.protocolVersion", "legacy"))
+                ? ScenarioCatalog.load(path)
+                : ScenarioCatalog.loadAllowingMetadata(path);
+    }
 
     /**
      * Initialize the artifact with a W3C WoT Thing Description URL.
@@ -646,22 +654,11 @@ public class LabEnvironment extends Artifact {
      */
     @OPERATION
     public void setRandomLabState() {
-        try (java.io.FileReader fr = new java.io.FileReader("benchmark/train_scenarios.json")) {
-            com.google.gson.JsonArray arr = com.google.gson.JsonParser.parseReader(fr).getAsJsonArray();
-            // Collect only objects that have an "id" field (skip comment-only entries)
-            List<com.google.gson.JsonObject> scenarios = new ArrayList<>();
-            for (com.google.gson.JsonElement el : arr) {
-                if (el.isJsonObject() && el.getAsJsonObject().has("id")) {
-                    scenarios.add(el.getAsJsonObject());
-                }
-            }
-            if (scenarios.isEmpty()) {
-                LOGGER.warning("setRandomLabState: no scenarios found in benchmark/train_scenarios.json — falling back to resetLab");
-                doReset();
-                return;
-            }
+        try {
+            ScenarioCatalog scenarios = loadScenarioCatalog(
+                    java.nio.file.Path.of("benchmark/train_scenarios.json"));
             int idx = (int)(Math.random() * scenarios.size());
-            com.google.gson.JsonObject s = scenarios.get(idx);
+            com.google.gson.JsonObject s = scenarios.scenarioAt(idx);
             List<String> keys = new ArrayList<>();
             List<Object> vals = new ArrayList<>();
             extractScenarioKV(s, keys, vals);
@@ -669,8 +666,8 @@ public class LabEnvironment extends Artifact {
             LOGGER.info("setRandomLabState: scenario " + s.get("id").getAsInt()
                         + " — " + (s.has("description") ? s.get("description").getAsString() : ""));
         } catch (IOException e) {
-            LOGGER.warning("setRandomLabState: failed to read train_scenarios.json — " + e.getMessage() + " — falling back to resetLab");
-            doReset();
+            LOGGER.severe("setRandomLabState: failed to read train_scenarios.json — " + e.getMessage());
+            failed("scenario_catalog_invalid", "benchmark/train_scenarios.json", e.getMessage());
         }
     }
 
@@ -684,40 +681,48 @@ public class LabEnvironment extends Artifact {
      */
     @OPERATION
     public void setScenarioLabState(String scenarioFile, int scenarioId) {
-        try (java.io.FileReader fr = new java.io.FileReader(scenarioFile)) {
-            com.google.gson.JsonArray arr = com.google.gson.JsonParser.parseReader(fr).getAsJsonArray();
-            com.google.gson.JsonObject found = null;
-            for (com.google.gson.JsonElement el : arr) {
-                if (el.isJsonObject()) {
-                    com.google.gson.JsonObject obj = el.getAsJsonObject();
-                    if (obj.has("id") && obj.get("id").getAsInt() == scenarioId) {
-                        found = obj;
-                        break;
-                    }
-                }
-            }
-            if (found == null) {
-                LOGGER.warning("setScenarioLabState: scenario id=" + scenarioId
-                              + " not found in " + scenarioFile + " — falling back to resetLab");
-                doReset();
-                return;
-            }
+        try {
+            com.google.gson.JsonObject found = loadScenarioCatalog(
+                    java.nio.file.Path.of(scenarioFile)).scenarioById(scenarioId);
             List<String> keys = new ArrayList<>();
             List<Object> vals = new ArrayList<>();
             extractScenarioKV(found, keys, vals);
             setLabStateFromMap(keys.toArray(new Object[0]), vals.toArray(new Object[0]));
             LOGGER.info("setScenarioLabState: loaded scenario " + scenarioId
                        + " — " + (found.has("description") ? found.get("description").getAsString() : ""));
-        } catch (IOException e) {
-            LOGGER.warning("setScenarioLabState: failed to read " + scenarioFile
-                          + " — " + e.getMessage() + " — falling back to resetLab");
-            doReset();
+        } catch (IOException | IllegalArgumentException e) {
+            LOGGER.severe("setScenarioLabState: " + e.getMessage());
+            failed("scenario_lookup_failed", scenarioFile, scenarioId, e.getMessage());
+        }
+    }
+
+    /**
+     * Load the scenario at a zero-based file position, set it, and return its real ID.
+     * The ordered file positions are the protocol-v2 schedule; IDs need not be contiguous.
+     */
+    @OPERATION
+    public void setScenarioLabStateByPosition(String scenarioFile, int zeroBasedPosition,
+                                               OpFeedbackParam<Integer> actualScenarioId) {
+        try {
+            ScenarioCatalog catalog = loadScenarioCatalog(java.nio.file.Path.of(scenarioFile));
+            com.google.gson.JsonObject found = catalog.scenarioAt(zeroBasedPosition);
+            int id = catalog.idAt(zeroBasedPosition);
+            List<String> keys = new ArrayList<>();
+            List<Object> vals = new ArrayList<>();
+            extractScenarioKV(found, keys, vals);
+            setLabStateFromMap(keys.toArray(new Object[0]), vals.toArray(new Object[0]));
+            actualScenarioId.set(id);
+            LOGGER.info("setScenarioLabStateByPosition: position=" + zeroBasedPosition
+                    + " actualId=" + id + " file=" + scenarioFile);
+        } catch (IOException | IndexOutOfBoundsException e) {
+            LOGGER.severe("setScenarioLabStateByPosition: " + e.getMessage());
+            failed("scenario_position_failed", scenarioFile, zeroBasedPosition, e.getMessage());
         }
     }
 
     /**
      * Enumerate all scenario IDs in the given scenario JSON file (in file order).
-     * Returns an empty array if the file is missing or contains no scenarios.
+     * Missing, empty, duplicate-ID, or (under protocol v2) missing-ID files fail hard.
      * Used by the bench agent to dynamically build its run list per profile.
      *
      * @param scenarioFile Path to the scenario JSON file.
@@ -725,19 +730,33 @@ public class LabEnvironment extends Artifact {
      */
     @OPERATION
     public void getScenarioIds(String scenarioFile, OpFeedbackParam<Object[]> ids) {
-        List<Integer> result = new ArrayList<>();
-        try (java.io.FileReader fr = new java.io.FileReader(scenarioFile)) {
-            com.google.gson.JsonArray arr = com.google.gson.JsonParser.parseReader(fr).getAsJsonArray();
-            for (com.google.gson.JsonElement el : arr) {
-                if (el.isJsonObject() && el.getAsJsonObject().has("id")) {
-                    result.add(el.getAsJsonObject().get("id").getAsInt());
-                }
-            }
+        try {
+            List<Integer> result = loadScenarioCatalog(
+                    java.nio.file.Path.of(scenarioFile)).orderedIds();
+            ids.set(result.toArray());
+            LOGGER.info("getScenarioIds(" + scenarioFile + "): " + result.size() + " scenarios");
         } catch (IOException e) {
-            LOGGER.warning("getScenarioIds: failed to read " + scenarioFile + " — " + e.getMessage());
+            LOGGER.severe("getScenarioIds: " + e.getMessage());
+            failed("scenario_catalog_invalid", scenarioFile, e.getMessage());
         }
-        ids.set(result.toArray());
-        LOGGER.info("getScenarioIds(" + scenarioFile + "): " + result.size() + " scenarios");
+    }
+
+    /** Return the canonical SHA-256 of the comma-separated ordered scenario IDs. */
+    @OPERATION
+    public void getScenarioScheduleHash(String scenarioFile, OpFeedbackParam<String> hash) {
+        try {
+            hash.set(loadScenarioCatalog(
+                    java.nio.file.Path.of(scenarioFile)).scheduleSha256());
+        } catch (IOException e) {
+            LOGGER.severe("getScenarioScheduleHash: " + e.getMessage());
+            failed("scenario_catalog_invalid", scenarioFile, e.getMessage());
+        }
+    }
+
+    /** Protocol provenance counter. A non-zero value is impossible in v2. */
+    @OPERATION
+    public void getScenarioFallbackCount(OpFeedbackParam<Integer> count) {
+        count.set(scenarioFallbackCount);
     }
 
     /**

@@ -26,6 +26,8 @@
           "exec_max_steps_bench":  { "type": "integer", "minimum": 0 },
           "exec_delay_ms_bench":   { "type": "integer", "minimum": 0 },
           "note":                  { "type": "string" },
+          "protocol_version":      { "enum": ["phase1-v2"] },
+          "metric_schema":         { "enum": ["phase1-benchmark-v2"] },
           "learning_overrides":    {
             "type": "object",
             "properties": {
