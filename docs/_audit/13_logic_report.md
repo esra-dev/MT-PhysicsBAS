@@ -89,6 +89,10 @@ data-dependent n=10→20 escalation, LLM comparison with zero uncertainty quanti
    detector with structural guards (0 false positives on confirmatory cells), both-polarity
    discard, user alert, warm-restart re-learn, clean-parent Q-table warm-start mapping
    (11_gap_analysis.md#L67-L79). This is the advisor's Phase-2 paragraph rendered in code.
+   **[WITHDRAWN 2026-07-22: the "0 false positives on confirmatory cells" verification is
+   contradicted by the committed runs of record — healthy components were blacklisted in
+   every replica of all four lab3 single-lamp cells and in 4/10 lab2_f1bdead vanilla
+   replicas. See `docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md` item 3.]**
 5. **Blind-fault active probe** — converts an off-policy undetectable fault into one caught
    within ~6–8 episodes, 100 % detection, 3 of 4 cells significant at 4.2–9.4×
    (11_gap_analysis.md#L80). Worth its own thesis subsection.

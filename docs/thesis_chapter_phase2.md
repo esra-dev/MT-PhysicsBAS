@@ -1,5 +1,17 @@
 # Phase 2 — Fault Detection, Blacklisting, and Re-Learning
 
+> **WITHDRAWN — historical, protocol-affected (2026-07-22).** Every empirical
+> number in this chapter is superseded pending the Phase-2 protocol-v2 rerun:
+> the adaptation scheduler silently substituted unseeded random resets for
+> missing scenario IDs (~17–30% of episodes), start states were recorded before
+> the settle wait, and the fault detector blacklisted **healthy** components in
+> the committed runs of record (all four lab3 single-lamp cells: every replica,
+> both arms; lab2_f1bdead: 4/10 vanilla vs 0/10 KG, treatment-correlated inside
+> the strongest registered cell, including one wrong primary). The chapter's
+> "zero false positives" and "recall 100%" claims are **false** for the runs of
+> record. See `docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`. This draft
+> is retained as the historical record until the corrected rewrite.
+
 > **Thesis chapter draft** (2026-07-12). Confirmatory numbers are the
 > post-inversion runs of record (`pre_registration.md` §9.10, commit `6c727b6`,
 > CI runs 29148475671 / 29151540231 / 29155539633 / 29157197853 / 29163456132);
