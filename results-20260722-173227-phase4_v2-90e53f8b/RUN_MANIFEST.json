@@ -1,0 +1,23 @@
+{
+  "tag": "results-20260722-173227-phase4_v2-90e53f8b",
+  "utc": "20260722-173227",
+  "runMode": "phase4_v2",
+  "profiles": [
+    "lab4",
+    "lab4dual",
+    "lab4chain",
+    "lab5"
+  ],
+  "bench_modes": [
+    "rule_based",
+    "ql_false",
+    "ql_true"
+  ],
+  "git_sha": "90e53f8b087fc390a7ad51a0187b81c89c21c64e",
+  "git_short_sha": "90e53f8b",
+  "git_branch": "phase234-correction-2026-07-22",
+  "artifact_count": 0,
+  "artifacts": [],
+  "host": null,
+  "user": null
+}
