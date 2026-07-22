@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail if Phase-1 scenario IDs or declared lux disagree with current physics."""
+"""Fail if Phase-1/Phase-4 scenario IDs or declared lux disagree with physics."""
 
 from __future__ import annotations
 
@@ -8,6 +8,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PHASE1_LABS = ("lab1", "lab2", "lab3")
+PHASE4_LABS = ("lab4", "lab4dual", "lab4chain", "lab5")
+ALL_LABS = PHASE1_LABS + PHASE4_LABS
 
 
 def expected_levels(lab: str, row: dict) -> dict[str, float]:
@@ -23,21 +26,44 @@ def expected_levels(lab: str, row: dict) -> dict[str, float]:
             "Z1Level": 25 + (400 if z1_light else 0) + (0.50 * sun if z1_blind else 0),
             "Z2Level": 25 + (400 if z2_light else 0) + (0.50 * sun if z2_blind else 0),
         }
+    spotlight = bool(row.get("Spotlight", False))
+    shared = 150 if spotlight else 0
     if lab == "lab3":
-        spotlight = bool(row.get("Spotlight", False))
-        shared = 150 if spotlight else 0
         return {
             "Z1Level": 25 + (400 if z1_light else 0) + (100 if z2_light else 0)
             + (0.50 * sun if z1_blind else 0) + (0.30 * sun if z2_blind else 0) + shared,
             "Z2Level": 25 + (400 if z2_light else 0) + (100 if z1_light else 0)
             + (0.50 * sun if z2_blind else 0) + (0.30 * sun if z1_blind else 0) + shared,
         }
-    raise ValueError(f"Unknown Phase-1 lab: {lab}")
+    if lab in PHASE4_LABS:
+        # Phase-4 physics (simulator_flow_lab4/lab4dual/lab4chain/lab5.json):
+        # AND-gated lamps, 150-lux cross-lamp coupling, 0.40-sun foreign blind.
+        if lab == "lab5":
+            z1_on = bool(row.get("Z1Eff", False)) or bool(row.get("Z1Ineff", False))
+            z2_on = bool(row.get("Z2Eff", False)) or bool(row.get("Z2Ineff", False))
+        else:
+            plug1 = bool(row.get("PlugZ1", False))
+            if lab == "lab4":
+                z1_on = z1_light and plug1
+                z2_on = z2_light
+            elif lab == "lab4dual":
+                z1_on = z1_light and plug1
+                z2_on = z2_light and bool(row.get("PlugZ2", False))
+            else:  # lab4chain: breaker -> plug -> lamp
+                z1_on = z1_light and plug1 and bool(row.get("MasterSwitch", False))
+                z2_on = z2_light
+        return {
+            "Z1Level": 25 + (400 if z1_on else 0) + (150 if z2_on else 0)
+            + (0.50 * sun if z1_blind else 0) + (0.40 * sun if z2_blind else 0) + shared,
+            "Z2Level": 25 + (400 if z2_on else 0) + (150 if z1_on else 0)
+            + (0.50 * sun if z2_blind else 0) + (0.40 * sun if z1_blind else 0) + shared,
+        }
+    raise ValueError(f"Unknown lab: {lab}")
 
 
 def validate_file(path: Path, lab: str) -> list[str]:
     errors: list[str] = []
-    rows = json.loads(path.read_text(encoding="utf-8"))
+    rows = json.loads(path.read_text(encoding="utf-8-sig"))
     ids: set[int] = set()
     scenario_count = 0
     for row in rows:
@@ -79,8 +105,13 @@ def validate_all(root: Path = ROOT) -> list[str]:
                  "var z2 = 25", "(z2b ? 0.50 * sun : 0)"),
         "lab3": ("var z1 = 25", "(z2l ? 100", "(z2b ? 0.30 * sun",
                  "var z2 = 25", "(z1l ? 100", "(z1b ? 0.30 * sun"),
+        "lab4": ("z1l && plug", "0.50 * sun", "0.40 * sun", "sp ? 150 : 0"),
+        "lab4dual": ("z1l && plug1", "z2l && plug2", "0.40 * sun"),
+        "lab4chain": ("z1l && plug && master", "0.40 * sun"),
+        "lab5": ("z1eff || z1ineff", "z2eff || z2ineff", "0.40 * sun",
+                 "(z1ineff ? 4 : 0)"),
     }
-    for lab in ("lab1", "lab2", "lab3"):
+    for lab in ALL_LABS:
         simulator = root / "simulator" / f"simulator_flow_{lab}.json"
         simulator_text = simulator.read_text(encoding="utf-8")
         for token in simulator_tokens[lab]:
@@ -113,7 +144,8 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Phase-1 scenario/dashboard validation passed (IDs unique; lux matches physics).")
+    print("Scenario/dashboard validation passed for labs "
+          f"{', '.join(ALL_LABS)} (IDs unique; lux matches physics).")
     return 0
 
 
