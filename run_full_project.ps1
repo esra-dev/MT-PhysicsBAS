@@ -38,7 +38,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase4")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase4","phase4_v2")]
     [string]$RunMode = "dev",
 
     # Optional comma-separated subset of profiles to train and benchmark.
@@ -173,6 +173,11 @@ if ($RunConfig) {
 # and forwarded as -Dsim.http.* to JaCaMoLauncher; LabEnvironment.init
 # picks them up at startup.
 $HttpArgs = @()
+# Phase-4 protocol v2: ordered token:weight overrides for the deterministic
+# policy-energy metric (empty/absent keeps the frozen Phase-1 substring rule).
+if ($P.policy_energy_weights) {
+    $HttpArgs += "-Pphase1.policyEnergyWeights=$($P.policy_energy_weights)"
+}
 if ($P.protocol_version) {
     $HttpArgs += "-Pphase1.protocolVersion=$($P.protocol_version)"
 }
@@ -944,6 +949,7 @@ try {
                     fixed_horizon_episodes = $(if ($P.protocol_version -eq 'phase1-v2') { [int]$P.num_episodes } else { 0 })
                     paired_rng_version = $(if ($P.protocol_version -eq 'phase1-v2') { 'common-seed-v1' } else { 'legacy-arm-mixed' })
                     metric_schema = $(if ($P.metric_schema) { $P.metric_schema } else { 'legacy' })
+                    policy_energy_weights = $(if ($P.policy_energy_weights) { $P.policy_energy_weights } else { '' })
                     scenario_fallback_count = 0
                     timestamp = (Get-Date).ToString("o")
                     artifacts = $expectedArtefacts

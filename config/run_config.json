@@ -275,6 +275,26 @@
         "cross_zone_bonus": 3.0
       }
     },
+    "phase4_v2": {
+      "note": "CORRECTED PROTOCOL V2 Phase 4 (dependency + energy ladder). Arm-C convention (KG prior only: PBRS off, adaptive trust off — the withdrawn phase4 record stacked PBRS+trust, the same arm-D confound the Phase-1 correction eliminated) plus the non-fading lab5 energy prior. Fixed 3000-episode horizon, strict ordered scenario IDs, paired RNG, benchmark metric schema v2, and deterministic policy-energy weights for the Phase-4 actuators (ineff 4, eff 1, spotlight 2, plugs/breaker/blinds 0, lamps 1; mirrors phase4.power_formula and the KG ws:energyCost declarations).",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "policy_energy_weights": "ineff:4,eff:1,spotlight:2,plug:0,masterswitch:0,light:1,blind:0",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "none",
+        "adaptive_trust": false,
+        "stereo_energy_prior_weight": 2.0
+      }
+    },
     "phase4": {
       "note": "Phase 4 dependency + energy labs (lab4 smart-plug, lab5 energy). Same learning stack and timing as the default phase1 (KG prior ON, PBRS ON, adaptive-trust ON) but ADDS the non-fading energy prior (stereo_energy_prior_weight=2.0). The energy prior only affects lab5 because only lab5's KG declares ws:energyCost (labs 1-4 actuators have energyCost 0, so the term is inert there). lab4's hidden smart-plug power dependency is exploited through the REUSED IV-gate machinery (the gated lamp's ON action is treated as IV-gated on the plug state via ws:powerGates), so it needs no extra knob. phase4.yml passes -OnlyProfiles lab4|lab5 per matrix cell; the ql_true vs ql_false within-lab delta is the headline finding. energyPriorWeight is tunable post-smoke.",
       "tick": "0.05",
