@@ -73,7 +73,8 @@ def _headings(lines: list[str]) -> list[str]:
 def _classification(path: str, number: int, line: str, heading: str) -> str:
     lower = line.lower()
     historical_tokens = (
-        "+53.3", "29639767776", "29692725784", "29703323649", "29705215235",
+        "+53.3", "+0.01877", "+0.01679", "29639767776", "29692725784",
+        "29703323649", "29705215235",
         "legacy energy", "pooled-20", "protocol-affected",
     )
     if any(token in lower for token in historical_tokens):

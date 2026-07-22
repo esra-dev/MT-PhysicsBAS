@@ -112,6 +112,10 @@ jobs:
           cmp docs/audit/phase1_claim_ledger.csv /tmp/phase1_claim_ledger.csv
       - name: Phase-1 provenance golden check
         run: python3 analysis/check_provenance.py
+      - name: Dashboard Phase-1 data must be a byte-identical derivation
+        run: |
+          python3 dashboard/scripts/prepare_data.py --only phase1
+          git diff --exit-code -- dashboard/public/data/phase1.json
       - name: Build dashboard
         working-directory: dashboard
         run: |

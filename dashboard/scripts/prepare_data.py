@@ -9,7 +9,6 @@ files into dashboard/public/data/. Stdlib only. Run from anywhere:
 import csv
 import json
 import math
-import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,36 +32,58 @@ TRAIN_DIRS = {
 }
 MODES = ["ql_true", "ql_false", "rule_based"]
 
-# Phase-1 confirmatory source: the post-inversion arm-C run of record
-# (THESIS_STATE_REPORT.md §5.2). Never point this back at
-# phase1_headline_download/ — that archive is the superseded pre-inversion
-# run 27336756264 (checked by analysis/check_provenance.py).
-PHASE1_RUN_ID = "29639767776"
-PHASE1_SRC = ROOT / "phase1_postinv" / f"run_{PHASE1_RUN_ID}" / "analysis" / "out"
-# Registered pooled-20 primary (Plan B): seeds 1-10 of the run of record merged
-# with the registered seeds-11-20 extension run 29692725784, BH within the
-# registered m=3 family only (THESIS_STATE_REPORT.md Addendum 2026-07-19c).
-# For the three registered cells these are the citable values; the n=10 tables
-# stay as the run-29639767776 record.
-POOLED20_CSV = (ROOT / "phase1_postinv" / "pooled20_reanalysis"
-                / "pooled20_registered_family.csv")
-PHASE1_PROVENANCE = {
-    "run_id": PHASE1_RUN_ID,
-    "commit": "e631877",
-    "profile": "phase1_kg_only (factorial arm C: KG prior ON, PBRS OFF, trust OFF)",
-    "instrument": "post-inversion (action-space inversion of 2026-07-10)",
-    "cross_zone_bonus": 0.0,
-    "lab3_physics": "cross-zone spill +100 lux / 0.30*Sun (current; retuned 2026-07-08)",
-    "source": "phase1_postinv/run_29639767776/analysis/out",
-    "supersedes": "pre-inversion run 27336756264 (phase1_headline_download/kg_only)",
-    "registered_primary": ("pooled-20 (seeds 1-10 run 29639767776 + registered "
-                           "extension seeds 11-20 run 29692725784, head 02ed6c1; "
-                           "BH within the registered m=3 family; "
-                           "THESIS_STATE_REPORT.md Addendum 2026-07-19c)"),
-    "pooled20_source": "phase1_postinv/pooled20_reanalysis/pooled20_registered_family.csv",
-    "n10_role": ("run-of-record descriptive tables; for the three registered "
-                 "cells the citable values are the registered_pooled20 rows"),
+# Phase-1 confirmatory source: the protocol-v2 corrected campaign. Every value
+# in dashboard/public/data/phase1.json is derived from a committed
+# phase1_v2_corrected/ file; CI regenerates the JSON and fails on any byte
+# difference, and analysis/check_provenance.py validates the same file
+# independently. Protocol-v1 sources (run 29639767776 and the pooled-20
+# reanalysis) are withdrawn and must never feed this builder again.
+PHASE1_V2 = ROOT / "phase1_v2_corrected"
+PHASE1_FAMILY_CSV = PHASE1_V2 / "analysis" / "registered" / "phase1_v2_registered_family.csv"
+PHASE1_DECOMP_JSON = PHASE1_V2 / "analysis" / "registered" / "phase1_v2_decomposition.json"
+PHASE1_GATES_JSON = PHASE1_V2 / "analysis" / "phase1_v2_protocol_gate_summary.json"
+PHASE1_CONTROLS_CSV = PHASE1_V2 / "analysis" / "phase1_v2_controls_and_descriptives.csv"
+PHASE1_ARM_C_OUT = PHASE1_V2 / "run_29848584965" / "analysis" / "out"
+PHASE1_RUN_KEYS = {
+    "phase1_v2_kg_only": "arm_c",
+    "phase1_v2_redundancy_only": "redundancy_only",
+    "phase1_v2_baseline": "baseline",
+    "phase1_v2_pbrs_only": "pbrs_only",
 }
+PHASE1_FAMILY_NAMES = {
+    "1_arm_c_lab2_auc_goal": "Arm-C lab2 auc_goal",
+    "2_redundancy_lab2_auc_goal": "Redundancy lab2 auc_goal",
+    "3_arm_c_minus_redundancy_lab2": "Arm C minus redundancy, lab2",
+    "4_arm_c_lab3_mean_first_goal_presentations": "Arm-C lab3 first-goal presentations",
+    "5_arm_c_lab3_avg_cycling": "Arm-C lab3 cycling",
+}
+PHASE1_DECOMP_CATEGORIES = {
+    "more_than_two_thirds": "more than two thirds: redundancy reproduces most of arm C",
+    "between_one_third_and_two_thirds":
+        "between one third and two thirds: redundancy reproduces part of arm C",
+    "less_than_one_third": "less than one third: redundancy does not reproduce arm C",
+}
+PHASE1_LAB_HEADLINES = {
+    "lab1": "Saturated null control",
+    "lab2": "Small learning benefit, mostly redundancy-derived",
+    "lab3": "First-goal and cycling null; adverse training/energy descriptives",
+}
+PHASE1_BENCH_KEYS = {
+    "lab2": (
+        ("benchmark_goal_rate", "goal_rate"),
+        ("benchmark_steps", "avg_steps"),
+        ("benchmark_deviation", "avg_dev"),
+        ("benchmark_policy_energy", "avg_policy_energy"),
+        ("benchmark_cycling", "avg_cycling"),
+    ),
+    "lab3": (
+        ("benchmark_goal_rate", "goal_rate"),
+        ("benchmark_policy_energy", "avg_policy_energy"),
+        ("benchmark_cycling", "avg_cycling"),
+        ("benchmark_redundant", "avg_redundant"),
+    ),
+}
+LEGACY_ENERGY_METRIC = "avg_legacy_wallclock_energy"
 
 # The replay / early-training traces are local single-seed demo recordings
 # from 2026-06-10 — pre-inversion action registry and, for lab3, the original
@@ -200,23 +221,135 @@ def read_csv_rows(path):
     return list(csv.DictReader(open(path)))
 
 
-def build_phase1():
-    kg = PHASE1_SRC
-    obj = {
-        "_provenance": PHASE1_PROVENANCE,
-        "learning_speed": read_csv_rows(kg / "learning_speed_tests.csv"),
-        "summary_ci": read_csv_rows(kg / "summary_table_ci.csv"),
-        "paired": read_csv_rows(kg / "paired_tests.csv"),
-        "registered_pooled20": read_csv_rows(POOLED20_CSV),
+def build_phase1(out_dir=None):
+    """Derive the protocol-v2 Phase-1 dashboard summary from the corrected
+    archives. Fails loudly on any inconsistency instead of guessing."""
+    out_dir = OUT if out_dir is None else out_dir
+    gates = json.load(open(PHASE1_GATES_JSON, encoding="utf-8"))
+    run_rows = gates["runs"]
+    head_shas = {row["head_sha"] for row in run_rows}
+    if len(head_shas) != 1:
+        raise SystemExit("phase1 gate summary: inconsistent head_sha across runs")
+
+    runs = {}
+    for mode, key in PHASE1_RUN_KEYS.items():
+        matches = [row["run_id"] for row in run_rows if row["run_mode"] == mode]
+        if len(matches) != 1:
+            raise SystemExit(f"phase1 gate summary: expected exactly one {mode} run")
+        runs[key] = matches[0]
+
+    family = []
+    for row in read_csv_rows(PHASE1_FAMILY_CSV):
+        q = float(row["q_signflip_bh_m5"])
+        family.append({
+            "name": PHASE1_FAMILY_NAMES[row["registered_test"]],
+            "mean": float(row["mean_paired_difference"]),
+            "median": float(row["median_paired_difference"]),
+            "ci_lo": float(row["ci_lo_bootstrap"]),
+            "ci_hi": float(row["ci_hi_bootstrap"]),
+            "p": float(row["p_signflip_two_sided"]),
+            "q": q,
+            "rank_biserial": float(row["paired_rank_biserial"]),
+            "verdict": "supported" if q <= 0.05 else "null",
+        })
+    if len(family) != len(PHASE1_FAMILY_NAMES):
+        raise SystemExit("phase1 registered family: unexpected row count")
+
+    decomp = json.load(open(PHASE1_DECOMP_JSON, encoding="utf-8"))
+    decomposition = {
+        "redundancy_share": float(decomp["redundancy_share"]),
+        "category": PHASE1_DECOMP_CATEGORIES[decomp["category"]],
     }
-    json.dump(obj, open(OUT / "phase1.json", "w"), separators=(",", ":"))
-    img = OUT / "img"
-    img.mkdir(exist_ok=True)
+
+    learning = read_csv_rows(PHASE1_ARM_C_OUT / "learning_speed_tests.csv")
+    paired = read_csv_rows(PHASE1_ARM_C_OUT / "paired_tests.csv")
+
+    def learn(lab, metric):
+        values = [row["mean_diff_true_minus_false"] for row in learning
+                  if row["profile"] == lab and row["metric"] == metric]
+        if len(values) != 1:
+            raise SystemExit(f"learning_speed_tests: expected one {lab}/{metric} row")
+        return float(values[0])
+
+    def bench(lab, metric):
+        values = [row["mean_diff"] for row in paired
+                  if row["profile"] == lab and row["metric"] == metric
+                  and row["mode_a"] == "ql_true" and row["mode_b"] == "ql_false"]
+        if len(values) != 1:
+            raise SystemExit(f"paired_tests: expected one {lab}/{metric} row")
+        return float(values[0])
+
+    labs = {}
     for lab in ("lab1", "lab2", "lab3"):
-        src = kg / f"learning_curve_{lab}.png"
-        if src.exists():
-            shutil.copy(src, img / f"p1_curve_{lab}.png")
-    print("phase1.json + curves written")
+        entry = {
+            "headline": PHASE1_LAB_HEADLINES[lab],
+            "auc_goal": learn(lab, "auc_goal"),
+            "first_goal_presentations": learn(lab, "mean_first_goal_presentations"),
+        }
+        for out_key, metric in PHASE1_BENCH_KEYS.get(lab, ()):
+            entry[out_key] = bench(lab, metric)
+        labs[lab] = entry
+
+    control_rows = read_csv_rows(PHASE1_CONTROLS_CSV)
+
+    def control_counts(mode):
+        corrected = sum(1 for row in control_rows
+                        if row["run_mode"] == mode
+                        and row["metric"] != LEGACY_ENERGY_METRIC
+                        and float(row["mean_difference"]) != 0.0)
+        legacy = sum(1 for row in control_rows
+                     if row["run_mode"] == mode
+                     and row["metric"] == LEGACY_ENERGY_METRIC
+                     and float(row["mean_difference"]) != 0.0)
+        return corrected, legacy
+
+    baseline_nonzero, baseline_legacy = control_counts("phase1_v2_baseline")
+    pbrs_nonzero, pbrs_legacy = control_counts("phase1_v2_pbrs_only")
+    if baseline_legacy != pbrs_legacy:
+        raise SystemExit("control modes disagree on legacy wall-clock row counts")
+
+    def gate_value(src_key):
+        values = {row[src_key] for row in run_rows}
+        if len(values) != 1:
+            raise SystemExit(f"phase1 gate summary: runs disagree on {src_key}")
+        return values.pop()
+
+    horizons = {tuple(row["fixed_horizons"]) for row in run_rows}
+    if len(horizons) != 1 or len(next(iter(horizons))) != 1:
+        raise SystemExit("phase1 gate summary: unexpected training horizon set")
+    protocol_gates = {
+        "training_cells_per_run": gate_value("training_cells"),
+        "benchmark_cells_per_run": gate_value("benchmark_cells"),
+        "episodes_per_training_cell": next(iter(horizons))[0],
+        "fallback_count": gate_value("scenario_fallback_count"),
+        "paired_schedule_mismatches": gate_value("schedule_pair_mismatches"),
+        "first_goal_rows_per_run": gate_value("first_goal_rows"),
+        "censored_first_goal_rows_per_run": gate_value("first_goal_censored_rows"),
+    }
+
+    obj = {
+        "protocol_version": gates["protocol_version"],
+        "status": "current thesis evidence",
+        "head_sha": head_shas.pop(),
+        "runs": runs,
+        "registered_family": family,
+        "decomposition": decomposition,
+        "labs": labs,
+        "controls": {
+            "baseline_corrected_contrasts_nonzero": baseline_nonzero,
+            "pbrs_corrected_contrasts_nonzero": pbrs_nonzero,
+            "legacy_wallclock_rows_nonzero_per_control_mode": baseline_legacy,
+            "note": ("Only the withdrawn wall-clock diagnostic varies between "
+                     "otherwise identical labels."),
+        },
+        "protocol_gates": protocol_gates,
+        "source": "phase1_v2_corrected/analysis/registered/phase1_v2_registered_family.csv",
+    }
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with open(out_dir / "phase1.json", "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(obj, handle, indent=2)
+        handle.write("\n")
+    print("phase1.json written (protocol v2, derived from phase1_v2_corrected/)")
 
 
 def build_phase2():
@@ -256,11 +389,26 @@ def build_phase4():
     print("phase4.json written")
 
 
-if __name__ == "__main__":
-    build_replays()
-    build_training()
-    build_phase1()
-    build_phase2()
-    build_phase3()
-    build_phase4()
+BUILDERS = {
+    "replays": build_replays,
+    "training": build_training,
+    "phase1": build_phase1,
+    "phase2": build_phase2,
+    "phase3": build_phase3,
+    "phase4": build_phase4,
+}
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Prepare dashboard JSON data.")
+    parser.add_argument("--only", choices=sorted(BUILDERS), action="append",
+                        help="build only the named dataset(s); default: all")
+    args = parser.parse_args()
+    for name in (args.only or list(BUILDERS)):
+        BUILDERS[name]()
     print("done ->", OUT)
+
+
+if __name__ == "__main__":
+    main()

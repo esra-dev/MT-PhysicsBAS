@@ -6,6 +6,14 @@ sweep that will be cited post-inversion).
 result cited in the thesis from this point on must come from a post-inversion
 run (see §6 runbook).
 
+> **Historical note (2026-07-22) — Phase-1 values below are withdrawn.** The
+> §6.2 values Δ=+0.01679 (q=0) and pooled Δ=+0.01877 are protocol-affected
+> protocol-v1 results, invalidated by the scenario-scheduler, first-goal, and
+> wall-clock-energy defects documented in
+> `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`. Current Phase-1
+> evidence: `docs/phase1_results_v2.md` (protocol v2). The action-space
+> inversion itself is unaffected and remains in force.
+
 ## 1. What changed and why
 
 Before this change, the action space of BOTH learner arms was built by
@@ -157,6 +165,11 @@ would still straddle two code states — scientifically unclean).
   sensitivity sweep: `THESIS_STATE_REPORT.md` Addendum 2026-07-18b. (The
   registered seeds-11–20 extension later pooled this to the citable
   Δ=+0.01877, n=20 — Addendum 2026-07-19c.)
+- ⚠️ **Withdrawn (2026-07-21):** Δ=+0.01679 and pooled Δ=+0.01877 are protocol-affected
+  protocol-v1 values (defective scenario scheduler, first-goal definition, and
+  wall-clock energy — `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`);
+  they are no longer citable. Corrected Phase-1 evidence:
+  `docs/phase1_results_v2.md`.
 - This regenerates the headline learning-speed comparison (time-to-goal,
   redundant actions, success) on the post-inversion code and produces fresh
   labeled Q-table artifacts per seed.
