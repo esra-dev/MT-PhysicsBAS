@@ -1,0 +1,13 @@
+profile,mode,n_replicas,mean_scenarios,goal_rate_mean,goal_rate_ci_lo,goal_rate_ci_hi,energy_compliance_mean,energy_compliance_ci_lo,energy_compliance_ci_hi,mean_steady_power_mean,mean_steady_power_ci_lo,mean_steady_power_ci_hi,over_budget_rate_mean,over_budget_rate_ci_lo,over_budget_rate_ci_hi
+lab4,ql_false,10,80.0,0.99875,0.9962500000000001,1.0,0.99875,0.9962500000000001,1.0,nan,nan,nan,nan,nan,nan
+lab4,ql_true,10,80.0,1.0,1.0,1.0,1.0,1.0,1.0,nan,nan,nan,nan,nan,nan
+lab4,rule_based,10,80.0,1.0,1.0,1.0,1.0,1.0,1.0,nan,nan,nan,nan,nan,nan
+lab4chain,ql_false,10,80.0,0.9899999999999999,0.98375,0.9962500000000001,0.9899999999999999,0.98375,0.9962500000000001,nan,nan,nan,nan,nan,nan
+lab4chain,ql_true,10,80.0,1.0,1.0,1.0,1.0,1.0,1.0,nan,nan,nan,nan,nan,nan
+lab4chain,rule_based,10,80.0,1.0,1.0,1.0,1.0,1.0,1.0,nan,nan,nan,nan,nan,nan
+lab4dual,ql_false,10,80.0,0.97875,0.9625,0.9925,0.97875,0.9625,0.9925,nan,nan,nan,nan,nan,nan
+lab4dual,ql_true,10,80.0,1.0,1.0,1.0,1.0,1.0,1.0,nan,nan,nan,nan,nan,nan
+lab4dual,rule_based,10,80.0,1.0,1.0,1.0,1.0,1.0,1.0,nan,nan,nan,nan,nan,nan
+lab5,ql_false,10,80.0,0.9925,0.9800000000000001,1.0,0.69375,0.6675000000000001,0.725,1.6475000000000002,1.45625,1.8625,0.3007805907172996,0.26916666666666667,0.3279166666666667
+lab5,ql_true,10,80.0,0.975,0.95625,0.99375,0.75,0.71875,0.78125,1.13125,1.04375,1.225,0.23041666666666663,0.20249999999999999,0.26166666666666666
+lab5,rule_based,10,80.0,1.0,1.0,1.0,1.0,1.0,1.0,0.875,0.875,0.875,0.0,0.0,0.0

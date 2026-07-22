@@ -1,0 +1,26 @@
+{
+  "head_sha": "90e53f8b087fc390a7ad51a0187b81c89c21c64e",
+  "profiles": [
+    "lab4",
+    "lab4dual",
+    "lab4chain",
+    "lab5"
+  ],
+  "publish_results": true,
+  "ref": "refs/heads/phase234-correction-2026-07-22",
+  "run_id": 29926341581,
+  "run_mode": "phase4_v2",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "workflow": ".github/workflows/phase1.yml"
+}
