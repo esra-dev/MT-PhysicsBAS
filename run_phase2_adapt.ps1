@@ -194,6 +194,37 @@ function Map-Get { param($map, [string]$key)
     return $prop.Value
 }
 
+# ─── Protocol-v2 gate-manifest helpers (ADAPT_OK.json) ────────────────────────
+function Get-Sha256Hex { param([byte[]]$Bytes)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        return ([System.BitConverter]::ToString($sha.ComputeHash($Bytes))).Replace('-','').ToLowerInvariant()
+    } finally { $sha.Dispose() }
+}
+function Get-FileSetSha256 { param([string[]]$Paths)
+    $lines = @()
+    foreach ($p in ($Paths | Sort-Object)) {
+        $h = Get-Sha256Hex ([System.IO.File]::ReadAllBytes($p))
+        $lines += ("{0}:{1}" -f ([System.IO.Path]::GetFileName($p)), $h)
+    }
+    return Get-Sha256Hex ([System.Text.Encoding]::UTF8.GetBytes(($lines -join "`n")))
+}
+# Ordered scenario IDs (real, possibly non-contiguous) + schedule hash for a
+# scenario JSON file. Mirrors ScenarioCatalog.scheduleSha256 (comma-joined IDs).
+function Get-ScenarioSchedule { param([string]$ScenarioPath)
+    $rows = Get-Content -Raw $ScenarioPath | ConvertFrom-Json
+    $ids = @()
+    foreach ($row in $rows) {
+        if ($row.PSObject.Properties['id']) { $ids += [int]$row.id }
+    }
+    if ($ids.Count -eq 0) { throw "Scenario file has no IDs: $ScenarioPath" }
+    if ((@($ids | Select-Object -Unique)).Count -ne $ids.Count) {
+        throw "Scenario file has duplicate IDs: $ScenarioPath"
+    }
+    $hash = Get-Sha256Hex ([System.Text.Encoding]::UTF8.GetBytes(($ids -join ',')))
+    return [pscustomobject]@{ ids = $ids; hash = $hash }
+}
+
 try {
     Write-Header "MT-Esra Phase 2 — Fault-Detection / Blacklist / Re-learn  |  $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
     Write-OK   "node-red : $NodeRedCmd"
@@ -273,7 +304,8 @@ try {
             $recoveryFile = Join-Path $ScriptRoot ("recovery_stereotypes_{0}{1}.csv"        -f $bool, $qtSuffix)
             $adaptedFile  = Join-Path $ScriptRoot ("qtable_adapted_stereotypes_{0}{1}.csv"  -f $bool, $qtSuffix)
             $metricsFile  = Join-Path $ScriptRoot ("metrics_adapted_stereotypes_{0}{1}.csv" -f $bool, $qtSuffix)
-            foreach ($stale in @($recoveryFile, $adaptedFile, $metricsFile)) {
+            $adaptOkFile  = Join-Path $ScriptRoot ("ADAPT_OK_stereotypes_{0}{1}.json"       -f $bool, $qtSuffix)
+            foreach ($stale in @($recoveryFile, $adaptedFile, $metricsFile, $adaptOkFile)) {
                 if (Test-Path $stale) { Remove-Item $stale -Force -ErrorAction SilentlyContinue }
             }
 
@@ -388,6 +420,52 @@ try {
                 $detPretty = "none"; if ([int]$detectEp -ge 0) { $detPretty = [string]([int]$detectEp + 1) }
                 $recPretty = $recovery; if ([int]$recovery -lt 0) { $recPretty = "N/A" }
                 Write-OK "Done in ${elapsedMin}m  defect=$defectComp  detect=$detPretty  reconverge=$reconvEp  recovery=$recPretty"
+
+                # ── Protocol-v2 gate manifest (ADAPT_OK.json). Written only for a
+                # completed cell; the archive validator rejects cells without one.
+                # scenario_fallback_count is structurally 0: the random-fallback
+                # path no longer exists — a missing scenario ID hard-fails the
+                # cell before this point.
+                try {
+                    $scRel = Map-Get $P2.train_scenarios_map $profile
+                    if ($null -eq $scRel) {
+                        throw "config phase2.train_scenarios_map has no entry for '$profile'"
+                    }
+                    $schedule = Get-ScenarioSchedule (Join-Path $ScriptRoot ($scRel -replace '/', '\'))
+                    $qtFiles = @(Get-ChildItem -Path $ScriptRoot -Filter ("qtable_final_stereotypes_{0}{1}*.csv" -f $bool, $cleanSfx) |
+                                 ForEach-Object { $_.FullName })
+                    $qtHash = ""
+                    if ($qtFiles.Count -gt 0) { $qtHash = Get-FileSetSha256 $qtFiles }
+                    $epRows = 0
+                    if (Test-Path $metricsFile) {
+                        $epRows = @(Get-Content $metricsFile | Where-Object {
+                            $_ -and -not $_.StartsWith('Episode') -and -not $_.StartsWith('#') }).Count
+                    }
+                    $manifest = [ordered]@{
+                        status                   = if ($qtFiles.Count -gt 0) { "ok" } else { "cold_start" }
+                        protocol_version         = "phase2-v2"
+                        detector_version         = "fault-detector-v2"
+                        metric_schema            = "phase2-recovery-v2"
+                        settled_start_state      = $true
+                        scenario_fallback_count  = 0
+                        profile                  = $profile
+                        parent_profile           = $parentName
+                        mode                     = $mode
+                        run_seed                 = $RunSeed
+                        adapt_episodes_effective = $epRows
+                        adapt_episodes_override  = $EffEpisodes
+                        train_scenarios_file     = $scRel
+                        ordered_scenario_ids     = $schedule.ids
+                        scenario_schedule_sha256 = $schedule.hash
+                        parent_qtable_files      = @($qtFiles | ForEach-Object { [System.IO.Path]::GetFileName($_) } | Sort-Object)
+                        parent_qtable_sha256     = $qtHash
+                    }
+                    $manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath $adaptOkFile -Encoding utf8
+                    Write-OK "ADAPT_OK manifest written: $([System.IO.Path]::GetFileName($adaptOkFile))"
+                } catch {
+                    Write-Fail "Could not write ADAPT_OK manifest for $profile/$mode : $_"
+                    $script:HadFatalError = $true
+                }
             } else {
                 Write-Fail "No recovery CSV produced for $profile/$mode (see $cellLog)"
                 $script:HadFatalError = $true

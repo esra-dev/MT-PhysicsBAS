@@ -225,19 +225,22 @@ greedy_eval_episodes(20).
     ?lab_artifact(LabId);
     ?qlearner_artifact(QlId);
 
-    // Set start state: cycle fixed scenarios if configured, else random.
+    // Protocol-v2 start: cycle by zero-based file position (the real, possibly
+    // non-contiguous IDs — a missing ID is fatal, never a random reset), let
+    // the simulator settle, and only THEN record the episode start state.
     if (train_scenarios_file(ScenariosFile)) {
         ?train_scenarios_count(TCount);
-        ScenarioId = (N mod TCount) + 1;
-        setScenarioLabState(ScenariosFile, ScenarioId)[artifact_id(LabId)];
+        ScenarioPosition = N mod TCount;
+        setScenarioLabStateByPosition(ScenariosFile, ScenarioPosition, _ScenarioId)[artifact_id(LabId)];
+        .wait(250); // settle BEFORE measuring the episode start (> 200 ms tick)
         readLabStatus(ZLStart, SRStart, SKStart, SVStart)[artifact_id(LabId)];
         encodeState(ZLStart, SRStart, SKStart, SVStart, StartStateVec)[artifact_id(QlId)];
         beginEpisodeFromState(StartStateVec)[artifact_id(QlId)]
     } else {
         setRandomLabState[artifact_id(LabId)];
+        .wait(250);
         beginEpisode[artifact_id(QlId)]
     };
-    .wait(250); // let the sim settle after state change (> 200 ms tick)
 
     !run_episode_adapt(N, 0);
 
@@ -404,8 +407,9 @@ greedy_eval_episodes(20).
             .print("[Adapt] SECONDARY defect detected at episode ", EpN + 1, ": ", Comp)
         }
     };
-    // Remove BOTH ON and OFF actions of the defective component.
-    blacklistComponent(Comp, NRemoved)[artifact_id(QlId)];
+    // Remove BOTH ON and OFF actions of the defective component. The episode
+    // is recorded so the protocol-v2 recovery log names EVERY blacklist event.
+    blacklistComponentAt(Comp, EpN, NRemoved)[artifact_id(QlId)];
     getNumApplicableActions(AppNow)[artifact_id(QlId)];
     .print("[Adapt] Blacklisted ", NRemoved, " action(s); action space now = ", AppNow);
     // Re-prime learning over the surviving actions (master plan §3.1).
@@ -583,10 +587,12 @@ greedy_eval_episodes(20).
 @greedy_eval_loop_step
 +!greedy_eval_loop(K, I, Acc, Out) : I < K <-
     ?lab_artifact(LabId);
+    // Protocol-v2: cycle by zero-based file position (real IDs, fatal if
+    // missing) — the certification loop must never draw random states.
     if (train_scenarios_file(ScFile)) {
         ?train_scenarios_count(TCount);
-        ScId = (I mod TCount) + 1;
-        setScenarioLabState(ScFile, ScId)[artifact_id(LabId)]
+        ScPosition = I mod TCount;
+        setScenarioLabStateByPosition(ScFile, ScPosition, _ScId)[artifact_id(LabId)]
     } else {
         setRandomLabState[artifact_id(LabId)]
     };
