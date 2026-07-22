@@ -195,6 +195,7 @@ jobs:
             -DynamicsProfiles ${{ matrix.profile }} `
             -Modes ${{ matrix.mode }} `
             -Probes $probes `
+            -Replica ${{ matrix.replica }} `
             -WatchdogIdleSec 600
           if ($LASTEXITCODE -ne 0) { exit 1 }
       - name: Resolve filename boolean for this mode
@@ -211,6 +212,7 @@ jobs:
             learned_dynamics_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.ttl
             dynamics_delays_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
             timebounded_results_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            DYNAMICS_OK_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.json
             log/dynamics_${{ matrix.profile }}_${{ matrix.mode }}.log
             log/dynamics_${{ matrix.profile }}_${{ matrix.mode }}.err.log
             run_phase3_dynamics.log
@@ -258,7 +260,7 @@ jobs:
             # headline; time-bounded results drive deadline compliance; the TTL
             # is the KG writeback kept for audit). Same filenames across replicas
             # live in separate rep dirs so phase3_dynamics.py aggregates them.
-            for f in "${d}"dynamics_delays_*.csv "${d}"timebounded_results_*.csv "${d}"learned_dynamics_*.ttl; do
+            for f in "${d}"dynamics_delays_*.csv "${d}"timebounded_results_*.csv "${d}"learned_dynamics_*.ttl "${d}"DYNAMICS_OK_*.json; do
               [ -e "$f" ] || continue
               cp -n "$f" "dynamics_root/rep${rep}/" 2>/dev/null || true
             done
@@ -270,6 +272,18 @@ jobs:
           python analysis/phase3_dynamics.py \
             --root dynamics_root \
             --out analysis/out
+      - name: Record immutable workflow inputs
+        shell: bash
+        run: |
+          python analysis/write_workflow_provenance.py \
+            --out analysis/out/workflow_inputs.json \
+            --run-id "${{ github.run_id }}" \
+            --sha "${{ github.sha }}" \
+            --ref "${{ github.ref }}" \
+            --run-mode "phase3-v2" \
+            --profiles "$DYNAMICS_PROFILES" \
+            --seeds "$REPLICAS" \
+            --publish-results "${{ github.event.inputs.publish_results }}"
       - name: Generate job summary
         if: always()
         shell: bash

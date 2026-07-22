@@ -66,7 +66,10 @@ param(
     [int]$Probes = 0,
     [switch]$Smoke,
     [int]$WatchdogIdleSec = 600,
-    [int]$SimReadyTimeoutSec = 90
+    [int]$SimReadyTimeoutSec = 90,
+    # Replica index for the protocol-v2 DYNAMICS_OK gate manifest. -1 = local
+    # unindexed run; CI passes the matrix replica.
+    [int]$Replica = -1
 )
 
 $ErrorActionPreference = "Stop"
@@ -277,7 +280,8 @@ try {
             $ttlFile     = Join-Path $ScriptRoot ("learned_dynamics_{0}_{1}.ttl"    -f $bool, $profile)
             $delayFile   = Join-Path $ScriptRoot ("dynamics_delays_{0}_{1}.csv"     -f $bool, $profile)
             $resultsFile = Join-Path $ScriptRoot ("timebounded_results_{0}_{1}.csv" -f $bool, $profile)
-            foreach ($stale in @($ttlFile, $delayFile, $resultsFile)) {
+            $dynOkFile   = Join-Path $ScriptRoot ("DYNAMICS_OK_{0}_{1}.json"        -f $bool, $profile)
+            foreach ($stale in @($ttlFile, $delayFile, $resultsFile, $dynOkFile)) {
                 if (Test-Path $stale) { Remove-Item $stale -Force -ErrorAction SilentlyContinue }
             }
 
@@ -382,7 +386,10 @@ try {
                         $energySum = 0.0
                         foreach ($r in $rows) {
                             $e = 0.0
-                            if ([double]::TryParse($r.energy_cost, [ref]$e)) { $energySum += $e }
+                            # Protocol v2: tick_energy is the deterministic
+                            # per-attempt delta; the wall-clock column is a
+                            # labelled legacy diagnostic and is not summarised.
+                            if ([double]::TryParse($r.tick_energy, [ref]$e)) { $energySum += $e }
                         }
                         $energyStr = "{0:N1}" -f $energySum
                         $status = "OK"
@@ -411,7 +418,27 @@ try {
 
             $elapsedMin = [int](New-TimeSpan -Start $cellStart -End (Get-Date)).TotalMinutes
             if ($status -eq "OK") {
-                Write-OK "Done in ${elapsedMin}m  met=$metStr  energy=$energyStr  blindTicks(learned/truth)=$blindStr"
+                Write-OK "Done in ${elapsedMin}m  met=$metStr  tick_energy=$energyStr  blindTicks(learned/truth)=$blindStr"
+
+                # -- Protocol-v2 gate manifest (DYNAMICS_OK.json) --
+                try {
+                    $manifest = [ordered]@{
+                        status            = "ok"
+                        protocol_version  = "phase3-v2"
+                        energy_meter      = "tick-v1"
+                        profile           = $profile
+                        mode              = $mode
+                        replica           = $Replica
+                        blind_delay_ticks = $GroundTruthTicks
+                        seconds_per_tick  = $SecondsPerTick
+                        probes_override   = $Probes
+                    }
+                    $manifest | ConvertTo-Json -Depth 4 | Out-File -FilePath $dynOkFile -Encoding utf8
+                    Write-OK "DYNAMICS_OK manifest written: $([System.IO.Path]::GetFileName($dynOkFile))"
+                } catch {
+                    Write-Fail "Could not write DYNAMICS_OK manifest for $profile/$mode : $_"
+                    $script:HadFatalError = $true
+                }
             } else {
                 Write-Fail "No time-bounded results CSV produced for $profile/$mode (see $cellLog)"
                 $script:HadFatalError = $true

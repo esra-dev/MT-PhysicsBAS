@@ -285,12 +285,28 @@ public class DynamicsLearner extends Artifact {
      * actuator and measuring the actual time-to-target. {@code met} is 1 if the
      * target rank was reached within the deadline, else 0.
      */
+    /** Phase-3 protocol-v2 energy instrument tag (docs/audit/gate_manifest_schema.md). */
+    public static final String ENERGY_METER_VERSION = "tick-v1";
+
+    /**
+     * Buffer one time-bounded-goal outcome row. The deadline-aware planner in
+     * the dynamics agent calls this once per (goal) after executing its chosen
+     * actuator and measuring the actual time-to-target. {@code met} is 1 if the
+     * target rank was reached within the deadline, else 0.
+     *
+     * Protocol v2: {@code tickEnergy} is the energy-accumulator DELTA over the
+     * attempt and {@code tickSpan} the simulator-tick delta over the same two
+     * reads — deterministic in simulator time. {@code energyCostWallclockLegacy}
+     * is the withdrawn cumulative wall-clock read, kept as a labelled
+     * diagnostic only.
+     */
     @OPERATION
     public void recordExploitResult(String profile, String mode, String goalId,
                                     int zone, int targetRank, double deadlineSec,
                                     String chosenLabel, double believedDelaySec,
                                     double learnedDelaySec, double actualDelaySec,
-                                    double energyCost, int met) {
+                                    double tickEnergy, int tickSpan,
+                                    double energyCostWallclockLegacy, int met) {
         exploitRows.add(csv(profile)
                 + "," + csv(mode)
                 + "," + csv(goalId)
@@ -301,7 +317,10 @@ public class DynamicsLearner extends Artifact {
                 + "," + String.format(Locale.ROOT, "%.2f", believedDelaySec)
                 + "," + String.format(Locale.ROOT, "%.2f", learnedDelaySec)
                 + "," + String.format(Locale.ROOT, "%.2f", actualDelaySec)
-                + "," + String.format(Locale.ROOT, "%.2f", energyCost)
+                + "," + String.format(Locale.ROOT, "%.2f", tickEnergy)
+                + "," + tickSpan
+                + "," + String.format(Locale.ROOT, "%.2f", energyCostWallclockLegacy)
+                + "," + ENERGY_METER_VERSION
                 + "," + met);
     }
 
@@ -310,7 +329,8 @@ public class DynamicsLearner extends Artifact {
     public void saveExploitResults(String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
             pw.println("profile,mode,goal_id,zone,target_rank,deadline_sec,chosen_label,"
-                     + "believed_delay_sec,learned_delay_sec,actual_delay_sec,energy_cost,met");
+                     + "believed_delay_sec,learned_delay_sec,actual_delay_sec,"
+                     + "tick_energy,tick_span,energy_cost_wallclock_legacy,energy_meter,met");
             for (String row : exploitRows) pw.println(row);
             LOGGER.info("saveExploitResults: wrote " + exploitRows.size() + " rows to " + filename);
         } catch (IOException e) {

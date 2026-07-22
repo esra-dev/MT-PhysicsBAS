@@ -152,7 +152,11 @@ _ARMS = (("ql_true", "true"), ("ql_false", "false"))
 # energy, which is "lower is better" -- orientation is handled when we decide
 # `ql_true_better` per row.
 _COMPLIANCE_METRICS = ("overall_compliance", "tight_compliance", "loose_compliance")
-_ENERGY_METRIC = "total_energy"
+# Protocol v2: the energy descriptive is the deterministic tick-integrated
+# delta (tick_energy column, meter tick-v1). The withdrawn cumulative
+# wall-clock read survives only as the labelled *_wallclock_legacy diagnostic.
+_ENERGY_METRIC = "total_tick_energy"
+_LEGACY_ENERGY_METRIC = "total_energy_wallclock_legacy"
 
 
 def load_phase3_config(cfg_path: Path) -> dict:
@@ -270,7 +274,7 @@ def collect_compliance(root: Path, bool_str: str, profile: str,
     fname = f"timebounded_results_{bool_str}_{profile}.csv"
     paths = find_csv_paths(root, fname)
 
-    overall, tight, loose, energy, actual = [], [], [], [], []
+    overall, tight, loose, energy, legacy_energy, actual = [], [], [], [], [], []
     n_goals_total = 0
     for p in paths:
         try:
@@ -283,11 +287,18 @@ def collect_compliance(root: Path, bool_str: str, profile: str,
             continue
         n_met = n_tot = n_tight_met = n_tight = n_loose_met = n_loose = 0
         e_sum = 0.0
+        legacy_sum = 0.0
         a_vals = []
         for r in rows:
             met = _as_float(r.get("met"))
             deadline = _as_float(r.get("deadline_sec"))
-            ecost = _as_float(r.get("energy_cost"))
+            # Protocol v2: tick_energy is the deterministic per-attempt delta.
+            # The legacy cumulative column (renamed *_wallclock_legacy; old
+            # archives call it energy_cost) is read only as a diagnostic.
+            ecost = _as_float(r.get("tick_energy"))
+            legacy = _as_float(r.get("energy_cost_wallclock_legacy"))
+            if legacy is None:
+                legacy = _as_float(r.get("energy_cost"))
             adelay = _as_float(r.get("actual_delay_sec"))
             if met is None or deadline is None:
                 continue
@@ -305,6 +316,8 @@ def collect_compliance(root: Path, bool_str: str, profile: str,
                     n_loose_met += 1
             if ecost is not None:
                 e_sum += ecost
+            if legacy is not None:
+                legacy_sum += legacy
             if adelay is not None and adelay >= 0:
                 a_vals.append(adelay)
         if n_tot == 0:
@@ -316,6 +329,7 @@ def collect_compliance(root: Path, bool_str: str, profile: str,
         if n_loose:
             loose.append(n_loose_met / n_loose)
         energy.append(e_sum)
+        legacy_energy.append(legacy_sum)
         actual.append(sum(a_vals) / len(a_vals) if a_vals else float("nan"))
 
     return {
@@ -324,7 +338,8 @@ def collect_compliance(root: Path, bool_str: str, profile: str,
         "overall_compliance": overall,
         "tight_compliance": tight,
         "loose_compliance": loose,
-        "total_energy": energy,
+        "total_tick_energy": energy,
+        "total_energy_wallclock_legacy": legacy_energy,
         "mean_actual_delay": actual,
     }
 
@@ -373,7 +388,8 @@ def write_compliance_ci(per_cell: dict, out_dir: Path, iters: int) -> int:
             "n_replicas": arm["n_replicas"],
             "n_goals_total": arm["n_goals_total"],
         }
-        for metric in (*_COMPLIANCE_METRICS, _ENERGY_METRIC, "mean_actual_delay"):
+        for metric in (*_COMPLIANCE_METRICS, _ENERGY_METRIC,
+                       _LEGACY_ENERGY_METRIC, "mean_actual_delay"):
             vals = [float(v) for v in arm[metric] if v == v]
             mean, lo, hi = _bootstrap_ci(vals, iters=iters)
             row[f"{metric}_mean"] = mean
@@ -508,7 +524,7 @@ def print_summary(per_cell: dict, per_delay: dict, profiles: list[str],
             o, _, _ = _bootstrap_ci([float(v) for v in arm["overall_compliance"]])
             t, _, _ = _bootstrap_ci([float(v) for v in arm["tight_compliance"]])
             l, _, _ = _bootstrap_ci([float(v) for v in arm["loose_compliance"]])
-            e, _, _ = _bootstrap_ci([float(v) for v in arm["total_energy"]])
+            e, _, _ = _bootstrap_ci([float(v) for v in arm["total_tick_energy"]])
             o = o * 100 if o == o else float("nan")
             t = t * 100 if t == t else float("nan")
             l = l * 100 if l == l else float("nan")

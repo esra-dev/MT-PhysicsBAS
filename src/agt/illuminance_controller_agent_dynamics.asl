@@ -321,16 +321,21 @@ key_infeas(B, Deadline, 1) :- B >  Deadline.
     setLabStateFromMap(BKeys, BVals)[artifact_id(LabId)];
     .wait(SettleMs);
     readLabStatusTimed(ZL0, _SR0, Tick0)[artifact_id(LabId)];
+    readEnergyCostTimed(E0, ET0)[artifact_id(LabId)];
     actionToWoT(A, WotType, WotValue)[artifact_id(QlId)];
     invokeAction(WotType, WotValue)[artifact_id(LabId)];
     !hold_and_measure(A, ZL0, Tick0, HoldTicks, -1, Delay);
-    readEnergyCost(Energy)[artifact_id(LabId)];
+    // Protocol-v2 energy: deterministic per-tick holding power over the held
+    // tick window (delta energy / delta ticks) — never a cumulative wall-clock
+    // accumulator read, whose value depended on elapsed real time.
+    readEnergyCostTimed(E1, ET1)[artifact_id(LabId)];
     readLabStatusTimed(ZLf, _SRf, _Tf)[artifact_id(LabId)];
     if (Delay >= 0) { recordDelaySample(A, Delay)[artifact_id(DId)] };
-    +action_cost(A, Energy);
+    if (ET1 > ET0) { Power = (E1 - E0) / (ET1 - ET0) } else { Power = 0.0 };
+    +action_cost(A, Power);
     !record_effect_zones(A, 1, ZL0, ZLf);
     .print("[Probe]   action ", A, " first-effect delay=", Delay,
-           " ticks, holding energy=", Energy).
+           " ticks, holding power=", Power, " per tick").
 
 // Hold an actuator ON for PollsLeft polls, capturing the first-rise delay.
 @hold_and_measure_done
@@ -411,16 +416,19 @@ key_infeas(B, Deadline, 1) :- B >  Deadline.
 +!exploit_goal(Id, Zone, Target, Deadline) <-
     !choose_action(Zone, Target, Deadline, ChosenA, Believed, Cost);
     if (ChosenA >= 0) {
-        !execute_and_measure(ChosenA, Zone, Target, Deadline, ActualSec, EnergyUsed, Met);
+        !execute_and_measure(ChosenA, Zone, Target, Deadline,
+                             ActualSec, TickEnergy, TickSpan, LegacyEnergy, Met);
         ?dyn_artifact(DId);
         getDelaySecondsForAction(ChosenA, LearnedSec)[artifact_id(DId)];
         ?active_profile(P); ?mode_label(Mode);
         !action_label(ChosenA, Label);
         recordExploitResult(P, Mode, Id, Zone, Target, Deadline, Label,
-                            Believed, LearnedSec, ActualSec, EnergyUsed, Met)[artifact_id(DId)];
+                            Believed, LearnedSec, ActualSec,
+                            TickEnergy, TickSpan, LegacyEnergy, Met)[artifact_id(DId)];
         .print("[Exploit] ", Id, " zone ", Zone, " >=", Target, " in ", Deadline,
                "s -> ", Label, " (believed ", Believed, "s) actual=", ActualSec,
-               "s energy=", EnergyUsed, " met=", Met)
+               "s tick_energy=", TickEnergy, " over ", TickSpan,
+               " ticks, met=", Met)
     } else {
         .print("[Exploit] ", Id, " — no feasible actuator; skipped.")
     }.
@@ -448,18 +456,26 @@ key_infeas(B, Deadline, 1) :- B >  Deadline.
 
 // Execute the chosen actuator from a fresh baseline and measure the ACTUAL
 // time-to-target. met=1 iff the target rank is reached within the deadline.
+// Protocol-v2 energy: TickEnergy is the accumulator DELTA over the attempt and
+// TickSpan the simulator-tick delta between the same two reads — deterministic
+// in simulator time. LegacyEnergy is the withdrawn cumulative wall-clock read,
+// recorded as a labelled diagnostic only.
 @execute_and_measure
-+!execute_and_measure(A, Zone, Target, Deadline, ActualSec, EnergyUsed, Met) <-
++!execute_and_measure(A, Zone, Target, Deadline, ActualSec, TickEnergy, TickSpan, LegacyEnergy, Met) <-
     ?lab_artifact(LabId); ?qlearner_artifact(QlId);
     ?active_profile(P); ?probe_baseline(P, BKeys, BVals);
     ?probe_settle_ms(SettleMs); ?probe_max_wait_ticks(MaxW); ?seconds_per_tick(SPT);
     setLabStateFromMap(BKeys, BVals)[artifact_id(LabId)];
     .wait(SettleMs);
     readLabStatusTimed(_ZL0, _SR0, Tick0)[artifact_id(LabId)];
+    readEnergyCostTimed(E0, ET0)[artifact_id(LabId)];
     actionToWoT(A, WotType, WotValue)[artifact_id(QlId)];
     invokeAction(WotType, WotValue)[artifact_id(LabId)];
     !measure_target(Zone, Target, Tick0, MaxW, 0, ReachTicks);
-    readEnergyCost(EnergyUsed)[artifact_id(LabId)];
+    readEnergyCostTimed(E1, ET1)[artifact_id(LabId)];
+    TickEnergy = E1 - E0;
+    TickSpan = ET1 - ET0;
+    LegacyEnergy = E1;
     if (ReachTicks >= 0) {
         ActualSec = ReachTicks * SPT;
         if (ActualSec <= Deadline) { Met = 1 } else { Met = 0 }
