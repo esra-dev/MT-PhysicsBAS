@@ -22,7 +22,7 @@
 #  spotlight, NO cross-zone feeds, NO hidden weaknesses.
 #
 #  Physics (simulator_flow_lab1.json, port 1892):
-#     Z1Level = 25 + 0.10*Sunshine + (Z1Light ? 400 : 0)
+#     Z1Level = 25 + (Z1Light ? 400 : 0)
 #  Sunshine is sampled once per episode from {0,100,400,900} and PINNED.
 #  State vector = [Z1Level(0..3), Z1Light(0/1)]  →  4 * 2 = 8 states.
 #  New feature vs. nothing: a single Causes actuator. This is the H1 baseline:

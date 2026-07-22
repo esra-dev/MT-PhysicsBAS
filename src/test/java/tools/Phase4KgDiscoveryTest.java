@@ -72,6 +72,101 @@ class Phase4KgDiscoveryTest {
             "lab4 actuators must carry no energyCost (energy prior inert)");
     }
 
+    // -------------------------------------------------------------- lab4dual
+
+    @Test
+    void lab4dualGatesBothLampsOnTheirOwnPlugs() {
+        StereotypeReasoner reasoner = new StereotypeReasoner(
+            new StereotypeReasoner.ClasspathOntologyLoader(
+                new String[] { "building_8_dualplug.ttl" }),
+            0.75);
+
+        // BOTH lamps must be IV-gated, each on ITS OWN plug slot.
+        // §10 of building_8_dualplug.ttl: PlugZ1 = slot 7, PlugZ2 = slot 8.
+        StereotypeReasoner.ActionInfo lamp1On = findOnAction(reasoner, "SetZ1Light");
+        assertNotNull(lamp1On, "Z1 lamp ON action must be discovered");
+        assertTrue(lamp1On.hasIV,
+            "Z1 lamp ON must be IV-gated by SmartPlug_Z1 (ws:powerGates)");
+        assertEquals(7, lamp1On.ivStateVecIndex,
+            "Z1 lamp ON must be gated on the PlugZ1 slot (stateVecIndex 7)");
+        assertEquals(1, lamp1On.ivMinRank,
+            "Power-gate ivMinRank must be 1 (plug ON enables the lamp)");
+
+        StereotypeReasoner.ActionInfo lamp2On = findOnAction(reasoner, "SetZ2Light");
+        assertNotNull(lamp2On, "Z2 lamp ON action must be discovered");
+        assertTrue(lamp2On.hasIV,
+            "Z2 lamp ON must be IV-gated by SmartPlug_Z2 (ws:powerGates)");
+        assertEquals(8, lamp2On.ivStateVecIndex,
+            "Z2 lamp ON must be gated on the PlugZ2 slot (stateVecIndex 8)");
+        assertEquals(1, lamp2On.ivMinRank,
+            "Power-gate ivMinRank must be 1 (plug ON enables the lamp)");
+
+        // Both plugs are ENABLERS: neither ON action may be IV-gated.
+        StereotypeReasoner.ActionInfo plug1On = findOnAction(reasoner, "SetPlugZ1");
+        StereotypeReasoner.ActionInfo plug2On = findOnAction(reasoner, "SetPlugZ2");
+        assertNotNull(plug1On, "SmartPlug_Z1 ON action must be discovered");
+        assertNotNull(plug2On, "SmartPlug_Z2 ON action must be discovered");
+        assertTrue(!plug1On.hasIV,
+            "SmartPlug_Z1 ON must NOT be IV-gated (it is an enabler)");
+        assertTrue(!plug2On.hasIV,
+            "SmartPlug_Z2 ON must NOT be IV-gated (it is an enabler)");
+
+        // lab4dual declares no ws:energyCost — the energy prior must stay inert.
+        assertEquals(0.0, lamp1On.energyCost, 1e-9,
+            "lab4dual actuators must carry no energyCost (energy prior inert)");
+    }
+
+    // ------------------------------------------------------------- lab4chain
+
+    @Test
+    void lab4chainAppliesTheTwoLevelPowerChain() {
+        StereotypeReasoner reasoner = new StereotypeReasoner(
+            new StereotypeReasoner.ClasspathOntologyLoader(
+                new String[] { "building_9_chainplug.ttl" }),
+            0.75);
+
+        // Level 2 of the chain: the Z1 lamp's ON action is gated on the PLUG
+        // slot. §10 of building_9_chainplug.ttl: PlugZ1 = slot 7.
+        StereotypeReasoner.ActionInfo lampOn = findOnAction(reasoner, "SetZ1Light");
+        assertNotNull(lampOn, "Z1 lamp ON action must be discovered");
+        assertTrue(lampOn.hasIV,
+            "Z1 lamp ON must be IV-gated by SmartPlug_Z1 (ws:powerGates level 2)");
+        assertEquals(7, lampOn.ivStateVecIndex,
+            "Z1 lamp ON must be gated on the PlugZ1 slot (stateVecIndex 7)");
+        assertEquals(1, lampOn.ivMinRank,
+            "Power-gate ivMinRank must be 1 (plug ON enables the lamp)");
+
+        // Level 1 of the chain: the PLUG's ON action is itself gated on the
+        // BREAKER slot. §10: MasterSwitch = slot 8. This is what makes the
+        // dependency a CHAIN rather than two parallel gates.
+        StereotypeReasoner.ActionInfo plugOn = findOnAction(reasoner, "SetPlugZ1");
+        assertNotNull(plugOn, "SmartPlug_Z1 ON action must be discovered");
+        assertTrue(plugOn.hasIV,
+            "SmartPlug_Z1 ON must be IV-gated by MasterSwitch (ws:powerGates level 1)");
+        assertEquals(8, plugOn.ivStateVecIndex,
+            "SmartPlug_Z1 ON must be gated on the MasterSwitch slot (stateVecIndex 8)");
+        assertEquals(1, plugOn.ivMinRank,
+            "Power-gate ivMinRank must be 1 (breaker ON enables the plug)");
+
+        // The breaker is the chain ROOT enabler: its ON action must NOT be
+        // IV-gated, so it receives the unconditional constructive bonus and
+        // the KG-primed agent learns the order breaker -> plug -> lamp.
+        StereotypeReasoner.ActionInfo masterOn = findOnAction(reasoner, "SetMasterSwitch");
+        assertNotNull(masterOn, "MasterSwitch ON action must be discovered");
+        assertTrue(!masterOn.hasIV,
+            "MasterSwitch ON must NOT be IV-gated (it is the chain root enabler)");
+
+        // The Z2 lamp is OUTSIDE the chain — directly actionable, no IV.
+        StereotypeReasoner.ActionInfo lamp2On = findOnAction(reasoner, "SetZ2Light");
+        assertNotNull(lamp2On, "Z2 lamp ON action must be discovered");
+        assertTrue(!lamp2On.hasIV,
+            "Z2 lamp ON must NOT be IV-gated (it is outside the chain)");
+
+        // lab4chain declares no ws:energyCost — the energy prior must stay inert.
+        assertEquals(0.0, lampOn.energyCost, 1e-9,
+            "lab4chain actuators must carry no energyCost (energy prior inert)");
+    }
+
     // ------------------------------------------------------------------ lab5
 
     @Test

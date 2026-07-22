@@ -44,7 +44,7 @@ use_stereotypes(true).
 // Adaptation parameters (num_episodes is overridden per-profile at startup).
 num_episodes(2000).
 max_steps_per_episode(20).
-action_delay_ms(65).      // delay between actions (ms) — must exceed 200 ms simulator tick
+action_delay_ms(65).      // delay between actions (ms) — exceeds one 50 ms simulator tick
 
 // Phase 2.2 — greedy goal-rate certification. After re-learning, run this many
 // ε=0 evaluation episodes to measure whether the FINAL (recovered) policy
@@ -308,8 +308,34 @@ greedy_eval_episodes(20).
     ?action_delay_ms(Delay);
     ?max_steps_per_episode(MaxSteps);
 
-    // ε-greedy action over the CURRENT (possibly reduced) action space.
-    getActionFromState(StateVec, true, Action)[artifact_id(QlId)];
+    // Action selection is regime-dependent (advisor's "operate, then re-learn"
+    // design). BEFORE any fault is detected the agent runs its FROZEN clean
+    // policy "as normal" (greedy) — it does NOT adapt; it only monitors — with
+    // one addition: ACTIVE KG-DRIVEN SELF-TEST. Some actuators (the sun-mediated
+    // blinds) are never on the greedy path (a deterministic lamp dominates the
+    // stochastic blind at energy-free reward), so a blind fault would stay latent
+    // under passive monitoring. getDiagnosticProbeAction returns the OPEN action
+    // of an un-verified blind whenever the CURRENT state satisfies its
+    // falsifiability preconditions (sun rank >= fault.detect.ivMinSunRank, own
+    // zone below saturation, blind currently OFF) — i.e. a state in which a
+    // healthy blind MUST cross a rank boundary. The agent takes that probe so the
+    // KG Expected-vs-Actual check below can adjudicate the blind; a healthy blind
+    // is verified once and never probed again, a faulty one is caught on the
+    // first probe. This is fault DETECTION (sampling), not policy adaptation: the
+    // Q-table stays FROZEN (no calculateQ until `detected(_)`), so the agent
+    // still does NOT work around the fault. AFTER a fault is detected, blacklisted
+    // and warm-restarted the agent re-learns over the survivors with ε-boosted
+    // re-exploration (warmRestart restored ε to fault.relearn.epsBoost).
+    if (detected(_)) {
+        getActionFromState(StateVec, true, Action)[artifact_id(QlId)]        // Regime B: post-fault re-learning (ε-boosted)
+    } else {
+        getDiagnosticProbeAction(StateVec, Probe)[artifact_id(QlId)];
+        if (Probe >= 0) {
+            Action = Probe                                                  // active self-test: probe an un-verified actuator
+        } else {
+            getActionFromState(StateVec, false, Action)[artifact_id(QlId)]   // Regime A: exploit frozen clean policy (monitor)
+        }
+    };
     actionToWoT(Action, WotType, WotValue)[artifact_id(QlId)];
     if (WotType \== "none") {
         invokeAction(WotType, WotValue)[artifact_id(LabId)]
@@ -320,13 +346,23 @@ greedy_eval_episodes(20).
     readLabStatus(ZoneLevels2, SunshineRank2, SKs2, SVs2)[artifact_id(LabId)];
     encodeState(ZoneLevels2, SunshineRank2, SKs2, SVs2, NextState)[artifact_id(QlId)];
 
-    // Learn (Bellman update + dynamics stats).
-    calculateQ(StateVec, Action, NextState)[artifact_id(QlId)];
-    ?learner_artifact(LId);
-    observe(StateVec, Action, NextState)[artifact_id(LId)];
+    // Learn (Bellman update + dynamics stats) ONLY after a fault has been
+    // detected, discarded (blacklisted) and warm-restarted. Pre-detection the
+    // clean Q-table stays FROZEN so the agent does NOT silently adapt around the
+    // fault (advisor: "the agent will not try to work around a fault").
+    // `detected(_)` is asserted in @on_defect_new, which fires AFTER
+    // observeForFaults below, so the detecting step itself does not learn; every
+    // step from the next one onward does.
+    if (detected(_)) {
+        calculateQ(StateVec, Action, NextState)[artifact_id(QlId)];
+        ?learner_artifact(LId);
+        observe(StateVec, Action, NextState)[artifact_id(LId)]
+    };
 
     // STRICT Expected-vs-Actual check: does the KG prediction for this action
-    // match what actually happened? Accumulates per-component fault evidence.
+    // match what actually happened? Phase 2.3 — INSTANT isolation: the FIRST
+    // unambiguous anomaly (dead/inverted) names the defective component; there is
+    // no fault counter / accumulation threshold.
     observeForFaults(StateVec, Action, NextState, NewlyDefective)[artifact_id(QlId)];
     if (NewlyDefective \== "") {
         !on_defect(NewlyDefective, EpN)
@@ -374,9 +410,94 @@ greedy_eval_episodes(20).
     .print("[Adapt] Blacklisted ", NRemoved, " action(s); action space now = ", AppNow);
     // Re-prime learning over the surviving actions (master plan §3.1).
     warmRestart[artifact_id(QlId)];
-    .print("[Adapt] Warm restart complete — re-learning over surviving components.").
+    .print("[Adapt] Warm restart complete — re-learning over surviving components.");
+    // Phase 2.5b — BEST-EFFORT DEGRADATION. Now that the defective component is
+    // gone, PROVE (deterministically, against the live faulty physics) whether
+    // the nominal goal is still reachable with the surviving actuators. Only if
+    // it is NOT do we lower the target to the closest achievable rank and NOTIFY
+    // the user; if the goal is still reachable this is a no-op and the agent
+    // keeps recovering toward the true goal exactly as before. Probe EVERY zone:
+    // a single-zone lab (labmon) probes only zone 0, a two-zone lab (lab3)
+    // probes zones 0 and 1, each lowering its own effective goal independently.
+    getNumZones(NumZones)[artifact_id(QlId)];
+    .print("[Adapt] Probing reachability across ", NumZones, " zone(s).");
+    !assess_zones(0, NumZones).
 @on_defect_dup
 +!on_defect(_, _) <- true.   // component already known — ignore.
+
+/* ============================================================
+ * Best-effort degradation (Phase 2.5b)
+ *
+ * After a fault is blacklisted, enumerate the surviving-actuator combinations,
+ * drive the (faulty) lab into each, and record the rank closest to the nominal
+ * goal (argmin |rank − goal|). If the closest achievable rank is BELOW the goal,
+ * the goal is UNREACHABLE: lower the effective goal to that rank and inform the
+ * user (belief + console alert). Otherwise the goal is still reachable → no-op.
+ * ============================================================ */
+
+// Probe every zone in turn. Each zone's probe independently re-enumerates the
+// surviving-actuator combinations (beginReachabilityProbe resets its scratch and
+// argmin toward that zone's own nominal goal), so a multi-zone degradation (both
+// zones below their nominal rank) is detected and reported zone-by-zone.
+@assess_zones_done
++!assess_zones(Z, N) : Z >= N <- true.
+@assess_zones_step
++!assess_zones(Z, N) : Z < N <-
+    !assess_reachability(Z);
+    !assess_zones(Z + 1, N).
+
+@assess_reachability
++!assess_reachability(Zone) <-
+    ?qlearner_artifact(QlId);
+    beginReachabilityProbe(NumCombos)[artifact_id(QlId)];
+    .print("[Adapt] Reachability probe: testing ", NumCombos, " surviving-actuator combination(s).");
+    !probe_combo_loop(Zone, 0, NumCombos);
+    finishReachabilityProbe(Zone, BestRank, Degraded)[artifact_id(QlId)];
+    if (Degraded) {
+        getNominalGoal(Zone, Nominal)[artifact_id(QlId)];
+        +degraded_mode(Zone, BestRank, Nominal);
+        .print("==========================================================");
+        .print("   [DEGRADED] Goal rank ", Nominal, " is UNREACHABLE with the");
+        .print("   components that survive after blacklisting.");
+        .print("   Best achievable illuminance = rank ", BestRank, ".");
+        .print("   The agent will get AS CLOSE AS POSSIBLE (rank ", BestRank, ")");
+        .print("   and operate in DEGRADED mode. *** USER NOTIFIED. ***");
+        .print("==========================================================")
+    } else {
+        .print("[Adapt] Nominal goal still reachable with surviving components — normal recovery.")
+    }.
+
+// Enumerate combinations 0..N-1. For each: realise the combo, let the sim
+// settle, read the achieved rank, record the argmin-distance best.
+@probe_combo_loop_done
++!probe_combo_loop(_, I, N) : I >= N <- true.
+@probe_combo_loop_step
++!probe_combo_loop(Zone, I, N) : I < N <-
+    ?qlearner_artifact(QlId);
+    ?lab_artifact(LabId);
+    ?action_delay_ms(Delay);
+    getProbeCombo(I, ComboActions)[artifact_id(QlId)];
+    !apply_combo(ComboActions);
+    .wait(Delay);
+    readLabStatus(ZL, SR, SK, SV)[artifact_id(LabId)];
+    encodeState(ZL, SR, SK, SV, StateVec)[artifact_id(QlId)];
+    recordProbeRank(StateVec, Zone)[artifact_id(QlId)];
+    !probe_combo_loop(Zone, I + 1, N).
+
+// Realise one combination: execute each surviving actuator's ON/OFF action.
+@apply_combo_done
++!apply_combo([]) <- true.
+@apply_combo_step
++!apply_combo([A | Rest]) <-
+    ?qlearner_artifact(QlId);
+    ?lab_artifact(LabId);
+    ?action_delay_ms(Delay);
+    actionToWoT(A, WotType, WotValue)[artifact_id(QlId)];
+    if (WotType \== "none") {
+        invokeAction(WotType, WotValue)[artifact_id(LabId)]
+    };
+    .wait(Delay);
+    !apply_combo(Rest).
 
 /* ============================================================
  * Finish — save adapted artifacts + the recovery metric, stop MAS.
@@ -402,10 +523,17 @@ greedy_eval_episodes(20).
     !get_reconverge_episode(ReconvergeEp);
     !get_secondary_detect_episode(SecondaryEp);
     !get_defect_label(DefectLabel);
+    // Phase 2.5b: annotate the row with the graceful-degradation status. In a
+    // degraded cell GoalRate is BEST-EFFORT attainment (fraction of greedy
+    // rollouts that reach the closest achievable rank), not nominal-goal rate.
+    getGoalStatus(0, NominalGoal, EffectiveGoal, DegradedFlag)[artifact_id(QlId)];
     !sx_filename("recovery_stereotypes_", UseStereotypes, QtSuffix, ".csv", RecoveryFile);
-    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, SecondaryEp, GoalRate, DefectLabel)[artifact_id(QlId)];
+    saveRecoveryLog(RecoveryFile, DetectEp, ReconvergeEp, SecondaryEp, GoalRate, DefectLabel,
+                    NominalGoal, EffectiveGoal, DegradedFlag)[artifact_id(QlId)];
     .print("[Adapt] Recovery metric saved to ", RecoveryFile,
-           " (detect=", DetectEp, " reconverge=", ReconvergeEp, " secondary=", SecondaryEp, " goalRate=", GoalRate, ")");
+           " (detect=", DetectEp, " reconverge=", ReconvergeEp, " secondary=", SecondaryEp,
+           " goalRate=", GoalRate, " nominalGoal=", NominalGoal, " bestEffort=", EffectiveGoal,
+           " degraded=", DegradedFlag, ")");
     if (not detected(_)) {
         .print("[Adapt] NOTE: no fault was detected within the budget.")
     };

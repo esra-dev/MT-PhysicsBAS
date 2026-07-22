@@ -3,19 +3,17 @@ name: Phase 1 (KG acceleration, clean labs)
 # ──────────────────────────────────────────────────────────────────────────
 # Phase 1 — Knowledge-Guided Acceleration on STRICTLY-CLEAN labs.
 #
-# Proves the advisor's anchor finding: a KG-primed Q-learner (ql_true /
-# stereotypes-on) learns FASTER and with FEWER redundant actions than a
-# tabula-rasa Q-learner (ql_false / stereotypes-off), while reaching the SAME
-# final goal-success. Labs lab1/lab2/lab3 contain NO weaknesses, NO injected
-# faults and NO wrong priors — the simulator physics align exactly with the
-# knowledge graph, so any learning-speed gap is attributable to the prior.
+# Corrective protocol-v2 campaign. It estimates whether and how a KG-primed
+# Q-learner differs from its paired comparator; no outcome direction is assumed.
+# Labs lab1/lab2/lab3 contain no injected faults. Registered controls test
+# whether any difference is due to KG mechanisms, redundancy shaping, PBRS,
+# or an incidental harness effect.
 #
-# Same setup -> train -> bench -> aggregate DAG as sweep-paper.yml, but with
-# Phase-1 defaults: profiles lab1,lab2,lab3; run_mode phase1 (3000 episodes,
-# ~3x faster per cell than paper); seeds 1..10 for confirmatory power. Every
-# (profile x stereo x seed) training cell and (profile x mode x seed)
-# benchmark cell runs concurrently across GitHub-hosted runners, so the
-# wall-clock is set by the slowest single cell, not the cell count.
+# Registered campaign defaults: labs 1–3, seeds 1–20, fixed 3,000-episode
+# training, protocol phase1-v2, and arm C. The same workflow is dispatched once
+# for each of the four corrected modes. Each dispatch contains 120 training
+# cells and 180 benchmark cells plus setup and aggregate jobs. Data-producing
+# cells run once; failures remain visible under their original workflow run ID.
 # ──────────────────────────────────────────────────────────────────────────
 
 on:
@@ -26,13 +24,13 @@ on:
         required: false
         default: "lab1,lab2,lab3"
       seeds:
-        description: "Comma-separated RNG seeds. Default 1..10 (confirmatory power: Wilcoxon can reach p<0.05 only at n>=6). Use 1,2,3,4,5 for a faster smoke replication."
+        description: "Comma-separated RNG seeds. Corrected registered campaign uses exactly 1..20; no optional extension."
         required: false
-        default: "1,2,3,4,5,6,7,8,9,10"
+        default: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"
       run_mode:
-        description: "run_config.json profile: phase1 (3000x20, recommended) | phase1_baseline (arm A, KG+PBRS+trust off) | phase1_kg_only (arm C headline, KG prior only) | phase1_pbrs_only (arm B control, PBRS only) | phase1_full (arm D, full stack) | paper (10000x20) | dev (50x20, quick gate)"
+        description: "Corrected modes: phase1_v2_kg_only | phase1_v2_redundancy_only | phase1_v2_baseline | phase1_v2_pbrs_only. Legacy modes remain available only for historical reproduction."
         required: false
-        default: "phase1"
+        default: "phase1_v2_kg_only"
       publish_results:
         description: "Push consolidated results to 'results' branch"
         type: boolean
@@ -43,13 +41,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: phase1
+  # One queue per registered treatment mode. GitHub retains at most one
+  # pending run per concurrency group, so a shared `phase1` group would cancel
+  # intermediate campaigns when all four registered runs are submitted.
+  group: phase1-${{ github.event.inputs.run_mode || 'phase1_v2_kg_only' }}
   cancel-in-progress: false
 
 env:
-  RUN_MODE: ${{ github.event.inputs.run_mode || 'phase1' }}
+  RUN_MODE: ${{ github.event.inputs.run_mode || 'phase1_v2_kg_only' }}
   PROFILES: ${{ github.event.inputs.profiles || 'lab1,lab2,lab3' }}
-  SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5,6,7,8,9,10' }}
+  SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20' }}
 
 jobs:
   setup:
@@ -117,6 +118,9 @@ jobs:
     timeout-minutes: 180    # phase1 (3000 eps) ~50 min/cell; 3x safety margin
     strategy:
       fail-fast: false
+      # Four registered workflows run together; 10 cells per workflow keeps
+      # the campaign at the registered ~40-job aggregate concurrency ceiling.
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         stereo:  ["true", "false"]
@@ -169,30 +173,38 @@ jobs:
           path: build
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Run training cell (with early-failure retry)
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph inside the retry
+            # loop — the cell's Gradle run then starts against a fully warm
+            # cache instead of hitting Maven Central mid-run (Phase-2 run
+            # 29115969476 lost a cell to transient Maven-Central 403s).
+            ./gradlew --no-daemon classes validateTurtle
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
+      - name: Run training cell once (data-bearing attempts are never replaced)
         shell: pwsh
         run: |
-          $ok = $false
-          for ($attempt = 1; $attempt -le 2; $attempt++) {
-            $start = Get-Date
-            ./run_full_project.ps1 `
-              -RunMode ${{ env.RUN_MODE }} `
-              -OnlyProfiles ${{ matrix.profile }} `
-              -OnlyStereo ${{ matrix.stereo }} `
-              -RunSeed ${{ matrix.seed }} `
-              -SkipBenchmark `
-              -SkipPreflight
-            $rc = $LASTEXITCODE
-            if ($rc -eq 0) { $ok = $true; break }
-            $elapsedMin = ((Get-Date) - $start).TotalMinutes
-            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
-              Write-Host "::error::training cell failed after $([math]::Round($elapsedMin,1)) min on attempt $attempt (rc=$rc) - not retrying"
-              break
-            }
-            Write-Host "::warning::training cell failed early ($([math]::Round($elapsedMin,1)) min) on attempt $attempt (rc=$rc); retrying once"
-            Start-Sleep -Seconds 15
-          }
-          if (-not $ok) { exit 1 }
+          ./run_full_project.ps1 `
+            -RunMode ${{ env.RUN_MODE }} `
+            -OnlyProfiles ${{ matrix.profile }} `
+            -OnlyStereo ${{ matrix.stereo }} `
+            -RunSeed ${{ matrix.seed }} `
+            -SkipBenchmark `
+            -SkipPreflight
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload training artefacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -220,6 +232,7 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         mode:    ["rule_based", "ql_false", "ql_true"]
@@ -328,30 +341,38 @@ jobs:
           path: .
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: Run benchmark cell (with early-failure retry)
+      - name: Warm Gradle deps (retry on JitPack/Maven-Central flakes)
+        shell: bash
+        run: |
+          set +e
+          rc=0
+          for attempt in 1 2 3; do
+            # validateTurtle is a JavaExec on sourceSets.main.runtimeClasspath,
+            # so this resolves the RUNTIME dependency graph inside the retry
+            # loop — the cell's Gradle run then starts against a fully warm
+            # cache instead of hitting Maven Central mid-run (Phase-2 run
+            # 29115969476 lost a cell to transient Maven-Central 403s).
+            ./gradlew --no-daemon classes validateTurtle
+            rc=$?
+            [ $rc -eq 0 ] && break
+            if [ $attempt -lt 3 ]; then
+              wait=$((attempt * 30))
+              echo "::warning::dep warm-up attempt $attempt failed (rc=$rc); retrying in ${wait}s"
+              sleep $wait
+            fi
+          done
+          if [ $rc -ne 0 ]; then echo "::error::Gradle dependency resolution failed after 3 attempts (rc=$rc)"; exit $rc; fi
+      - name: Run benchmark cell once (data-bearing attempts are never replaced)
         shell: pwsh
         run: |
-          $ok = $false
-          for ($attempt = 1; $attempt -le 2; $attempt++) {
-            $start = Get-Date
-            ./run_full_project.ps1 `
-              -RunMode ${{ env.RUN_MODE }} `
-              -OnlyProfiles ${{ matrix.profile }} `
-              -OnlyModes ${{ matrix.mode }} `
-              -RunSeed ${{ matrix.seed }} `
-              -SkipTraining `
-              -SkipPreflight
-            $rc = $LASTEXITCODE
-            if ($rc -eq 0) { $ok = $true; break }
-            $elapsedMin = ((Get-Date) - $start).TotalMinutes
-            if ($attempt -eq 2 -or $elapsedMin -gt 5) {
-              Write-Host "::error::benchmark cell failed after $([math]::Round($elapsedMin,1)) min on attempt $attempt (rc=$rc) - not retrying"
-              break
-            }
-            Write-Host "::warning::benchmark cell failed early ($([math]::Round($elapsedMin,1)) min) on attempt $attempt (rc=$rc); retrying once"
-            Start-Sleep -Seconds 15
-          }
-          if (-not $ok) { exit 1 }
+          ./run_full_project.ps1 `
+            -RunMode ${{ env.RUN_MODE }} `
+            -OnlyProfiles ${{ matrix.profile }} `
+            -OnlyModes ${{ matrix.mode }} `
+            -RunSeed ${{ matrix.seed }} `
+            -SkipTraining `
+            -SkipPreflight
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload benchmark artefacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -386,6 +407,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Start with an empty corrected-analysis directory
+        shell: bash
+        run: |
+          rm -rf analysis/out
+          mkdir -p analysis/out
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -498,20 +524,52 @@ jobs:
           if [ -d _train_root_seed1 ]; then
             cp -n _train_root_seed1/* . 2>/dev/null || true
           fi
+      - name: Validate protocol-v2 archive invariants
+        if: startsWith(env.RUN_MODE, 'phase1_v2_')
+        run: python analysis/validate_phase1_v2_archive.py .
       - name: Run sweep analysis (multi-seed mode)
+        shell: bash
         run: |
+          EXTRA=()
+          if [[ "$RUN_MODE" == phase1_v2_* ]]; then
+            EXTRA+=(--protocol-version phase1-v2)
+          fi
           python analysis/sweep_report.py \
             --root benchmark/results \
             --out analysis/out \
             --seeds-mode \
-            --ci-bootstrap-iters 10000
+            --ci-bootstrap-iters 10000 \
+            "${EXTRA[@]}"
+      - name: Record immutable workflow inputs
+        shell: bash
+        run: |
+          python analysis/write_workflow_provenance.py \
+            --out analysis/out/workflow_inputs.json \
+            --run-id "${{ github.run_id }}" \
+            --sha "${{ github.sha }}" \
+            --ref "${{ github.ref }}" \
+            --run-mode "$RUN_MODE" \
+            --profiles "$PROFILES" \
+            --seeds "$SEEDS" \
+            --publish-results "${{ github.event.inputs.publish_results }}"
       - name: Run learning curves (multi-seed bands)
-        if: always()
         run: |
           python analysis/learning_curves.py \
             --root . \
-            --out analysis/out \
-            || echo "learning_curves.py: non-fatal failure (will revisit)"
+            --out analysis/out
+      - name: Create complete SHA-256 inventory for the consolidated artifact
+        shell: bash
+        run: |
+          python analysis/phase1_archive_inventory.py \
+            --root . \
+            --out analysis/out/SHA256SUMS.csv \
+            --include 'analysis/out' \
+            --include 'benchmark/results_seed*' \
+            --include 'qtable_final_*.csv' \
+            --include 'metrics_*.csv' \
+            --include 'learned_stereotypes_*.ttl' \
+            --include 'iv_stats_*.json' \
+            --include 'benchmark_results_*.csv'
       - name: Aggressive cleanup before git operations
         shell: bash
         run: |
@@ -533,9 +591,9 @@ jobs:
             echo "**Mode:** \`${{ env.RUN_MODE }}\`"
             echo "**Commit:** \`${{ github.sha }}\`"
             echo ""
-            echo "H1 (acceleration) is read from **learning_speed_tests.csv** below:"
-            echo "auc_goal (PRIMARY, higher_better) should favour ql_true; mean_first_goal"
-            echo "and episodes_to_threshold (lower_better) should be smaller for ql_true."
+            echo "Within-mode corrected contrasts are listed in **learning_speed_tests.csv** below:"
+            echo "Protocol-v2 inference uses two-sided paired sign-flip tests; bootstrap is CI-only."
+            echo "auc_goal is higher-better; mean_first_goal_presentations is lower-better."
             echo ""
             if [ -f analysis/out/learning_speed_tests.csv ]; then
               echo "## learning_speed_tests.csv (ql_true - ql_false, paired across seeds)"
@@ -596,8 +654,10 @@ jobs:
             -RunMode ${{ env.RUN_MODE }} `
             -Profiles "${{ env.PROFILES }}" `
             -Modes "rule_based,ql_false,ql_true" `
-            -OverwriteResultsBranch `
             -PublishResults
+            # -OverwriteResultsBranch removed 2026-07-12: force-orphaning wiped
+            # every other workflow's published results (it deleted the five
+            # Phase-2 runs of record on 2026-07-12). Default mode appends.
       - name: Skip publish warning
         if: ${{ env.SKIP_PUBLISH == '1' }}
         shell: bash

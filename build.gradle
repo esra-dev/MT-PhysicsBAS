@@ -23,6 +23,15 @@ repositories {
     maven { url = uri('https://jitpack.io') }
 }
 
+// Reproduce the concrete executed SPARQL result and KG-induced lab2 action
+// ranking quoted in docs/audit/phase1_audit_2026-07-19.md.
+tasks.register('phase1SparqlEvidence', JavaExec) {
+    group = 'verification'
+    description = 'Print the Phase-1 lab2 SPARQL audit evidence.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.Phase1SparqlEvidence'
+}
+
 // Keep Logback as the single SLF4J runtime provider. JaCaMo / WoT transitive
 // dependencies also bring slf4j-nop and reload4j bindings, which makes SLF4J
 // warn on stderr during preflight and can trip the PowerShell runner.
@@ -83,9 +92,10 @@ sourceSets {
         java {
             srcDir 'src/test/java'
         }
-        resources {
-            srcDir 'src/test/resources'
-        }
+        // NOTE: src/test/resources is already Gradle's DEFAULT test-resources
+        // dir; re-declaring it via srcDir duplicates every entry and fails
+        // processTestResources once the dir is non-empty (first Phase 5 test
+        // fixture). The default is used as-is.
     }
 }
 
@@ -233,12 +243,13 @@ clean {
 def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries','sim.http.backoffMs',
                  'reward.clip','stereo.priorScale','stereo.priorDecayEpisodes','stereo.priorDecayFloor',
                  'stereo.priorRedundant','stereo.priorIVUnsat','stereo.initBonus','stereo.crossZoneBonus',
+                 'stereo.redundancyOnly',
                  // Phase 4 (lab5 energy): non-fading energy prior weight. Only
                  // lab5's KG declares ws:energyCost, so it is inert on labs 1-4.
                  'stereo.energyPriorWeight',
                  // Research extensions: PBRS, adaptive trust, per-run seed.
                  'reward.shaping','stereo.adaptiveTrust','stereo.adaptiveTrust.minSamples','stereo.adaptiveTrust.floor',
-                 'run.seed',
+                 'run.seed','phase1.protocolVersion',
                  // Phase 3 process-dynamics: probe cadence / hold window / sample
                  // budget + DynamicsLearner thresholds. Read by the dynamics agent
                  // (tools.jia.system_prop_num) and by tools.DynamicsLearner
@@ -378,13 +389,67 @@ task validateTurtle(type: JavaExec, dependsOn: 'classes') {
     args 'src/resources'
 }
 
+// verifyActionRegistry: golden test for the ontology-discovered action
+// registries (action-space inversion audit). Recomputes every lab ontology
+// set's registry with the CURRENT StereotypeReasoner code and compares it to
+// the label-keyed goldens under config/golden_registry. The contract is the
+// action-KEY SET + per-action metadata; action INDICES are informational only
+// (all persisted per-action artifacts are label-remapped on load). Fails the
+// build on any set/metadata difference. Pass -PregistryGolden=<dir> to check
+// against a different golden dir (e.g. config/golden_registry/pre_inversion
+// for the one-time pre-vs-post equivalence audit).
+task verifyActionRegistry(type: JavaExec, dependsOn: 'classes') {
+    description = 'Golden-checks every lab ontology action registry against config/golden_registry.'
+    group = ' MT-Esra'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.RegistryGoldenCheck'
+    args (project.findProperty('registryGolden') ?: 'config/golden_registry')
+}
+
+// dumpActionRegistry: (re)generates the golden registry CSVs. Run ONLY after
+// an INTENDED discovery/ontology change, review the diff, and commit the
+// updated goldens together with the change that caused it.
+task dumpActionRegistry(type: JavaExec, dependsOn: 'classes') {
+    description = 'Regenerates the golden action-registry CSVs under config/golden_registry.'
+    group = ' MT-Esra'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.ActionRegistryDump'
+    args (project.findProperty('registryOut') ?: 'config/golden_registry')
+}
+
+// synthesizeOverlay: Phase 5 learned-KG-completion writer. Reads the raw
+// StereotypeLearner stats dumped by saveRawStats after a gap-profile training
+// run, applies the registered emission gates, and writes the provenance-tagged
+// learned overlay TTL + the learned_claims audit CSV. Usage:
+//   gradlew synthesizeOverlay -Pstats=learned_stats_true_labmon_nostereo.csv
+//     -Pont=building_6_monitor_nostereo.ttl
+//     -Pout=learned_overlay_true_labmon_nostereo.ttl
+//     -Pclaims=learned_claims_true_labmon_nostereo.csv
+//     [-Prun=<ci run id> -Pseed=<n> -PsourceProfile=<profile> -Pcommit=<sha>]
+task synthesizeOverlay(type: JavaExec, dependsOn: 'classes') {
+    description = 'Phase 5: synthesizes a learned KG overlay TTL + claims CSV from raw learner stats.'
+    group = ' MT-Esra'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.OverlaySynthesizer'
+    doFirst {
+        def argList = []
+        ['stats', 'ont', 'out', 'claims', 'run', 'seed', 'commit'].each { key ->
+            def val = project.findProperty(key)
+            if (val != null && val.toString() != '') { argList += ["--${key}", val.toString()] }
+        }
+        def profileVal = project.findProperty('sourceProfile')
+        if (profileVal) { argList += ['--sourceProfile', profileVal.toString()] }
+        args = argList
+    }
+}
+
 // preflight: lightweight sanity checks before a long sweep. Validates that
 // each requested profile has the expected ttl, ontology, and scenario JSON
 // files, and that simulator ports respond to /health (unless -PskipSimProbe
 // is passed). Run via:
 //   gradlew preflight -Pprofiles=custom2,custom3
 //   gradlew preflight -Pprofiles=custom2 -PskipSimProbe
-task preflight(dependsOn: 'validateTurtle') {
+task preflight(dependsOn: ['validateTurtle', 'verifyActionRegistry']) {
     description = 'Phase 12 #6: validate profiles, scenarios, ontology, and simulator availability.'
     group = ' MT-Esra'
 

@@ -1,0 +1,66 @@
+Stage 11 git audit
+Observed local time: 2026-06-18T13:24:57+02:00
+Scope: read-only provenance check for Stage 11 template-population notes.
+No branch switch, reset, clean, delete, or checkout was performed.
+
+Current refs observed earlier in Stage 11:
+- current branch: phase3-process-dynamics
+- HEAD: eda6ca1ffa026e723ad1a18a2bdb3aed927e7433
+- origin/phase3-process-dynamics: f0f1bc84a1917116e005ff940988726d352f46ba
+- origin/main: 3bb5289c36cb3093228ec0609fe57ec676b1ee53
+- origin/results: 0372ecd5864fa6555ebfce7d05e05d9aaab96994
+- phase2-fault-detection: 2981147fc4c740d9ce3340be363d010a34937324
+- kg-crosszone-coupling: 866297d54750c91f4595962f9c975d2f1704f629
+- kg-crosszone-coupling-bump: 293bb07df96a2b51fcf9f68adfcd6f0245713682
+- kg-crosszone-ablation: e8d63e09be504f1dc206737ca8feb05299fe1031
+- main: 7ac37a10fe3b3c23bc2b54159c40142fd367e821
+
+Command:
+git show --stat --oneline --decorate 7137f88 3bb5289 eda6ca1 22a448b 0372ecd
+
+Selected output:
+- 7137f88 Phase 3: response-delay learning (process dynamics)
+  - 17 files changed, 4333 insertions, 5 deletions
+  - includes .github/workflows/phase3.yml, analysis/phase3_dynamics.py,
+    run_phase3_dynamics.ps1, simulator slow flows, dynamics agent,
+    DynamicsLearner, slow TTL resources, task_dynamics.jcm
+- 3bb5289 (origin/main, origin/HEAD) Merge pull request #2 from esra-dev/phase3-process-dynamics
+  - 45 files changed, 11223 insertions, 30 deletions
+  - includes Phase 2 workflow/adaptation/result-analysis files plus Phase 3 files
+- eda6ca1 (HEAD -> phase3-process-dynamics) ci(phase3): default replicas 1..10 to clear Wilcoxon floor; document confirmatory sweep
+  - 2 files changed, 668 insertions, 2 deletions
+  - files: .github/workflows/phase3.yml; docs/PHASE2_TO_PHASE3_CHANGES.md
+- 22a448b Phase 2 recovery results: run 27547019772 (20260615-183138)
+  - selected result CSVs include analysis_out/phase2_recovery_ci.csv
+    and analysis_out/phase2_recovery_paired.csv
+  - full stat contains 362 files changed, 261585 insertions
+- 0372ecd (origin/results) Phase 3 dynamics results: run 27621106006 (20260616-133306)
+  - 123 files changed, 2639 insertions
+  - selected result CSVs include analysis_out/phase3_delay_accuracy.csv,
+    analysis_out/phase3_compliance_ci.csv,
+    analysis_out/phase3_compliance_paired.csv
+
+Command:
+git diff --stat 3bb5289c36cb3093228ec0609fe57ec676b1ee53 eda6ca1ffa026e723ad1a18a2bdb3aed927e7433 -- .github/workflows/phase3.yml docs/PHASE2_TO_PHASE3_CHANGES.md paper_notes
+
+Output:
+ .github/workflows/phase3.yml     |   4 +-
+ docs/PHASE2_TO_PHASE3_CHANGES.md | 666 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 668 insertions(+), 2 deletions(-)
+
+Command:
+git log --all --decorate --oneline --max-count=30 -- paper_notes docs/PHASE1_TO_PHASE2_CHANGES.md docs/PHASE2_TO_PHASE3_CHANGES.md .github/workflows/phase3.yml analysis/phase3_dynamics.py
+
+Output:
+eda6ca1 (HEAD -> phase3-process-dynamics) ci(phase3): default replicas 1..10 to clear Wilcoxon floor; document confirmatory sweep
+7137f88 Phase 3: response-delay learning (process dynamics)
+985c7a1 fix(phase2): ambiguous-abstain closes lab3_f2inv Spotlight FP race (v4 8->4 -> v5 target 0); add S17/S18 analysis
+2aab559 fix(phase2): primary-detection-time component attribution kills lab3_f2inv Spotlight FP
+
+Command:
+git diff --stat -- docs/PHASE1_TO_PHASE2_CHANGES.md docs/PHASE2_TO_PHASE3_CHANGES.md
+
+Output:
+ docs/PHASE1_TO_PHASE2_CHANGES.md | 252 +++++++++++++++++++++++++++++++++++++++
+ docs/PHASE2_TO_PHASE3_CHANGES.md |  49 +++++++-
+ 2 files changed, 298 insertions(+), 3 deletions(-)

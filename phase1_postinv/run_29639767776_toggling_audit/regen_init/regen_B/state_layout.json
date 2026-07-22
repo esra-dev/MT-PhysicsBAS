@@ -1,0 +1,30 @@
+{
+  "profile": "lab3",
+  "goal": [3, 3],
+  "ontology": ["building_3_complex.ttl"],
+  "sunshineProb": 0.75,
+  "domainSizes": [4, 4, 2, 2, 2, 2, 2, 4],
+  "zoneLevelIndices": [0, 1],
+  "sunshineIndex": 7,
+  "numActions": 11,
+  "wotStateToSvIndex": {
+    "http://example.org/was#Z1Blinds": 4,
+    "http://example.org/was#Z2Light": 3,
+    "http://example.org/was#Z1Light": 2,
+    "http://example.org/was#Z2Blinds": 5,
+    "http://example.org/was#Spotlight": 6
+  },
+  "actions": [
+    {"index": 0, "label": "SetSpotlight=OFF", "wotActionType": "http://example.org/was#SetSpotlight", "wotValue": false, "stateVecBitIndex": 6, "hasIV": false},
+    {"index": 1, "label": "SetSpotlight=ON", "wotActionType": "http://example.org/was#SetSpotlight", "wotValue": true, "stateVecBitIndex": 6, "hasIV": false},
+    {"index": 2, "label": "SetZ1Blinds=OFF", "wotActionType": "http://example.org/was#SetZ1Blinds", "wotValue": false, "stateVecBitIndex": 4, "hasIV": false},
+    {"index": 3, "label": "SetZ1Blinds=ON", "wotActionType": "http://example.org/was#SetZ1Blinds", "wotValue": true, "stateVecBitIndex": 4, "hasIV": true},
+    {"index": 4, "label": "SetZ1Light=OFF", "wotActionType": "http://example.org/was#SetZ1Light", "wotValue": false, "stateVecBitIndex": 2, "hasIV": false},
+    {"index": 5, "label": "SetZ1Light=ON", "wotActionType": "http://example.org/was#SetZ1Light", "wotValue": true, "stateVecBitIndex": 2, "hasIV": false},
+    {"index": 6, "label": "SetZ2Blinds=OFF", "wotActionType": "http://example.org/was#SetZ2Blinds", "wotValue": false, "stateVecBitIndex": 5, "hasIV": false},
+    {"index": 7, "label": "SetZ2Blinds=ON", "wotActionType": "http://example.org/was#SetZ2Blinds", "wotValue": true, "stateVecBitIndex": 5, "hasIV": true},
+    {"index": 8, "label": "SetZ2Light=OFF", "wotActionType": "http://example.org/was#SetZ2Light", "wotValue": false, "stateVecBitIndex": 3, "hasIV": false},
+    {"index": 9, "label": "SetZ2Light=ON", "wotActionType": "http://example.org/was#SetZ2Light", "wotValue": true, "stateVecBitIndex": 3, "hasIV": false},
+    {"index": 10, "label": "DO_NOTHING", "wotActionType": "", "wotValue": false, "stateVecBitIndex": -1, "hasIV": false}
+  ]
+}

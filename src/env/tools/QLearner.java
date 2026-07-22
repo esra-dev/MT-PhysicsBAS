@@ -184,12 +184,26 @@ public class QLearner extends Artifact {
     // Fields
     // -----------------------------------------------------------------------
     private double[][][] qTables;    // Per-zone decomposed Q-tables [numZones][N_STATES][nActions]
-    private int[]        goal;       // target rank per zone, length = numZones
+    private int[]        goal;       // NOMINAL target rank per zone, length = numZones (source of truth)
+    // Phase 2.5b — best-effort degradation. effectiveGoal starts as a clone of
+    // goal and is LOWERED (only during a faulty-lab adapt run, only after a
+    // reachability probe PROVES the nominal goal is unreachable with the
+    // surviving actuators) to the closest achievable rank. isTerminal and the
+    // Q-reward target read effectiveGoal so the agent optimises toward — and is
+    // rewarded for holding — the best reachable rank instead of being punished
+    // for sitting below an unreachable nominal goal. In clean training and in
+    // reachable-goal recovery, effectiveGoal == goal, so behaviour is identical.
+    private int[]        effectiveGoal;
+    // Reachability-probe scratch state (populated by beginReachabilityProbe).
+    private int[][]      probeSurvivors;  // rows = {onActionIdx, offActionIdx} of each surviving actuator
+    private int          probeBestRank = -1;
+    private int          probeBestDist = Integer.MAX_VALUE;
     private boolean    useStereotypes;
     private boolean    maskStrict = false; // if true, hard masking for ablation (default: soft priors)
     private Random     rng;
     private int        firstGoalEpisode = -1;
     private int        goalCount        = 0;
+    private String     protocolVersion  = "legacy";
 
     // StereotypeReasoner — always instantiated for structural discovery
     private StereotypeReasoner reasoner;
@@ -231,6 +245,9 @@ public class QLearner extends Artifact {
     // Per-scenario first-goal tracking: map from state-index → first episode number
     private final Map<Integer, Integer> firstGoalByStartState = new java.util.LinkedHashMap<>();
     private int currentEpisodeStartState = -1; // set by beginEpisode(startStateVec)
+    private final FirstGoalPresentationTracker firstGoalPresentations =
+            new FirstGoalPresentationTracker();
+    private int currentEpisodeScenarioId = -1;
 
     // Convergence detection: track max |Q| delta over the last 100 episodes
     private double prevMaxAbsQ      = 0.0;
@@ -241,27 +258,31 @@ public class QLearner extends Artifact {
     // -----------------------------------------------------------------------
     // Phase 2 — fault detection, blacklisting & warm-restart re-learning
     // -----------------------------------------------------------------------
-    // A component is flagged DEFECTIVE when the Knowledge-Graph prediction for
-    // one of its actions is repeatedly contradicted by the observed transition:
+    // Phase 2.3 — INSTANT isolation (NO evidence-accumulation threshold). A
+    // component is flagged DEFECTIVE the FIRST time the Knowledge-Graph
+    // prediction for one of its actions is contradicted by the observed
+    // transition:
     //   • DEAD     — the actuator bit flips as commanded (or is silently
     //                dropped) but the zone illuminance it should move does not
-    //                respond, across >= FAULT_DEAD_RATE of observations.
-    //   • INVERTED — the zone moves in the OPPOSITE direction to the KG sign,
-    //                across >= FAULT_INV_RATE of observations.
-    //   • ANOMALY  — combined dead+inverted rate >= FAULT_ANOMALY_RATE. This
-    //                catches a component whose evidence is SPLIT between the two
-    //                modes (e.g. an inverted lamp that reads 'dead' when the
-    //                zone is already at rank 0 and 'inverted' when the zone is
-    //                elevated) so that neither single rate crosses on its own.
-    // Detection requires at least FAULT_MIN_SAMPLES falsifiable observations of
-    // the action so a few saturated / no-op steps cannot trip a false alarm.
+    //                respond.
+    //   • INVERTED — the zone moves in the OPPOSITE direction to the KG sign.
+    // A SINGLE unambiguous, component-attributable observation of either mode is
+    // sufficient: the advisor's design is that the agent recognises an action in
+    // its policy produced UNEXPECTED behaviour, discards that artifact, and
+    // re-learns — there is no "how many times was it faulty" counter. False
+    // alarms are prevented STRUCTURALLY rather than statistically: only
+    // FALSIFIABLE claims are scored (the action must make a non-zero KG bit-claim
+    // and the zone it should move must not already be saturated at the boundary),
+    // a zone fed by an already-blacklisted Causes actuator is skipped
+    // (contamination guard), and a no-response on a zone with a fault-SUSPECT
+    // co-feeder is abstained.
     // Only CAUSES actuators are adjudicated: a MEDIATES / IV-gated actuator
     // (e.g. a sunshine-gated blind) has no unconditional sign, and its null
     // response is expected whenever the IV is low or the zone is lamp-saturated,
     // so observeForFaults skips it (the fault model — dead / inverted lux —
     // targets Causes lamps). Once flagged, blacklistComponent() removes BOTH the
     // ON and OFF actions of the component, and warmRestart() re-primes learning
-    // over the survivors. All thresholds are -D overridable.
+    // over the survivors.
     private boolean[] blacklisted;     // [nActions] — true → removed from action space
     private int[]     faultObsN;       // [nActions] — falsifiable observations of the action
     private int[]     faultDeadN;      // [nActions] — observations with no zone response (dead)
@@ -280,17 +301,24 @@ public class QLearner extends Artifact {
     // actions share one wotActionType, but hasIV is only set on the activation
     // action, so this set lets the detector skip BOTH polarities of a blind).
     private java.util.Set<String> ivGatedComponents = new java.util.HashSet<>();
-    private static final int    FAULT_MIN_SAMPLES  = parseIntProp   ("fault.detect.minSamples",  20);
-    private static final double FAULT_DEAD_RATE    = parseDoubleProp("fault.detect.deadRate",    0.80);
-    private static final double FAULT_INV_RATE     = parseDoubleProp("fault.detect.invRate",     0.60);
-    private static final double FAULT_ANOMALY_RATE = parseDoubleProp("fault.detect.anomalyRate", 0.75);
+    // Phase 2 extension — ACTIVE self-test bookkeeping. An IV-gated (blind)
+    // component is added here once it has been soundly OPENED under adequate sun
+    // and adjudicated HEALTHY by observeForFaults, so getDiagnosticProbeAction
+    // stops probing it (a healthy blind is tested exactly once). A faulty blind
+    // never enters this set — it is blacklisted instead — so it is never re-probed.
+    private java.util.Set<String> probeVerified = new java.util.HashSet<>();
+    // Phase 2.3 — INSTANT isolation: a component is blacklisted on its FIRST
+    // unambiguous fault observation, so the minSamples / dead-rate / inv-rate /
+    // anomaly-rate accumulation thresholds have been removed. False positives are
+    // held off by the structural falsifiability + contamination + suspect-
+    // co-feeder guards below, not by counting repeated anomalies.
     private static final double FAULT_EPS_BOOST    = parseDoubleProp("fault.relearn.epsBoost",   0.30);
     // Phase 2.2 — combined dead+inverted observations for an actuator to count as
     // a fault SUSPECT that can mask a co-located healthy actuator's zone response
     // (primary-detection-time component attribution). Kept small — and paired with
     // a single-inverted-observation fast path in isFaultSuspect — so a genuine
     // fault is recognised as "suspect", and its masking effect discounted, before
-    // the neighbour it corrupts can reach FAULT_MIN_SAMPLES and be mis-flagged.
+    // the neighbour it corrupts is itself (instantly) mis-flagged.
     private static final int    FAULT_SUSPECT_MIN  = parseIntProp   ("fault.detect.suspectMin",   2);
 
     // Phase 2.1 — policy-stability recovery detector (adapt regime).
@@ -304,6 +332,21 @@ public class QLearner extends Artifact {
     private int[]  recoveryPolicy      = null;  // last greedy policy snapshot
     private int    recoveryStableCount = 0;     // consecutive episodes with no policy change
     private static final int RECOVERY_WINDOW = parseIntProp("fault.recover.window", 50);
+
+    // Phase 2 extension — IV-gated (Mediates) fault detection floor. A blind's
+    // lux contribution is 0.50·sunshine, so its rank response is only FALSIFIABLE
+    // when the instrumental variable (sunshine) is high enough that a healthy
+    // OPEN ALWAYS crosses a discretised rank boundary. Below this sun rank a null
+    // response is expected-healthy (the sun is too weak to move the zone a whole
+    // rank) and adjudicating it would manufacture false "dead" verdicts. At sun
+    // rank ≥2 (sun≥400 → ≥200 lux own-zone contribution) a healthy blind crosses
+    // a rank boundary from EVERY achievable pre-open zone lux in labs 2/3 — the
+    // deterministic lux lattice yields pre-open zone values of ~25 (rank 0) or
+    // ~175 (rank 2) with no own-blind term, and +200 lux lifts both across a
+    // boundary — so 2 is the sound floor. Override -Dfault.detect.ivMinSunRank=3
+    // for a stricter (sun=900-only) gate.
+    private static final int IV_DETECT_MIN_SUN_RANK =
+        parseIntProp("fault.detect.ivMinSunRank", 2);
 
     // -----------------------------------------------------------------------
     // CArtAgO initialisation
@@ -322,14 +365,15 @@ public class QLearner extends Artifact {
                                   Object[] ontologyPaths, double sunshineSatisfactionProb) {
         this.goal = new int[goal.length];
         for (int i = 0; i < goal.length; i++) this.goal[i] = toInt(goal[i]);
+        // Phase 2.5b: effective (best-effort) goal starts equal to the nominal
+        // goal; only a proven-unreachable faulty lab lowers it (setEffectiveGoal).
+        this.effectiveGoal = this.goal.clone();
         this.useStereotypes = useStereotypes;
-        // Deterministic-by-default; bench/training agents may override via setSeed().
-        // Seed mixes stereo flag so stereotype-on / stereotype-off runs explore
-        // different action sequences (prior fix: identical FirstGoalEpisode bug).
-        // RUN_SEED (sysprop -Drun.seed=N) is XORed in so independent replicas
-        // for confidence-interval analysis explore different trajectories.
-        long baseSeed = 42L ^ (useStereotypes ? 0x5A5A5A5A5A5A5A5AL : 0xA5A5A5A5A5A5A5A5L);
-        if (RUN_SEED != 0L) baseSeed ^= mix64(RUN_SEED);
+        // Protocol v2 uses the same seed-derived stream in both treatment arms.
+        // The streams can diverge after treatment-dependent decisions consume RNG,
+        // but they begin paired and no arm label is mixed into the seed.
+        this.protocolVersion = System.getProperty("phase1.protocolVersion", "legacy");
+        long baseSeed = computeActionSeed(RUN_SEED, useStereotypes, protocolVersion);
         this.rng            = new Random(baseSeed);
 
         // Convert Object[] to String[]
@@ -426,6 +470,16 @@ public class QLearner extends Artifact {
                         ? " (minSamples=" + ADAPTIVE_TRUST_MIN_SAMPLES + " floor=" + ADAPTIVE_TRUST_FLOOR + ")"
                         : "")
                   + " runSeed=" + RUN_SEED);
+    }
+
+    static long computeActionSeed(long runSeed, boolean useStereotypes, String protocolVersion) {
+        long baseSeed = 42L;
+        if (!"phase1-v2".equals(protocolVersion)) {
+            baseSeed ^= useStereotypes
+                    ? 0x5A5A5A5A5A5A5A5AL : 0xA5A5A5A5A5A5A5A5L;
+        }
+        if (runSeed != 0L) baseSeed ^= mix64(runSeed);
+        return baseSeed;
     }
 
     /**
@@ -543,7 +597,7 @@ public class QLearner extends Artifact {
                 int slot = zoneLevelIndices[z];
                 int prevLevel = toInt(stateVec[slot]);
                 int nextLevel = toInt(nextStateVec[slot]);
-                int target    = goal[z];
+                int target    = effectiveGoal[z];
                 double phiPrev = -Math.abs(prevLevel - target);
                 double phiNext = -Math.abs(nextLevel - target);
                 double F = gamma * phiNext - phiPrev;
@@ -946,13 +1000,73 @@ public class QLearner extends Artifact {
     // -----------------------------------------------------------------------
 
     /**
+     * ACTIVE KG-driven actuator self-test (Phase 2 extension). Returns, for the
+     * CURRENT state, the OPEN action of an un-verified, non-blacklisted IV-gated
+     * (blind) component whose falsifiability preconditions are satisfied RIGHT
+     * NOW — otherwise -1.
+     *
+     * A blind's lux effect is 0.50·sunshine, so its rank response is only
+     * soundly falsifiable when (a) the blind is currently OFF (opening it makes a
+     * non-zero KG bit-claim), (b) the sunshine rank is ≥ {@link
+     * #IV_DETECT_MIN_SUN_RANK} (a healthy open MUST cross a rank boundary), and
+     * (c) the blind's own zone has headroom (it is below its saturation rank, so
+     * a healthy +Δ can actually raise the discretised rank). When such a state
+     * arises the adapt agent takes this probe instead of its greedy monitoring
+     * action, so {@link #observeForFaults} can adjudicate the blind. This is what
+     * lets a blind fault surface even though a deterministic lamp dominates the
+     * sun-gated blind on the (energy-free) greedy path — the blind is otherwise
+     * never opened. A healthy blind is verified on its first probe (see {@link
+     * #probeVerified}) and never probed again; a faulty one is blacklisted.
+     *
+     * Pure read — does NOT mutate policy or state.
+     */
+    @OPERATION
+    public void getDiagnosticProbeAction(Object[] stateVec,
+                                         OpFeedbackParam<Integer> probeAction) {
+        probeAction.set(-1);
+        if (reasoner == null || actionInfos == null) return;
+        int[] s = toIntArray(stateVec);
+        if (sunshineIndex < 0 || sunshineIndex >= s.length) return;
+        if (s[sunshineIndex] < IV_DETECT_MIN_SUN_RANK) return; // sun too low to test any blind
+        for (int a = 0; a < nActions; a++) {
+            StereotypeReasoner.ActionInfo ai = actionInfos[a];
+            if (ai == null || ai.wotActionType == null) continue;
+            if (!ai.wotValue) continue;                                  // only OPEN actions test a blind
+            if (!ivGatedComponents.contains(ai.wotActionType)) continue; // blinds only
+            if (blacklisted != null && a < blacklisted.length && blacklisted[a]) continue;
+            if (probeVerified.contains(ai.wotActionType)) continue;      // already tested healthy
+            int bitSlot = ai.stateVecBitIndex;
+            if (bitSlot < 0 || bitSlot >= s.length) continue;
+            int[] pred = reasoner.getActionPrediction(s, a);
+            int bitPred = (bitSlot < pred.length) ? pred[bitSlot] : 0;
+            if (bitPred == 0) continue;                                  // blind already OPEN — not falsifiable
+            // Require headroom on EVERY own zone the blind claims to raise, so a
+            // healthy open is guaranteed to cross a rank boundary (no false dead).
+            boolean testable = false, saturated = false;
+            for (int z = 0; z < zoneLevelIndices.length; z++) {
+                int slot = zoneLevelIndices[z];
+                if (slot < 0 || slot >= s.length) continue;
+                int predD = (slot < pred.length) ? pred[slot] : 0;
+                if (predD <= 0) continue;
+                int maxRank = (slot < domainSizes.length) ? domainSizes[slot] - 1 : 3;
+                if (s[slot] >= maxRank) { saturated = true; break; }     // no headroom here
+                testable = true;
+            }
+            if (saturated || !testable) continue;
+            probeAction.set(a);
+            return;
+        }
+    }
+
+    /**
      * Strict Expected-vs-Actual check for ONE transition. Compares the
      * Knowledge-Graph prediction for {@code actionIdx} in {@code stateVecBefore}
-     * against the observed Δ to {@code stateVecAfter}, and accumulates per-action
-     * evidence that the underlying component is DEAD (no response) or INVERTED
-     * (opposite response). When an action crosses its detection threshold for
-     * the first time, {@code newlyDefective} is set to the component's WoT
-     * action-type URI; otherwise it is set to the empty string.
+     * against the observed Δ to {@code stateVecAfter}. Phase 2.3 — INSTANT
+     * isolation: the FIRST time a falsifiable, component-attributable observation
+     * shows the underlying component is DEAD (no response) or INVERTED (opposite
+     * response), {@code newlyDefective} is set to the component's WoT action-type
+     * URI; otherwise it is set to the empty string. There is no accumulation
+     * threshold — a single unambiguous anomaly is sufficient to isolate it.
      *
      * Only falsifiable observations are counted: the action must make a non-zero
      * KG bit-claim (i.e. it is not redundant in this state), and a zone the
@@ -961,10 +1075,14 @@ public class QLearner extends Artifact {
      * evidence.
      *
      * Only CAUSES actuators (unconditional {@code elem:increases} sign) are
-     * adjudicated. MEDIATES / IV-gated actuators (e.g. blinds, whose effect is
-     * gated by sunshine and is rank-masked when a co-located lamp saturates the
-     * zone) are skipped: their null response is expected healthy behaviour, not
-     * fault evidence, so adjudicating them yields false DEFECTIVE verdicts.
+     * adjudicated unconditionally. MEDIATES / IV-gated actuators (e.g. blinds,
+     * whose effect is 0.50·sunshine) are adjudicated CONDITIONALLY (Phase 2
+     * extension): only on their OPEN action and only when the sunshine rank is
+     * ≥ {@link #IV_DETECT_MIN_SUN_RANK}, so that a healthy blind's null response
+     * under weak/low sun is never mis-read as a fault, while a genuinely dead or
+     * inverted blind is still caught the first time it is opened under adequate
+     * sun. A shared MULTI-ZONE Causes feeder (the Spotlight) remains out of scope
+     * (see the multi-zone guard below).
      *
      * Pure accumulation — does NOT mutate the policy. Call
      * {@link #blacklistComponent} + {@link #warmRestart} to act on a defect.
@@ -978,24 +1096,59 @@ public class QLearner extends Artifact {
         StereotypeReasoner.ActionInfo ai = actionInfos[actionIdx];
         if (ai == null || ai.wotActionType == null) return;          // DO_NOTHING — no claim
         if (blacklisted != null && blacklisted[actionIdx]) return;   // already removed
-        // Only CAUSES actuators (unconditional elem:increases) are adjudicated.
-        // A MEDIATES / IV-gated actuator (e.g. a blind, whose effect is
-        // 0.5·sunshine) has NO unconditional sign: its zone response is absent
-        // when the IV is low AND is rank-masked whenever a co-located lamp
-        // already saturates the zone at its target rank. A null response is
-        // therefore EXPECTED healthy behaviour, not fault evidence, so scoring
-        // it manufactures false DEFECTIVE verdicts (observed: a healthy blind
-        // flagged at deadRate=1.00 because Z2 was lamp-pinned at its rank-3
-        // target). The injected fault model (dead / inverted lux) only applies
-        // to Causes lamps; detecting a broken Mediates actuator from discretised
-        // ranks alone is unsound, so it is deliberately out of detector scope.
-        // NB: hasIV is set only on the activation action, so we test the whole
-        // component (both ON and OFF actions share one wotActionType).
-        if (ivGatedComponents.contains(ai.wotActionType)) return;
+        // Phase 2.6 (monitor KG-silent variants): a KG-SILENT actuator was
+        // discovered only via its WoT mapping — the stereotype layer makes NO
+        // behavioral claim about it, so there is no Expected-vs-Actual
+        // prediction to falsify. Abstain entirely (also keeps the essential
+        // unmodeled fallback lever safe from a spurious bit-level dead flag).
+        if (ai.kgSilent) return;
+        // MEDIATES / IV-gated actuators (blinds, whose lux effect is 0.50·sunshine)
+        // are adjudicated CONDITIONALLY (Phase 2 extension). Their zone response
+        // is only falsifiable on the OPEN (activation) action and only when the
+        // instrumental variable (sunshine) is high enough that a healthy open
+        // ALWAYS crosses a discretised rank boundary; below that the null response
+        // is expected-healthy, not fault evidence. The conditional IV-gate is
+        // applied further down — AFTER the pre/post state and the KG prediction
+        // are decoded — because it needs the sunshine rank from `before`. (See the
+        // IV-gate block below.) Everything between here and there — the multi-zone
+        // guard, the bit/zone falsifiability checks, and the dead/inverted
+        // adjudication — then applies to a blind unchanged, so a genuinely dead or
+        // inverted blind is caught the FIRST time it is opened under adequate sun,
+        // while a healthy blind is never mis-flagged.
+
+        // Phase 2.3 — INSTANT detection adjudicates ONLY single-zone (dominant)
+        // Causes actuators. A shared MULTI-ZONE Causes feeder (the Spotlight,
+        // affectedZones=[0,1]) contributes only a MARGINAL amount to each zone, so
+        // a healthy toggle may fail to cross a discretised rank boundary — a no-op
+        // that single-observation detection would mis-read as "dead" (observed:
+        // the healthy Spotlight flagged in lab3_f1dead) — and its net per-zone
+        // response is confounded by co-feeders (an inverted co-lamp flooring a
+        // shared zone reads as "inverted"). Such an actuator is NOT falsifiable at
+        // rank resolution and is NEVER fault-injected (the model targets single-
+        // zone lamps), so adjudicating it only manufactures false positives. A
+        // single-zone lamp is the DOMINANT feeder of its zone, so its rank response
+        // IS a sound falsifiable signal and stays fully adjudicated. (Verified: in
+        // every lab, SetZxLight feeds exactly one zone; only SetSpotlight is multi-
+        // zone.) This is the structural guard that makes threshold-free instant
+        // isolation safe.
+        if (ai.affectedZones != null && ai.affectedZones.size() > 1) return;
 
         int[] before = toIntArray(stateVecBefore);
         int[] after  = toIntArray(stateVecAfter);
         int[] pred   = reasoner.getActionPrediction(before, actionIdx);
+
+        // ── Conditional IV-gate (Phase 2 extension) ─────────────────────────
+        // A blind (Mediates / IV-gated) is only SOUNDLY falsifiable on its OPEN
+        // action and only when sunshine is strong enough to guarantee a rank
+        // crossing for a healthy blind. Skip otherwise so a healthy blind is
+        // never mis-flagged (its CLOSE action, or an open under weak/low sun,
+        // legitimately produces a null rank response), while a genuinely dead or
+        // inverted blind IS caught the first time it is opened under adequate sun.
+        if (ivGatedComponents.contains(ai.wotActionType)) {
+            if (!ai.wotValue) return;                                    // only the OPEN action is falsifiable
+            if (sunshineIndex < 0 || sunshineIndex >= before.length) return;
+            if (before[sunshineIndex] < IV_DETECT_MIN_SUN_RANK) return; // IV too low → healthy null expected
+        }
 
         int bitSlot = ai.stateVecBitIndex;
         if (bitSlot < 0 || bitSlot >= before.length) return;
@@ -1082,23 +1235,38 @@ public class QLearner extends Artifact {
             return; // bitObs neither 0 nor == bitPred (shouldn't happen for a 0/1 bit)
         }
 
+        // Maintain the per-action counters BEFORE flagging: the suspect-co-feeder
+        // guard (isFaultSuspect) reads faultInvertN / faultDeadN to attribute
+        // masking on shared zones, and faultObsN bounds-guards that lookup.
         faultObsN[actionIdx]++;
         if (dead)     faultDeadN[actionIdx]++;
         if (inverted) faultInvertN[actionIdx]++;
 
-        if (faultObsN[actionIdx] < FAULT_MIN_SAMPLES) return;
-        double deadRate    = (double) faultDeadN[actionIdx]   / faultObsN[actionIdx];
-        double invRate     = (double) faultInvertN[actionIdx] / faultObsN[actionIdx];
-        double anomalyRate = (double) (faultDeadN[actionIdx] + faultInvertN[actionIdx])
-                                    / faultObsN[actionIdx];
-        if (deadRate >= FAULT_DEAD_RATE || invRate >= FAULT_INV_RATE
-                || anomalyRate >= FAULT_ANOMALY_RATE) {
+        // Phase 2 extension — ACTIVE self-test verification. A blind (IV-gated)
+        // OPEN action that reached this point was soundly falsifiable (sun ≥
+        // threshold, own zone had headroom, bit flipped) and, if it is neither
+        // dead nor inverted, responded CORRECTLY — mark the component verified so
+        // getDiagnosticProbeAction stops probing it. (Lamps/spotlight are not
+        // probed, so gating on ivGatedComponents keeps this a blind-only signal.)
+        if (!dead && !inverted && ai.wotValue
+                && ivGatedComponents.contains(ai.wotActionType)) {
+            probeVerified.add(ai.wotActionType);
+        }
+
+        // Phase 2.3 — INSTANT isolation. A single unambiguous, component-
+        // attributable fault observation (a dead/no-response OR an
+        // inverted/opposite-response on the actuator's own falsifiable claim)
+        // blacklists the component immediately — there is no accumulation
+        // threshold. Every false-positive guard above has already run and
+        // `return`ed on any unfalsifiable / saturated / suspect-co-feeder /
+        // contaminated-zone step, so only a genuine anomaly reaches this point.
+        if (dead || inverted) {
             newlyDefective.set(ai.wotActionType);
             LOGGER.warning(String.format(
                 "observeForFaults: component %s flagged DEFECTIVE via action %d (%s) "
-              + "[obs=%d deadRate=%.2f invRate=%.2f anomalyRate=%.2f]",
+              + "on FIRST anomalous observation [%s]",
                 ai.wotActionType, actionIdx, ai.label,
-                faultObsN[actionIdx], deadRate, invRate, anomalyRate));
+                dead ? "dead/no-response" : "inverted/opposite-response"));
         }
     }
 
@@ -1106,9 +1274,9 @@ public class QLearner extends Artifact {
      * Phase 2.2 — is action {@code b} currently carrying enough anomaly evidence to
      * be treated as a fault SUSPECT whose corruption of a shared zone should be
      * discounted when adjudicating a co-located actuator? Deliberately an EARLY,
-     * low bar — far below the {@code FAULT_MIN_SAMPLES} needed to actually flag a
-     * defect — so a real fault is recognised before the neighbour it corrupts can
-     * be mis-flagged (the lab3_f2inv race). Two triggers:
+     * low bar so a real fault is recognised as suspect the moment it shows any
+     * anomaly, before the neighbour it corrupts is itself (instantly) mis-flagged
+     * (the lab3_f2inv race). Two triggers:
      *   • a SINGLE opposite-direction (inverted) observation — essentially
      *     impossible for a healthy actuator on its own zone, so it alone suffices;
      *   • OR {@code FAULT_SUSPECT_MIN} combined dead+inverted observations.
@@ -1294,18 +1462,29 @@ public class QLearner extends Artifact {
      * evaluation episodes the FINAL policy reaches the goal in. It distinguishes
      * a policy that merely STOPPED CHANGING (stable) from one that actually
      * REACHES the goal (goal-reaching), closing the stability≠optimality gap.
+     *
+     * Phase 2.5b: {@code nominalGoal} / {@code bestEffortRank} / {@code degraded}
+     * record graceful degradation. When the nominal goal is proven unreachable
+     * with the surviving actuators, the effective target is lowered to the
+     * closest achievable rank ({@code bestEffortRank}); {@code RankShortfall} =
+     * nominal − best-effort and {@code DegradedMode} = 1 flag the cell so the
+     * recovered goal-rate is read as BEST-EFFORT attainment, not nominal-goal
+     * attainment.
      */
     @OPERATION
     public void saveRecoveryLog(String filename, int detectEp, int reconvergeEp,
                                 int secondaryDetectEp, double recoveredGoalRate,
-                                String blacklistedLabel) {
+                                String blacklistedLabel,
+                                int nominalGoal, int bestEffortRank, boolean degraded) {
         boolean exists = new java.io.File(filename).exists();
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename, true))) {
-            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate");
+            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate,NominalGoal,BestEffortRank,RankShortfall,DegradedMode");
             int rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1;
-            pw.printf("%s,%d,%d,%d,%d,%.4f%n",
+            int shortfall = (nominalGoal >= 0 && bestEffortRank >= 0) ? (nominalGoal - bestEffortRank) : 0;
+            pw.printf("%s,%d,%d,%d,%d,%.4f,%d,%d,%d,%d%n",
                 blacklistedLabel == null ? "" : blacklistedLabel,
-                detectEp, reconvergeEp, rec, secondaryDetectEp, recoveredGoalRate);
+                detectEp, reconvergeEp, rec, secondaryDetectEp, recoveredGoalRate,
+                nominalGoal, bestEffortRank, shortfall, degraded ? 1 : 0);
             LOGGER.info("saveRecoveryLog: appended recovery row to " + filename);
         } catch (IOException e) {
             LOGGER.warning("saveRecoveryLog: failed " + filename + " — " + e.getMessage());
@@ -1407,10 +1586,164 @@ public class QLearner extends Artifact {
     @OPERATION
     public void isTerminal(Object[] stateVec, OpFeedbackParam<Boolean> terminal) {
         boolean t = true;
-        for (int z = 0; z < goal.length; z++) {
-            if (toInt(stateVec[zoneLevelIndices[z]]) != goal[z]) { t = false; break; }
+        // Phase 2.5b: "terminal" means the agent has reached its EFFECTIVE goal —
+        // the nominal goal in the normal case, or the proven best-effort rank in
+        // a degraded (goal-unreachable) faulty lab.
+        for (int z = 0; z < effectiveGoal.length; z++) {
+            if (toInt(stateVec[zoneLevelIndices[z]]) != effectiveGoal[z]) { t = false; break; }
         }
         terminal.set(t);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 2.5b — best-effort degradation (reachability probe + effective goal)
+    // -----------------------------------------------------------------------
+    //
+    // These operations implement graceful degradation for FAULTY labs: after a
+    // dead/inverted component is detected and blacklisted, the agent PROVES
+    // (deterministically, against the live faulty physics) whether the NOMINAL
+    // goal is still reachable with the surviving actuators. If not, the target
+    // is lowered to the CLOSEST achievable rank (argmin |rank − nominalGoal|
+    // over the enumerated surviving-actuator combinations) and the user is
+    // notified. Nothing here runs in clean training or in reachable-goal
+    // recovery (the probe reports "reachable", effectiveGoal stays == goal).
+
+    /**
+     * Number of controlled zones (= length of the goal vector). Read by the
+     * adapt agent so it can run the reachability probe over EVERY zone: a
+     * single-zone lab (e.g. labmon) probes only zone 0, while a two-zone lab
+     * (e.g. lab3) probes zones 0 and 1. Keeps the degradation logic generic.
+     */
+    @OPERATION
+    public void getNumZones(OpFeedbackParam<Integer> out) {
+        out.set(goal.length);
+    }
+
+    /**
+     * Nominal (configured) goal rank for a zone — the target the agent tries to
+     * reach before any degradation. Read by the adapt agent to report the
+     * shortfall when it must fall back to a best-effort rank.
+     */
+    @OPERATION
+    public void getNominalGoal(int zone, OpFeedbackParam<Integer> out) {
+        out.set((zone >= 0 && zone < goal.length) ? goal[zone] : -1);
+    }
+
+    /**
+     * Lower (or restore) the EFFECTIVE goal rank for a zone. Called only after a
+     * reachability probe proves the nominal goal unreachable.
+     */
+    @OPERATION
+    public void setEffectiveGoal(int zone, int rank) {
+        if (zone >= 0 && zone < effectiveGoal.length) {
+            effectiveGoal[zone] = rank;
+            LOGGER.warning("setEffectiveGoal: zone " + zone + " effective goal set to rank "
+                + rank + " (nominal " + goal[zone] + ")");
+        }
+    }
+
+    /**
+     * Report the goal status of a zone: nominal rank, effective rank, and whether
+     * the zone is degraded (effective &lt; nominal). Used to annotate the recovery
+     * log after adaptation finishes.
+     */
+    @OPERATION
+    public void getGoalStatus(int zone, OpFeedbackParam<Integer> nominal,
+                              OpFeedbackParam<Integer> effective,
+                              OpFeedbackParam<Boolean> degraded) {
+        int g = (zone >= 0 && zone < goal.length) ? goal[zone] : -1;
+        int e = (zone >= 0 && zone < effectiveGoal.length) ? effectiveGoal[zone] : -1;
+        nominal.set(g);
+        effective.set(e);
+        degraded.set(e < g);
+    }
+
+    /**
+     * Begin a reachability probe over the SURVIVING (non-blacklisted) boolean
+     * actuators. Collects each survivor's ON/OFF action-index pair and resets the
+     * best-so-far tracker. Returns the number of actuator combinations to test
+     * (2^k for k survivors) so the agent can enumerate them via getProbeCombo.
+     */
+    @OPERATION
+    public void beginReachabilityProbe(OpFeedbackParam<Integer> numCombos) {
+        java.util.LinkedHashMap<String, int[]> byType = new java.util.LinkedHashMap<>();
+        for (int a = 0; a < nActions; a++) {
+            StereotypeReasoner.ActionInfo ai = actionInfos[a];
+            if (ai == null || ai.wotActionType == null) continue; // skip DO_NOTHING
+            if (blacklisted[a]) continue;                         // skip blacklisted component
+            int[] pair = byType.computeIfAbsent(ai.wotActionType, k -> new int[]{-1, -1});
+            if (ai.wotValue) pair[0] = a; else pair[1] = a;       // [onIdx, offIdx]
+        }
+        java.util.List<int[]> survivors = new java.util.ArrayList<>();
+        for (int[] pair : byType.values()) {
+            if (pair[0] >= 0 && pair[1] >= 0) survivors.add(pair);
+        }
+        probeSurvivors = survivors.toArray(new int[0][]);
+        probeBestRank  = -1;
+        probeBestDist  = Integer.MAX_VALUE;
+        int k = probeSurvivors.length;
+        // Safety cap: never enumerate more than 2^16 combinations.
+        int combos = (k >= 0 && k <= 16) ? (1 << k) : 1;
+        numCombos.set(combos);
+        LOGGER.info("beginReachabilityProbe: " + k + " surviving actuator(s) → "
+            + combos + " combination(s) to test.");
+    }
+
+    /**
+     * Return the list of action indices that realise combination {@code comboIdx}
+     * of the probe: for each surviving actuator, its ON action-index if the
+     * corresponding bit is set, else its OFF action-index. The agent executes
+     * these (via actionToWoT + invokeAction) to drive the lab into that state.
+     */
+    @OPERATION
+    public void getProbeCombo(int comboIdx, OpFeedbackParam<Object[]> actionList) {
+        int k = (probeSurvivors == null) ? 0 : probeSurvivors.length;
+        Object[] out = new Object[k];
+        for (int j = 0; j < k; j++) {
+            int bit = (comboIdx >> j) & 1;
+            out[j] = (bit == 1) ? probeSurvivors[j][0] : probeSurvivors[j][1];
+        }
+        actionList.set(out);
+    }
+
+    /**
+     * Record the rank a probed combination achieved in {@code zone}. Keeps the
+     * combination whose achieved rank is CLOSEST to the nominal goal (ties broken
+     * toward the higher rank), i.e. argmin |rank − nominalGoal|.
+     */
+    @OPERATION
+    public void recordProbeRank(Object[] stateVec, int zone) {
+        int rank = toInt(stateVec[zoneLevelIndices[zone]]);
+        int dist = Math.abs(rank - goal[zone]);
+        if (dist < probeBestDist || (dist == probeBestDist && rank > probeBestRank)) {
+            probeBestDist = dist;
+            probeBestRank = rank;
+        }
+        LOGGER.fine("recordProbeRank: zone " + zone + " achieved rank " + rank
+            + " (best so far " + probeBestRank + ")");
+    }
+
+    /**
+     * Finish the probe: the best achievable rank is reported. If it is below the
+     * nominal goal, the zone is DEGRADED — the effective goal is lowered to that
+     * best rank and {@code degraded} is set true. Otherwise the nominal goal is
+     * reachable and nothing changes.
+     */
+    @OPERATION
+    public void finishReachabilityProbe(int zone, OpFeedbackParam<Integer> bestRank,
+                                        OpFeedbackParam<Boolean> degraded) {
+        bestRank.set(probeBestRank);
+        boolean deg = probeBestRank >= 0 && probeBestRank < goal[zone];
+        if (deg) {
+            effectiveGoal[zone] = probeBestRank;
+            LOGGER.warning("finishReachabilityProbe: zone " + zone + " NOMINAL goal rank "
+                + goal[zone] + " UNREACHABLE — best-effort rank " + probeBestRank
+                + " (shortfall " + (goal[zone] - probeBestRank) + "). Entering DEGRADED mode.");
+        } else {
+            LOGGER.info("finishReachabilityProbe: zone " + zone + " nominal goal rank "
+                + goal[zone] + " still reachable (best probed rank " + probeBestRank + ").");
+        }
+        degraded.set(deg);
     }
 
     /**
@@ -1465,6 +1798,7 @@ public class QLearner extends Artifact {
         episodeWastedByPenalty  = 0;
         episodeWastedByNoEffect = 0;
         currentEpisodeStartState = -1;
+        currentEpisodeScenarioId = -1;
         episodeMaxBellmanDelta = 0.0;
         currentEpisodeNum++;
     }
@@ -1484,8 +1818,34 @@ public class QLearner extends Artifact {
         episodeWastedByPenalty  = 0;
         episodeWastedByNoEffect = 0;
         currentEpisodeStartState = stateVecToIndex(startStateVec);
+        currentEpisodeScenarioId = -1;
         episodeMaxBellmanDelta = 0.0;
         currentEpisodeNum++;
+    }
+
+    /** Configure the complete ordered scenario set before protocol-v2 training. */
+    @OPERATION
+    public void configureTrainingScenarios(Object[] orderedScenarioIds) {
+        List<Integer> ids = new ArrayList<>();
+        for (Object id : orderedScenarioIds) ids.add(toInt(id));
+        firstGoalPresentations.configure(ids);
+        LOGGER.info("configureTrainingScenarios: " + ids);
+    }
+
+    /** Begin a settled, scenario-aware protocol-v2 episode. */
+    @OPERATION
+    public void beginEpisodeForScenario(int scenarioId, Object[] startStateVec,
+                                        boolean terminalAtStart) {
+        episodeCumRewardZ1 = 0;
+        episodeCumRewardZ2 = 0;
+        episodeSteps = 0;
+        episodeWastedByPenalty = 0;
+        episodeWastedByNoEffect = 0;
+        currentEpisodeStartState = stateVecToIndex(startStateVec);
+        currentEpisodeScenarioId = scenarioId;
+        episodeMaxBellmanDelta = 0.0;
+        currentEpisodeNum++;
+        firstGoalPresentations.begin(scenarioId, terminalAtStart);
     }
 
     /**
@@ -1502,8 +1862,12 @@ public class QLearner extends Artifact {
             goalReached ? 1.0 : 0.0,
             epsilon,
             episodeWastedByPenalty,
-            episodeWastedByNoEffect
+            episodeWastedByNoEffect,
+            currentEpisodeScenarioId
         });
+        if (currentEpisodeScenarioId >= 0) {
+            firstGoalPresentations.end(goalReached);
+        }
         // Update convergence detector: use max per-step Bellman delta from this episode
         convergenceCount = (episodeMaxBellmanDelta < CONVERGENCE_THRESHOLD) ? convergenceCount + 1 : 0;
     }
@@ -1558,11 +1922,21 @@ public class QLearner extends Artifact {
     @OPERATION
     public void saveMetrics(String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("Episode,Steps,RewardZ1,RewardZ2,GoalReached,Epsilon,WastedByPenalty,WastedByNoEffect");
+            if ("phase1-v2".equals(protocolVersion)) {
+                pw.println("Episode,Steps,RewardZ1,RewardZ2,GoalReached,Epsilon,WastedByPenalty,WastedByNoEffect,ScenarioId");
+            } else {
+                pw.println("Episode,Steps,RewardZ1,RewardZ2,GoalReached,Epsilon,WastedByPenalty,WastedByNoEffect");
+            }
             for (double[] m : episodeMetrics) {
-                pw.printf("%d,%d,%.2f,%.2f,%d,%.6f,%d,%d%n",
-                    (int) m[0], (int) m[1], m[2], m[3], (int) m[4], m[5],
-                    (int) m[6], (int) m[7]);
+                if ("phase1-v2".equals(protocolVersion)) {
+                    pw.printf("%d,%d,%.2f,%.2f,%d,%.6f,%d,%d,%d%n",
+                        (int) m[0], (int) m[1], m[2], m[3], (int) m[4], m[5],
+                        (int) m[6], (int) m[7], (int) m[8]);
+                } else {
+                    pw.printf("%d,%d,%.2f,%.2f,%d,%.6f,%d,%d%n",
+                        (int) m[0], (int) m[1], m[2], m[3], (int) m[4], m[5],
+                        (int) m[6], (int) m[7]);
+                }
             }
             pw.println();
             pw.println("# Summary");
@@ -1616,8 +1990,11 @@ public class QLearner extends Artifact {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename), 1 << 20);
              PrintWriter pw = new PrintWriter(bw)) {
             StringBuilder row = new StringBuilder(256);
+            // Action-space inversion: columns are keyed by action LABEL (not
+            // positional "aN") so the loader can remap them if the discovery
+            // ordering ever changes again.
             row.append("StateIndex");
-            for (int a = 0; a < nActions; a++) row.append(",a").append(a);
+            for (int a = 0; a < nActions; a++) row.append(',').append(actionInfos[a].label);
             pw.println(row);
             long rowsWritten = 0;
             for (int s = 0; s < nStates; s++) {
@@ -1639,12 +2016,16 @@ public class QLearner extends Artifact {
     private void saveAdaptiveTrustSidecar(String filename) {
         if (actionCalSum == null || actionCalN == null) return;
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("Action,SunBucket,Sum,N");
+            // Action-space inversion: rows are keyed by action LABEL (header
+            // "ActionLabel,...") instead of the positional index (legacy header
+            // "Action,..."), so the loader can remap them safely.
+            pw.println("ActionLabel,SunBucket,Sum,N");
             long rowsWritten = 0;
             for (int a = 0; a < actionCalN.length; a++) {
                 for (int sb = 0; sb < actionCalN[a].length; sb++) {
                     if (actionCalN[a][sb] == 0) continue;
-                    pw.println(a + "," + sb + "," + actionCalSum[a][sb] + "," + actionCalN[a][sb]);
+                    pw.println(actionInfos[a].label + "," + sb + ","
+                             + actionCalSum[a][sb] + "," + actionCalN[a][sb]);
                     rowsWritten++;
                 }
             }
@@ -1789,14 +2170,27 @@ public class QLearner extends Artifact {
     @OPERATION
     public void saveFirstGoalPerScenario(String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("StartStateIndex,FirstGoalEpisode");
-            for (Map.Entry<Integer, Integer> entry : firstGoalByStartState.entrySet()) {
-                pw.println(entry.getKey() + "," + entry.getValue());
+            if ("phase1-v2".equals(protocolVersion)) {
+                pw.println("ProtocolVersion,ScenarioId,Presentations,FirstSuccessPresentation,Censored,AnalysisPresentation,TerminalAtStartPresentations");
+                for (FirstGoalPresentationTracker.Record record : firstGoalPresentations.records()) {
+                    String first = record.firstSuccessPresentation == null
+                            ? "" : String.valueOf(record.firstSuccessPresentation);
+                    pw.println("phase1-v2," + record.scenarioId + "," + record.presentations
+                            + "," + first + "," + record.censored() + ","
+                            + record.analysisValue() + ","
+                            + record.terminalAtStartPresentations);
+                }
+            } else {
+                pw.println("StartStateIndex,FirstGoalEpisode");
+                for (Map.Entry<Integer, Integer> entry : firstGoalByStartState.entrySet()) {
+                    pw.println(entry.getKey() + "," + entry.getValue());
+                }
             }
             pw.println();
-            pw.println("# TotalDistinctStartStates," + firstGoalByStartState.size());
-            LOGGER.info("saveFirstGoalPerScenario: " + firstGoalByStartState.size()
-                       + " entries → " + filename);
+            int count = "phase1-v2".equals(protocolVersion)
+                    ? firstGoalPresentations.records().size() : firstGoalByStartState.size();
+            pw.println("# TotalScenarioRows," + count);
+            LOGGER.info("saveFirstGoalPerScenario: " + count + " entries → " + filename);
         } catch (IOException e) {
             LOGGER.warning("saveFirstGoalPerScenario: failed to write " + filename
                           + " — " + e.getMessage());
@@ -1944,8 +2338,18 @@ public class QLearner extends Artifact {
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f))) {
             String header = br.readLine();
             if (header == null) return;
-            String[] cols = header.split(",");
-            int numActionCols = cols.length - 1;
+            // Action-space inversion: remap columns by action LABEL. A legacy
+            // positional sidecar (header "StateIndex,a0,a1,...") has no label
+            // matches → mapHeaderToActions returns null and the file is
+            // ignored (correctness over convenience: positional counts cannot
+            // be trusted across a discovery-ordering change). Re-train to
+            // regenerate labeled sidecars.
+            int[] colToAction = mapHeaderToActions(header, filename);
+            if (colToAction == null) {
+                LOGGER.warning("loadVisitCountsSidecar: " + filename + " ignored"
+                    + " (cellMul fade will be inactive at bench)");
+                return;
+            }
             String line;
             long rowsLoaded = 0;
             while ((line = br.readLine()) != null) {
@@ -1954,8 +2358,10 @@ public class QLearner extends Artifact {
                 String[] parts = line.split(",");
                 int stateIdx = Integer.parseInt(parts[0].trim());
                 if (stateIdx < 0 || stateIdx >= nStates) continue;
-                for (int a = 0; a < Math.min(numActionCols, nActions); a++) {
-                    visitCounts[stateIdx][a] = Long.parseLong(parts[a + 1].trim());
+                for (int c = 0; c < colToAction.length && c + 1 < parts.length; c++) {
+                    int a = colToAction[c];
+                    if (a < 0) continue;
+                    visitCounts[stateIdx][a] = Long.parseLong(parts[c + 1].trim());
                 }
                 rowsLoaded++;
             }
@@ -1973,8 +2379,23 @@ public class QLearner extends Artifact {
             return;
         }
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f))) {
-            String header = br.readLine(); // Action,SunBucket,Sum,N
+            String header = br.readLine();
             if (header == null) return;
+            // Action-space inversion: rows are keyed by action LABEL (header
+            // "ActionLabel,SunBucket,Sum,N"). A legacy positional file (header
+            // "Action,SunBucket,Sum,N", rows keyed by index) cannot be trusted
+            // across a discovery-ordering change and is REFUSED — re-train to
+            // regenerate labeled sidecars.
+            if (!header.startsWith("ActionLabel")) {
+                LOGGER.severe("loadAdaptiveTrustSidecar: " + filename + " is a legacy"
+                    + " positional trust sidecar (header '" + header.trim() + "') —"
+                    + " IGNORED after the action-space inversion. Re-train to"
+                    + " regenerate. (calMul adaptive trust will be inactive at bench.)");
+                return;
+            }
+            java.util.Map<String, Integer> byLabel = new java.util.HashMap<>();
+            for (int a = 0; a < nActions; a++) byLabel.put(actionInfos[a].label, a);
+            java.util.Set<String> unknown = new java.util.TreeSet<>();
             String line;
             long rowsLoaded = 0;
             while ((line = br.readLine()) != null) {
@@ -1982,15 +2403,19 @@ public class QLearner extends Artifact {
                 if (line.isEmpty() || line.startsWith("#")) continue;
                 String[] parts = line.split(",");
                 if (parts.length < 4) continue;
-                int a   = Integer.parseInt(parts[0].trim());
-                int sb  = Integer.parseInt(parts[1].trim());
+                Integer a  = byLabel.get(parts[0].trim());
+                if (a == null) { unknown.add(parts[0].trim()); continue; }
+                int sb     = Integer.parseInt(parts[1].trim());
                 double sum = Double.parseDouble(parts[2].trim());
                 long   n   = Long.parseLong(parts[3].trim());
-                if (a < 0 || a >= nActions) continue;
                 if (sb < 0 || sb >= actionCalN[a].length) continue;
                 actionCalSum[a][sb] = sum;
                 actionCalN[a][sb]   = n;
                 rowsLoaded++;
+            }
+            if (!unknown.isEmpty()) {
+                LOGGER.warning("loadAdaptiveTrustSidecar: " + filename
+                    + " — unknown action labels skipped: " + unknown);
             }
             LOGGER.info("loadAdaptiveTrustSidecar: loaded " + rowsLoaded + " rows from " + filename);
         } catch (IOException | NumberFormatException e) {
@@ -1998,12 +2423,68 @@ public class QLearner extends Artifact {
         }
     }
 
+    /**
+     * Action-space inversion: map the action columns of a persisted CSV header
+     * to CURRENT registry indices by action LABEL (e.g. "SetZ1Light=ON"), so
+     * saved artifacts survive any change in discovery ordering. Q-table CSVs
+     * have always carried labels in their header; this makes the loader
+     * actually honour them instead of assuming positional identity.
+     *
+     * @return an array of length numActionCols whose entry c is the current
+     *         action index for CSV column c+1, or -1 when that label no longer
+     *         exists; or {@code null} when NO column label matches — the file
+     *         cannot be safely mapped (a legacy positional sidecar from before
+     *         the inversion, or an artifact of a different lab) and MUST be
+     *         ignored by the caller.
+     */
+    private int[] mapHeaderToActions(String headerLine, String filename) {
+        String[] cols = headerLine.split(",");
+        if (cols.length < 2) {
+            LOGGER.warning("mapHeaderToActions: no action columns in " + filename);
+            return null;
+        }
+        java.util.Map<String, Integer> byLabel = new java.util.HashMap<>();
+        for (int a = 0; a < nActions; a++) byLabel.put(actionInfos[a].label, a);
+        int[] map = new int[cols.length - 1];
+        java.util.List<String> unknown = new java.util.ArrayList<>();
+        int matched = 0;
+        boolean identity = (cols.length - 1 == nActions);
+        for (int c = 1; c < cols.length; c++) {
+            Integer a = byLabel.get(cols[c].trim());
+            map[c - 1] = (a == null) ? -1 : a;
+            if (a == null) { unknown.add(cols[c].trim()); identity = false; }
+            else { matched++; if (a != c - 1) identity = false; }
+        }
+        if (matched == 0) {
+            LOGGER.severe("mapHeaderToActions: NO header label of " + filename
+                + " matches the current action registry — file IGNORED."
+                + " (Legacy positional artifact from before the action-space"
+                + " inversion, or an artifact of a different lab. Re-train to"
+                + " regenerate label-keyed artifacts.)");
+            return null;
+        }
+        boolean[] covered = new boolean[nActions];
+        for (int m : map) if (m >= 0) covered[m] = true;
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        for (int a = 0; a < nActions; a++) if (!covered[a]) missing.add(actionInfos[a].label);
+        if (identity) {
+            LOGGER.info("mapHeaderToActions: " + filename + " — identity mapping ("
+                + matched + " actions)");
+        } else {
+            LOGGER.warning("mapHeaderToActions: " + filename + " — label-remapped "
+                + matched + "/" + (cols.length - 1) + " columns"
+                + (unknown.isEmpty() ? "" : "; unknown columns skipped: " + unknown)
+                + (missing.isEmpty() ? "" : "; actions left at init values: " + missing));
+        }
+        return map;
+    }
+
     private void loadQTableIntoZone(String filename, int zoneIdx) {
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(filename))) {
             String header = br.readLine();
             if (header == null) { LOGGER.warning("loadQTableIntoZone: empty " + filename); return; }
-            String[] cols = header.split(",");
-            int numActionCols = cols.length - 1;
+            int[] colToAction = mapHeaderToActions(header, filename);
+            if (colToAction == null) return;
             String line;
             while ((line = br.readLine()) != null) {
                 line = line.trim();
@@ -2011,8 +2492,10 @@ public class QLearner extends Artifact {
                 String[] parts = line.split(",");
                 int stateIdx = Integer.parseInt(parts[0].trim());
                 if (stateIdx < 0 || stateIdx >= nStates) continue;
-                for (int a = 0; a < Math.min(numActionCols, nActions); a++) {
-                    qTables[zoneIdx][stateIdx][a] = Double.parseDouble(parts[a + 1].trim());
+                for (int c = 0; c < colToAction.length && c + 1 < parts.length; c++) {
+                    int a = colToAction[c];
+                    if (a < 0) continue;
+                    qTables[zoneIdx][stateIdx][a] = Double.parseDouble(parts[c + 1].trim());
                 }
             }
             LOGGER.info("loadQTableIntoZone: loaded " + filename + " → zone " + zoneIdx);
@@ -2025,8 +2508,8 @@ public class QLearner extends Artifact {
         try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(filename))) {
             String header = br.readLine();
             if (header == null) { LOGGER.warning("loadQTableCombined: empty " + filename); return; }
-            String[] cols = header.split(",");
-            int numActionCols = cols.length - 1;
+            int[] colToAction = mapHeaderToActions(header, filename);
+            if (colToAction == null) return;
             int numZones = qTables.length;
             String line;
             while ((line = br.readLine()) != null) {
@@ -2035,8 +2518,10 @@ public class QLearner extends Artifact {
                 String[] parts = line.split(",");
                 int stateIdx = Integer.parseInt(parts[0].trim());
                 if (stateIdx < 0 || stateIdx >= nStates) continue;
-                for (int a = 0; a < Math.min(numActionCols, nActions); a++) {
-                    double combined = Double.parseDouble(parts[a + 1].trim());
+                for (int c = 0; c < colToAction.length && c + 1 < parts.length; c++) {
+                    int a = colToAction[c];
+                    if (a < 0) continue;
+                    double combined = Double.parseDouble(parts[c + 1].trim());
                     double perZone = combined / numZones;
                     for (int z = 0; z < numZones; z++) {
                         qTables[z][stateIdx][a] = perZone;
@@ -2072,7 +2557,9 @@ public class QLearner extends Artifact {
         // Zone level is stored at zoneLevelIndices[zoneIdx] in the state vector
         int prevLevel = toInt(prevStateVec[zoneLevelIndices[zoneIdx]]);
         int nextLevel = toInt(nextStateVec[zoneLevelIndices[zoneIdx]]);
-        int target = goal[zoneIdx];
+        // Phase 2.5b: reward toward the EFFECTIVE goal (best-effort rank when the
+        // nominal goal was proven unreachable in a degraded faulty lab).
+        int target = effectiveGoal[zoneIdx];
 
         double  r      = 0.0;
         boolean wasted = false;

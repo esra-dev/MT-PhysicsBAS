@@ -1,0 +1,58 @@
+CAPTURE STATUS: VERIFIED 2026-07-21
+COMMAND: ./gradlew --no-daemon phase1SparqlEvidence
+ONTOLOGY: src/resources/building_2_intermediate.ttl
+QUERY SOURCE: src/env/tools/StereotypeReasoner.java ACTUATOR_DISCOVERY_QUERY
+
+=== EXECUTED QUERY ===
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX elem:  <http://w3id.org/elementary#>
+PREFIX ws:    <http://example.org/was/lab/stereotypes#>
+PREFIX lab:   <http://example.org/was/lab#>
+PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?comp ?zone ?zoneIdx ?dvLabel ?iv ?ivMinRank        ?wotActionType ?wotStateType ?actionValue ?energyCost
+WHERE {
+  ?comp  brick:isLocatedIn             ?zone .
+  ?zone  a                             lab:Workstation .
+  ?zone  ws:zoneIndex                  ?zoneIdx .
+  ?comp  elem:hasBehavioralStereotype  ?stereo .
+  ?stereo elem:hasPhysicalMechanism    ?mech .
+  ?mech  elem:hasManipulatedVariable   ?mv .
+  ?mech  elem:hasDependentVariable     ?dv .
+  ?dv    rdfs:label                    ?dvLabel .
+  FILTER EXISTS { ?dv elem:hasQuantity <http://qudt.org/vocab/quantitykind/Illuminance> }
+  ?comp  elem:hasComponentAction       ?action .
+  ?action ws:actionValue               ?actionValue .
+  OPTIONAL {
+    ?mech elem:hasIndependentVariable ?iv .
+  }
+  OPTIONAL { ?mech ws:ivMinRank ?ivMinRank . }
+  OPTIONAL { ?comp ws:hasWoTActionSemanticType ?wotActionType . }
+  OPTIONAL { ?comp ws:hasWoTStateSemanticType  ?wotStateType . }
+  OPTIONAL { ?comp ws:energyCost               ?energyCost . }
+}
+ORDER BY ?zoneIdx ?wotActionType ?actionValue
+
+=== ACTUAL RESULT ROWS ===
+comp,zone,zoneIdx,dvLabel,iv,ivMinRank,wotActionType,wotStateType,actionValue,energyCost
+"http://example.org/was/lab#Blind_Z1","http://example.org/was/lab#Zone1","1","Indoor illuminance level","http://example.org/was/lab/stereotypes#outdoorIlluminance","1","http://example.org/was#SetZ1Blinds","http://example.org/was#Z1Blinds","false",
+"http://example.org/was/lab#Blind_Z1","http://example.org/was/lab#Zone1","1","Indoor illuminance level","http://example.org/was/lab/stereotypes#outdoorIlluminance","1","http://example.org/was#SetZ1Blinds","http://example.org/was#Z1Blinds","true",
+"http://example.org/was/lab#CeilingLight_Z1","http://example.org/was/lab#Zone1","1","Indoor illuminance level",,,"http://example.org/was#SetZ1Light","http://example.org/was#Z1Light","false",
+"http://example.org/was/lab#CeilingLight_Z1","http://example.org/was/lab#Zone1","1","Indoor illuminance level",,,"http://example.org/was#SetZ1Light","http://example.org/was#Z1Light","true",
+"http://example.org/was/lab#Blind_Z2","http://example.org/was/lab#Zone2","2","Indoor illuminance level","http://example.org/was/lab/stereotypes#outdoorIlluminance","1","http://example.org/was#SetZ2Blinds","http://example.org/was#Z2Blinds","false",
+"http://example.org/was/lab#Blind_Z2","http://example.org/was/lab#Zone2","2","Indoor illuminance level","http://example.org/was/lab/stereotypes#outdoorIlluminance","1","http://example.org/was#SetZ2Blinds","http://example.org/was#Z2Blinds","true",
+"http://example.org/was/lab#CeilingLight_Z2","http://example.org/was/lab#Zone2","2","Indoor illuminance level",,,"http://example.org/was#SetZ2Light","http://example.org/was#Z2Light","false",
+"http://example.org/was/lab#CeilingLight_Z2","http://example.org/was/lab#Zone2","2","Indoor illuminance level",,,"http://example.org/was#SetZ2Light","http://example.org/was#Z2Light","true",
+
+=== RESULTING INITIAL GREEDY DECISION ===
+state=[0,2,0,0,0,0,0]; goal=[2,2]
+actionIndex,wotActionType,actionValue,initQSum
+0,http://example.org/was#SetZ1Blinds,false,-100.0
+1,http://example.org/was#SetZ1Blinds,true,-100.0
+2,http://example.org/was#SetZ1Light,false,-100.0
+3,http://example.org/was#SetZ1Light,true,15.0
+4,http://example.org/was#SetZ2Blinds,false,-100.0
+5,http://example.org/was#SetZ2Blinds,true,-100.0
+6,http://example.org/was#SetZ2Light,false,-100.0
+7,http://example.org/was#SetZ2Light,true,0.0
+8,DO_NOTHING,,0.0
+SELECTED=3,http://example.org/was#SetZ1Light,true,15.0

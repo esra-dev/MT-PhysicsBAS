@@ -1,0 +1,30 @@
+observed_at_utc=2026-06-18T09:28:47Z
+branch=phase3-process-dynamics
+head=eda6ca1ffa026e723ad1a18a2bdb3aed927e7433
+origin_results=0372ecd5864fa6555ebfce7d05e05d9aaab96994
+
+## git log --oneline --decorate --all --max-count=12 -- analysis/phase2_recovery.py analysis/sweep_report.py paper_notes/phase2_extract_results.mjs paper_notes/phase1_extract_tables.mjs
+aa74486 Phase 2.2: goal-rate certification + lab3_f2inv spotlight FP fix
+8ff250d Phase 2: fault detection/blacklist/re-learn + multi-fault labs + one-run CI
+7543d15 (tag: results-20260610-214349-phase1-7543d15) Phase 1: clean-lab KG-acceleration ladder (lab1/2/3) + CI workflow + execute_policy single-zone fix
+beaf8ea feat(sweep): add run_mode input + horizon-ablation profiles; AUC-primary metric fix; n=10 analysis
+7a3d64c fix(sweep): learning-speed metric + constructive prior + VDN + 10k episodes (SW17-1..8)
+1ed46a4 (tag: results-20260605-051258-dev-1ed46a4) fix(analysis): hoist escaped mode labels out of f-string
+0d76d05 (origin/copilot/fix-aggregate-publish-job) Fix f-string backslash SyntaxError in sweep_report.py
+842d5c8 fix(analysis): split confirmatory/exploratory BH families, first-goal aggregation, NaN CI for n<2
+ae27ac6 Add seed-aware paper sweep analysis pipeline
+2a9f1ec feat(analysis): enhance sweep_report aggregation and visualization
+e2270c9 feat: add analysis scripts and benchmark scenario configurations
+
+## git show --stat --oneline 22a448be5d9829751badd341904e36ed582f091f -- phase2/27547019772-20260615-183138/analysis_out/phase2_recovery_ci.csv phase2/27547019772-20260615-183138/analysis_out/phase2_recovery_paired.csv
+22a448b Phase 2 recovery results: run 27547019772 (20260615-183138)
+ .../analysis_out/phase2_recovery_ci.csv               | 19 +++++++++++++++++++
+ .../analysis_out/phase2_recovery_paired.csv           | 12 ++++++++++++
+ 2 files changed, 31 insertions(+)
+
+## git diff --stat 22a448be5d9829751badd341904e36ed582f091f 0372ecd5864fa6555ebfce7d05e05d9aaab96994 -- phase2/27547019772-20260615-183138/analysis_out/phase2_recovery_ci.csv phase2/27547019772-20260615-183138/analysis_out/phase2_recovery_paired.csv
+NO OUTPUT
+
+## git diff --stat 985c7a18558b6d5cb96c018a395b0aae6389f410 2981147fc4c740d9ce3340be363d010a34937324 -- .github/workflows/phase2.yml config/run_config.json analysis/phase2_recovery.py analysis/sweep_report.py src/env/tools/QLearner.java
+ .github/workflows/phase2.yml | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)

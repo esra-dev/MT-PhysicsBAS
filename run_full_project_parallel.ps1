@@ -99,11 +99,11 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase4")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase4")]
     [string]$RunMode = "dev",
 
     # Profiles to train/benchmark. Empty = Phase-1 clean ladder (lab1,lab2,lab3).
-    # For Phase 4 pass -Profiles lab4,lab5 (with -RunMode phase4).
+    # For Phase 4 pass -Profiles lab4,lab4dual,lab4chain,lab5 (with -RunMode phase4).
     [string[]]$Profiles = @(),
 
     [ValidateRange(1,6)]
@@ -150,6 +150,8 @@ $Simulators = @(
     [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
     [pscustomobject]@{ Profile="lab4"; Port=1897; Flow="simulator_flow_lab4.json" }
     [pscustomobject]@{ Profile="lab5"; Port=1898; Flow="simulator_flow_lab5.json" }
+    [pscustomobject]@{ Profile="lab4dual"; Port=1901; Flow="simulator_flow_lab4dual.json" }
+    [pscustomobject]@{ Profile="lab4chain"; Port=1902; Flow="simulator_flow_lab4chain.json" }
 )
 
 # ─── Logging ─────────────────────────────────────────────────────────────────

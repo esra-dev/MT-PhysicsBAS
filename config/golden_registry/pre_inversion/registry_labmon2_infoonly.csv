@@ -1,0 +1,16 @@
+# action registry golden — ontology set 'labmon2_infoonly' = building_7_dualmonitor_infoonly.ttl
+# contract = key-set + metadata columns; actionIndex is informational only
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,12
+http://example.org/was#SetZ1Blinds|OFF,SetZ1Blinds=OFF,http://example.org/was#Z1Blinds,6,0,0,false,-1,1,0.0,false,0
+http://example.org/was#SetZ1Blinds|ON,SetZ1Blinds=ON,http://example.org/was#Z1Blinds,6,1,0,true,8,1,0.0,false,1
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,2,0,0,false,-1,1,0.0,false,2
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,2,1,0,false,-1,1,0.0,false,3
+http://example.org/was#SetZ1Monitor|OFF,SetZ1Monitor=OFF,http://example.org/was#Z1Monitor,4,0,,false,-1,1,0.0,true,8
+http://example.org/was#SetZ1Monitor|ON,SetZ1Monitor=ON,http://example.org/was#Z1Monitor,4,1,,false,-1,1,0.0,true,9
+http://example.org/was#SetZ2Blinds|OFF,SetZ2Blinds=OFF,http://example.org/was#Z2Blinds,7,0,1,false,-1,1,0.0,false,4
+http://example.org/was#SetZ2Blinds|ON,SetZ2Blinds=ON,http://example.org/was#Z2Blinds,7,1,1,true,8,1,0.0,false,5
+http://example.org/was#SetZ2Light|OFF,SetZ2Light=OFF,http://example.org/was#Z2Light,3,0,1,false,-1,1,0.0,false,6
+http://example.org/was#SetZ2Light|ON,SetZ2Light=ON,http://example.org/was#Z2Light,3,1,1,false,-1,1,0.0,false,7
+http://example.org/was#SetZ2Monitor|OFF,SetZ2Monitor=OFF,http://example.org/was#Z2Monitor,5,0,,false,-1,1,0.0,true,10
+http://example.org/was#SetZ2Monitor|ON,SetZ2Monitor=ON,http://example.org/was#Z2Monitor,5,1,,false,-1,1,0.0,true,11

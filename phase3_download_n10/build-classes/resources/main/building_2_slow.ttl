@@ -1,0 +1,491 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick:  <https://brickschema.org/schema/Brick#> .
+@prefix elem:   <http://w3id.org/elementary#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
+@prefix sosa:   <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:    <http://example.org/was/lab#> .
+@prefix ws:     <http://example.org/was/lab/stereotypes#> .
+
+# ===========================================================================
+#  LAB 2 — SLOW  (Phase 3: Learning Process Dynamics — temporal response delay)
+# ---------------------------------------------------------------------------
+#  SELF-CONTAINED domain ontology. Loaded via ont(["building_2_slow.ttl"])
+#  WITHOUT lab-ontology.ttl. Structurally IDENTICAL to Lab 2 (Intermediate):
+#  TWO INDEPENDENT zones, each with one lamp (Causes) and one blind (Mediates).
+#
+#  The ONLY delta over building_2_intermediate.ttl is TEMPORAL:
+#    * the lamp responds INSTANTANEOUSLY (ws:InstantaneousResponse), but
+#    * the motorized blind responds SLOWLY (ws:DelayedResponse) — opening the
+#      blind takes ~60 s of wall-clock-equivalent simulator time before the
+#      indoor illuminance reaches its new steady state.
+#
+#  Physics (simulator_flow_lab2_slow.json, port 1895) — STEADY-STATE identical:
+#     Z1Level = 25 + (Z1Light ? 400 : 0) + (Z1BlindsEff ? 0.50*Sunshine : 0)
+#     Z2Level = 25 + (Z2Light ? 400 : 0) + (Z2BlindsEff ? 0.50*Sunshine : 0)
+#  where Z*BlindsEff is the EFFECTIVE aperture that lags the COMMANDED Z*Blinds
+#  flag by BLIND_DELAY_TICKS (= 12 env ticks). The lamp uses Z*Light directly.
+#  Sunshine sampled once per episode from {0,100,400,900} and PINNED.
+#  State vector = [Z1Level,Z2Level,Z1Light,Z2Light,Z1Blinds,Z2Blinds,Sunshine]
+#                = 4*4*2*2*2*2*4 = 1024 states (unchanged; state slots read the
+#  COMMANDED blind flags, so the Q-state space is identical to Lab 2).
+#
+#  ── Phase-3 semantics ──
+#  ws:responseDelay is a LEARNABLE numeric property (seconds). It is deliberately
+#  NOT given a value here: the agent MEASURES the per-actuator delay online (via
+#  the DynamicsLearner artifact) and writes it back to learned_dynamics_*.ttl.
+#  The domain ontology supplies only the QUALITATIVE prior (lamp = instantaneous,
+#  motorized blind = delayed) via ws:hasResponseDynamic — a stereotype-level
+#  structural fact that the KG can legitimately assert. The MAGNITUDE is learned.
+# ===========================================================================
+
+
+# ===========================================================================
+# Property declarations (self-contained)
+# ===========================================================================
+
+brick:feeds   owl:equivalentProperty elem:feeds .
+sosa:observes owl:equivalentProperty elem:observes .
+
+elem:increases a owl:ObjectProperty ;
+    rdfs:label "increases (Causes shortcut)" .
+
+ws:zoneIndex a owl:DatatypeProperty ;
+    rdfs:label "Zone index" ; rdfs:range xsd:integer .
+
+ws:ivMinRank a owl:DatatypeProperty ;
+    rdfs:label "Minimum effective IV rank" ; rdfs:range xsd:integer .
+
+ws:actionValue a owl:DatatypeProperty ;
+    rdfs:label "Action boolean value" ; rdfs:range xsd:boolean .
+
+ws:rankBound_1 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_2 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_3 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+
+ws:hasWoTActionSemanticType a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:hasWoTStateSemanticType  a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:stateVecIndex   a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateDomainSize a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
+
+# ── Phase-3 temporal-dynamics vocabulary ──────────────────────────────────
+# ws:responseDelay : LEARNED actuation→steady-state delay, in SECONDS. Written
+#   back per component by the DynamicsLearner (NOT asserted in this file).
+ws:responseDelay a owl:DatatypeProperty ;
+    rdfs:label "Response delay (actuation to steady state, seconds)" ;
+    rdfs:range xsd:decimal .
+
+# ws:responseDelayTicks : the same quantity in raw simulator ticks (auxiliary).
+ws:responseDelayTicks a owl:DatatypeProperty ;
+    rdfs:label "Response delay in simulator ticks" ;
+    rdfs:range xsd:integer .
+
+# ws:responseDelaySamples : number of probe observations behind a learned delay.
+ws:responseDelaySamples a owl:DatatypeProperty ;
+    rdfs:label "Probe sample count behind a learned response delay" ;
+    rdfs:range xsd:integer .
+
+# ws:hasResponseDynamic : QUALITATIVE temporal prior on a stereotype/component.
+ws:hasResponseDynamic a owl:ObjectProperty ;
+    rdfs:label "Qualitative temporal response class of an actuator" .
+
+ws:InstantaneousResponse a owl:NamedIndividual, owl:Class ;
+    rdfs:label "Instantaneous response (effect within ~one tick)" .
+
+ws:DelayedResponse a owl:NamedIndividual, owl:Class ;
+    rdfs:label "Delayed response (motorized / thermal lag)" .
+
+
+# ===========================================================================
+# 1.  PHYSICAL MECHANISMS
+# ===========================================================================
+
+# Lamp: Causes (unconditional positive effect). INSTANTANEOUS.
+ws:pm_incandescent_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_incandescent_light_emission" ;
+    elem:hasManipulatedVariable elem:electrical_power_input ;
+    elem:hasDependentVariable   elem:luminiscence ;
+    elem:increases              elem:luminiscence .
+
+# Blind: Mediates (sunshine is the IV; blind aperture gates IV→DV). The sign is
+# STATE-DEPENDENT (positive only when sunshine rank >= ivMinRank), so
+# elem:increases is intentionally NOT asserted here. MOTORIZED → DELAYED.
+ws:pm_daylight_ingress a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_daylight_ingress through blind aperture" ;
+    elem:hasIndependentVariable ws:outdoorIlluminance ;
+    elem:hasManipulatedVariable ws:blindApertureRatio ;
+    elem:hasDependentVariable   elem:luminiscence ;
+    ws:ivMinRank                1 .
+
+# Indoor illuminance sensing.
+ws:illuminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illuminance sensing" ;
+    elem:hasIndependentVariable elem:luminiscence ;
+    elem:hasDependentVariable   ws:sensedIlluminance .
+
+# Outdoor light emission (the sun — uncontrolled, no MV).
+ws:pm_outdoor_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_outdoor_light_emission" ;
+    elem:hasDependentVariable   ws:outdoorIlluminance .
+
+# Outdoor illuminance sensing (weather station).
+ws:outdoorIlluminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Outdoor illuminance sensing" ;
+    elem:hasIndependentVariable ws:outdoorIlluminance ;
+    elem:hasDependentVariable   ws:sensedOutdoorIlluminance .
+
+
+# ===========================================================================
+# 2.  PROCESS VARIABLES
+# ===========================================================================
+
+elem:electrical_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to light" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:outdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:blindApertureRatio a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Blind aperture ratio (open vs. closed)" ;
+    elem:dealsWithStuff  ws:MechanicalPosition ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:DimensionlessRatio .
+
+elem:luminiscence a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor illuminance level" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor illuminance signal" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "100"^^xsd:decimal ;
+    ws:rankBound_3       "300"^^xsd:decimal .
+
+ws:sensedOutdoorIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed outdoor illuminance signal" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "200"^^xsd:decimal ;
+    ws:rankBound_3       "600"^^xsd:decimal .
+
+
+# ===========================================================================
+# 3.  PHYSICAL STUFF + STREAM KINDS
+# ===========================================================================
+
+elem:photons a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visible light (photons)" .
+
+ws:MechanicalPosition a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Mechanical position / aperture" .
+
+ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor lighting stream" .
+
+ws:OutdoorSunlightStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Outdoor sunlight stream" .
+
+
+# ===========================================================================
+# 4.  COMPONENT STEREOTYPES
+# ===========================================================================
+
+# Lamp = INSTANTANEOUS responder (effect manifests within ~one env tick).
+ws:LampIncandescentStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Incandescent lamp stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_incandescent_light_emission ;
+    elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet ;
+    ws:hasResponseDynamic    ws:InstantaneousResponse .
+
+ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of incandescent lamp" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    elem:electrical_power_input .
+
+ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of incandescent lamp" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# Blind = DELAYED responder (motorized aperture; ~60 s to steady state). The
+# numeric delay is LEARNED, not asserted; only the qualitative class is given.
+ws:BlindStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Window blind stereotype (motorized, slow)" ;
+    elem:hasPhysicalMechanism ws:pm_daylight_ingress ;
+    elem:hasConnectionPoint  ws:cp_blind_outdoor_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_actuator_inlet ;
+    elem:hasConnectionPoint  ws:cp_blind_light_outlet ;
+    ws:hasResponseDynamic    ws:DelayedResponse .
+
+ws:cp_blind_outdoor_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Outdoor sunlight inlet of blind" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   ws:outdoorIlluminance ;
+    elem:suitableFor           ws:OutdoorSunlightStream .
+
+ws:cp_blind_actuator_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Actuator inlet of blind (Up / Down command)" ;
+    elem:dealsWithStuff ws:MechanicalPosition ;
+    elem:manipulates    ws:blindApertureRatio .
+
+ws:cp_blind_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Indoor light outlet of blind" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor light sensor stereotype" ;
+    elem:hasPhysicalMechanism ws:illuminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet .
+
+ws:cp_lightsensor_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable elem:luminiscence ;
+    elem:suitableFor         ws:IndoorLightingStream .
+
+ws:cp_lightsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:sensedIlluminance .
+
+ws:WeatherStationStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Weather station (outdoor illuminance sensor) stereotype" ;
+    elem:hasPhysicalMechanism ws:outdoorIlluminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_ws_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_ws_signal_outlet .
+
+ws:cp_ws_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of weather station" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:outdoorIlluminance ;
+    elem:suitableFor         ws:OutdoorSunlightStream .
+
+ws:cp_ws_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of weather station" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:sensedOutdoorIlluminance .
+
+ws:OutsideStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Outdoor light source (sun) stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_outdoor_light_emission ;
+    elem:hasConnectionPoint  ws:cp_outside_light_outlet .
+
+ws:cp_outside_light_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Outdoor light outlet (sun)" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:outdoorIlluminance ;
+    elem:suitableFor         ws:OutdoorSunlightStream .
+
+
+# ===========================================================================
+# 5.  BUILDING TOPOLOGY (two independent zones)
+# ===========================================================================
+
+lab:Workstation a owl:Class ;
+    rdfs:label "Workstation" ;
+    rdfs:subClassOf brick:Space .
+
+lab:IntermediateBuilding a brick:Building ;
+    rdfs:label "Lab 2 (Slow) Building" ;
+    brick:hasPart lab:Lab .
+
+lab:Lab a brick:Room ;
+    rdfs:label "Lab 2 room" ;
+    brick:hasPart lab:Zone1 ;
+    brick:hasPart lab:Zone2 .
+
+lab:Zone1 a lab:Workstation ;
+    rdfs:label "Workstation 1" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 1 .
+
+lab:Zone2 a lab:Workstation ;
+    rdfs:label "Workstation 2" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 2 .
+
+
+# ===========================================================================
+# 6.  COMPONENT INSTANCES (two lamps, two blinds, two sensors, weather, sun)
+# ===========================================================================
+
+lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
+    rdfs:label "Indoor illuminance sensor equipment" ;
+    rdfs:subClassOf brick:Sensor_Equipment .
+
+lab:CeilingLight_Z1 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Incandescent lamp – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:CeilingLight_Z2 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Incandescent lamp – Workstation 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:Blind_Z1 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:Blind_Z2 a brick:Blind, elem:Actuator ;
+    rdfs:label "Window blind – Workstation 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    elem:hasBehavioralStereotype ws:BlindStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorIlluminance_Z1 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:LightSensor_Z2 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 2" ;
+    brick:isLocatedIn lab:Zone2 ;
+    sosa:observes     lab:IndoorIlluminance_Z2 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:WeatherStation a brick:Weather_Station, elem:Sensor ;
+    rdfs:label "Outdoor weather station" ;
+    brick:isLocatedIn lab:IntermediateBuilding ;
+    sosa:observes     lab:OutdoorIlluminance ;
+    elem:hasBehavioralStereotype ws:WeatherStationStereotype ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:Outside a owl:NamedIndividual ;
+    rdfs:label "Outdoor light source (sun)" ;
+    elem:hasBehavioralStereotype ws:OutsideStereotype ;
+    elem:isPartOf      lab:OutdoorSunlightStream .
+
+lab:IndoorLightingStream a elem:Stream ;
+    rdfs:label "Indoor lighting process stream" ;
+    elem:hasStreamKind ws:IndoorLightingStream .
+
+lab:OutdoorSunlightStream a elem:Stream ;
+    rdfs:label "Outdoor sunlight stream" ;
+    elem:hasStreamKind ws:OutdoorSunlightStream .
+
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 1" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+lab:IndoorIlluminance_Z2 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 2" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+lab:OutdoorIlluminance a sosa:ObservableProperty ;
+    rdfs:label "Outdoor illuminance (sunshine)" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+
+# ===========================================================================
+# 7.  TOPOLOGICAL CONNECTIONS (same-zone + sun — NO cross-zone feeds)
+# ===========================================================================
+
+# Sun → weather station + both blinds.
+lab:Outside          brick:feeds  lab:WeatherStation .
+lab:Outside          brick:feeds  lab:Blind_Z1 .
+lab:Outside          brick:feeds  lab:Blind_Z2 .
+
+# Each actuator illuminates ONLY its own zone's sensor (independent zones).
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z1 .
+lab:CeilingLight_Z2  brick:feeds  lab:LightSensor_Z2 .
+lab:Blind_Z1         brick:feeds  lab:LightSensor_Z1 .
+lab:Blind_Z2         brick:feeds  lab:LightSensor_Z2 .
+
+
+# ===========================================================================
+# 8.  COMPONENT ACTIONS
+# ===========================================================================
+
+ws:SetZ1Light_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Light_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z1 elem:hasComponentAction ws:SetZ1Light_ON, ws:SetZ1Light_OFF .
+
+ws:SetZ2Light_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Light_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z2 elem:hasComponentAction ws:SetZ2Light_ON, ws:SetZ2Light_OFF .
+
+ws:SetZ1Blinds_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Blinds_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z1 elem:hasComponentAction ws:SetZ1Blinds_ON, ws:SetZ1Blinds_OFF .
+
+ws:SetZ2Blinds_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ2Blinds_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Blind_Z2 elem:hasComponentAction ws:SetZ2Blinds_ON, ws:SetZ2Blinds_OFF .
+
+
+# ===========================================================================
+# 9.  STATE VECTOR SLOT REGISTRY  (length 7)
+#     [Z1Level, Z2Level, Z1Light, Z2Light, Z1Blinds, Z2Blinds, Sunshine]
+#     NOTE: the boolean blind slots read the COMMANDED flag (Z*Blinds), so the
+#     Q-state space is byte-for-byte identical to Lab 2 (Intermediate). The
+#     temporal delay is observable ONLY in the Z*Level dynamics, not in state
+#     cardinality.
+# ===========================================================================
+
+lab:Slot_ZoneLevel_Z1
+    ws:stateVecIndex   0 ; ws:stateDomainSize 4 ; ws:stateSlotRole "zone_level" ; ws:zoneIndex 1 .
+
+lab:Slot_ZoneLevel_Z2
+    ws:stateVecIndex   1 ; ws:stateDomainSize 4 ; ws:stateSlotRole "zone_level" ; ws:zoneIndex 2 .
+
+lab:Slot_Sunshine
+    ws:stateVecIndex   6 ; ws:stateDomainSize 4 ; ws:stateSlotRole "sunshine" .
+
+
+# ===========================================================================
+# 10.  WoT ACTION / STATE MAPPINGS  (the discovery gate)
+# ===========================================================================
+
+lab:CeilingLight_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:stateVecIndex            2 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:CeilingLight_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Light" ;
+    ws:stateVecIndex            3 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:Blind_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Blinds" ;
+    ws:stateVecIndex            4 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+lab:Blind_Z2
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ2Blinds" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z2Blinds" ;
+    ws:stateVecIndex            5 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .

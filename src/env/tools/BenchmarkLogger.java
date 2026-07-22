@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 
 import cartago.Artifact;
 import cartago.OPERATION;
+import cartago.OpFeedbackParam;
 
 /**
  * BenchmarkLogger — CArtAgO artifact for recording execution-phase benchmark metrics.
@@ -23,7 +24,8 @@ import cartago.OPERATION;
  *   ActuatorCyclingCount     — number of actuator state reversals (ON→OFF or OFF→ON)
  *                              across the scenario (proxy for wear)
  *   CrossZoneInterferences   — steps where an action moved a non-target zone away from its target
- *   TotalEnergyCost          — cumulative energy cost reported by the simulator
+ *   PolicyEnergyCost         — protocol-v2 instantaneous actuator cost, sampled once per decision
+ *   LegacyWallClockTotalEnergyCost — timing-dependent simulator diagnostic only
  *
  * Usage:
  *   beginScenario(id, runId, agentType, initialState)
@@ -48,6 +50,8 @@ public class BenchmarkLogger extends Artifact {
     private int     wastedSteps             = 0;
     private int     actuatorCyclingCount    = 0;
     private int     crossZoneInterferences  = 0;
+    private double  policyEnergyCost        = 0.0;
+    private String  metricSchema            = "legacy";
 
     // ── Phase 3 weakness-aware counters ─────────────────────────────────
     private int     silentlyDropped         = 0;  // W4: action took effect but lamp was budget-dropped
@@ -76,6 +80,8 @@ public class BenchmarkLogger extends Artifact {
         int    actuatorCyclingCount;
         int    crossZoneInterferences;
         double totalEnergyCost;
+        double policyEnergyCost;
+        String metricSchema;
         int    silentlyDropped;
         int    delayedEffectSteps;
         int    unmodelledZoneEffect;
@@ -107,6 +113,8 @@ public class BenchmarkLogger extends Artifact {
         wastedSteps               = 0;
         actuatorCyclingCount      = 0;
         crossZoneInterferences    = 0;
+        policyEnergyCost          = 0.0;
+        metricSchema              = "legacy";
         silentlyDropped           = 0;
         delayedEffectSteps        = 0;
         unmodelledZoneEffect      = 0;
@@ -119,6 +127,18 @@ public class BenchmarkLogger extends Artifact {
         LOGGER.info("BenchmarkLogger.beginScenario: id=" + scenarioId
                     + " run=" + runId + " agent=" + agentType
                     + " state=" + initialState);
+    }
+
+    /** Begin a v2 scenario with the settled initial actuator state. */
+    @OPERATION
+    public void beginScenarioV2(int scenarioId, int runId, String agentType,
+                                String initialState, Object[] actuatorKeys,
+                                Object[] actuatorValues) {
+        beginScenario(scenarioId, runId, agentType, initialState);
+        metricSchema = "phase1-benchmark-v2";
+        lastActuatorKeys = actuatorKeys == null ? new Object[0] : actuatorKeys.clone();
+        lastActuatorValues = actuatorValues == null ? new Object[0] : actuatorValues.clone();
+        firstStep = false;
     }
 
     /**
@@ -172,6 +192,38 @@ public class BenchmarkLogger extends Artifact {
                     + " action=" + actionType);
     }
 
+    /** Record a post-settle v2 decision and sample instantaneous power exactly once. */
+    @OPERATION
+    public void recordStepV2(int step,
+                             Object[] zoneLevels,
+                             Object[] targets,
+                             String actionType,
+                             boolean wasted,
+                             Object[] currActuatorKeys,
+                             Object[] currActuatorValues,
+                             boolean crossZoneInterference) {
+        recordStep(step, zoneLevels, targets, actionType, wasted,
+                currActuatorKeys, currActuatorValues, crossZoneInterference);
+        policyEnergyCost += Phase1PolicyEnergy.instantaneousCost(
+                currActuatorKeys, currActuatorValues);
+    }
+
+    /** Read deterministic instantaneous Phase-1 actuator cost from a state snapshot. */
+    @OPERATION
+    public void readInstantaneousPolicyEnergyCost(
+            Object[] actuatorKeys, Object[] actuatorValues,
+            OpFeedbackParam<Double> cost) {
+        cost.set(Phase1PolicyEnergy.instantaneousCost(actuatorKeys, actuatorValues));
+    }
+
+    double currentPolicyEnergyCostForTest() {
+        return policyEnergyCost;
+    }
+
+    int currentCyclingCountForTest() {
+        return actuatorCyclingCount;
+    }
+
     /**
      * Close the current scenario and commit its record to the results list.
      *
@@ -192,6 +244,8 @@ public class BenchmarkLogger extends Artifact {
         r.actuatorCyclingCount    = actuatorCyclingCount;
         r.crossZoneInterferences  = crossZoneInterferences;
         r.totalEnergyCost         = totalEnergyCost;
+        r.policyEnergyCost        = policyEnergyCost;
+        r.metricSchema            = metricSchema;
         r.silentlyDropped         = silentlyDropped;
         r.delayedEffectSteps      = delayedEffectSteps;
         r.unmodelledZoneEffect    = unmodelledZoneEffect;
@@ -205,42 +259,62 @@ public class BenchmarkLogger extends Artifact {
                     + " energy=" + String.format("%.1f", totalEnergyCost));
     }
 
+    /** End a v2 scenario; legacy wall-clock energy is retained only as a diagnostic. */
+    @OPERATION
+    public void endScenarioV2(boolean goalReached, int totalSteps,
+                              double legacyWallClockEnergy) {
+        endScenario(goalReached, totalSteps, legacyWallClockEnergy);
+    }
+
     /**
      * Write all accumulated scenario records to a CSV file.
      *
      * Columns:
      *   ScenarioId, RunId, AgentType, GoalReached, Steps,
      *   CumIlluminanceDeviation, WastedSteps,
-     *   ActuatorCyclingCount, CrossZoneInterferences, TotalEnergyCost
+     *   ActuatorCyclingCount, CrossZoneInterferences, PolicyEnergyCost,
+     *   LegacyWallClockTotalEnergyCost
      *
      * @param filename Target CSV filename (e.g. "benchmark_results_rule_based.csv").
      */
     @OPERATION
     public void saveBenchmarkResults(String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("ScenarioId,RunId,AgentType,GoalReached,Steps,"
-                     + "CumIlluminanceDeviation,WastedSteps,"
-                     + "ActuatorCyclingCount,CrossZoneInterferences,TotalEnergyCost,"
-                     + "SilentlyDropped,DelayedEffectSteps,UnmodelledZoneEffect,"
-                     + "ConditionInversions,TopologyMismatches,ComfortDeviation");
-            for (ScenarioRecord r : records) {
-                pw.printf("%d,%d,%s,%d,%d,%.2f,%d,%d,%d,%.2f,%d,%d,%d,%d,%d,%.2f%n",
-                    r.scenarioId,
-                    r.runId,
-                    r.agentType,
-                    r.goalReached ? 1 : 0,
-                    r.steps,
-                    r.cumIlluminanceDeviation,
-                    r.wastedSteps,
-                    r.actuatorCyclingCount,
-                    r.crossZoneInterferences,
-                    r.totalEnergyCost,
-                    r.silentlyDropped,
-                    r.delayedEffectSteps,
-                    r.unmodelledZoneEffect,
-                    r.conditionInversions,
-                    r.topologyMismatches,
-                    r.comfortDeviation);
+            boolean v2 = !records.isEmpty()
+                    && records.stream().allMatch(
+                            r -> "phase1-benchmark-v2".equals(r.metricSchema));
+            if (v2) {
+                pw.println("ScenarioId,RunId,AgentType,MetricSchema,GoalReached,Steps,"
+                         + "CumIlluminanceDeviation,WastedSteps,"
+                         + "ActuatorCyclingCount,CrossZoneInterferences,PolicyEnergyCost,"
+                         + "LegacyWallClockTotalEnergyCost,"
+                         + "SilentlyDropped,DelayedEffectSteps,UnmodelledZoneEffect,"
+                         + "ConditionInversions,TopologyMismatches,ComfortDeviation");
+                for (ScenarioRecord r : records) {
+                    pw.printf("%d,%d,%s,%s,%d,%d,%.2f,%d,%d,%d,%.2f,%.2f,%d,%d,%d,%d,%d,%.2f%n",
+                        r.scenarioId, r.runId, r.agentType, r.metricSchema,
+                        r.goalReached ? 1 : 0, r.steps, r.cumIlluminanceDeviation,
+                        r.wastedSteps, r.actuatorCyclingCount, r.crossZoneInterferences,
+                        r.policyEnergyCost, r.totalEnergyCost, r.silentlyDropped,
+                        r.delayedEffectSteps, r.unmodelledZoneEffect,
+                        r.conditionInversions, r.topologyMismatches, r.comfortDeviation);
+                }
+            } else {
+                // Preserve the exact legacy schema for historical workflows.
+                pw.println("ScenarioId,RunId,AgentType,GoalReached,Steps,"
+                         + "CumIlluminanceDeviation,WastedSteps,"
+                         + "ActuatorCyclingCount,CrossZoneInterferences,TotalEnergyCost,"
+                         + "SilentlyDropped,DelayedEffectSteps,UnmodelledZoneEffect,"
+                         + "ConditionInversions,TopologyMismatches,ComfortDeviation");
+                for (ScenarioRecord r : records) {
+                    pw.printf("%d,%d,%s,%d,%d,%.2f,%d,%d,%d,%.2f,%d,%d,%d,%d,%d,%.2f%n",
+                        r.scenarioId, r.runId, r.agentType, r.goalReached ? 1 : 0,
+                        r.steps, r.cumIlluminanceDeviation, r.wastedSteps,
+                        r.actuatorCyclingCount, r.crossZoneInterferences,
+                        r.totalEnergyCost, r.silentlyDropped, r.delayedEffectSteps,
+                        r.unmodelledZoneEffect, r.conditionInversions,
+                        r.topologyMismatches, r.comfortDeviation);
+                }
             }
             LOGGER.info("BenchmarkLogger.saveBenchmarkResults: written " + records.size()
                         + " records to " + filename);
@@ -509,8 +583,8 @@ public class BenchmarkLogger extends Artifact {
      * Two parallel key/value arrays represent actuator states; a reversal is
      * any key whose boolean value differs between prev and curr.
      */
-    private int countReversals(Object[] prevKeys, Object[] prevVals,
-                               Object[] currKeys, Object[] currVals) {
+    static int countReversals(Object[] prevKeys, Object[] prevVals,
+                              Object[] currKeys, Object[] currVals) {
         int reversals = 0;
         for (int i = 0; i < prevKeys.length; i++) {
             String key = String.valueOf(prevKeys[i]);

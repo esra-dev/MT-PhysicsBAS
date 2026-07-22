@@ -1,0 +1,102 @@
+{
+  "all_gates_pass": true,
+  "protocol_version": "phase1-v2",
+  "runs": [
+    {
+      "benchmark_cells": 180,
+      "first_goal_censored_rows": 0,
+      "first_goal_rows": 1080,
+      "first_goal_terminal_at_start_rows": 440,
+      "fixed_horizons": [
+        3000
+      ],
+      "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+      "metric_schemas": [
+        "phase1-benchmark-v2"
+      ],
+      "paired_rng_versions": [
+        "common-seed-v1"
+      ],
+      "protocol_versions": [
+        "phase1-v2"
+      ],
+      "run_id": 29848584965,
+      "run_mode": "phase1_v2_kg_only",
+      "scenario_fallback_count": 0,
+      "schedule_pair_mismatches": 0,
+      "training_cells": 120
+    },
+    {
+      "benchmark_cells": 180,
+      "first_goal_censored_rows": 0,
+      "first_goal_rows": 1080,
+      "first_goal_terminal_at_start_rows": 440,
+      "fixed_horizons": [
+        3000
+      ],
+      "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+      "metric_schemas": [
+        "phase1-benchmark-v2"
+      ],
+      "paired_rng_versions": [
+        "common-seed-v1"
+      ],
+      "protocol_versions": [
+        "phase1-v2"
+      ],
+      "run_id": 29848587274,
+      "run_mode": "phase1_v2_redundancy_only",
+      "scenario_fallback_count": 0,
+      "schedule_pair_mismatches": 0,
+      "training_cells": 120
+    },
+    {
+      "benchmark_cells": 180,
+      "first_goal_censored_rows": 0,
+      "first_goal_rows": 1080,
+      "first_goal_terminal_at_start_rows": 440,
+      "fixed_horizons": [
+        3000
+      ],
+      "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+      "metric_schemas": [
+        "phase1-benchmark-v2"
+      ],
+      "paired_rng_versions": [
+        "common-seed-v1"
+      ],
+      "protocol_versions": [
+        "phase1-v2"
+      ],
+      "run_id": 29848589682,
+      "run_mode": "phase1_v2_baseline",
+      "scenario_fallback_count": 0,
+      "schedule_pair_mismatches": 0,
+      "training_cells": 120
+    },
+    {
+      "benchmark_cells": 180,
+      "first_goal_censored_rows": 0,
+      "first_goal_rows": 1080,
+      "first_goal_terminal_at_start_rows": 440,
+      "fixed_horizons": [
+        3000
+      ],
+      "head_sha": "d3442385c91fbe11a5714bd15ca83add8f81f115",
+      "metric_schemas": [
+        "phase1-benchmark-v2"
+      ],
+      "paired_rng_versions": [
+        "common-seed-v1"
+      ],
+      "protocol_versions": [
+        "phase1-v2"
+      ],
+      "run_id": 29848592010,
+      "run_mode": "phase1_v2_pbrs_only",
+      "scenario_fallback_count": 0,
+      "schedule_pair_mismatches": 0,
+      "training_cells": 120
+    }
+  ]
+}

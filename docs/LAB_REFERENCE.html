@@ -1,0 +1,690 @@
+<!DOCTYPE html><html><head>
+      <title>LAB_REFERENCE</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\esrad\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.30\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      <script type="text/javascript" src="file:///c:\Users\esrad\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.30\crossnote\dependencies\mermaid\mermaid.min.js" charset="UTF-8"></script>
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-details{margin:0;padding:0;border:none}.markdown-preview .md-toc summary.md-toc-link-wrapper{cursor:pointer;list-style-position:outside}.markdown-preview .md-toc summary.md-toc-link-wrapper::marker{font-size:.85em}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='0']{margin-left:12px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='1']{margin-left:28px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='2']{margin-left:44px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='3']{margin-left:60px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='4']{margin-left:76px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='5']{margin-left:80px}.markdown-preview a.tag,.markdown-preview a.tag:active,.markdown-preview a.tag:link,.markdown-preview a.tag:visited,.markdown-preview span.tag:not(.token){display:inline-block;background-color:var(--vscode-badge-background,rgba(127,127,127,.18));color:var(--vscode-badge-foreground,currentColor);border-radius:2em;font-size:.85em;font-weight:500;padding:.05em .55em;line-height:1.5;white-space:nowrap;text-decoration:none;text-shadow:none;box-shadow:none;transition:background-color .12s ease,opacity .12s ease}.markdown-preview a.tag{cursor:pointer}.markdown-preview a.tag:focus,.markdown-preview a.tag:hover{background-color:var(--vscode-badge-background,rgba(127,127,127,.32));color:var(--vscode-badge-foreground,currentColor);opacity:.85;text-decoration:none;outline:0}.markdown-preview .wikilink-embed-content{border-left:3px solid var(--vscode-textBlockQuote-border,rgba(128,128,128,.3));background:var(--vscode-textBlockQuote-background,rgba(128,128,128,.05));margin:.5em 0;padding:.5em .75em;border-radius:0 3px 3px 0}.markdown-preview .wikilink-embed-content.wikilink-embed-error{border-left-color:var(--vscode-errorForeground,#cf222e);color:var(--vscode-errorForeground,#cf222e);font-style:italic;opacity:.8}.markdown-preview .wikilink-embed-content h1:first-child,.markdown-preview .wikilink-embed-content h2:first-child,.markdown-preview .wikilink-embed-content h3:first-child,.markdown-preview .wikilink-embed-content h4:first-child,.markdown-preview .wikilink-embed-content h5:first-child,.markdown-preview .wikilink-embed-content h6:first-child{margin-top:.25em}.markdown-preview .wikilink-embed-content .wikilink-embed-content{margin:.25em 0;padding:.25em .5em}.markdown-preview .block-id{display:none}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));border:4px solid var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));background-clip:content-box}.scrollbar-style::-webkit-scrollbar-thumb:hover{background-color:var(--vscode-scrollbarSlider-hoverBackground,rgba(120,120,120,.66))}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));border:4px solid var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb:hover{background-color:var(--vscode-scrollbarSlider-hoverBackground,rgba(120,120,120,.66))}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-details{margin:0;padding:0;border:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='0']{padding-left:0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='1']{padding-left:16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='2']{padding-left:32px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='3']{padding-left:48px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='4']{padding-left:64px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='5']{padding-left:80px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. -->
+<script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script>
+    </head>
+    <body for="html-export">
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="lab-reference--all-phases-lab-by-lab">Lab Reference — All Phases (lab-by-lab) </h1>
+<p><strong>Project:</strong> MT-Esra (Knowledge-Guided RL for Building Automation)<br>
+<strong>Stack:</strong> JaCaMo (Jason BDI + CArtAgO) · tabular Q-learning · Knowledge Graph / stereotypes · Node-RED simulators<br>
+<strong>Single source of truth for profiles:</strong> <a href="../src/agt/lab_profiles.asl">src/agt/lab_profiles.asl</a></p>
+<p>This document describes <strong>every lab used in the four-phase thesis arc, one by one</strong> — its components, topology, the simulator/environment physics (the exact lux/energy values), the agent-side state space, what knowledge it encodes, and what it is designed to test. Legacy pre-phase "custom" labs are summarised in the appendix.</p>
+<hr>
+<h2 id="0-shared-conventions-read-this-first">0. Shared conventions (read this first) </h2>
+<p>Every lab is a <strong>smart-lighting control problem</strong>: a Node-RED simulator models one or more <em>zones</em>, each with a light-level sensor and a set of actuators (lamps, motorized blinds, a shared spotlight). An agent toggles actuators to drive every zone to its <strong>target brightness rank</strong> within a 20-step episode.</p>
+<h3 id="the-three-control-modes-compared-in-every-lab">The three control modes (compared in every lab) </h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Knowledge</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rule_based</code></td>
+<td>hand-written policy</td>
+<td>non-learning reference</td>
+</tr>
+<tr>
+<td><code>ql_false</code></td>
+<td><strong>tabula-rasa</strong> Q-learning</td>
+<td>learns from scratch (the control arm)</td>
+</tr>
+<tr>
+<td><code>ql_true</code></td>
+<td><strong>KG-primed</strong> Q-learning</td>
+<td>same learner + stereotype priors from the Knowledge Graph (the treatment arm)</td>
+</tr>
+</tbody>
+</table>
+<p>The headline of every phase is the <strong>within-lab <code>ql_true</code> vs <code>ql_false</code> delta</strong> — the pure effect of the prior knowledge.</p>
+<h3 id="discretisation-how-continuous-lux-becomes-a-rank">Discretisation (how continuous lux becomes a rank) </h3>
+<p>The agent never sees raw lux; it sees a <strong>rank 0–3</strong> per zone, via per-lab bounds:</p>
+<table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Phase 1/3/4 bounds</th>
+<th>Rank meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Light level</td>
+<td><code>[50, 100, 300]</code></td>
+<td>0 dark <code>&lt;50</code> · 1 dim <code>[50,100)</code> · 2 medium <code>[100,300)</code> · 3 <strong>bright</strong> <code>≥300</code></td>
+</tr>
+<tr>
+<td>Sunshine</td>
+<td><code>[50, 200, 600]</code></td>
+<td>0 <code>&lt;50</code> · 1 <code>[50,200)</code> · 2 <code>[200,600)</code> · 3 <code>≥600</code></td>
+</tr>
+</tbody>
+</table>
+<p>(The legacy custom labs use <code>[75,200,400]</code> / <code>[50,150,500]</code> — see appendix.)</p>
+<h3 id="sunshine-the-exogenous-context">Sunshine (the exogenous context) </h3>
+<p>Sunshine is sampled <strong>once per episode</strong> from <code>{0, 100, 400, 900}</code> lux and <strong>pinned</strong> for the whole episode, so the simulator tick is a deterministic function of state (no PRNG in the physics). <code>sunshine_prob = 0.75</code> is <code>P(sun ≥ rank 1)</code>. Sunshine matters because <strong>blinds only harvest daylight</strong> — the central "stereotype" the KG encodes is <code>Mediates(blind, sunshine)</code>.</p>
+<h3 id="ambient--horizon">Ambient &amp; horizon </h3>
+<ul>
+<li><strong>Ambient floor:</strong> every zone sits at <strong>25 lux</strong> with everything off.</li>
+<li><strong>Episode horizon:</strong> 20 steps (<code>max_steps = 20</code>); a scenario is <em>solved</em> when every zone hits its target rank.</li>
+</ul>
+<h3 id="the-lab-ladder-at-a-glance">The lab ladder at a glance </h3>
+<div class="mermaid">flowchart TB
+    subgraph P1["Phase 1 — Clean Ladder (does KG accelerate learning?)"]
+        L1["lab1 Trivial&lt;br/&gt;1 zone · 1 lamp&lt;br/&gt;8 states · port 1892"]
+        L2["lab2 Intermediate&lt;br/&gt;2 zones · lamp+blind&lt;br/&gt;1024 states · port 1893"]
+        L3["lab3 Complex&lt;br/&gt;+ cross-zone + spotlight&lt;br/&gt;2048 states · port 1894"]
+        L1 --&gt; L2 --&gt; L3
+    end
+    subgraph P2["Phase 2 — Faulty Ladder (detect → blacklist → re-learn)"]
+        F["lab{1,2,3}_f{1,2}{dead,inv}&lt;br/&gt;same KG, ONE broken lamp in sim&lt;br/&gt;ports 1892–1894"]
+    end
+    subgraph P3["Phase 3 — Slow Ladder (learn temporal dynamics)"]
+        S2["lab2_slow · port 1895"]
+        S3["lab3_slow · port 1896"]
+    end
+    subgraph P4["Phase 4 — Knowledge Ladder (hidden facts the KG knows)"]
+        L4["lab4 Smart-Plug&lt;br/&gt;hidden AND-gate dependency&lt;br/&gt;4096 states · port 1897"]
+        L5["lab5 Energy&lt;br/&gt;eff vs ineff lamps&lt;br/&gt;8192 states · port 1898"]
+    end
+    L3 -.fork.-&gt; F
+    L2 -.fork.-&gt; S2
+    L3 -.fork.-&gt; S3
+    L3 -.fork.-&gt; L4
+    L3 -.fork.-&gt; L5
+</div><h3 id="master-table">Master table </h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Lab</th>
+<th>Port</th>
+<th>Zones</th>
+<th>New mechanism</th>
+<th>States</th>
+<th>KG file</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>lab1</code></td>
+<td>1892</td>
+<td>1</td>
+<td>single <code>Causes</code> lamp</td>
+<td>8</td>
+<td><code>building_1_trivial.ttl</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>lab2</code></td>
+<td>1893</td>
+<td>2</td>
+<td>+ <code>Mediates</code> blind (sun)</td>
+<td>1024</td>
+<td><code>building_2_intermediate.ttl</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>lab3</code></td>
+<td>1894</td>
+<td>2</td>
+<td>+ cross-zone spill + spotlight</td>
+<td>2048</td>
+<td><code>building_3_complex.ttl</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>lab1_f1dead</code></td>
+<td>1892</td>
+<td>1</td>
+<td>dead lamp (no recovery)</td>
+<td>8</td>
+<td><code>building_1_trivial.ttl</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>lab2_f1dead</code>/<code>f1inv</code></td>
+<td>1893</td>
+<td>2</td>
+<td>one dead / inverted lamp</td>
+<td>1024</td>
+<td><code>building_2_intermediate.ttl</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>lab2_f2dead</code>/<code>f2inv</code></td>
+<td>1893</td>
+<td>2</td>
+<td>both lamps dead / inverted</td>
+<td>1024</td>
+<td><code>building_2_intermediate.ttl</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>lab3_f1dead</code>/<code>f1inv</code></td>
+<td>1894</td>
+<td>2</td>
+<td>one dead / inverted lamp</td>
+<td>2048</td>
+<td><code>building_3_complex.ttl</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>lab3_f2dead</code>/<code>f2inv</code></td>
+<td>1894</td>
+<td>2</td>
+<td>both lamps dead / inverted</td>
+<td>2048</td>
+<td><code>building_3_complex.ttl</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>lab2_slow</code></td>
+<td>1895</td>
+<td>2</td>
+<td>blind response delay (60 s)</td>
+<td>1024 (dim 7)</td>
+<td><code>building_2_slow.ttl</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>lab3_slow</code></td>
+<td>1896</td>
+<td>2</td>
+<td>delay on <strong>both</strong> blinds</td>
+<td>2048 (dim 8)</td>
+<td><code>building_3_slow.ttl</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>lab4</code></td>
+<td>1897</td>
+<td>2</td>
+<td>hidden smart-plug AND-gate</td>
+<td>4096</td>
+<td><code>building_4_smartplug.ttl</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>lab5</code></td>
+<td>1898</td>
+<td>2</td>
+<td>efficient vs inefficient lamps</td>
+<td>8192</td>
+<td><code>building_5_energy.ttl</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h1 id="phase-1--the-clean-ladder">Phase 1 — The Clean Ladder </h1>
+<p><strong>Question:</strong> <em>does priming the learner with the Knowledge Graph make it converge faster than a tabula-rasa learner, on clean problems with no hidden traps?</em></p>
+<p>All three labs are <strong>strictly clean</strong>: the simulator physics is fully aligned with the KG, so every <code>ql_true − ql_false</code> difference is attributable to the prior. Each loads <strong>only its own self-contained <code>building_*.ttl</code></strong> (schema + topology + WoT mappings + slot registry); <code>lab-ontology.ttl</code> is deliberately <em>not</em> loaded, so nothing can leak in extra actuators. The ladder adds <strong>exactly one mechanism class per step</strong>.</p>
+<hr>
+<h2 id="lab1--trivial-port-1892">lab1 — Trivial (port 1892) </h2>
+<p><strong>Role:</strong> the acceleration baseline — the smallest possible lab where a <code>Causes</code> actuator (a lamp that unconditionally adds light) must be switched on.</p>
+<h3 id="components--topology">Components &amp; topology </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>        ┌─────────────── Zone 1 ───────────────┐
+ Sun ──▶ │  ambient 25 lux                       │
+(distractor) │  [Sensor] Z1Level  ── rank 0..3       │
+        │  [Actuator] Z1Light (Causes, +400)   │
+        └───────────────────────────────────────┘
+                target: Z1 = bright (rank 3)
+</code></pre><ul>
+<li><strong>1 zone, 1 sensor, 1 actuator</strong> (<code>Z1Light</code>, a <code>Causes</code> lamp).</li>
+<li>Sunshine is present but is a <strong>pure distractor</strong>: it is <em>not</em> in the state vector and contributes only <code>0.10·Sun</code> (≤ 90 lux at sun 900), never enough to reach rank 3 alone.</li>
+</ul>
+<h3 id="simulator-physics">Simulator physics </h3>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Z</mi><mn>1</mn><mo>=</mo><mn>25</mn><mo>+</mo><mn>0.10</mn><mo>⋅</mo><mtext>Sun</mtext><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>L</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>400</mn><mo>:</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Z1 = 25 + 0.10\cdot\text{Sun} + (Z1Light\;?\;400:0)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.10</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7667em;vertical-align:-0.0833em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal">L</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">400</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">:</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">0</span><span class="mclose">)</span></span></span></span></span><p>The lamp (<code>+400</code> → 425 lux) is the <strong>only</strong> path to rank 3, so the unique optimum in every scenario is <code>Z1Light = on</code>.</p>
+<h3 id="agent-state--space">Agent state &amp; space </h3>
+<ul>
+<li>State vector: <code>[Z1Level, Z1Light]</code> → <code>4 × 2 = 8 states</code>.</li>
+<li>Target: <code>target(1, 3)</code>. Held-out benchmark: 8 scenarios (2 per sun rank).</li>
+</ul>
+<h3 id="knowledge-encoded">Knowledge encoded </h3>
+<p><code>Z1Light Causes Z1Level</code> (unconditional positive). What the KG buys here: the primed agent starts already believing "switch the lamp on," so its first-goal episode is earlier. <code>training_params(1000, 0.9920)</code>.</p>
+<h3 id="what-it-tests">What it tests </h3>
+<p>The simplest acceleration signal, plus a sanity check that the agent does <strong>not</strong> redundantly toggle an already-correct lamp (the "bright start" scenarios).</p>
+<hr>
+<h2 id="lab2--intermediate-port-1893">lab2 — Intermediate (port 1893) </h2>
+<p><strong>Role:</strong> introduces the <strong><code>Mediates(blind, sunshine)</code></strong> mechanism — a blind that harvests daylight only when the sun is up. This is the central stereotype of the whole thesis.</p>
+<h3 id="components--topology-1">Components &amp; topology </h3>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>   ┌──────────── Zone 1 ────────────┐   ┌──────────── Zone 2 ────────────┐
+   │ [Sensor]  Z1Level               │   │ [Sensor]  Z2Level               │
+   │ [Act] Z1Light  (Causes,  +400)  │   │ [Act] Z2Light  (Causes,  +400)  │
+   │ [Act] Z1Blinds (Mediates,       │   │ [Act] Z2Blinds (Mediates,       │
+   │        0.50·Sun)                 │   │        0.50·Sun)                 │
+   └─────────────────────────────────┘   └─────────────────────────────────┘
+        target Z1 = bright(3)                  target Z2 = bright(3)
+   (the two zones are fully INDEPENDENT — no coupling)
+</code></pre><ul>
+<li><strong>2 independent zones</strong>, each with a <code>Causes</code> lamp <strong>and</strong> a <code>Mediates</code> blind.</li>
+<li>No cross-zone coupling; the only shared exogenous input is the sun.</li>
+</ul>
+<h3 id="simulator-physics-per-zone-identical-for-z1-z2">Simulator physics (per zone, identical for Z1, Z2) </h3>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Level</mtext><mo>=</mo><mn>25</mn><mo>+</mo><mo stretchy="false">(</mo><mi>L</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>400</mn><mo>:</mo><mn>0</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.50</mn><mo>⋅</mo><mtext>Sun</mtext><mo>:</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\text{Level} = 25 + (Light\;?\;400:0) + (Blinds\;?\;0.50\cdot\text{Sun}:0)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord text"><span class="mord">Level</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">400</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">:</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">0</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.50</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">:</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">0</span><span class="mclose">)</span></span></span></span></span><ul>
+<li>Lamp <strong>always</strong> reaches rank 3 (425 lux) → every scenario is solvable.</li>
+<li>Blind-only reaches rank 3 <strong>only at sun 900</strong> (25 + 0.50·900 = 475) at <strong>zero energy</strong> — the cheap, sun-conditioned optimum the <code>Mediates</code> prior should find quickly. At sun 0/100/400 the blind tops out at ≤ 225 (rank 2), so the lamp is required.</li>
+</ul>
+<h3 id="agent-state--space-1">Agent state &amp; space </h3>
+<ul>
+<li>State vector: <code>[Z1Level, Z2Level, Z1Light, Z2Light, Z1Blinds, Z2Blinds, Sunshine]</code> (7 slots).</li>
+<li>States: <strong>1024</strong>. Targets: <code>target(1,3), target(2,3)</code>. Benchmark: 16 scenarios (4 per sun rank).</li>
+</ul>
+<h3 id="knowledge-encoded-1">Knowledge encoded </h3>
+<p><code>Light Causes Level</code> (both zones) <strong>and</strong> <code>Blind Mediates Level via Sunshine</code>. The prior's payoff is <strong>sun-conditioned action selection</strong> — open the blind when sunny (free), use the lamp when dark. <code>training_params(2000, 0.9960)</code>.</p>
+<h3 id="what-it-tests-1">What it tests </h3>
+<p>Whether the KG-primed agent learns the sun-conditioned blind policy faster than a learner that must discover the sun-conditioning from scratch.</p>
+<hr>
+<h2 id="lab3--complex-port-1894">lab3 — Complex (port 1894) </h2>
+<p><strong>Role:</strong> the richest clean lab — adds <strong>cross-zone light spill</strong> and a <strong>shared spotlight</strong> (a redundant actuator the agent must learn to <em>avoid</em>). This is the template every Phase 2/3/4 lab forks.</p>
+<h3 id="components--topology-2">Components &amp; topology </h3>
+<div class="mermaid">flowchart LR
+    Sun((Sun))
+    subgraph Z1["Zone 1  (target rank 3)"]
+        Z1L["Z1Light Causes +400"]
+        Z1B["Z1Blinds Mediates 0.50·Sun"]
+        S1["Z1Level sensor"]
+    end
+    subgraph Z2["Zone 2  (target rank 3)"]
+        Z2L["Z2Light Causes +400"]
+        Z2B["Z2Blinds Mediates 0.50·Sun"]
+        S2["Z2Level sensor"]
+    end
+    SP["Spotlight (shared Causes +150 BOTH zones)"]
+    Z1L --&gt; S1
+    Z1B --&gt; S1
+    Z2L --&gt; S2
+    Z2B --&gt; S2
+    Z1L -. "+50 spill" .-&gt; S2
+    Z2L -. "+50 spill" .-&gt; S1
+    Z1B -. "0.25·Sun spill" .-&gt; S2
+    Z2B -. "0.25·Sun spill" .-&gt; S1
+    SP --&gt; S1
+    SP --&gt; S2
+    Sun --&gt; Z1B
+    Sun --&gt; Z2B
+</div><ul>
+<li>lab2 + <strong>cross-zone spill</strong> (each zone's lamp/blind leaks light into the <em>other</em> zone) + <strong>one shared Spotlight</strong> (<code>Causes</code>, +150 to <strong>both</strong> zones).</li>
+</ul>
+<h3 id="simulator-physics-1">Simulator physics </h3>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Z</mi><mn>1</mn><mo>=</mo><mn>25</mn><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>L</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>400</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>L</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>50</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.50</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.25</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>S</mi><mi>p</mi><mi>o</mi><mi>t</mi><mi>l</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>150</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Z1 = 25 + (Z1Light\;?\;400) + (Z2Light\;?\;50) + (Z1Blinds\;?\;0.50\cdot\text{Sun}) + (Z2Blinds\;?\;0.25\cdot\text{Sun}) + (Spotlight\;?\;150)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal">L</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">400</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal">L</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">50</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.50</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="mord mathnormal">p</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.0197em;">tl</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">150</span><span class="mclose">)</span></span></span></span></span><p>Z2 is symmetric. Note the <strong>cross coefficients are smaller</strong> than own-zone: lamp spill <code>+50</code> (vs <code>+400</code>), blind spill <code>0.25·Sun</code> (vs <code>0.50·Sun</code>).</p>
+<ul>
+<li>Lamp always reaches rank 3 → every scenario solvable.</li>
+<li><strong>Spotlight is a trap:</strong> +150 is never enough alone (need ≥ 300), so the optimum <em>never</em> uses it — the agent must learn to <strong>avoid the redundant actuator</strong>.</li>
+<li>At sun 900, opening <strong>both</strong> blinds gives 25 + 450 + 225 = 700 per zone at <strong>zero energy</strong> = the cheap optimum.</li>
+</ul>
+<h3 id="agent-state--space-2">Agent state &amp; space </h3>
+<ul>
+<li>State vector adds <code>Spotlight</code>: <code>[Z1Level, Z2Level, Z1Light, Z2Light, Z1Blinds, Z2Blinds, Spotlight, Sunshine]</code> (8 slots).</li>
+<li>States: <strong>2048</strong>. Targets <code>target(1,3), target(2,3)</code>. Benchmark: 16 scenarios. <code>training_params(3000, 0.9970)</code>.</li>
+</ul>
+<h3 id="what-it-tests-2">What it tests </h3>
+<p>KG-primed acceleration in the presence of (a) cross-zone interactions and (b) a tempting-but-useless shared actuator — does the prior steer the agent away from redundant spotlight toggles?</p>
+<hr>
+<h1 id="phase-2--the-faulty-ladder">Phase 2 — The Faulty Ladder </h1>
+<p><strong>Question:</strong> <em>when a real actuator silently breaks, can the agent detect it, blacklist it, alert the user, and re-learn over what survives — and does the KG-primed arm recover faster?</em></p>
+<h3 id="the-fault-model-simulator-side-kg-unchanged">The fault model (simulator-side, KG unchanged) </h3>
+<p>Each faulty profile is a <strong>clean Phase-1 parent</strong> (lab1/lab2/lab3) whose <strong>agent-side ontology, targets and bounds are identical</strong> to the parent (the KG still believes the <em>nominal</em> physics), but whose <strong>simulator flow injects exactly one hardware fault</strong> into a <code>Causes</code> lamp:</p>
+<table>
+<thead>
+<tr>
+<th>Fault suffix</th>
+<th>Injection</th>
+<th>KG predicts</th>
+<th>Reality gives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_f1dead</code></td>
+<td>lamp lux forced to <strong>0</strong> (relay clicks, bulb emits nothing)</td>
+<td><code>+Δ</code></td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>_f1inv</code></td>
+<td>lamp lux <strong>negated</strong> (mis-wired)</td>
+<td><code>+Δ</code></td>
+<td><code>0</code> (from dark) or <code>−Δ</code> (from an elevated zone)</td>
+</tr>
+<tr>
+<td><code>_f2dead</code></td>
+<td><strong>both</strong> lamps dead (multi-fault)</td>
+<td><code>+Δ</code> each</td>
+<td><code>0</code> each</td>
+</tr>
+<tr>
+<td><code>_f2inv</code></td>
+<td><strong>both</strong> lamps inverted</td>
+<td><code>+Δ</code> each</td>
+<td><code>0</code> / <code>−Δ</code></td>
+</tr>
+</tbody>
+</table>
+<p>The faulty flow runs on the <strong>same port + TD</strong> as the clean parent (only one variant adapts at a time). <code>adapt_source/2</code> maps each faulty profile to the clean parent's Q-table suffix, so the adapt agent <strong>warm-loads the Phase-1 Q-table</strong> and measures <em>recovery from a working policy</em>.</p>
+<h3 id="detection--recovery-pipeline">Detection → recovery pipeline </h3>
+<div class="mermaid">flowchart LR
+    A["each step:&lt;br/&gt;predict Δ from KG"] --&gt; B["compare to observed Δ"]
+    B --&gt; C{"≥20 samples &amp;&lt;br/&gt;dead≥0.80 or inv≥0.60&lt;br/&gt;or anomaly≥0.75?"}
+    C -- no --&gt; A
+    C -- yes --&gt; D["BLACKLIST component&lt;br/&gt;(remove ON+OFF actions)"]
+    D --&gt; E["ALERT user&lt;br/&gt;[FAULT] DEFECTIVE ..."]
+    E --&gt; F["warmRestart:&lt;br/&gt;zero Q of dead action,&lt;br/&gt;decay poisoned states,&lt;br/&gt;restore ε≥0.30"]
+    F --&gt; G["re-learn over survivors"]
+    G -.-&gt;|"monitoring stays on"| A
+</div><p>Detection constants: <code>FAULT_MIN_SAMPLES = 20</code>, <code>FAULT_DEAD_RATE = 0.80</code>, <code>FAULT_INV_RATE = 0.60</code>, <code>FAULT_ANOMALY_RATE = 0.75</code>, <code>FAULT_EPS_BOOST = 0.30</code>. Only <strong><code>Causes</code></strong> actuators are adjudicated — <code>Mediates</code> blinds are IV-gated (a healthy blind can look "dead" at sun 0), so they are skipped to avoid false positives. Headline metric: <code>RecoveryEpisodes = ReconvergeEpisode − DetectEpisode</code>.</p>
+<hr>
+<h2 id="lab1_f1dead--single-dead-lamp-port-1892">lab1_f1dead — single dead lamp (port 1892) </h2>
+<p>The <strong>degenerate detection showcase.</strong> lab1 has only one actuator, so after blacklisting <strong>no lever survives</strong> — the agent <strong>detects + alerts but cannot recover</strong> (recovery = N/A). Proves the monitor fires correctly even when remediation is impossible. Warm-loads <code>_lab1</code>.</p>
+<h2 id="lab2_f1dead--lab2_f1inv--one-broken-lamp-recovery-possible-port-1893">lab2_f1dead / lab2_f1inv — one broken lamp, recovery possible (port 1893) </h2>
+<p>The Z1 lamp is dead (<code>f1dead</code>) or inverted (<code>f1inv</code>). The <strong>Z1 blind and all of Z2 survive</strong>, so the agent re-learns a recovered policy (rank-3 Z1 reachable via the blind on sunny episodes). <code>f1inv</code> produces opposite-sign evidence when the zone is already lit. Warm-loads <code>_lab2</code>.</p>
+<h2 id="lab2_f2dead--lab2_f2inv--both-lamps-broken-port-1893">lab2_f2dead / lab2_f2inv — both lamps broken (port 1893) </h2>
+<p><strong>Multi-fault</strong>, iterative detect→blacklist→re-learn: both task lamps are dead/inverted. After both are blacklisted only the <strong>blinds survive</strong>, so full rank-3 recovery is only possible on <strong>sunny</strong> episodes — a medium-complexity "several-broken, partial-recovery" case proving multi-component detection. Warm-loads <code>_lab2</code>.</p>
+<h2 id="lab3_f1dead--lab3_f1inv--one-broken-lamp-in-the-complex-lab-port-1894">lab3_f1dead / lab3_f1inv — one broken lamp in the complex lab (port 1894) </h2>
+<p>Z1 lamp dead/inverted in lab3. <strong>Survivors are richer:</strong> the shared spotlight + cross-zone spill keep Z1 partly elevated, so <code>f1inv</code> yields <em>genuine opposite-direction</em> evidence (not just dead-looking Δ=0) — the cleanest inversion-detection case. Warm-loads <code>_lab3</code>.</p>
+<h2 id="lab3_f2dead--lab3_f2inv--both-lamps-broken-in-the-complex-lab-port-1894">lab3_f2dead / lab3_f2inv — both lamps broken in the complex lab (port 1894) </h2>
+<p>Both lamps dead/inverted. The <strong>spotlight (+150 both zones) and the blinds survive</strong>, giving the <strong>cleanest several-dead-with-recovery</strong> case in the suite (recovery via spotlight + blinds). Warm-loads <code>_lab3</code>. <code>training_params(4000, 0.9970)</code> (lab3 faults train longer).</p>
+<blockquote>
+<p><strong>Note on lab1:</strong> there is no <code>lab1_f*inv</code> or <code>lab1_f2*</code> — with a single lamp, "inverted" and "several" are degenerate, so only <code>lab1_f1dead</code> exists.</p>
+</blockquote>
+<hr>
+<h1 id="phase-3--the-slow-ladder">Phase 3 — The Slow Ladder </h1>
+<p><strong>Question:</strong> <em>can the agent learn each actuator's temporal response delay online, write it back to the KG, and use it to satisfy time-bounded goals ("bright immediately" vs "bright within 5 min")?</em></p>
+<h3 id="the-delay-model">The delay model </h3>
+<p>Each slow profile is <strong>structurally identical</strong> to its clean parent (same agent-side ontology shape, targets, bounds → <strong>same Q-state space</strong>), but the <strong>simulator gives the motorized blind a temporal response delay</strong> while lamps and the spotlight stay instantaneous:</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>flag flip ──▶ [ lamp / spotlight ]  ──▶  effect on NEXT tick   (immediate)
+
+flag flip ──▶ [ motorized blind ]  ──▶  12-tick countdown  ──▶  effect
+                                          │
+              12 ticks × 50 ms wall = 600 ms wall-clock
+              = 60 s of SIMULATED time at seconds_per_tick = 5.0
+</code></pre><p>The Node-RED flow runs a <strong>50 ms env-tick</strong> (<code>inject repeat=0.05</code>) that increments <code>Tick</code> and integrates <code>EnergyCost</code> / <code>TotalEnergyCost</code>, exposed via a new <code>readLabStatusTimed</code> op. On <code>POST /setState</code> the blind countdown is <strong>skipped</strong> (the dynamics probe always starts from a clean <code>t=0</code>).</p>
+<blockquote>
+<p><strong>Important:</strong> the slow labs <strong>do not Q-learn</strong> — a dedicated <em>dynamics agent</em> measures the per-actuator delay by probing, writes <code>ws:responseDelay</code> to <code>learned_dynamics_*.ttl</code>, then plans against deadlines. <code>training_params</code> is therefore unused. The building TTLs are <em>static</em> — <code>ws:responseDelay</code> is <strong>not</strong> asserted there; the writeback file is the canonical learned value. Config: <code>seconds_per_tick = 5.0</code>, <code>blind_delay_ticks = 12</code> (ground truth), probe <code>{probes_per_actuator: 8, settle_ms: 400, poll_ms: 50, max_wait_ticks: 60, target_rank: 3, probe_sun_rank: 900}</code>.</p>
+</blockquote>
+<hr>
+<h2 id="lab2_slow--intermediate--blind-delay-port-1895">lab2_slow — Intermediate + blind delay (port 1895) </h2>
+<ul>
+<li><strong>Forks lab2.</strong> Physics identical to lab2 (<code>Level = 25 + Light?400 + Blinds?0.50·Sun</code>), but the blind takes <strong>~60 s</strong> to actuate.</li>
+<li>State dim <strong>7</strong> (same as lab2). KG: <code>building_2_slow.ttl</code>, TD <code>interactions-lab2_slow.ttl</code>. Benchmark/training scenarios reused from lab2 (schema identical).</li>
+<li><strong>Tests:</strong> can the agent learn one slow actuator's delay and prefer the <em>instant</em> lamp when the goal is "bright <strong>now</strong>," but the <em>free</em> blind when the goal allows "within 5 min" on a sunny episode?</li>
+</ul>
+<h2 id="lab3_slow--complex--delay-on-both-blinds-port-1896">lab3_slow — Complex + delay on both blinds (port 1896) </h2>
+<ul>
+<li><strong>Forks lab3.</strong> Physics identical to lab3 (cross-zone spill + spotlight), but <strong>both</strong> motorized blinds are delayed (~60 s); lamps and spotlight instantaneous.</li>
+<li>State dim <strong>8</strong> (same as lab3). KG: <code>building_3_slow.ttl</code>, TD <code>interactions-lab3_slow.ttl</code>. Scenarios reused from lab3.</li>
+<li><strong>Tests:</strong> delay learning when <strong>two</strong> slow actuators coexist with instantaneous ones and cross-zone coupling — the richest temporal-planning case.</li>
+</ul>
+<hr>
+<h1 id="phase-4--the-knowledge-ladder">Phase 4 — The Knowledge Ladder </h1>
+<p><strong>Question (the thesis core):</strong> <em>can the KG encode facts a tabula-rasa learner fundamentally cannot see — a hidden wiring dependency and a per-device energy datasheet — and does a KG-primed agent exploit them, provably, and beat an LLM's general knowledge?</em></p>
+<p>Both labs are <strong>strictly clean</strong> forks of lab3 (2 zones, target rank 3, ambient 25, sun ∈ {0,100,400,900}). Both use the <strong>richer cross-zone coefficients</strong> <code>LAMP_CROSS = +150</code> and <code>BLIND_CROSS = 0.40·Sun</code> (vs lab3's +50 / 0.25·Sun), and a Spotlight at +150 both zones.</p>
+<hr>
+<h2 id="lab4--smart-plug-hidden-dependency-port-1897">lab4 — Smart-Plug hidden dependency (port 1897) </h2>
+<p><strong>Role:</strong> a <strong>hidden-but-documented power dependency</strong> — the Z1 ceiling lamp is wired behind a smart plug and emits light <strong>only when BOTH its switch AND the plug are ON</strong> (a logical AND-gate). The dependency lives in the KG (<code>ws:powerGates</code>); a tabula-rasa agent must discover it by trial and error.</p>
+<h3 id="components--topology-3">Components &amp; topology </h3>
+<div class="mermaid">flowchart LR
+    PlugZ1["PlugZ1 (smart plug, enabler)"]
+    Z1L["Z1Light switch"]
+    AND{"AND-gate"}
+    Lamp["Z1 lamp emits +400"]
+    PlugZ1 --&gt; AND
+    Z1L --&gt; AND
+    AND --&gt;|"z1lamp_on = Z1Light AND PlugZ1"| Lamp
+    Z2L["Z2Light (direct, +400)"]
+    SP["Spotlight (+150 both)"]
+</div><ul>
+<li>lab3 topology <strong>+ <code>PlugZ1</code></strong> (a new actuator) gating the Z1 lamp. Zone 2's lamp is direct (no plug).</li>
+<li>KG vocabulary: <strong><code>ws:powerGates</code></strong> (<code>plug ws:powerGates lamp</code>) + <code>ws:poweredBy</code> (inverse) + <code>ws:plugPowerSwitch</code>.</li>
+</ul>
+<h3 id="simulator-physics-2">Simulator physics </h3>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>z</mi><mn>1</mn><mi>l</mi><mi>a</mi><mi>m</mi><mi>p</mi><mi mathvariant="normal">_</mi><mi>o</mi><mi>n</mi><mo>=</mo><mi>Z</mi><mn>1</mn><mi>L</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mo>∧</mo><mi>P</mi><mi>l</mi><mi>u</mi><mi>g</mi><mi>Z</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">z1lamp\_on = Z1Light \wedge PlugZ1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0044em;vertical-align:-0.31em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">am</span><span class="mord mathnormal">p</span><span class="mord" style="margin-right:0.0278em;">_</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal">L</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∧</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal" style="margin-right:0.0359em;">ug</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span></span></span></span></span><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Z</mi><mn>1</mn><mo>=</mo><mn>25</mn><mo>+</mo><mo stretchy="false">(</mo><mi>z</mi><mn>1</mn><mi>l</mi><mi>a</mi><mi>m</mi><mi>p</mi><mi mathvariant="normal">_</mi><mi>o</mi><mi>n</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>400</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>L</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>150</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.50</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.40</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>S</mi><mi>p</mi><mi>o</mi><mi>t</mi><mi>l</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>150</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Z1 = 25 + (z1lamp\_on\;?\;400) + (Z2Light\;?\;150) + (Z1Blinds\;?\;0.50\cdot\text{Sun}) + (Z2Blinds\;?\;0.40\cdot\text{Sun}) + (Spotlight\;?\;150)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">am</span><span class="mord mathnormal">p</span><span class="mord" style="margin-right:0.0278em;">_</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">400</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal">L</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">150</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.50</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.40</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="mord mathnormal">p</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.0197em;">tl</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">150</span><span class="mclose">)</span></span></span></span></span><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Z</mi><mn>2</mn><mo>=</mo><mn>25</mn><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>L</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>400</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>z</mi><mn>1</mn><mi>l</mi><mi>a</mi><mi>m</mi><mi>p</mi><mi mathvariant="normal">_</mi><mi>o</mi><mi>n</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>150</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.50</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.40</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>S</mi><mi>p</mi><mi>o</mi><mi>t</mi><mi>l</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>150</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Z2 = 25 + (Z2Light\;?\;400) + (z1lamp\_on\;?\;150) + (Z2Blinds\;?\;0.50\cdot\text{Sun}) + (Z1Blinds\;?\;0.40\cdot\text{Sun}) + (Spotlight\;?\;150)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal">L</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">400</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">am</span><span class="mord mathnormal">p</span><span class="mord" style="margin-right:0.0278em;">_</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">150</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.50</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.40</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="mord mathnormal">p</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.0197em;">tl</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">150</span><span class="mclose">)</span></span></span></span></span><p>Energy/tick (bookkeeping) <code>= (z1lamp_on?1) + (Z2Light?1) + (Spotlight?2)</code>; the plug itself draws nothing.</p>
+<ul>
+<li><strong>Signature trap (scenarios 3 &amp; 11):</strong> <code>Z1Light</code> is already ON but <code>PlugZ1</code> is OFF, so Z1 stays dark — the fix is to toggle the <strong>plug</strong>, not the lamp. A tabula-rasa learner that flips the lamp sees no effect and is punished by the no-effect penalty.</li>
+<li>At sun 900, both blinds give 0.50·Sun own + 0.40·Sun cross = 835/zone at zero energy (plug irrelevant) = cheap optimum.</li>
+</ul>
+<h3 id="agent-state-kg-mechanism--space">Agent state, KG mechanism &amp; space </h3>
+<ul>
+<li>State vector adds <code>PlugZ1</code> (slot 7): <code>[Z1Level, Z2Level, Z1Light, Z2Light, Z1Blinds, Z2Blinds, Spotlight, PlugZ1, Sunshine]</code>.</li>
+<li>States: <strong>4096</strong>. Targets <code>target(1,3), target(2,3)</code>. <code>training_params(3000, 0.9970)</code>.</li>
+<li><strong>How the KG exploits it:</strong> the reasoner reads <code>ws:powerGates</code> and marks the Z1 lamp's ON action as <strong>IV-gated on the plug slot</strong> (<code>ivMinRank = 1</code>), reusing the existing instrumental-variable machinery — so the primed agent learns <em>enable the plug first</em>.</li>
+</ul>
+<h3 id="what-it-tests-3">What it tests </h3>
+<p>Efficiency under a hidden dependency: KG-primed vs tabula-rasa <strong>steps, deviation, wasted/redundant actions</strong> to reach the goal (both eventually reach it; the KG arm reaches it with materially fewer redundant toggles).</p>
+<hr>
+<h2 id="lab5--energy-aware-port-1898">lab5 — Energy-aware (port 1898) </h2>
+<p><strong>Role:</strong> <strong>two directly-actionable lamps per zone with identical brightness (+400) but different energy cost</strong> (<code>ws:energyCost</code> 1 vs 4). The goal is energy-aware. Energy is <strong>deliberately NOT in the Q-reward</strong> — only a KG-primed agent (reading the cost via a <strong>non-fading energy prior</strong>) prefers the cheap lamp.</p>
+<h3 id="components--topology-4">Components &amp; topology </h3>
+<div class="mermaid">flowchart LR
+    subgraph Z1["Zone 1"]
+        E1["Z1Eff  +400, energyCost 1"]
+        I1["Z1Ineff +400, energyCost 4"]
+        B1["Z1Blinds 0.50·Sun, cost 0"]
+    end
+    subgraph Z2["Zone 2"]
+        E2["Z2Eff  +400, energyCost 1"]
+        I2["Z2Ineff +400, energyCost 4"]
+        B2["Z2Blinds 0.50·Sun, cost 0"]
+    end
+    SP["Spotlight +150 both, cost 2"]
+    note["anyLamp = Eff OR Ineff → +400 ONCE&lt;br/&gt;(both on = wasted energy, no extra light)"]
+</div><ul>
+<li>Per zone: an <strong>efficient</strong> lamp and an <strong>inefficient</strong> lamp, <strong>optically identical</strong> (<code>anyLamp = Eff OR Ineff</code> contributes +400 <strong>once</strong>), plus the lab3 blind/spotlight/cross-zone structure (richer cross coefficients).</li>
+<li>KG vocabulary: <strong><code>ws:energyCost</code></strong> (per-actuator datasheet: Eff 1, Ineff 4, Spotlight 2, blinds 0).</li>
+</ul>
+<h3 id="simulator-physics-3">Simulator physics </h3>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>z</mi><mi mathvariant="normal">_</mi><mi>a</mi><mi>n</mi><mi>y</mi><mi>L</mi><mi>a</mi><mi>m</mi><mi>p</mi><mo>=</mo><mi>Z</mi><mi mathvariant="normal">_</mi><mi>E</mi><mi>f</mi><mi>f</mi><mo>∨</mo><mi>Z</mi><mi mathvariant="normal">_</mi><mi>I</mi><mi>n</mi><mi>e</mi><mi>f</mi><mi>f</mi></mrow><annotation encoding="application/x-tex">z\_anyLamp = Z\_Eff \vee Z\_Ineff</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9933em;vertical-align:-0.31em;"></span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mord" style="margin-right:0.0278em;">_</span><span class="mord mathnormal">an</span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="mord mathnormal">L</span><span class="mord mathnormal">am</span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0044em;vertical-align:-0.31em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord" style="margin-right:0.0278em;">_</span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∨</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0044em;vertical-align:-0.31em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord" style="margin-right:0.0278em;">_</span><span class="mord mathnormal" style="margin-right:0.0785em;">I</span><span class="mord mathnormal">n</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span></span></span></span></span><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>Z</mi><mn>1</mn><mo>=</mo><mn>25</mn><mo>+</mo><mo stretchy="false">(</mo><mi>z</mi><mn>1</mn><mi>a</mi><mi>n</mi><mi>y</mi><mi>L</mi><mi>a</mi><mi>m</mi><mi>p</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>400</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>z</mi><mn>2</mn><mi>a</mi><mi>n</mi><mi>y</mi><mi>L</mi><mi>a</mi><mi>m</mi><mi>p</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>150</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.50</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>B</mi><mi>l</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>s</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>0.40</mn><mo>⋅</mo><mtext>Sun</mtext><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>S</mi><mi>p</mi><mi>o</mi><mi>t</mi><mi>l</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>150</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Z1 = 25 + (z1anyLamp\;?\;400) + (z2anyLamp\;?\;150) + (Z1Blinds\;?\;0.50\cdot\text{Sun}) + (Z2Blinds\;?\;0.40\cdot\text{Sun}) + (Spotlight\;?\;150)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mord">1</span><span class="mord mathnormal">an</span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="mord mathnormal">L</span><span class="mord mathnormal">am</span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">400</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.044em;">z</span><span class="mord">2</span><span class="mord mathnormal">an</span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="mord mathnormal">L</span><span class="mord mathnormal">am</span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">150</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.50</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.0502em;">B</span><span class="mord mathnormal" style="margin-right:0.0197em;">l</span><span class="mord mathnormal">in</span><span class="mord mathnormal">d</span><span class="mord mathnormal">s</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0.40</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Sun</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="mord mathnormal">p</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.0197em;">tl</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">150</span><span class="mclose">)</span></span></span></span></span><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext mathvariant="bold">power</mtext><mo>=</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>E</mi><mi>f</mi><mi>f</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>1</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>1</mn><mi>I</mi><mi>n</mi><mi>e</mi><mi>f</mi><mi>f</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>4</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>E</mi><mi>f</mi><mi>f</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>1</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>Z</mi><mn>2</mn><mi>I</mi><mi>n</mi><mi>e</mi><mi>f</mi><mi>f</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>4</mn><mo stretchy="false">)</mo><mo>+</mo><mo stretchy="false">(</mo><mi>S</mi><mi>p</mi><mi>o</mi><mi>t</mi><mi>l</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mtext>  </mtext><mo stretchy="false">?</mo><mtext>  </mtext><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\textbf{power} = (Z1Eff\;?\;1) + (Z1Ineff\;?\;4) + (Z2Eff\;?\;1) + (Z2Ineff\;?\;4) + (Spotlight\;?\;2)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6389em;vertical-align:-0.1944em;"></span><span class="mord text"><span class="mord textbf">power</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">1</span><span class="mord mathnormal" style="margin-right:0.0785em;">I</span><span class="mord mathnormal">n</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">4</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0715em;">Z</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.0785em;">I</span><span class="mord mathnormal">n</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">4</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="mord mathnormal">p</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.0197em;">tl</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span><span class="mord mathnormal">h</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mclose">?</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">2</span><span class="mclose">)</span></span></span></span></span><h3 id="the-energy-budget--compliance-metric">The energy budget &amp; compliance metric </h3>
+<p>Each scenario carries an <strong><code>energyBudget</code></strong> (default <strong>2</strong>) — a scenario-level <em>scoring annotation</em>, not a simulator state field. A budget of 2 is met by two efficient lamps (1+1) or by free daylight (blinds 0); it is <strong>violated</strong> by any inefficient lamp (4), a redundant double-lamp (5/6/8), or the spotlight (+2).</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>compliant</mtext><mo>=</mo><mtext>GoalReached</mtext><mtext>  </mtext><mo>∧</mo><mtext>  </mtext><mtext>steady-state&nbsp;power</mtext><mo>≤</mo><mtext>energyBudget</mtext></mrow><annotation encoding="application/x-tex">\text{compliant} = \text{GoalReached} \;\wedge\; \text{steady-state power} \le \text{energyBudget}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord text"><span class="mord">compliant</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord text"><span class="mord">GoalReached</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∧</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord text"><span class="mord">steady-state&nbsp;power</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord text"><span class="mord">energyBudget</span></span></span></span></span></span><h3 id="agent-state-kg-mechanism--space-1">Agent state, KG mechanism &amp; space </h3>
+<ul>
+<li>State vector (10 slots): <code>[Z1Level, Z2Level, Z1Eff, Z1Ineff, Z2Eff, Z2Ineff, Z1Blinds, Z2Blinds, Spotlight, Sunshine]</code>.</li>
+<li>States: <strong>8192</strong>. Targets <code>target(1,3), target(2,3)</code>. <code>training_params(3000, 0.9970)</code>.</li>
+<li><strong>How the KG exploits it:</strong> a <strong>non-fading energy prior</strong> subtracts <code>weight · energyCost</code> (weight 2.0) from the greedy Q of every costed ON action — so the inefficient lamp (−8) is dispreferred vs the efficient one (−2). This is the <strong>only</strong> channel for energy preference, since energy is not in the reward; it persists through prior decay into the benchmark (see <a href="PHASE3_TO_PHASE4_CHANGES.md">PHASE3_TO_PHASE4_CHANGES.md</a> §6).</li>
+</ul>
+<h3 id="what-it-tests-4">What it tests </h3>
+<p>The decisive thesis claim: an energy-aware metric (compliance, steady power) that <strong>only</strong> the KG-primed agent can optimise, because the cost lives <strong>only</strong> in the KG. (Certified result: <code>energy_compliance</code> 0.784 vs 0.683, Wilcoxon p = 0.00093, Cliff δ 0.69 at n = 20 — see <a href="PHASE4.md">PHASE4.md</a> §10a.)</p>
+<hr>
+<h1 id="appendix-a--legacy-custom-labs-pre-phase-exploratory">Appendix A — Legacy "custom" labs (pre-phase, exploratory) </h1>
+<p>Before the four-phase arc, the project used a series of exploratory labs (ports 1881–1891) with <strong>different discretisation</strong> (<code>light_bounds [75,200,400]</code>, <code>sunshine_bounds [50,150,500]</code>). They are retained for reproducibility but are <strong>not</strong> part of the thesis ladder. Most are 4-zone weakness labs that inject <strong>one systematic ontology gap (W1–W6)</strong> to stress-test resilience.</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Port</th>
+<th>Zones</th>
+<th>Injected weakness</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>custom</code> / <code>custom_full_train</code></td>
+<td>1881</td>
+<td>2</td>
+<td>none</td>
+<td>default 2-zone lab; <code>_full</code> = fixed-cycle training ablation</td>
+</tr>
+<tr>
+<td><code>custom2</code></td>
+<td>1882</td>
+<td>4</td>
+<td><strong>W1</strong> missing-stereotype (hidden corridor +30 lux not in TD)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>custom3</code></td>
+<td>1883</td>
+<td>4</td>
+<td><strong>W2</strong> context-dependent (blind sun-flip at sun rank ≥ 3)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>custom4</code></td>
+<td>1884</td>
+<td>4</td>
+<td><strong>W3</strong> dynamics (ramp/residual/hysteresis)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>custom5</code></td>
+<td>1885</td>
+<td>4</td>
+<td><strong>W4</strong> shared resource (7-unit power cap, lowest priority dropped)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>custom6</code></td>
+<td>1886</td>
+<td>4</td>
+<td><strong>W5</strong> dynamic topology (partition toggles every 5 ticks)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>custom7</code></td>
+<td>1887</td>
+<td>4</td>
+<td><strong>W6</strong> multi-objective heat (+0.1 °C/tick per ON lamp)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>custom8</code></td>
+<td>1888</td>
+<td>4</td>
+<td>none (clean IV-coupling demo)</td>
+<td>wide sun coverage (<code>sunshine_prob 0.50</code>)</td>
+</tr>
+<tr>
+<td><code>custom9</code></td>
+<td>1889</td>
+<td>4</td>
+<td>none (clean, sun-dependent optimum)</td>
+<td>spotlights disabled; H1 lab (4-zone, slow to converge)</td>
+</tr>
+<tr>
+<td><code>custom9s</code></td>
+<td>1891</td>
+<td>2</td>
+<td>none (simple constructive sibling)</td>
+<td>2-zone reduction that converges in ~1000 ep; spotlight repurposed as +150 corridor light</td>
+</tr>
+</tbody>
+</table>
+<p>The 4-zone weakness labs share one agent-side ontology (<code>lab-ontology.ttl</code> + <code>lab-ontology-custom2.ttl</code> + <code>wot-mappings-custom2.ttl</code>); the <strong>simulator</strong> is ground truth and injects the weakness, so the <em>observed Δ vs predicted Δ</em> is the experimental signal. <code>weakness_flags</code> selects the matching per-step fingerprint check in the bench agent.</p>
+<hr>
+<h1 id="appendix-b--where-each-labs-facts-live">Appendix B — Where each lab's facts live </h1>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>File pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Profile (ports, bounds, targets, training)</td>
+<td><a href="../src/agt/lab_profiles.asl">src/agt/lab_profiles.asl</a></td>
+</tr>
+<tr>
+<td>Knowledge Graph (schema, topology, WoT, slots)</td>
+<td><code>src/resources/building_*.ttl</code></td>
+</tr>
+<tr>
+<td>WoT Thing Description (action/state affordances)</td>
+<td><code>src/resources/interactions-lab*.ttl</code></td>
+</tr>
+<tr>
+<td>Simulator physics (the exact lux/energy values)</td>
+<td><code>simulator/simulator_flow_lab*.json</code></td>
+</tr>
+<tr>
+<td>Held-out benchmark scenarios (+ per-scenario <code>comment</code> documenting the physics)</td>
+<td><code>benchmark/scenarios_lab*.json</code></td>
+</tr>
+<tr>
+<td>Training scenarios</td>
+<td><code>benchmark/train_scenarios_lab*.json</code></td>
+</tr>
+<tr>
+<td>Phase narratives</td>
+<td><a href="PHASE1_TO_PHASE2_CHANGES.md">PHASE1_TO_PHASE2_CHANGES.md</a> · <a href="PHASE2_TO_PHASE3_CHANGES.md">PHASE2_TO_PHASE3_CHANGES.md</a> · <a href="PHASE3_TO_PHASE4_CHANGES.md">PHASE3_TO_PHASE4_CHANGES.md</a> · <a href="PHASE4.md">PHASE4.md</a></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Tip:</strong> every <code>benchmark/scenarios_lab*.json</code> opens with a <code>comment</code> field that states the exact physics formula and the intended optimum for that lab — the most authoritative one-line spec per lab.</p>
+</blockquote>
+
+      </div>
+      
+      
+    
+    
+    <script type="module">
+// TODO: If ZenUML gets integrated into mermaid in the future,
+//      we can remove the following lines.
+
+
+var MERMAID_CONFIG = ({"startOnLoad":false});
+if (typeof MERMAID_CONFIG !== 'undefined') {
+  MERMAID_CONFIG.startOnLoad = false
+  MERMAID_CONFIG.cloneCssStyles = false
+  MERMAID_CONFIG.theme = "default"
+}
+
+mermaid.initialize(MERMAID_CONFIG || {})
+if (typeof(window['Reveal']) !== 'undefined') {
+  function mermaidRevealHelper(event) {
+    var currentSlide = event.currentSlide
+    var diagrams = currentSlide.querySelectorAll('div.mermaid')
+    for (var i = 0; i < diagrams.length; i++) {
+      var diagram = diagrams[i]
+      if (!diagram.hasAttribute('data-processed')) {
+        mermaid.init(null, diagram, ()=> {
+          Reveal.slide(event.indexh, event.indexv)
+        })
+      }
+    }
+  }
+  Reveal.addEventListener('slidetransitionend', mermaidRevealHelper)
+  Reveal.addEventListener('ready', mermaidRevealHelper)
+  await mermaid.run({
+    nodes: document.querySelectorAll('div.mermaid')
+  })
+} else {
+  await mermaid.run({
+    nodes: document.querySelectorAll('div.mermaid')
+  })
+}
+</script>
+    
+    
+    
+  
+    </body></html>

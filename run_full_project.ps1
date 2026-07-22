@@ -38,7 +38,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase4")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase4")]
     [string]$RunMode = "dev",
 
     # Optional comma-separated subset of profiles to train and benchmark.
@@ -173,6 +173,9 @@ if ($RunConfig) {
 # and forwarded as -Dsim.http.* to JaCaMoLauncher; LabEnvironment.init
 # picks them up at startup.
 $HttpArgs = @()
+if ($P.protocol_version) {
+    $HttpArgs += "-Pphase1.protocolVersion=$($P.protocol_version)"
+}
 if ($RunConfig -and $RunConfig.http_client) {
     $hc = $RunConfig.http_client
     if ($hc.connect_timeout_ms  -ne $null) { $HttpArgs += "-Psim.http.connectMs=$($hc.connect_timeout_ms)" }
@@ -190,6 +193,9 @@ if ($RunConfig -and $RunConfig.learning) {
     # Audit Step 3b S3b-4: per-action prior magnitudes (redundant / IV-unsat).
     if ($ln.stereo_prior_redundant      -ne $null) { $HttpArgs += "-Pstereo.priorRedundant=$($ln.stereo_prior_redundant)" }
     if ($ln.stereo_prior_iv_unsat       -ne $null) { $HttpArgs += "-Pstereo.priorIVUnsat=$($ln.stereo_prior_iv_unsat)" }
+    # Audit control arm (Addendum 2026-07-19e): registry-only redundancy prior,
+    # knowledge layer disabled (profile phase1_redundancy_only).
+    if ($ln.stereo_redundancy_only      -ne $null) { $HttpArgs += "-Pstereo.redundancyOnly=$($ln.stereo_redundancy_only)" }
     # Research Phase C: constructive optimistic Q-init bonus (H5 ablation sets 0.0).
     if ($ln.stereo_init_bonus           -ne $null) { $HttpArgs += "-Pstereo.initBonus=$($ln.stereo_init_bonus)" }
     # KG-X (Part B): cross-zone structural exploration prior (default 0.0 = OFF).
@@ -211,14 +217,17 @@ if ($RunSeed -ne 0) {
 
 # ─── Project layout ───────────────────────────────────────────────────────────
 # Profiles to train/benchmark. Phase 1 clean ladder: lab1/lab2/lab3 by default.
-# Phase 4 adds lab4/lab5 (selected per-cell via -OnlyProfiles by phase4.yml);
-# they are NOT in the default set so a plain phase1 run is unchanged.
+# Phase 4 adds lab4/lab4dual/lab4chain/lab5 (selected per-cell via -OnlyProfiles
+# by phase4.yml); they are NOT in the default set so a plain phase1 run is
+# unchanged.
 $TrainProfiles = @(
     "lab1", "lab2", "lab3"
 )
 # Superset of all known/selectable profiles (used only to validate -OnlyProfiles).
 $KnownProfiles = @(
-    "lab1", "lab2", "lab3", "lab4", "lab5"
+    "lab1", "lab2", "lab2noise", "lab3", "lab4", "lab4dual", "lab4chain", "lab5",
+    "labmon", "labmon2",
+    "labmon_infoonly", "labmon_nostereo", "labmon2_infoonly", "labmon2_nostereo"
 )
 
 # Apply -OnlyProfiles filter (parallel orchestrator passes one profile per clone).
@@ -278,18 +287,40 @@ $ProfileQtableSuffix = @{
     custom9s = "_custom9s"
     lab1 = "_lab1"
     lab2 = "_lab2"
+    lab2noise = "_lab2noise"
     lab3 = "_lab3"
     lab4 = "_lab4"
+    lab4dual = "_lab4dual"
+    lab4chain = "_lab4chain"
     lab5 = "_lab5"
+    labmon = "_labmon"
+    labmon2 = "_labmon2"
+    labmon_infoonly = "_labmon_infoonly"
+    labmon_nostereo = "_labmon_nostereo"
+    labmon2_infoonly = "_labmon2_infoonly"
+    labmon2_nostereo = "_labmon2_nostereo"
 }
 
 # Simulator map: each entry is a profile → (port, flow file) binding
 $Simulators = @(
     [pscustomobject]@{ Profile="lab1"; Port=1892; Flow="simulator_flow_lab1.json" }
     [pscustomobject]@{ Profile="lab2"; Port=1893; Flow="simulator_flow_lab2.json" }
+    # Exploratory noise pilot (Addendum 2026-07-19f): lab2 physics + per-tick
+    # ±10% multiplicative sensor noise; own port so clean lab2 stays untouched.
+    [pscustomobject]@{ Profile="lab2noise"; Port=1903; Flow="simulator_flow_lab2noise.json" }
     [pscustomobject]@{ Profile="lab3"; Port=1894; Flow="simulator_flow_lab3.json" }
     [pscustomobject]@{ Profile="lab4"; Port=1897; Flow="simulator_flow_lab4.json" }
+    [pscustomobject]@{ Profile="lab4dual"; Port=1901; Flow="simulator_flow_lab4dual.json" }
+    [pscustomobject]@{ Profile="lab4chain"; Port=1902; Flow="simulator_flow_lab4chain.json" }
     [pscustomobject]@{ Profile="lab5"; Port=1898; Flow="simulator_flow_lab5.json" }
+    [pscustomobject]@{ Profile="labmon"; Port=1899; Flow="simulator_flow_labmon.json" }
+    [pscustomobject]@{ Profile="labmon2"; Port=1900; Flow="simulator_flow_labmon2.json" }
+    # Phase 2.6 KG-silent monitor variants: SAME physics/flows/ports as the
+    # labmon/labmon2 parents — only the agent-side KG (building_*.ttl) differs.
+    [pscustomobject]@{ Profile="labmon_infoonly"; Port=1899; Flow="simulator_flow_labmon.json" }
+    [pscustomobject]@{ Profile="labmon_nostereo"; Port=1899; Flow="simulator_flow_labmon.json" }
+    [pscustomobject]@{ Profile="labmon2_infoonly"; Port=1900; Flow="simulator_flow_labmon2.json" }
+    [pscustomobject]@{ Profile="labmon2_nostereo"; Port=1900; Flow="simulator_flow_labmon2.json" }
 )
 
 # ASL file paths (relative; resolved via Set-Location above)
@@ -384,6 +415,36 @@ function Get-ExpectedTrainingArtifacts {
     )
 }
 
+function Get-Phase1ScenarioProvenance {
+    param([string]$Profile)
+    $scenarioFile = Join-Path $ScriptRoot "benchmark\train_scenarios_${Profile}.json"
+    if (-not (Test-Path -LiteralPath $scenarioFile)) {
+        throw "Protocol-v2 scenario file missing: $scenarioFile"
+    }
+    $rows = @(Get-Content -LiteralPath $scenarioFile -Raw -Encoding UTF8 | ConvertFrom-Json)
+    $ids = @($rows | Where-Object { $_.PSObject.Properties['id'] } | ForEach-Object { [int]$_.id })
+    if ($ids.Count -ne $rows.Count) {
+        throw "Protocol-v2 scenario entry is missing an ID: $scenarioFile"
+    }
+    if ($ids.Count -eq 0) { throw "Protocol-v2 scenario file has no IDs: $scenarioFile" }
+    if ((@($ids | Select-Object -Unique)).Count -ne $ids.Count) {
+        throw "Protocol-v2 scenario file has duplicate IDs: $scenarioFile"
+    }
+    $canonical = $ids -join ','
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($canonical)
+        $hash = ([System.BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
+    } finally {
+        $sha.Dispose()
+    }
+    return [pscustomobject]@{
+        file = "benchmark/train_scenarios_${Profile}.json"
+        ids = $ids
+        hash = $hash
+    }
+}
+
 function Assert-TrainingManifestsComplete {
     $missing = @()
     foreach ($profile in $TrainProfiles) {
@@ -405,6 +466,20 @@ function Assert-TrainingManifestsComplete {
             if ($manifest.status -ne "ok") {
                 $missing += "Manifest status not ok: $manifestPath"
                 continue
+            }
+
+            if ($P.protocol_version -eq 'phase1-v2') {
+                if ($manifest.protocol_version -ne 'phase1-v2' -or
+                    $manifest.run_seed -ne $RunSeed -or
+                    $manifest.fixed_horizon_episodes -ne 3000 -or
+                    $manifest.paired_rng_version -ne 'common-seed-v1' -or
+                    $manifest.metric_schema -ne 'phase1-benchmark-v2' -or
+                    $manifest.scenario_fallback_count -ne 0 -or
+                    -not $manifest.ordered_scenario_ids -or
+                    -not $manifest.scenario_schedule_sha256) {
+                    $missing += "Protocol-v2 provenance invalid: $manifestPath"
+                    continue
+                }
             }
 
             if (-not $manifest.artifacts -or $manifest.artifacts.Count -eq 0) {
@@ -831,6 +906,23 @@ try {
                     throw "Training artifacts missing for profile=$profile stereo=${stereo}: $($missingNow -join ', ')"
                 }
 
+                $scenarioProvenance = $null
+                if ($P.protocol_version -eq 'phase1-v2') {
+                    $scenarioProvenance = Get-Phase1ScenarioProvenance -Profile $profile
+                    $metricsName = "metrics_stereotypes_${stereo}$($ProfileQtableSuffix[$profile]).csv"
+                    $metricsPath = Join-Path $ScriptRoot $metricsName
+                    $episodeRows = @(Import-Csv -LiteralPath $metricsPath | Where-Object { $_.Episode -match '^\d+$' })
+                    if ($episodeRows.Count -ne [int]$P.num_episodes) {
+                        throw "Protocol-v2 fixed horizon failed for $profile/${stereo}: expected $($P.num_episodes), got $($episodeRows.Count)"
+                    }
+                    $fgName = "first_goal_stereotypes_${stereo}$($ProfileQtableSuffix[$profile]).csv"
+                    $fgPath = Join-Path $ScriptRoot $fgName
+                    $fgRows = @(Import-Csv -LiteralPath $fgPath | Where-Object { $_.ProtocolVersion -eq 'phase1-v2' })
+                    if ($fgRows.Count -ne $scenarioProvenance.ids.Count) {
+                        throw "Protocol-v2 first-goal rows failed for $profile/${stereo}: expected $($scenarioProvenance.ids.Count), got $($fgRows.Count)"
+                    }
+                }
+
                 # Archive training artefacts for this cell
                 $archiveDir = "benchmark\results\$profile\training_stereo_$stereo"
                 New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
@@ -843,7 +935,16 @@ try {
                     status = "ok"
                     profile = $profile
                     stereotype = $stereo
+                    run_seed = [int]$RunSeed
                     run_mode = $RunMode
+                    protocol_version = $(if ($P.protocol_version) { $P.protocol_version } else { 'legacy' })
+                    ordered_scenario_ids = $(if ($scenarioProvenance) { $scenarioProvenance.ids } else { @() })
+                    scenario_schedule_sha256 = $(if ($scenarioProvenance) { $scenarioProvenance.hash } else { '' })
+                    scenario_file = $(if ($scenarioProvenance) { $scenarioProvenance.file } else { '' })
+                    fixed_horizon_episodes = $(if ($P.protocol_version -eq 'phase1-v2') { [int]$P.num_episodes } else { 0 })
+                    paired_rng_version = $(if ($P.protocol_version -eq 'phase1-v2') { 'common-seed-v1' } else { 'legacy-arm-mixed' })
+                    metric_schema = $(if ($P.metric_schema) { $P.metric_schema } else { 'legacy' })
+                    scenario_fallback_count = 0
                     timestamp = (Get-Date).ToString("o")
                     artifacts = $expectedArtefacts
                 } | ConvertTo-Json -Depth 4

@@ -1,0 +1,1 @@
+mode,seed,scenario,run,step,state,action_label,action_idx,q_executed,q_rowmax,argmax_under_zone_sum

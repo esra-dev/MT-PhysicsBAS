@@ -1,0 +1,16 @@
+{
+    "status":  "ok",
+    "profile":  "custom9s",
+    "stereotype":  "false",
+    "run_mode":  "dev",
+    "timestamp":  "2026-06-08T14:25:57.4600886+02:00",
+    "artifacts":  [
+                      "qtable_final_stereotypes_false_custom9s.csv",
+                      "qtable_initial_stereotypes_false_custom9s.csv",
+                      "metrics_stereotypes_false_custom9s.csv",
+                      "iv_stats_stereotypes_false_custom9s.json",
+                      "coverage_stereotypes_false_custom9s.csv",
+                      "first_goal_stereotypes_false_custom9s.csv",
+                      "learned_stereotypes_false_custom9s.ttl"
+                  ]
+}

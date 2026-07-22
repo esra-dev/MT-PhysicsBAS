@@ -1,0 +1,13 @@
+profile,metric,metric_tier,direction,censored_frac,n_paired,seeds_paired,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_one_sided_favorable,p_wilcoxon,cliffs_delta,q_bootstrap_bh,bh_family_m
+lab1,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,12
+lab1,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,0.006639758970261767,-0.6959999772926694,0.6676165662023621,0.9882,0.4941,1.0,0.0,1.0,12
+lab1,episodes_to_threshold,secondary_censored,lower_better,0.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,12
+lab1,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,0.0,-12.9,12.15,0.9836,0.5182,0.921875,0.05,1.0,12
+lab2,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,0.01973991330443482,0.014654884961653902,0.024458569523174385,0.0,0.0,0.001953125,1.0,0.0,12
+lab2,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,5.647065688562856,1.0952484161387133,9.903491997332443,0.0162,0.0081,0.02734375,0.52,0.0648,12
+lab2,episodes_to_threshold,secondary_censored,lower_better,0.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,12
+lab2,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,-16.9577070383639,-45.68755261640066,8.79626129074286,0.2256,0.1128,0.322265625,-0.42,0.5414399999999999,12
+lab3,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,-0.003751250416805607,-0.008019756585528526,0.0006673057685895593,0.0986,0.9508,0.193359375,-0.4,0.29579999999999995,12
+lab3,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,14.258352784261419,11.233294014671557,17.19568772924308,0.0,0.0,0.001953125,1.0,0.0,12
+lab3,episodes_to_threshold,secondary_censored,lower_better,0.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,12
+lab3,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,17.383416589414377,-22.641093394903816,57.58610610577579,0.3968,0.8016,0.625,0.18,0.7936,12

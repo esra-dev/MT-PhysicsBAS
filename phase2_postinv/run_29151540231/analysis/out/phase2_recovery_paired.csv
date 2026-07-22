@@ -1,0 +1,14 @@
+profile,metric,recovery_tier,in_registered_family,n_paired,seeds_paired,ql_true_mean,ql_false_mean,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_bootstrap_one_sided_true_faster,p_wilcoxon,cliffs_delta,ql_true_faster,q_bootstrap_bh,bh_family_m
+lab3_f1dead_z2,RecoveryEpisodes,confirmatory,True,9,seed1;seed2;seed3;seed4;seed6;seed7;seed8;seed9;seed10,511.1111111111111,571.3333333333334,-60.22222222222222,-120.12222222222222,-4.333333333333333,0.0332,0.9836,0.203125,-0.2839506172839506,True,nan,0
+lab3_f1inv_z2,RecoveryEpisodes,descriptive,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,1325.0,1294.5,30.5,-399.81,491.90999999999985,0.9166,0.4583,0.845703125,0.2,False,nan,0
+lab3_f1bdead,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,198.1,288.1,-90.0,-265.0075,86.50249999999997,0.3196,0.8405,0.375,-0.33,True,nan,0
+lab3_f1binv,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,398.5,405.0,-6.5,-138.4075,116.0,0.9288,0.5368,0.845703125,-0.02,True,nan,0
+lab2_f1bdead,RecoveryEpisodes,confirmatory,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,75.6,382.1,-306.5,-439.5,-174.59500000000006,0.0,1.0,0.001953125,-0.92,True,nan,0
+lab2_f1binv,RecoveryEpisodes,descriptive,False,4,seed1;seed2;seed3;seed10,479.5,323.75,155.75,-44.25,399.0,0.1268,0.0634,0.375,0.375,False,nan,0
+lab3_f2inv,DetectEpisode,,False,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1dead_z2,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1inv_z2,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1bdead,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,5.6,6.2,-0.6,-3.5,2.3,0.7078,0.6773,0.765625,-0.12,True,nan,0
+lab3_f1binv,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,7.4,5.7,1.7,-0.6,4.0,0.1558,0.0779,0.1875,0.27,False,nan,0
+lab2_f1bdead,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,7.2,6.4,0.8,-0.1,2.1,0.164,0.082,0.359375,0.3,False,nan,0
+lab2_f1binv,DetectEpisode,,True,10,seed1;seed2;seed3;seed4;seed5;seed6;seed7;seed8;seed9;seed10,7.2,6.0,1.2,-1.0,3.3,0.3,0.15,0.421875,0.24,False,nan,0

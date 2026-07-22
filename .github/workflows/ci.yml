@@ -99,6 +99,23 @@ jobs:
             }
             if (bad > 0) { console.error(bad, 'invalid file(s)'); process.exit(1); }
           "
+      - name: Validate Phase-1 scenario physics
+        run: python3 analysis/validate_phase1_scenarios.py
+      - name: Run Python analysis tests
+        run: |
+          python3 -m pip install pytest numpy
+          python3 -m pytest -q analysis/tests
+      - name: Enforce exhaustive Phase-1 claim ledger and audit provenance tags
+        run: |
+          python3 analysis/phase1_claim_ledger_lint.py
+          python3 analysis/build_phase1_claim_ledger.py --output /tmp/phase1_claim_ledger.csv
+          cmp docs/audit/phase1_claim_ledger.csv /tmp/phase1_claim_ledger.csv
+      - name: Phase-1 provenance golden check
+        run: python3 analysis/check_provenance.py
+      - name: Dashboard Phase-1 data must be a byte-identical derivation
+        run: |
+          python3 dashboard/scripts/prepare_data.py --only phase1
+          git diff --exit-code -- dashboard/public/data/phase1.json
       - name: Build dashboard
         working-directory: dashboard
         run: |
@@ -119,7 +136,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Run preflight (skip simulator probe)
-        run: ./gradlew --no-daemon preflight -Pprofiles=custom2,custom3,custom4,custom5,custom6,custom7 -PskipSimProbe
+        run: ./gradlew --no-daemon preflight -Pprofiles=lab1,lab2,lab3 -PskipSimProbe
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Smoke training: end-to-end check that one (profile x stereo) training
@@ -128,7 +145,7 @@ jobs:
   # but only the smallest profile and a single stereo mode (~3-5 min).
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   smoke-training:
-    name: Smoke training (custom2 / stereo=false / dev)
+    name: Non-inferential smoke (lab1 / stereo=true / v2)
     runs-on: ubuntu-latest
     needs: [build-test]
     steps:
@@ -160,22 +177,25 @@ jobs:
         shell: pwsh
         run: |
           ./run_full_project.ps1 `
-            -RunMode dev `
-            -OnlyProfiles custom2 `
-            -OnlyStereo false `
+            -RunMode phase1_v2_kg_only `
+            -OnlyProfiles lab1 `
+            -OnlyStereo true `
+            -RunSeed 1 `
             -SkipBenchmark `
             -SkipPreflight
       - name: Upload smoke artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: smoke-train-custom2-stereo-false
+          name: smoke-phase1-v2-lab1-stereo-true
           path: |
-            qtable_final_stereotypes_false_custom2.csv
-            metrics_stereotypes_false_custom2.csv
-            iv_stats_stereotypes_false_custom2.json
-            learned_stereotypes_false_custom2.ttl
-            log/train_custom2_stereo_false.log
+            qtable_final_stereotypes_true_lab1.csv
+            metrics_stereotypes_true_lab1.csv
+            first_goal_stereotypes_true_lab1.csv
+            iv_stats_stereotypes_true_lab1.json
+            learned_stereotypes_true_lab1.ttl
+            benchmark/results/lab1/training_stereo_true/TRAINING_OK.json
+            log/train_lab1_stereo_true.log
             run_full_project.log
           if-no-files-found: warn
           retention-days: 7

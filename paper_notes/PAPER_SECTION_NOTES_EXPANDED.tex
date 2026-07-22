@@ -1,0 +1,1000 @@
+%%=============================================================
+%%  Stage 11 Expanded Section Notes — LaTeX scaffolding
+%%  Source: PAPER_SECTION_NOTES_EXPANDED.md (Stage 11, prose form)
+%%  Template target: memoir-class thesis
+%%    abstract → 01_chapter1 → 02_chapter2 → 03_chapter3
+%%               → 04_chapter4 → 05_chapter5 → appendix
+%%
+%%  THIS IS DRAFTING SCAFFOLDING, NOT FINAL THESIS PROSE.
+%%  Every numeric value is tied to the immutable locators in
+%%  PAPER_SECTION_NOTES.md and the committed origin/results CSVs.
+%%  Evidence labels: [DIRECT] [DERIVED] [INTERPRETATION]
+%%                   [UNRESOLVED] [SUPERSEDED]
+%%  Research-status tags follow 00_PROTOCOL.md §4.
+%%  No phase may be claimed PRE_REGISTERED_CONFIRMATORY
+%%  (formal post-pivot preregistration is NOT FOUND, GAP-021).
+%%=============================================================
+
+\documentclass[12pt, a4paper, oneside]{memoir}
+
+%% ----- packages -----
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{csquotes}
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+%% ----- evidence-label commands -----
+\newcommand{\evDirect}{\textcolor{blue}{[DIRECT]}}
+\newcommand{\evDerived}{\textcolor{teal}{[DERIVED]}}
+\newcommand{\evInterp}{\textcolor{violet}{[INTERPRETATION]}}
+\newcommand{\evUnresolved}{\textcolor{red}{[UNRESOLVED]}}
+\newcommand{\evSuperseded}{\textcolor{gray}{[SUPERSEDED]}}
+
+%% research-status
+\newcommand{\rsPHE}{\texttt{POST\_HOC\_EXPLORATORY}}
+\newcommand{\rsEV}{\texttt{ENGINEERING\_VALIDATION}}
+
+%% convenience
+\newcommand{\qlT}{\texttt{ql\_true}}
+\newcommand{\qlF}{\texttt{ql\_false}}
+\newcommand{\wsRD}{\texttt{ws:responseDelay}}
+
+%% ----- document -----
+\title{Stage 11 Expanded Section Notes\\[0.5ex]
+       \large LaTeX Scaffolding for Thesis Manuscript}
+\author{MT-Esra}
+\date{2026-06-18}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\clearpage
+
+%%=============================================================
+\chapter*{Reading and Labelling Conventions}
+\addcontentsline{toc}{chapter}{Reading and Labelling Conventions}
+%%=============================================================
+
+Evidence labels \evDirect, \evDerived, \evInterp, \evUnresolved, and
+\evSuperseded\ carry the same meaning as in \texttt{00\_PROTOCOL.md} §3.
+Research-status tags (\rsPHE, \rsEV, etc.) follow \texttt{00\_PROTOCOL.md}
+§4. No phase may be written up as
+\texttt{PRE\_REGISTERED\_CONFIRMATORY}: formal post-pivot preregistration is
+\texttt{NOT FOUND} (GAP-021 / S9T-019 / P3T-035).
+
+Numbers stated in these notes are either \emph{deterministic} (recomputable
+from raw run data) or \emph{direct analysis outputs} (bootstrap confidence
+intervals and bootstrap $p$-values that were \textbf{not} independently
+resampled in this environment).  The prose flags which is which wherever a
+confidence interval or bootstrap $p$-value appears, because the Stage~9 audit
+kept those two categories explicitly separate.
+
+%%=============================================================
+\chapter{Abstract}
+\label{ch:abstract}
+% Target file: content/abstract.tex
+% Write the abstract last, after the chapters are settled.
+%%=============================================================
+
+The abstract follows a four-move structure: problem, method, principal
+findings, strongest limitation.
+
+\section{Problem move \evDirect}
+
+The thesis studies whether semantic / knowledge-graph (KG) and physics
+knowledge measurably helps a reinforcement-learning agent control small
+simulated building labs, across three increasingly demanding situations:
+(i)~learning a clean lab whose physics already matches the KG;
+(ii)~reacting when a component the agent was trained on becomes defective;
+and
+(iii)~learning the temporal response behaviour of actuators and feeding that
+knowledge back into the KG\@.
+These three situations come directly from the advisor's requirement note and
+motivate the Phase~1 / Phase~2 / Phase~3 framing.
+
+\section{Method move \evDirect}
+
+Three mechanisms are evaluated on a JaCaMo (Jason BDI + CArtAgO) multi-agent
+stack with a tabular Q-learner, a KG/stereotype reasoner, and Node-RED
+illuminance-lab simulators:
+\begin{enumerate}
+  \item clean-lab KG/physics priming of the Q-learner;
+  \item an expected-versus-actual fault detector that blacklists a defective
+        component and warm-restarts learning; and
+  \item a probing routine that estimates per-actuator response delays, writes
+        them back to the KG as \wsRD, and lets a deadline-aware BDI planner
+        use them.
+\end{enumerate}
+
+\section{Principal findings}
+
+\begin{description}
+  \item[Phase~1 \evDerived, \rsPHE]
+    In the clean lab2 profile, the KG/physics-primed arm (\qlT) beats the
+    no-knowledge arm (\qlF) on goal-reaching AUC, average steps, redundant
+    actions, and goal rate; the improvement also replicates on fresh seeds.
+    Lab3 is more nuanced: its reward signal improves clearly while its
+    \emph{binary} goal metric does not.
+
+  \item[Phase~2 \evInterp, \rsEV; \rsPHE]
+    The detector achieves complete detection recall and correct component
+    attribution across every injected-fault cell tested; the
+    \emph{recovery-speed} advantage of the KG arm is narrow --- faster for
+    \texttt{lab3\_f1dead} but not for \texttt{lab3\_f1inv}.
+
+  \item[Phase~3 \evInterp, \rsEV; \rsPHE]
+    The agent learns the blind's delay to within ${\approx}2\,\%$ of ground
+    truth and the informed planner meets every tight deadline where the
+    delay-blind planner meets none, at the cost of higher energy use.
+\end{description}
+
+\section{Limitation move \evUnresolved}
+
+State plainly that:
+this is controlled simulator/lab evidence, not real-building deployment;
+no phase was formally preregistered;
+some statistical fields (Phase~1/2 bootstrap CIs and bootstrap $p$-values)
+are reported as original analysis outputs and were not independently
+re-resampled; and
+exact workflow-dispatch payloads and artifact-ZIP byte identity remain
+unverified.
+
+%%=============================================================
+\chapter{Introduction}
+\label{ch:introduction}
+% Target file: content/01_chapter1.tex
+%%=============================================================
+
+\section{Problem context \evDirect}
+\label{sec:intro-problem}
+
+Open from the advisor's anchoring question: in a \emph{clean} environment,
+does a Q-learning agent that is given prior physics/KG knowledge do better
+than one that starts tabula rasa?  The expected gains were specifically
+\emph{time-to-goal} and \emph{avoidance of redundant actions}, with final
+task success expected to be roughly comparable between the two.  This
+expectation, not a result, motivates the work and frames the first research
+question.  Establish here that the agent operates on small
+illuminance-control \enquote{labs}---rooms with lamps, a spotlight, and
+motorised blinds---and that a knowledge graph encodes the nominal physics of
+those rooms.
+
+\section{Research trajectory \evDirect}
+\label{sec:intro-trajectory}
+
+The project deliberately unfolds in three phases of rising difficulty, each
+building on the previous learner without rewriting it.
+
+\begin{description}
+  \item[Phase~1 --- clean labs.]
+    Labs whose true physics is aligned with the KG\@; the question is purely
+    whether KG priors accelerate clean learning.
+
+  \item[Phase~2 --- weakness labs.]
+    The agent is first trained clean, then dropped into a lab where a
+    component it relied on is now broken (dead or inverted).  The question is
+    whether the agent can notice, discard the broken component, and relearn
+    --- and whether KG knowledge helps it realign faster.
+
+  \item[Phase~3 --- process dynamics.]
+    The agent learns the \emph{temporal} behaviour (response delay) of each
+    actuator, writes it back into the KG, and uses it to satisfy
+    deadline-constrained goals.
+\end{description}
+
+The strict-separation design is important: each phase is additive, so
+Phase~1 and Phase~2 numerical results stay reproducible even after later
+phases are built.
+
+\section{Research questions}
+\label{sec:intro-rqs}
+
+None of the three research questions below is preregistered confirmatory
+(formal preregistration is \texttt{NOT FOUND}); all three are framed as
+exploratory / engineering-validation questions answered against a local
+pre-run expectation.
+
+\begin{description}
+  \item[RQ1 \evInterp, \rsPHE]
+    Does KG/physics priming improve clean-lab Q-learning \emph{speed} and
+    \emph{action efficiency} while preserving task success?
+
+  \item[RQ2 \evInterp, \rsEV; \rsPHE]
+    Can a clean-trained agent recognise unexpected component behaviour,
+    discard the defective component, and relearn --- and does the KG/physics
+    prior speed realignment?
+
+  \item[RQ3 \evInterp, \rsEV; \rsPHE]
+    Can the agent estimate actuator response delays, materialise them as KG
+    facts, and use them to meet time-bounded goals better than a delay-blind
+    planner?
+\end{description}
+
+For each RQ, the candidate-RQ table in \texttt{RESEARCH\_MODEL.md} records
+the expected mechanism and the falsification condition; carry those into the
+chapter so each RQ is stated together with what would have counted as a
+negative result.
+
+\section{Contributions \evDirect}
+\label{sec:intro-contributions}
+
+Four contributions are claimed.
+
+\begin{enumerate}
+  \item A \textbf{semantic/KG prior for tabular Q-learning} in clean
+        building labs, including a cross-zone structural prior that is kept
+        conceptually distinct from generic KG priming.
+
+  \item A \textbf{fault-recognition loop} that compares KG-predicted effects
+        against observed effects, blacklists the offending component, and
+        warm-restarts learning over the surviving action set.
+
+  \item A \textbf{response-delay learning mechanism} that probes actuators,
+        writes \wsRD\ back to the KG, and drives a deadline-aware BDI
+        planner.
+
+  \item A \textbf{reproducible evidence layer}---labelled ledgers, immutable
+        locators, and a statistical-integrity audit---that makes the
+        provenance and the limits of every reported number explicit.
+\end{enumerate}
+
+\section{Scope statement \evUnresolved}
+\label{sec:intro-scope}
+
+The evidence is from controlled Node-RED simulators and small labs, not
+deployed buildings.  Do not claim formal preregistration, do not claim
+byte-verified artifact-ZIP identity, and do not present Phase~1/2 bootstrap
+intervals as independently reproduced.  These scope caveats are not
+incidental---they are the same items that reappear as the Chapter~5
+limitations.
+
+%%=============================================================
+\chapter{Background and Related Work}
+\label{ch:background}
+% Target file: content/02_chapter2.tex
+%%=============================================================
+
+Keep \emph{foundations} (what the reader must know) separate from
+\emph{related work} (how the project compares to alternative research).  All
+external sources cited below are in \texttt{BIBLIOGRAPHIC\_LEDGER.csv}
+(\texttt{BIB-S10B-001}\ldots\texttt{016}); DOI-only rows are
+metadata-verified but not full-text reviewed (see the full-text gap,
+GAP-046).
+
+\section{Foundations}
+\label{sec:bg-foundations}
+
+\subsection{MAS and BDI \evDirect}
+
+Introduce the BDI agent model and the AgentSpeak(L) programming language
+(Rao 1996, \texttt{BIB-S10B-001}) and the JaCaMo multi-agent programming
+platform (Boissier et al.\ 2013, \texttt{BIB-S10B-002}).  These are the
+implementation foundations: the project's agents are Jason/AgentSpeak plans
+and its environment tools are CArtAgO artifacts (e.g.\ the dynamics agent
+and \texttt{DynamicsLearner}).  Treat these as foundations only---JaCaMo
+literature does not supply evidence for the project's KG-prior or
+delay-learning claims.
+
+\subsection{Q-learning \evDirect}
+
+Present tabular Q-learning via Watkins and Dayan (1992,
+\texttt{BIB-S10B-003}) as the RL algorithm the project builds on.
+Explicitly note that the Watkins--Dayan convergence theorem must \emph{not}
+be used as evidence that the project's runs converged; convergence in these
+labs is an empirical matter checked per run.
+
+\subsection{Semantic Web and KG metadata \evDirect}
+
+Introduce SOSA/SSN (\texttt{BIB-S10B-008}, \texttt{BIB-S10B-009}) and Brick
+(\texttt{BIB-S10B-010}) as the standard vocabularies for describing sensors,
+actuators, and building metadata.  Make the boundary clear: the project uses
+a \emph{custom} \texttt{ws:}~stereotype vocabulary (e.g.\
+\texttt{building\_2\_slow.ttl}, \texttt{building\_3\_slow.ttl}), so do
+\textbf{not} claim SSN/SOSA or Brick compliance or extension.  Note the
+source-hygiene correction (a wrong Brick DOI candidate was rejected and the
+correct DOI recorded: \texttt{BIB-S10B-REJ-001} $\to$ \texttt{BIB-S10B-010})
+if useful.
+
+\section{Related Work}
+\label{sec:bg-relwork}
+
+Organise related work into five comparison buckets, each ending with the
+explicit difference from this project.  The taxonomy maps onto Table~RW-1.
+
+\subsection{Building-control RL \evDirect}
+
+Compare with deep RL for HVAC control (Wei et al.\ 2017,
+\texttt{BIB-S10B-004}), model-free control of thermostatically controlled
+loads (Claessens et al.\ 2018, \texttt{BIB-S10B-005}), sparse-observation
+direct load control (Ruelens et al.\ 2019, \texttt{BIB-S10B-006}), and MARL
+for HVAC (Bayer \& Pruckner 2022, \texttt{BIB-S10B-007}).  These motivate RL
+for building control but differ from the project in domain (HVAC/thermal
+vs.\ illuminance), in the use of semantic priors, and in the BDI/KG
+layering.  State the domain and actuator mismatch explicitly; do not
+conflate the project's MAS architecture with multi-agent RL training.
+
+\subsection{KG priors and reward shaping \evDirect/\evInterp}
+
+Use KG-enhanced RL in recommender systems (Zhou et al.\ 2020,
+\texttt{BIB-S10B-011}) and the equivalence of potential-based shaping and
+Q-value initialisation (Wiewiora 2003, \texttt{BIB-S10B-012}) as
+\emph{analogical} and \emph{theoretical} support that structured prior
+knowledge can improve sample efficiency and action selection.  Stress that
+KGQR is not building automation and Wiewiora is theory, not semantic KG\@;
+the project's causal evidence for KG priors must come from the Phase~1
+result rows, not from these sources.
+
+\subsection{Physics-informed and model-assisted learning \evDirect}
+
+Compare with PhysQ (Gokhale et al.\ 2022, \texttt{BIB-S10B-013}) and
+model-assisted sensor-fault-tolerant HVAC control (Xu et al.\ 2021,
+\texttt{BIB-S10B-014}).  These share the motivation that prior physical
+knowledge improves building-control learning; the difference is that the
+project uses \emph{explicit symbolic RDF/KG priors} and tabular/BDI
+mechanisms plus explicit response-delay writeback, not physics-informed
+neural representations.
+
+\subsection{Fault and anomaly detection \evDirect}
+
+Compare Phase~2 with transfer learning for HVAC fault detection (Dowling \&
+Zhang 2020, \texttt{BIB-S10B-015}) and KG-based industrial root-cause
+diagnosis (Chen et al., \texttt{BIB-S10B-016}), plus the model-assisted
+fault-tolerant work (\texttt{BIB-S10B-014}).  The project differs by using an
+\emph{expected-versus-actual} KG check followed by blacklisting and
+relearning, rather than training a transfer classifier or doing industrial
+root-cause analysis.
+
+\subsection{Learned temporal and process dynamics \evInterp}
+
+Position Phase~3 against the model-free / sparse-observation control works
+(\texttt{BIB-S10B-005}, \texttt{BIB-S10B-006}) and PhysQ
+(\texttt{BIB-S10B-013}): building-control RL usually optimises a policy
+directly, whereas this project evaluates whether explicit per-actuator
+response-delay knowledge can be \emph{learned, written back to the KG, and
+consumed by a deadline-aware BDI planner}.  Phrase the novelty as bounded to
+the tested slow-lab actuator-delay setting; do not claim the project learns
+full building thermal dynamics.
+
+\section{Related-work artefacts \evUnresolved}
+\label{sec:bg-artefacts}
+
+Plan Table~RW-1 (rows = the five buckets above; columns = representative
+source IDs, method family, mapped project phase, difference from project)
+and Figure~RW-1 (a layered map: MAS/BDI execution at the base, KG/stereotype
+priors above it, the Q-learning/building-control RL layer, a fault/anomaly
+branch, and a learned-response-delay branch, with the project placed at the
+intersection of KG priors, the BDI planner, and learned temporal KG
+writeback).
+
+Carry the full-text gap note \evUnresolved: DOI-only rows need full-text
+review before any technical claim beyond title, venue, and year.
+
+%%=============================================================
+\chapter{Contributions and Approach}
+\label{ch:contributions}
+% Target file: content/03_chapter3.tex
+%%=============================================================
+
+Keep this chapter conceptual.  Push file-by-file code mapping to the
+appendix; only enough implementation detail to define each mechanism belongs
+here.
+
+\section{Approach overview \evInterp}
+\label{sec:approach-overview}
+
+The work is one coherent research artefact with three layers of semantic
+guidance: semantic priors that \emph{accelerate} clean learning (Phase~1),
+semantic expected-versus-actual checks that confer \emph{robustness} under
+faults (Phase~2), and learned process dynamics that are \emph{written back}
+to the KG and reused for time-bounded control (Phase~3).  The unifying idea
+is that a knowledge graph is not only a static prior but also a destination
+for newly learned facts.
+
+\section{Phase~1 --- clean-lab ladder and semantic priors \evDirect}
+\label{sec:approach-phase1}
+
+Describe the lab ladder (\texttt{lab1}, \texttt{lab2}, \texttt{lab3}) of
+increasing state-space size, the two learning arms (\qlF\ no-prior
+vs.\ \qlT\ KG-primed), and the benchmark modes (\texttt{rule\_based},
+\qlF, \qlT).  The KG/stereotype reasoner supplies action guidance that
+belongs to the initialisation / reward-shaping family (consistent with the
+Wiewiora framing in Chapter~\ref{ch:background}).
+
+The \textbf{cross-zone structural prior}---which encodes that actuators in
+one zone spill light into adjacent zones---is kept conceptually separate from
+generic KG priming, because the Phase~1 ablation specifically tests the
+\emph{targeted} cross-zone structure against an equal-budget \emph{untargeted}
+optimism baseline (\texttt{phase1\_kg\_xzone\_rand},
+\texttt{cross\_zone\_bonus=3.0}).
+
+\section{Phase~2 --- fault detection, blacklist, and relearn \evDirect}
+\label{sec:approach-phase2}
+
+Present the detect $\to$ attribute $\to$ blacklist $\to$ warm-restart $\to$
+re-certify loop.  The agent warm-starts from the clean Phase-1 Q-table, then
+on every step compares the KG-predicted directional effect of the action it
+just took against the observed effect.  Accumulated divergence over enough
+samples flags a component as dead or inverted; the component's ON and OFF
+actions are blacklisted (never \texttt{DO\_NOTHING}, always leaving at
+least~1 action), and a \emph{targeted} warm restart zeroes only the
+blacklisted actions' Q-values and visit counts before relearning over the
+reduced action set.
+
+The \textbf{false-positive guard} is a key design choice: blinds are
+interaction-variable-gated (\texttt{Mediates}) actuators whose effect depends
+on sunlight, so they are excluded from adjudication; only
+unconditional-sign \texttt{Causes} actuators (lamps, spotlight) are judged.
+All injected faults are on \texttt{Causes} lamps, so the guard removes a
+known false positive without ever masking a designed fault.
+
+Define the headline metric here:
+\begin{equation}
+  \texttt{RecoveryEpisodes} = \texttt{ReconvergeEpisode}
+                             - \texttt{DetectEpisode}
+\end{equation}
+and the \emph{well-posed-cell} restriction that limits recovery-speed
+inference to cells where a post-fault survivor policy actually exists.
+
+\section{Phase~3 --- response-delay learning and KG writeback \evDirect}
+\label{sec:approach-phase3}
+
+Phase~3 is an evaluated contribution that does \emph{not} train a Q-table
+(\texttt{task\_dynamics.jcm}).  The agent:
+
+\begin{enumerate}[label=(\alph*)]
+  \item probes each URI-bearing actuator from a known baseline and measures,
+        in simulator ticks, the delay until the controlled zone rank first
+        rises;
+  \item maintains a numerically stable Welford running mean/variance per
+        action and classifies each actuator as instantaneous or delayed
+        against a threshold;
+  \item writes the learned values back to the KG as a Turtle file with
+        \wsRD, \texttt{ws:responseDelayTicks}, sample counts, standard
+        deviation, and response class; and
+  \item in an exploit phase, scores every action that can reach the target
+        zone rank by the tuple $(\textit{infeasible-flag},\
+        \textit{energy\_cost},\ \textit{believed\_delay})$ and picks the
+        lexicographic minimum.
+\end{enumerate}
+
+The KG-primed arm reads the learned delay; the tabula-rasa arm believes
+every actuator is instantaneous.  The boundary is explicit \evUnresolved:
+richer temporal goal semantics, additional dynamics classes, real-building
+deployment, and broader scheduling integration are future work, not claims of
+this chapter.
+
+\section{Approach figures}
+\label{sec:approach-figures}
+
+Plan three schematic figures.
+\begin{description}
+  \item[(A) System architecture.]
+    BDI agents $\to$ CArtAgO artifacts $\to$ KG/RDF resources $\to$ Node-RED
+    simulator $\to$ CSV/log analysis $\to$ evidence ledgers.
+
+  \item[(B) Phase~2 mechanism flow.]
+    Clean Q-table warm-load $\to$ unexpected transition $\to$ KG
+    expected-effect check $\to$ component blacklist $\to$ warm restart $\to$
+    recovery certification.
+
+  \item[(C) Phase~3 pipeline.]
+    Slow lab $\to$ actuator probes $\to$ Welford delay table $\to$ \wsRD\
+    TTL $\to$ deadline planner $\to$ time-bounded result CSV\@.
+\end{description}
+
+\section{Implementation summary (detail in appendix) \evDirect}
+\label{sec:approach-impl}
+
+The stack comprises JaCaMo, tabular Q-learner, stereotype reasoner,
+\texttt{DynamicsLearner} artifact, Node-RED labs, Python/Node analysis
+scripts, and GitHub Actions workflows.  Configuration matrices, exact
+commands, and run/artifact provenance are in the appendix.
+
+%%=============================================================
+\chapter{Evaluation}
+\label{ch:evaluation}
+% Target file: content/04_chapter4.tex
+%%=============================================================
+
+Structure: experiment design matrix, then per-phase results, then the
+statistical-integrity discussion.  Every reported value is tied to a
+committed CSV row or a complete derived chain; CIs and bootstrap $p$-values
+for Phase~1/2 are flagged as direct analysis outputs that were not
+independently resampled.
+
+\section{Experiment design matrix}
+\label{sec:eval-design}
+
+Five experiments are evaluated (Table~T-EVAL-1).
+
+\begin{description}
+  \item[\texttt{EXP-P1-BUMP} \evDirect, \rsPHE]
+    Does bumped clean-lab KG/physics priming beat no-knowledge learning?
+    Baseline \qlF, treatment \qlT, profiles \texttt{lab1}/\texttt{lab2}/%
+    \texttt{lab3}, selected run \texttt{27461188614}.  Deterministic
+    means/differences were recomputed; CI/p/q/Cliff were read from analysis
+    CSVs, not re-resampled.  Lab2 is the primary anchor; lab3 reward improves
+    more clearly than lab3 binary goal.
+
+  \item[\texttt{EXP-P1-REPL} \evDirect, \rsPHE]
+    Do fresh seeds repeat the Phase~1 directions?  Fresh-seed root
+    \texttt{P1-BUMP-S11-20}, run \texttt{27462446044}.  This is replication
+    evidence, not a new preregistered confirmatory test.
+
+  \item[\texttt{EXP-P1-ABL} \evDirect, \rsPHE]
+    Does the targeted cross-zone structure beat equal-budget untargeted
+    optimism (\texttt{phase1\_kg\_xzone\_rand})?  Mechanism evidence only;
+    language stays exploratory.
+
+  \item[\texttt{EXP-P2-V5} \evDirect, \rsEV; \rsPHE]
+    Can clean-trained agents detect faults, discard the defective component,
+    and relearn faster with KG knowledge?  Nine fault profiles, modes
+    \qlF/\qlT, 10~seeds per CI cell, selected run \texttt{27547019772},
+    result commit \texttt{22a448be\ldots}.  Recovery-speed inference
+    restricted to \texttt{lab3\_f1dead} and \texttt{lab3\_f1inv} (the only
+    well-posed cells).
+
+  \item[\texttt{EXP-P3-DYN-N10} \evDirect, \rsEV; \rsPHE]
+    Can the agent learn delays, write them to the KG, and use them for
+    deadlines?  Profiles \texttt{lab2\_slow}/\texttt{lab3\_slow}, modes
+    \qlT/\qlF, 10~replicas, 6~goals per cell,
+    \texttt{seconds\_per\_tick=5.0}, \texttt{blind\_delay\_ticks=12}, run
+    \texttt{27621106006}, result commit \texttt{0372ecd5\ldots}.  The n5 run
+    is superseded \evSuperseded.
+\end{description}
+
+\section{Phase~1 results}
+\label{sec:eval-phase1}
+
+\subsection{Lab2 primary anchor \evDerived}
+
+This is the strongest clean-lab result.  \qlT\ $-$ \qlF\ differences:
+goal-reaching AUC $+0.0197$ (CI $[0.0147,\,0.0245]$, $q = 0.0$, Cliff's
+$\delta = 1.0$); average steps $-0.9$ (CI $[-1.55,\,-0.325]$, $q = 0.0$,
+Cliff's $\delta = -0.71$); average redundant actions $-0.9825$ (CI
+$[-1.59,\,-0.399]$, $q = 0.0$, Cliff's $\delta = -0.72$); goal rate
+$+0.04375$ (CI $[0.0125,\,0.08125]$, $q = 0.009$, Cliff's $\delta = 0.5$).
+The directional means and mean differences are deterministic from raw data;
+the CIs and $q$-values are original analysis outputs.  KG priming makes lab2
+learning faster, more action-efficient, less wasteful, \emph{and} modestly
+more successful.
+
+\subsection{Lab2 fresh-seed replication \evDerived}
+
+On fresh seeds, goal AUC difference $+0.0182$ (CI $[0.0106,\,0.0273]$,
+$q = 0.0$, Cliff's $\delta = 1.0$) and reward AUC difference $+7.67$
+(CI $[2.16,\,12.91]$, $q = 0.033$, Cliff's $\delta = 0.6$).  The direction
+holds, supporting robustness of the lab2 finding.
+
+\subsection{Lab3 active boundary \evDerived}
+
+The bumped lab3 \emph{binary-goal} result is \textbf{not} a clean positive:
+goal AUC difference $-0.00375$ (CI $[-0.00802,\,0.00067]$, $q = 0.296$),
+i.e.\ not distinguishable from zero.  However, the lab3 \emph{reward}
+evidence is clearly positive: reward AUC difference $+14.26$ (CI
+$[11.23,\,17.20]$, $q = 0.0$, Cliff's $\delta = 1.0$), replicated on fresh
+seeds at $+18.85$ (CI $[16.21,\,21.19]$, $q = 0.0$, Cliff's $\delta = 1.0$).
+Report binary-goal and reward metrics separately for lab3 and do not
+overstate.
+
+\subsection{Superseded as-is lab3 \evSuperseded}
+
+The earlier \enquote{as-is} lab3 rows (goal AUC $-0.00885$, $q = 0.0072$;
+cycling $+0.3375$, $q = 0.0252$) are audit/control evidence only, retained
+to explain why the bumped targeted run is the lab3 authority.
+
+\subsection{Phase~1 statistical caveat \evUnresolved}
+
+The Phase~1 table has 480~data rows.  Stage~9 confirmed all deterministic
+means (348~rows) and mean differences (132~rows) match the raw data with zero
+mismatches, but the 348~CI rows and 132~p/q/CI rows were not independently
+resampled.  Present Phase~1 CIs/$p$-values as reproduced-from-analysis, not
+re-derived.
+
+\section{Phase~2 results}
+\label{sec:eval-phase2}
+
+\subsection{Detection and attribution \evDerived}
+
+In the final v5 run, all 18~CI rows have $\texttt{n\_runs} = 10$,
+$\texttt{detection\_rate} = 1.0$, and $\texttt{n\_detected} = 10$; and all
+18~cells have \texttt{aggregate\_defect\_set\_matches\_expected = true} with
+$\texttt{unexpected\_component\_row\_count} = 0$.  In the tested
+injected-fault matrix, detection recall is complete and there are no spurious
+attributions.  Bound the claim to the tested matrix; do not generalise to
+untested fault types or real buildings.
+
+\subsection{Well-posed recovery scope \evDirect}
+
+Only \texttt{lab3\_f1dead} and \texttt{lab3\_f1inv} are marked
+$\texttt{well\_posed\_recovery} = \texttt{True}$; all other cells are
+descriptive/provisional for recovery-speed inference because a clean
+post-fault survivor policy is not well-defined there.
+
+\subsection{Recovery speed \evDerived}
+
+\begin{description}
+  \item[\texttt{lab3\_f1dead}: KG is clearly faster.]
+    $n_{\text{paired}} = 10$; \qlT\ mean $150.5$ vs.\ \qlF\ mean $363.4$;
+    difference $-212.9$ (CI $[-271.9,\,-148.3]$, Wilcoxon $p = 0.0039$,
+    Cliff's $\delta = -0.86$, BH $q = 0.0$, \texttt{ql\_true\_faster = True}).
+
+  \item[\texttt{lab3\_f1inv}: KG is \textbf{not} faster.]
+    $n_{\text{paired}} = 9$; \qlT\ mean $364.6$ vs.\ \qlF\ mean $332.8$;
+    difference $+31.8$ (CI $[-137.2,\,174.6]$, Wilcoxon $p = 0.496$,
+    Cliff's $\delta = 0.23$, BH $q = 0.650$, \texttt{ql\_true\_faster = False}).
+\end{description}
+
+The supported Phase~2 headline is narrow: KG-primed recovery is faster than
+naive for the dead-lamp case but \emph{not} for the inverted-lamp case.
+
+\subsection{Detection latency \evDerived}
+
+Detection timing is mixed across the nine \texttt{DetectEpisode} paired rows
+(differences ranging $-2.2\ldots+126.2$); only \texttt{lab3\_f1inv} shows a
+large, significant positive detection delay (Wilcoxon $p = 0.00195$, Cliff's
+$\delta = 1.0$, BH $q = 0.0$).  Do \textbf{not} state that KG generally
+detects faster.
+
+\subsection{Phase~2 statistical caveat \evUnresolved}
+
+Of 521~R2 table rows: 306 are deterministic-from-raw; 99 are
+deterministic-or-exact-test; 116 are direct analysis-output resampling rows;
+0~failed checks.  Bootstrap CIs and bootstrap $p$-values were not
+independently resampled (no Python was available in the audit environment).
+The exact Wilcoxon $p$-values, Cliff's $\delta$, and BH~$q$ arithmetic
+\emph{were} checked.
+
+\section{Phase~3 results}
+\label{sec:eval-phase3}
+
+\subsection{Run authority \evDirect}
+
+Results come from GitHub Actions run \texttt{27621106006} (workflow
+\enquote{Phase~3 (process dynamics, response-delay learning)}, success, head
+SHA \texttt{3bb5289c\ldots}), published to
+\texttt{origin/results@0372ecd5\ldots} under
+\texttt{phase3/27621106006-20260616-133306/}.
+
+\subsection{Delay-learning accuracy \evDirect}
+
+Learned slowest (blind) delays stay near the ground-truth 12~ticks:
+lab2~\qlF\ $12.1125$, lab2~\qlT\ $12.1875$,
+lab3~\qlF\ $12.2125$, lab3~\qlT\ $12.2125$;
+maximum relative error $1.77\,\%$.
+Across all 180~raw delay rows, the response class matched expectation in
+$180/180$ (80~delayed-blind rows, 100~instantaneous non-blind rows).
+
+\subsection{Deadline compliance \evDirect}
+
+\qlF\ compliance: overall $0.5$, tight $0.0$, loose $1.0$ for both slow
+profiles.  \qlT\ compliance: $1.0$ on overall, tight, and loose for both
+profiles.  The informed planner meets every tight deadline the delay-blind
+planner misses.
+
+\subsection{Paired statistics \evDirect}
+
+Overall compliance ($n = 10$ for both profiles): \qlT\ $1.0$ vs.\ \qlF\
+$0.5$; difference $0.5$ (CI $[0.5,\,0.5]$, Wilcoxon $p = 0.00195$, Cliff's
+$\delta = 1.0$, BH $q = 0.0$).  Tight compliance: difference $1.0$
+(CI $[1.0,\,1.0]$, Wilcoxon $p = 0.00195$, Cliff's $\delta = 1.0$, BH
+$q = 0.0$).  Loose compliance: difference $0.0$ (both arms already meet loose
+deadlines).
+
+\subsection{Energy trade-off \evDirect}
+
+\qlT\ spends more energy: lab2 total-energy difference $+3.2$
+(CI $[3.0,\,3.5]$), lab3 $+3.3$ (CI $[3.0,\,3.6]$), with
+\texttt{lower\_is\_better = True} and \texttt{ql\_true\_better = False}.
+The informed planner reaches for the fast, powered lamp under tight deadlines
+instead of the cheap, slow blind.  Lower energy is therefore \emph{not} the
+headline success metric---meeting deadlines is---and the energy cost is the
+conditioned price of that compliance.
+
+\subsection{Mechanism example \evDirect}
+
+In lab2 rep1, \qlT\ met $6/6$ goals while \qlF\ met $3/6$, missing tight
+goals \texttt{g1}, \texttt{g2}, \texttt{g5} after choosing blinds with
+believed delay $0.00$.  This single-replica trace makes the aggregate numbers
+concrete.
+
+\subsection{Choice-stability nuance \evDerived}
+
+Do not claim actuator-label decisions are bit-identical across replicas:
+lab3~\qlT\ loose-goal blind labels split $5/5$ between
+\texttt{SetZ1Blinds=ON} and \texttt{SetZ2Blinds=ON} for goals
+\texttt{g3}, \texttt{g4}, \texttt{g6}, while every \emph{met} outcome stayed
+stable.  The compliance result is robust even though the specific blind chosen
+for loose goals is not unique.
+
+\subsection{Superseded n5 run \evSuperseded}
+
+The earlier n5 run \texttt{27598417789} is audit history only: at
+$n_{\text{paired}} = 5$ the Wilcoxon $p$ floors at $0.0625$, which cannot
+reach significance, so the n10 run is the authority candidate.
+
+\section{Statistical integrity and threats to validity \evUnresolved}
+\label{sec:eval-integrity}
+
+Devote an explicit subsection to the evidence limits.  Present the Stage~9
+matrix (Figure~F-EVAL-4) separating deterministic/exact checks from
+unresolved bootstrap-output categories.  State the threats explicitly:
+(i)~no formal preregistration, so all results are exploratory/%
+engineering-validation;
+(ii)~Phase~1/2 bootstrap CIs and $p$-values are original analysis outputs,
+not independently re-resampled;
+(iii)~exact workflow-dispatch payloads are \texttt{NOT FOUND} and
+artifact-ZIP byte identity is not verified, so committed
+\texttt{origin/results} CSV rows are treated as the numeric authority;
+(iv)~all evidence is simulator/lab, not real-building deployment.
+These are the same items carried into Chapter~5.
+
+\section{Evaluation tables and figures}
+\label{sec:eval-figures}
+
+\begin{description}
+  \item[T-EVAL-1] Experiment matrix (five experiments, research status,
+        baseline, treatment, controls, metrics, key caveat).
+  \item[T-EVAL-2] Phase~1 compact table: lab2 anchor, lab2 replication, lab3
+        boundary, superseded as-is rows.
+  \item[T-EVAL-3] Phase~2 detection/attribution matrix plus well-posed
+        recovery table filtered to the two \texttt{lab3~f1} cells.
+  \item[T-EVAL-4] Phase~3 delay accuracy, compliance CI, paired compliance,
+        energy.
+  \item[F-EVAL-1] Phase~1 lab2 forest plot $+$ lab3 boundary panel, marked
+        exploratory with the resampling caveat.
+  \item[F-EVAL-2] Phase~2 recovery forest plot for the two well-posed cells
+        $+$ detection/attribution matrix.
+  \item[F-EVAL-3] Phase~3 grouped compliance bars $+$ paired effect panels
+        $+$ energy panel.
+  \item[F-EVAL-4] Statistical-integrity audit matrix.
+\end{description}
+
+%%=============================================================
+\chapter{Conclusions}
+\label{ch:conclusions}
+% Target file: content/05_chapter5.tex
+%%=============================================================
+
+\section{RQ answers}
+\label{sec:conc-rqs}
+
+\subsection{RQ1 \evInterp}
+
+\textbf{Supported but exploratory.}  The strongest clean-lab evidence is
+lab2, where KG/physics priming improves goal AUC, action efficiency,
+redundant-action count, and goal rate, with fresh-seed replication.  Lab3 is
+split: the reward evidence is positive and replicated, but the binary-goal
+metric is not distinguishable from zero.  KG priors accelerate and
+streamline clean-lab learning where the lab is well-aligned with the KG,
+with the honest caveat that the binary success benefit is lab-dependent.
+
+\subsection{RQ2 \evInterp}
+
+\textbf{Supported as engineering validation.}  The detector and attribution
+work across the entire tested injected-fault matrix (complete recall, no
+spurious attributions).  The KG \emph{recovery-speed} advantage is narrow
+and fault-type-dependent: clearly faster for the dead-lamp case
+(\texttt{lab3\_f1dead}), not faster for the inverted-lamp case
+(\texttt{lab3\_f1inv}).  The capability claim (detect $\to$ discard $\to$
+relearn works) must be stated separately from the weaker speed claim.
+
+\subsection{RQ3 \evInterp}
+
+\textbf{Supported as engineering validation.}  The agent learns the blind's
+response delay accurately (${\leq}1.77\,\%$ relative error), writes it back
+to the KG, and the informed planner meets every tight deadline the
+delay-blind planner misses---at a consistent, explainable energy cost.  Bound
+this to the two tested slow-lab profiles with a single delayed actuator class.
+
+\section{Limitations \evUnresolved}
+\label{sec:conc-limitations}
+
+The following limitations are stated without softening.
+
+\begin{enumerate}
+  \item No formal post-pivot preregistration was found; no result is
+        preregistered confirmatory.
+  \item Phase~1/2 bootstrap CIs and bootstrap $p$-values were not
+        independently resampled.
+  \item Exact workflow-dispatch input payloads are \texttt{NOT FOUND} for all
+        phases.
+  \item Local artifact directories are not ZIP-byte-verified against GitHub
+        artifact digests.
+  \item All evidence is from controlled simulators, not deployed buildings.
+  \item The lab3 stale-magnitude documentation issue remains unresolved.
+  \item DOI-only related-work rows are not full-text reviewed (GAP-046).
+  \item Phase~3 covers a limited dynamics scope: one delayed actuator class
+        in two profiles.
+\end{enumerate}
+
+\section{Future work \evInterp}
+\label{sec:conc-future}
+
+Natural continuations include: more actuator/dynamics classes and richer
+temporal goal specifications; online/real-building deployment;
+artifact-ZIP verification and recovery of exact dispatch payloads;
+preregistered confirmatory reruns; independent bootstrap reruns to close the
+resampling gap; and a full-text related-work audit of the DOI-only sources.
+
+%%=============================================================
+\appendix
+\chapter{Source and Run Provenance}
+\label{app:provenance}
+% Target file: content/appendix.tex  Appendix A
+%%=============================================================
+
+Record the repository state during Stage~11: branch
+\texttt{phase3-process-dynamics}, HEAD \texttt{eda6ca1f\ldots},
+\texttt{origin/results} \texttt{0372ecd5\ldots}.
+
+\begin{description}
+  \item[Phase~1 route.]
+    Stage~6 \texttt{PHASE1\_TABLES.csv} is the authoritative numeric table
+    (480~rows, zero deterministic mismatches).
+
+  \item[Phase~2 route.]
+    Run \texttt{27547019772}, v5 head \texttt{985c7a18\ldots}, result commit
+    \texttt{22a448be\ldots}.
+
+  \item[Phase~3 route.]
+    Run \texttt{27621106006}, head \texttt{3bb5289c\ldots}, artifact
+    \texttt{phase3-consolidated} id \texttt{7668397627}, digest
+    \texttt{sha256:a882677d\ldots}, result commit \texttt{0372ecd5\ldots}.
+\end{description}
+
+%%=============================================================
+\chapter{Reproduction Commands}
+\label{app:reproduction}
+% Appendix B
+%%=============================================================
+
+Commands below are recorded as notes, not claims that they were rerun in
+Stage~11.
+
+\begin{itemize}
+  \item Phase~1 table extractor:
+        \texttt{node paper\_notes/phase1\_extract\_tables.mjs \ldots}
+  \item Phase~2 extractor: (see \texttt{APPENDIX\_NOTES.md} for exact
+        invocation).
+  \item Stage~9 audit script: (see \texttt{APPENDIX\_NOTES.md}).
+  \item Phase~3 n10 recompute:
+        \texttt{python analysis/phase3\_dynamics.py --root \ldots{} --out
+        \ldots}
+  \item Tree-hash command: (see \texttt{APPENDIX\_NOTES.md}).
+  \item Phase~3 n5 recompute: \evSuperseded\ (n5 run superseded by n10).
+\end{itemize}
+
+%%=============================================================
+\chapter{Experiment Matrices}
+\label{app:matrices}
+% Appendix C
+%%=============================================================
+
+\begin{description}
+  \item[Phase~1.]
+    Profiles \texttt{lab1}/\texttt{lab2}/\texttt{lab3}; stereotype arms
+    true/false; benchmark modes \texttt{rule\_based}/\qlF/\qlT; component-%
+    isolation run modes \texttt{phase1\_baseline}\ldots%
+    \texttt{phase1\_kg\_xzone\_rand}.
+
+  \item[Phase~2.]
+    Nine fault profiles $\times$ two modes; parent ports, flows, suffixes,
+    and state dimensions documented in \texttt{APPENDIX\_NOTES.md}.
+
+  \item[Phase~3.]
+    Profiles \texttt{lab2\_slow}/\texttt{lab3\_slow}; two modes;
+    \texttt{seconds\_per\_tick = 5.0}; \texttt{blind\_delay\_ticks = 12};
+    \texttt{probes\_per\_actuator = 8}; settle/poll/max-wait constants;
+    target rank~3; probe sun~900; six goals.
+\end{description}
+
+Exact dispatch inputs remain \texttt{NOT FOUND} for all phases.
+
+%%=============================================================
+\chapter{Statistical Integrity}
+\label{app:stats}
+% Appendix D
+%%=============================================================
+
+Reproduce the Stage~9 audit breakdown.
+
+\begin{description}
+  \item[Phase~1 (480 rows).]
+    348~mean rows + 132~diff rows verified (deterministic); 348~CI rows +
+    132~p/q/CI rows not independently resampled.
+
+  \item[Phase~2 (521 rows).]
+    306~deterministic-from-raw; 99~deterministic-or-exact-test;
+    116~direct-analysis-output; 0~failures.
+    \texttt{RecoveryEpisodes} family size~2;
+    \texttt{DetectEpisode} family size~9.
+
+  \item[Phase~3 recompute.]
+    4~delay rows; 4~compliance CI rows; 8~paired rows; delay and paired CSVs
+    byte-identical to the downloaded consolidated CSVs; compliance CI a
+    numeric (not byte) match.
+\end{description}
+
+BH nuance: BH arithmetic was checked from aggregate bootstrap $p$-values,
+but those bootstrap $p$-values are themselves direct analysis outputs.
+
+%%=============================================================
+\chapter{Full Table Routes}
+\label{app:tables}
+% Appendix E
+%%=============================================================
+
+\begin{itemize}
+  \item Phase~1 compact evidence table: \texttt{R2P1T-001}\ldots%
+        \texttt{R2P1T-014}.
+  \item Phase~2 final CI table: 18~rows.
+  \item Phase~2 final paired table: rows~2--3 \texttt{RecoveryEpisodes};
+        rows~4--12 \texttt{DetectEpisode}.
+  \item Phase~2 detailed verification table: 522~rows with input chains.
+  \item Phase~3 result tables: see \texttt{PHASE3\_TABLES.csv}.
+  \item Bibliographic ledger: \texttt{BIBLIOGRAPHIC\_LEDGER.csv},
+        \texttt{BIB-S10B-001}\ldots\texttt{016} + 1~rejected entry.
+\end{itemize}
+
+%%=============================================================
+\chapter{Figure Specifications}
+\label{app:figures}
+% Appendix F
+%%=============================================================
+
+Route the architecture component/dataflow diagrams, the Phase~1/2/3 figure
+families, and the related-work map as evidence-grade figures (not yet
+rendered).  Full specifications are in \texttt{APPENDIX\_NOTES.md}.
+
+%%=============================================================
+\chapter{Audit History Index}
+\label{app:audit}
+% Appendix G
+%%=============================================================
+
+\begin{description}
+  \item[Phase~1.] as-is $\to$ bumped $\to$ ablation supersession chain.
+  \item[Phase~2.] v1--v5 (v5 removes the earlier \texttt{SetSpotlight}
+        attribution rows).
+  \item[Phase~3.] n5 $\to$ n10 (n5 had the Wilcoxon-floor issue).
+  \item[Bibliographic.] Rejected Brick DOI correction
+        (\texttt{BIB-S10B-REJ-001} $\to$ \texttt{BIB-S10B-010}).
+\end{description}
+
+%%=============================================================
+\chapter{Evidence-Gap Index}
+\label{app:gaps}
+% Appendix H
+%%=============================================================
+
+\begin{description}
+  \item[GAP-001] Advisor source provenance.
+  \item[GAP-021] Formal preregistration: \texttt{NOT FOUND}.
+  \item[GAP-035] Phase~1 result limits.
+  \item[GAP-037] Phase~2 result limits.
+  \item[GAP-044] Stage~9 statistical boundary.
+  \item[GAP-045] Phase~3 authority limits.
+  \item[GAP-046] Related-work full-text review (DOI-only rows).
+  \item[GAP-047] (see active ledger).
+\end{description}
+
+%%=============================================================
+%% Cross-cutting discipline reminders (comment block, not typeset)
+%%
+%% - Never upgrade exploratory/engineering-validation to confirmatory.
+%% - Separate deterministic numbers from not-independently-resampled CIs.
+%% - Keep [SUPERSEDED] material in audit history only.
+%% - Use NOT FOUND / NOT VERIFIED explicitly; no gap-filling by inference.
+%% - Bound every empirical claim to the simulator/lab + tested matrix.
+%%=============================================================
+
+\end{document}

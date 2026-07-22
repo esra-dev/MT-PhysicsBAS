@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "profile": "lab2",
+  "stereotype": "false",
+  "run_seed": 7,
+  "run_mode": "phase1_v2_baseline",
+  "protocol_version": "phase1-v2",
+  "ordered_scenario_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    9,
+    10,
+    12,
+    13,
+    16
+  ],
+  "scenario_schedule_sha256": "cc93966bd8e94da606755e972bff3461381c731c7b07ef9e3f6506b7b3f90461",
+  "scenario_file": "benchmark/train_scenarios_lab2.json",
+  "fixed_horizon_episodes": 3000,
+  "paired_rng_version": "common-seed-v1",
+  "metric_schema": "phase1-benchmark-v2",
+  "scenario_fallback_count": 0,
+  "timestamp": "2026-07-21T18:32:13.9015723+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_false_lab2.csv",
+    "qtable_initial_stereotypes_false_lab2.csv",
+    "metrics_stereotypes_false_lab2.csv",
+    "iv_stats_stereotypes_false_lab2.json",
+    "coverage_stereotypes_false_lab2.csv",
+    "first_goal_stereotypes_false_lab2.csv",
+    "learned_stereotypes_false_lab2.ttl"
+  ]
+}

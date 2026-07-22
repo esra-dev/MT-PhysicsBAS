@@ -1,0 +1,11 @@
+profile,mode,scenarios,goal_rate,avg_steps,avg_dev,avg_energy,avg_wasted,avg_cycling,avg_redundant,w1_unmodelled,w2_inversion,w3_delayed,w4_dropped,w5_topology
+lab2,ql_false,80,1.0,1.0625,3.8125,9.725,1.0,0.375,1.375,0,0,0,0,0
+lab2,ql_true,80,1.0,1.0,3.5625,9.5875,0.95,0.3125,1.2625,0,0,0,0,0
+lab2,rule_based,80,1.0,0.9375,3.4375,10.2125,0.8375,0.25,1.0875,0,0,0,0,0
+lab2,training_stereo_false,,,,,,,,,0,0,0,0,0
+lab2,training_stereo_true,,,,,,,,,0,0,0,0,0
+lab3,ql_false,80,1.0,0.9375,2.25,12.7625,0.9125,0.375,1.2875,0,0,0,0,0
+lab3,ql_true,80,0.9375,2.5625,4.5,18.0375,2.4875,2.0,4.4875,0,0,0,0,0
+lab3,rule_based,80,1.0,0.875,2.1875,13.15,0.8,0.3125,1.1125,0,0,0,0,0
+lab3,training_stereo_false,,,,,,,,,0,0,0,0,0
+lab3,training_stereo_true,,,,,,,,,0,0,0,0,0

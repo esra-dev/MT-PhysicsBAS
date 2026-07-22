@@ -44,16 +44,38 @@ Desktop.ini
 
 # Generated experiment/runtime artifacts
 .node-red-custom*/
+# Node-RED userDirs are auto-created by run_full_project.ps1 on first start;
+# their bootstrap content (node_modules, lib, backups) must never be committed.
+# Ignoring the dirs does NOT untrack the settings/config subsets already
+# committed for older labs (gitignore has no effect on tracked files).
+.node-red-lab*/
 benchmark/results/
 benchmark/results.archive_*/
 bench_step_log_*.csv
 benchmark_results_*.csv
 metrics_stereotypes_*.csv
+# Phase 2 adapt runtime artifacts. NEVER commit these: every CI adapt job's
+# artifact upload globs recovery_stereotypes_*.csv from the checkout root, and
+# the aggregate step's first-copy-wins reconstruction would then prefer a
+# stale committed file over the run's real result (contaminated run
+# 29115969476 — 7 cells shadowed by leftovers committed in df53b71).
+recovery_stereotypes_*.csv
+metrics_adapted_stereotypes_*.csv
+# ...but the archived post-inversion runs of record (downloaded from the CI
+# runs' phase2-consolidated artifacts) ARE the citable §9.7 data — keep them
+# committable like phase2_results_v6/ etc.
+!phase2_postinv/**
+!phase2_f2bdead/**
 coverage_stereotypes_*.csv
 first_goal_stereotypes_*.csv
 learned_stereotypes_*.ttl
 iv_stats_*.json
 qtable_*.csv
+# Phase-1 protocol-v2 and historical archives are permanent evidence, not
+# runtime leftovers.  Keep every downloaded artifact byte committable even
+# when its filename matches one of the generated-artifact patterns above.
+!phase1_v2_corrected/**
+!phase1_postinv/historical_raw/**
 nr_custom*_*.txt
 java_pid*.hprof
 
@@ -88,3 +110,18 @@ bin/
 
 # Research papers / PDFs
 *.pdf
+
+# Local-only working notes — never committed (guards against git add -A / .)
+paper_notes/_private/
+
+# Archived post-inversion runs of record (Phases 1/3/4), downloaded from the
+# CI runs' *-consolidated artifacts — the citable data, same rationale as
+# !phase2_postinv/** above. These negations sit at the END of the file so they
+# override every runtime-artifact pattern above (last matching rule wins).
+!phase1_postinv/**
+!phase3_postinv/**
+!phase4_postinv/**
+
+# attic/local_outputs: untracked local working outputs swept from the repo
+# root (2026-07-19 audit D8); never commit
+attic/local_outputs/

@@ -1,0 +1,16 @@
+profile,mode,scenarios,goal_rate,avg_steps,avg_dev,avg_energy,avg_wasted,avg_cycling,avg_redundant,w1_unmodelled,w2_inversion,w3_delayed,w4_dropped,w5_topology
+lab1,ql_false,40,1.0,0.5,1.5,4.225,0.45,0.0,0.45,0,0,0,0,0
+lab1,ql_true,40,1.0,0.5,1.5,4.375,0.475,0.0,0.475,0,0,0,0,0
+lab1,rule_based,40,1.0,0.5,1.5,4.275,0.425,0.0,0.425,0,0,0,0,0
+lab1,training_stereo_false,,,,,,,,,0,0,0,0,0
+lab1,training_stereo_true,,,,,,,,,0,0,0,0,0
+lab2,ql_false,80,1.0,1.0625,3.8125,9.85,1.025,0.375,1.4,0,0,0,0,0
+lab2,ql_true,80,1.0,1.375,4.5,9.8,1.3125,0.6875,2.0,0,0,0,0,0
+lab2,rule_based,80,1.0,0.9375,3.4375,9.9375,0.8875,0.25,1.1375,0,0,0,0,0
+lab2,training_stereo_false,,,,,,,,,0,0,0,0,0
+lab2,training_stereo_true,,,,,,,,,0,0,0,0,0
+lab3,ql_false,80,0.9375,2.125,3.4375,20.3625,2.0875,0.375,2.4625,0,0,0,0,0
+lab3,ql_true,80,0.9375,2.375,3.9375,18.3125,2.325,1.8125,4.1375,0,0,0,0,0
+lab3,rule_based,80,1.0,0.875,2.1875,13.025,0.8,0.3125,1.1125,0,0,0,0,0
+lab3,training_stereo_false,,,,,,,,,0,0,0,0,0
+lab3,training_stereo_true,,,,,,,,,0,0,0,0,0

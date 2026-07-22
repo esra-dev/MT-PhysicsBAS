@@ -15,7 +15,8 @@
 //   benchmark_results_<bench_mode>.csv
 //   Columns: ScenarioId, RunId, AgentType, GoalReached, Steps,
 //            CumIlluminanceDeviation, WastedSteps,
-//            ActuatorCyclingCount, CrossZoneInterferences, TotalEnergyCost
+//            ActuatorCyclingCount, CrossZoneInterferences, PolicyEnergyCost,
+//            LegacyWallClockTotalEnergyCost (diagnostic only)
 
 /* ============================================================
  * Beliefs
@@ -25,14 +26,15 @@
 // bench_mode("rule_based").
 // bench_mode("ql_false").
 bench_mode("ql_true").
+protocol_version("legacy").
 
-bench_runs(5).
+bench_runs(2).
 exec_max_steps(20).
 // S4-5 (audit-step-4): raised from 65 ms to 250 ms so the post-invokeAction
 // readLabStatus observes the state AFTER the Node-RED simulator's 200 ms
 // tick has propagated through compute_levels. Previously 65 ms < 200 ms
 // could return pre-tick state and bias training credit assignment.
-exec_delay_ms(100).
+exec_delay_ms(65).
 
 // S4-1 (audit-step-4): gate the bench-only anti-stuck rescue path. When
 // false, the bench evaluates the TRAINED greedy policy as-is (no runtime
@@ -91,7 +93,12 @@ bench_anti_stuck(false).
         -bench_mode(OldM);
         +bench_mode(OverrideMode);
         .print("[RuntimeOverride] bench_mode: ", OldM, " -> ", OverrideMode)
-    }.
+    };
+    tools.jia.system_prop("phase1.protocolVersion", "legacy", ProtocolVersion);
+    ?protocol_version(OldProtocol);
+    -protocol_version(OldProtocol);
+    +protocol_version(ProtocolVersion);
+    .print("[RuntimeOverride] protocol_version=", ProtocolVersion).
 // Failure handler: if tools.jia.system_prop is unavailable, log and continue.
 // active_profile and bench_mode will reflect whatever was pre-patched by the
 // run script into lab_profiles.asl and illuminance_controller_agent_bench.asl.
@@ -298,10 +305,16 @@ bench_anti_stuck(false).
     ?bench_mode(Mode);
     setScenarioLabState(File, ScenId)[artifact_id(LabId)];
     .wait(300); // let the simulator update tick propagate after setState (> 200 ms tick)
+    readLabStatus(_InitialLevels, _InitialSun, InitialKeys, InitialValues)[artifact_id(LabId)];
     .concat("scenario_id=", ScenId, StateStr0);
     .concat(StateStr0, " file=", StateStr1);
     .concat(StateStr1, File, StateStr);
-    beginScenario(ScenId, RunId, Mode, StateStr)[artifact_id(LogId)];
+    if (protocol_version("phase1-v2")) {
+        beginScenarioV2(ScenId, RunId, Mode, StateStr,
+                        InitialKeys, InitialValues)[artifact_id(LogId)]
+    } else {
+        beginScenario(ScenId, RunId, Mode, StateStr)[artifact_id(LogId)]
+    };
     // Reset anti-stuck ring buffers per scenario so stagnation detection
     // does not leak across scenario boundaries.
     .abolish(recent_states(_));
@@ -338,19 +351,29 @@ bench_anti_stuck(false).
     !check_terminal(ZoneLevels, Targets, AtGoal);
     if (AtGoal) {
         readEnergyCost(EnergyCost)[artifact_id(LabId)];
-        endScenario(true, Step, EnergyCost)[artifact_id(LogId)];
+        if (protocol_version("phase1-v2")) {
+            endScenarioV2(true, Step, EnergyCost)[artifact_id(LogId)]
+        } else {
+            endScenario(true, Step, EnergyCost)[artifact_id(LogId)]
+        };
         .print("[Bench] Scenario ", ScenId, " Run ", RunId,
                " REACHED TARGET in ", Step, " steps.")
     } else {
         !dispatch(Mode, ZoneLevels, SunshineRank, SKs, SVs, Targets);
+        .wait(Delay);
         readLabStatus(ZoneLevels2, _, SKs2, SVs2)[artifact_id(LabId)];
         readZoneTemperatures(Temps)[artifact_id(LabId)];
         !is_wasted(ZoneLevels, ZoneLevels2, SVs, SVs2, Wasted);
         !is_cross_zone(ZoneLevels, ZoneLevels2, Targets, CrossZone);
-        recordStep(Step, ZoneLevels, Targets, Mode, Wasted,
-                   SKs2, SVs2, CrossZone)[artifact_id(LogId)];
         // Detailed step log — reconstruct action label
         !get_last_action_label(Mode, ActionLabel);
+        if (protocol_version("phase1-v2")) {
+            recordStepV2(Step, ZoneLevels2, Targets, ActionLabel, Wasted,
+                         SKs2, SVs2, CrossZone)[artifact_id(LogId)]
+        } else {
+            recordStep(Step, ZoneLevels, Targets, ActionLabel, Wasted,
+                       SKs2, SVs2, CrossZone)[artifact_id(LogId)]
+        };
         !get_stuck_fired(StuckFired);
         recordStepDetailRichV2(Step, ZoneLevels, ZoneLevels2, Targets,
                                ActionLabel, false, CrossZone,
@@ -359,7 +382,6 @@ bench_anti_stuck(false).
         // Per-step weakness fingerprinting (QL modes only — needs reasoner).
         !fingerprint_weakness(Mode, ZoneLevels, SunshineRank, SKs, SVs,
                               ZoneLevels2, SKs2, SVs2);
-        .wait(Delay);
         !run_scenario_step(ScenId, RunId, Step + 1)
     }.
 
@@ -369,7 +391,11 @@ bench_anti_stuck(false).
     ?lab_artifact(LabId);
     ?bench_logger(LogId);
     readEnergyCost(EnergyCost)[artifact_id(LabId)];
-    endScenario(false, Step, EnergyCost)[artifact_id(LogId)];
+    if (protocol_version("phase1-v2")) {
+        endScenarioV2(false, Step, EnergyCost)[artifact_id(LogId)]
+    } else {
+        endScenario(false, Step, EnergyCost)[artifact_id(LogId)]
+    };
     .print("[Bench] Scenario ", ScenId, " Run ", RunId,
            " FAILED — max steps (", MaxSteps, ") reached.").
 
@@ -390,7 +416,7 @@ bench_anti_stuck(false).
     !walk_terminal(RL, RT, Result).
 
 @is_wasted_yes
-+!is_wasted(L1, L2, S1, S2, true) : L1 == L2 <- true.
++!is_wasted(L1, L2, S1, S2, true) : L1 == L2 & S1 == S2 <- true.
 @is_wasted_no
 +!is_wasted(_, _, _, _, false) <- true.
 

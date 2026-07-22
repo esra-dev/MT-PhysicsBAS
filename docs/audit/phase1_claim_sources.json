@@ -1,0 +1,23 @@
+{
+  "sources": [
+    "docs/_audit/THESIS_STATE_REPORT.md",
+    "docs/pre_registration.md",
+    "docs/paper_results_section.md",
+    "docs/phase1_results_v2.md",
+    "docs/phase1_results_n10.md",
+    "docs/phase1_xzone_asis_analysis.md",
+    "docs/phase1_xzone_bumped_analysis.md",
+    "docs/phase1_xzone_replication_s11_20_analysis.md",
+    "docs/phase1_xzone_ablation_analysis.md",
+    "docs/thesis_methods_phase1_registration.md",
+    "docs/PHASE1_TO_PHASE2_CHANGES.md",
+    "docs/ACTION_SPACE_INVERSION.md",
+    "docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md",
+    "docs/phase1_correction_registration_2026-07-21.md",
+    "docs/phase1_correction_registration_2026-07-21a.md",
+    "docs/phase1_correction_analysis_deviation_2026-07-22.md",
+    "docs/audit/phase1_audit_2026-07-19.md",
+    "dashboard/src/pages/Phase1.jsx",
+    "dashboard/public/data/phase1.json"
+  ]
+}

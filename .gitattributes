@@ -1,0 +1,5 @@
+# Preserve archived experiment artifacts byte-for-byte on every platform.
+# Their committed SHA-256 inventories describe the downloaded bytes, so Git
+# must not perform line-ending conversion inside these evidence directories.
+phase1_v2_corrected/** -text -whitespace
+phase1_postinv/historical_raw/** -text -whitespace

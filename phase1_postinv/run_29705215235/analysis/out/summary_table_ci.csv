@@ -1,0 +1,4 @@
+profile,mode,n_seeds,goal_rate_mean,goal_rate_ci_lo,goal_rate_ci_hi,avg_steps_mean,avg_steps_ci_lo,avg_steps_ci_hi,avg_dev_mean,avg_dev_ci_lo,avg_dev_ci_hi,avg_energy_mean,avg_energy_ci_lo,avg_energy_ci_hi,avg_wasted_mean,avg_wasted_ci_lo,avg_wasted_ci_hi,avg_cycling_mean,avg_cycling_ci_lo,avg_cycling_ci_hi,avg_redundant_mean,avg_redundant_ci_lo,avg_redundant_ci_hi
+lab2noise,ql_false,5,0.975,0.95,1.0,1.75,1.2625,2.275,5.7125,4.3625,7.2875,11.070000000000002,9.7375,12.4475,1.685,1.185,2.2125,0.5875,0.45,0.7125,2.2725,1.7600000000000002,2.85
+lab2noise,ql_true,5,1.0,1.0,1.0,1.175,1.1125,1.225,3.9125,3.7875,4.0375,9.930000000000001,9.69,10.165000000000001,1.105,1.0625,1.1400000000000001,0.4875,0.425,0.5375,1.5925,1.4899999999999998,1.6774999999999998
+lab2noise,rule_based,5,1.0,1.0,1.0,0.9375,0.9375,0.9375,3.4375,3.4375,3.4375,9.747499999999999,9.6525,9.8475,0.8875,0.8625,0.9100000000000001,0.25,0.25,0.25,1.1375,1.1124999999999998,1.1600000000000001

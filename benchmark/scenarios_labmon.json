@@ -1,0 +1,11 @@
+[
+  {
+    "comment": "labmon BENCHMARK scenarios (held-out test set). Goal Z1=rank3 (>300 lux). Single zone; deterministic physics Z1=25 + (Z1Light?400)+(Z1Monitor?290).",
+    "id": 5, "Z1Level": 25, "Z1Light": false, "Z1Monitor": false,
+    "description": "held-out: all off, dark -> reach rank3 (free primary lamp)"
+  },
+  {
+    "id": 8, "Z1Level": 150, "Z1Light": false, "Z1Monitor": false,
+    "description": "held-out: rank2 ambient start, all off -> reach rank3 (free primary lamp)"
+  }
+]

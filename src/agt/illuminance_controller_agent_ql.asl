@@ -34,6 +34,7 @@
 
 // ─── SWITCH: set to false for standard Q-learning without stereotypes ───
 use_stereotypes(true).
+protocol_version("legacy").
 // ───────────────────────────────────────────────────────────────────────
 
 // Lab-specific configuration (TD, ontology paths, light/sunshine bounds, sunshine
@@ -46,15 +47,10 @@ use_stereotypes(true).
 // Goal zone_goal/1 is derived at startup from zone_targets/N in the active profile.
 
 // Training parameters
-num_episodes(3000).
+num_episodes(50).
 max_steps_per_episode(20).
-// S4-5 (audit-step-4): raised from 65 ms to 250 ms to exceed the Node-RED
-// simulator's 200 ms tick. Previously the value contradicted its own
-// comment and could return pre-tick state from readLabStatus, biasing
-// the Q-update credit assignment toward the prior (rather than the
-// post-action) state. 250 ms = one full tick + safety margin.
-action_delay_ms(65).     // delay between actions during training (ms) — must exceed 200 ms simulator tick
-exec_delay_ms(100).       // delay between actions during execution (ms)
+action_delay_ms(65).     // delay between actions during training (ms) — exceeds one 50 ms simulator tick
+exec_delay_ms(65).       // delay between actions during execution (ms)
 
 exec_max_steps(20).
 
@@ -94,7 +90,12 @@ exec_max_steps(20).
         -active_profile(OldP);
         +active_profile(OverrideProfile);
         .print("[RuntimeOverride] active_profile: ", OldP, " -> ", OverrideProfile)
-    }.
+    };
+    tools.jia.system_prop("phase1.protocolVersion", "legacy", ProtocolVersion);
+    ?protocol_version(OldProtocol);
+    -protocol_version(OldProtocol);
+    +protocol_version(ProtocolVersion);
+    .print("[RuntimeOverride] protocol_version=", ProtocolVersion).
 // Failure handler: if tools.jia.system_prop is unavailable (e.g. ClassLoader
 // race during parallel builds), log a warning and continue.  The active_profile
 // belief will reflect whatever was pre-patched into lab_profiles.asl by the
@@ -159,6 +160,7 @@ exec_max_steps(20).
         getScenarioIds(ScenariosFile, ScIds)[artifact_id(LabId)];
         .length(ScIds, TCount);
         +train_scenarios_count(TCount);
+        +train_scenario_ids(ScIds);
         .print("[Profile] train_scenarios_count=", TCount)
     };
     .print("Lab artifact created.");
@@ -174,6 +176,9 @@ exec_max_steps(20).
     +qlearner_artifact(QlId);
     !profile_ont(OntPaths);
     configureQLearner(Goal, UseStereotypes, OntPaths, SunProb)[artifact_id(QlId)];
+    if (train_scenario_ids(DeclaredScenarioIds)) {
+        configureTrainingScenarios(DeclaredScenarioIds)[artifact_id(QlId)]
+    };
     .print("QLearner artifact created and initialised.");
     // Apply per-profile training parameters (episodes + epsilon decay)
     !profile_training_params(NumEps, EpDecay);
@@ -209,19 +214,22 @@ exec_max_steps(20).
     ?lab_artifact(LabId);
     ?qlearner_artifact(QlId);
 
-    // Set start state: cycle through fixed scenario file if configured, else random
+    // Protocol-v2 start: cycle by zero-based file position, return the real
+    // (possibly non-contiguous) ID, settle, and only then record the state.
     if (train_scenarios_file(ScenariosFile)) {
         ?train_scenarios_count(TCount);
-        ScenarioId = (N mod TCount) + 1;
-        setScenarioLabState(ScenariosFile, ScenarioId)[artifact_id(LabId)];
+        ScenarioPosition = N mod TCount;
+        setScenarioLabStateByPosition(ScenariosFile, ScenarioPosition, ScenarioId)[artifact_id(LabId)];
+        .wait(250); // let the simulator settle before measuring the episode start
         readLabStatus(ZLStart, SRStart, SKStart, SVStart)[artifact_id(LabId)];
         encodeState(ZLStart, SRStart, SKStart, SVStart, StartStateVec)[artifact_id(QlId)];
-        beginEpisodeFromState(StartStateVec)[artifact_id(QlId)]
+        isTerminal(StartStateVec, StartTerminal)[artifact_id(QlId)];
+        beginEpisodeForScenario(ScenarioId, StartStateVec, StartTerminal)[artifact_id(QlId)]
     } else {
         setRandomLabState[artifact_id(LabId)];
+        .wait(250);
         beginEpisode[artifact_id(QlId)]
     };
-    .wait(250); // let the sim settle after state change (> 200 ms tick)
 
     // Run one episode
     !run_episode(N, 0);
@@ -247,13 +255,17 @@ exec_max_steps(20).
         .print("[Training] >> ep ", N + 1, "/", MaxEpisodes, " | ", Status)
     };
 
-    // Early stopping: if Q-table has converged stop training before MaxEpisodes
-    hasConverged(Converged)[artifact_id(QlId)];
-    if (Converged) {
-        .print("[Training] Converged after ", N + 1, " episodes — stopping early.");
-        !train(MaxEpisodes)   // triggers @train_done
-    } else {
+    // Corrected Phase 1 has a fixed horizon: never stop before 3,000 episodes.
+    if (protocol_version("phase1-v2")) {
         !train(N + 1)
+    } else {
+        hasConverged(Converged)[artifact_id(QlId)];
+        if (Converged) {
+            .print("[Training] Converged after ", N + 1, " episodes — stopping early.");
+            !train(MaxEpisodes)
+        } else {
+            !train(N + 1)
+        }
     }.
 
 @train_done

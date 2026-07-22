@@ -1,0 +1,111 @@
+Stage 6 R2 Phase 1 Git Audit Snapshot
+Created: 20260618T075201Z
+Scope: AUDIT HISTORY only.
+Label: [DIRECT]
+
+Command A:
+git rev-parse HEAD
+Output A:
+eda6ca1ffa026e723ad1a18a2bdb3aed927e7433
+
+Command B:
+git rev-parse beaf8ea 7543d15 866297d 8a98cd82 c633718 e8d63e09 791626314 985c7a1 7137f88
+Output B:
+beaf8eac3137d1bbf255f9e3b68ce94413eea805
+7543d15a6e6d36842ffd82f60b488b1a6dde99cd
+866297d54750c91f4595962f9c975d2f1704f629
+8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1
+c633718766afb0c77f8fabd942f6e0aecdfa923d
+e8d63e09be504f1dc206737ca8feb05299fe1031
+791626314fb47d5324ba3336daed5906ef2e53b1
+985c7a18558b6d5cb96c018a395b0aae6389f410
+7137f8870881017a9eedd40c837e517481d0e9ce
+
+Command C:
+git status --short --branch
+Selected Output C:
+## phase3-process-dynamics...origin/phase3-process-dynamics [ahead 1]
+ M docs/PHASE1_TO_PHASE2_CHANGES.md
+ M docs/PHASE2_TO_PHASE3_CHANGES.md
+?? paper_notes/
+stderr: warning: could not open directory '.pytest_cache/v/cache/': Permission denied
+
+Command D:
+git log --all --decorate --oneline --max-count=80 -- .github/workflows/phase1.yml config/run_config.json src/agt/lab_profiles.asl src/env/tools/QLearner.java src/env/tools/StereotypeReasoner.java analysis/sweep_report.py docs/pre_registration.md
+Selected Output D:
+7137f88 (HEAD -> phase3-process-dynamics) Phase 3: response-delay learning (process dynamics)
+985c7a1 fix(phase2): ambiguous-abstain closes lab3_f2inv Spotlight FP race (v4 8->4 -> v5 target 0); add S17/S18 analysis
+2aab559 fix(phase2): primary-detection-time component attribution kills lab3_f2inv Spotlight FP
+aa74486 Phase 2.2: make KG+relearn causal signal visible in lab3_f2inv
+f4ac3fe Phase 2.1: stress-test false positives and add margin policy
+8ff250d Phase 2: add fault injection/adaptation evaluation workflow
+e8d63e0 (origin/kg-crosszone-ablation, kg-crosszone-ablation) ci: retry Node-RED npm install for phase1 workflow
+c633718 KG-X mechanism ablation: make stereotypes untargeted and add schema guard
+7629d0f KG cross-zone coupling stereotypes: timing-aware lab3 prior
+7ac37a1 (tag: results-20260611-123741-phase1_baseline-7ac37a1, tag: results-20260611-114056-phase1_kg_only_ib5-7ac37a1, main) phase1 retry: extend job timeout and optimize Node-RED wait
+55c0106 (tag: results-20260611-100516-phase1_kg_only-55c0106) Add Phase-1 factorial run-modes and provenance manifests
+7543d15 (tag: results-20260610-214349-phase1-7543d15) Phase 1: clean-lab KG-acceleration ladder, metrics, and CI workflow
+beaf8ea feat(sweep): add run_mode to manifest/report/heatmap outputs
+
+Command E:
+git show --no-patch --format="%H%n%D%n%an%n%ai%n%s" beaf8eac3137d1bbf255f9e3b68ce94413eea805 7543d15a6e6d36842ffd82f60b488b1a6dde99cd 866297d54750c91f4595962f9c975d2f1704f629 8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1 c633718766afb0c77f8fabd942f6e0aecdfa923d e8d63e09be504f1dc206737ca8feb05299fe1031 791626314fb47d5324ba3336daed5906ef2e53b1
+Selected Output E:
+beaf8eac3137d1bbf255f9e3b68ce94413eea805
+esrad
+2026-06-08 10:25:19 +0200
+feat(sweep): add run_mode to manifest/report/heatmap outputs
+7543d15a6e6d36842ffd82f60b488b1a6dde99cd
+tag: results-20260610-214349-phase1-7543d15
+esrad
+2026-06-10 21:56:56 +0200
+Phase 1: clean-lab KG-acceleration ladder, metrics, and CI workflow
+866297d54750c91f4595962f9c975d2f1704f629
+origin/kg-crosszone-coupling, kg-crosszone-coupling
+esrad
+2026-06-12 21:56:26 +0200
+Actions overnight A/B: 20 seeds lab3 cross-zone + stricter bandit
+8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1
+origin/kg-crosszone-coupling-bump
+esrad
+2026-06-13 10:03:27 +0200
+lab3 sim bump: stronger cross-zone leakage + noisier sensor action
+c633718766afb0c77f8fabd942f6e0aecdfa923d
+esrad
+2026-06-13 11:21:04 +0200
+KG-X mechanism ablation: make stereotypes untargeted and add schema guard
+e8d63e09be504f1dc206737ca8feb05299fe1031
+origin/kg-crosszone-ablation, kg-crosszone-ablation
+esrad
+2026-06-13 12:58:27 +0200
+ci: retry Node-RED npm install for phase1 workflow
+791626314fb47d5324ba3336daed5906ef2e53b1
+github-actions[bot]
+2026-06-11 12:37:42 +0000
+results: publish phase1 baseline artifacts
+
+Command F:
+git diff --stat beaf8eac3137d1bbf255f9e3b68ce94413eea805 7543d15a6e6d36842ffd82f60b488b1a6dde99cd -- .github/workflows/phase1.yml config/run_config.json src/agt/lab_profiles.asl src/env/tools/QLearner.java src/env/tools/StereotypeReasoner.java analysis/sweep_report.py docs/pre_registration.md
+Selected Output F:
+.github/workflows/phase1.yml | 583 insertions
+analysis/sweep_report.py | 26 +-
+config/run_config.json | 39 +-
+src/agt/lab_profiles.asl | 90 ++++++
+4 files changed, 729 insertions(+), 9 deletions(-)
+
+Command G:
+git diff --stat 7543d15a6e6d36842ffd82f60b488b1a6dde99cd 8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1 -- .github/workflows/phase1.yml config/run_config.json src/agt/lab_profiles.asl src/env/tools/QLearner.java src/env/tools/StereotypeReasoner.java src/env/Simulator_lab3.java analysis/sweep_report.py docs/pre_registration.md
+Selected Output G:
+.github/workflows/phase1.yml | 26 +-
+config/run_config.json | 103 +++++++++++++++++++++
+src/env/Simulator_lab3.java | 4 +-
+src/env/tools/StereotypeReasoner.java | 97 ++++++++++++++++++++
+4 files changed, 221 insertions(+), 9 deletions(-)
+
+Command H:
+git diff --stat 8a98cd82d64d6e4003c767a2b5a3a6d48a744ad1 e8d63e09be504f1dc206737ca8feb05299fe1031 -- .github/workflows/phase1.yml config/run_config.json src/agt/lab_profiles.asl src/env/tools/QLearner.java src/env/tools/StereotypeReasoner.java src/env/Simulator_lab3.java run_full_project.ps1 analysis/sweep_report.py docs/pre_registration.md
+Selected Output H:
+.github/workflows/phase1.yml | 26 ++
+config/run_config.json | 19 +-
+run_full_project.ps1 | 4 +-
+src/env/tools/StereotypeReasoner.java | 96 +++++++++++++++++++-
+4 files changed, 141 insertions(+), 4 deletions(-)

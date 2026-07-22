@@ -1,0 +1,70 @@
+[
+  {
+    "comment": "lab4chain CHAINED POWER DEPENDENCY held-out benchmark (16 scenarios, 4 per sun rank). Forked from lab4 and deepens the dependency to a DEPTH-2 CHAIN: the Z1 ceiling lamp is wired through a SMART PLUG (PlugZ1) which itself hangs off a CIRCUIT BREAKER (MasterSwitch). The Z1 lamp emits light ONLY when ALL THREE are ON (z1lamp_on = Z1Light AND PlugZ1 AND MasterSwitch); the Z2 lamp is directly actionable. Targets Z1=bright(3) AND Z2=bright(3) (level>=300). Physics: Z1 = 25 + (z1lamp_on?400) + (Z2Light?150) + (Z1Blinds?0.50*Sun) + (Z2Blinds?0.40*Sun) + (Spotlight?150); Z2 = 25 + (Z2Light?400) + (z1lamp_on?150) + (Z2Blinds?0.50*Sun) + (Z1Blinds?0.40*Sun) + (Spotlight?150). The chain is documented as two ws:powerGates arcs (breaker -> plug -> lamp), so a KG-primed agent learns the enable ORDER breaker-plug-lamp; a tabula-rasa agent faces a depth-2 AND-chain where toggling the lamp with the plug off AND toggling the plug with the breaker off are BOTH optical no-ops. Signature traps: scenario 3 (lamp+plug ON, breaker OFF — the fix is TWO levels above the lamp), scenario 7 (lamp+breaker ON, plug OFF), scenario 11 (lamp ON, plug AND breaker OFF — two enablers missing). At sun=900 opening both blinds gives 835/zone at ZERO energy = the cheap optimum (chain irrelevant). Sun in {0,100,400,900} via bounds [50,200,600].",
+    "id": 1, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "MasterSwitch": false, "Sunshine": 0,
+    "description": "sun=0, all off, chain fully open -> enable breaker + plug + Z1 lamp, and the Z2 lamp"
+  },
+  {
+    "id": 2, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "MasterSwitch": true,  "Sunshine": 0,
+    "description": "sun=0, both at target (full chain live + Z2 lamp) -> hold"
+  },
+  {
+    "id": 3, "Z1Level": 175, "Z2Level": 425, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "MasterSwitch": false, "Sunshine": 0,
+    "description": "sun=0, DEEP TRAP: Z1 lamp switch ON and PlugZ1 ON but MasterSwitch OFF (Z1 dark) while Z2 at target -> flip the BREAKER (two levels above the lamp)"
+  },
+  {
+    "id": 4, "Z1Level": 725, "Z2Level": 725, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "PlugZ1": true,  "MasterSwitch": true,  "Sunshine": 0,
+    "description": "sun=0, both bright (chain live) but spotlight ALSO on -> turn spotlight off (redundant energy)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 1 (sun=100) ===",
+    "id": 5, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "MasterSwitch": false, "Sunshine": 100,
+    "description": "sun=1, all off, chain fully open -> enable breaker + plug + both lamps (blinds reach only rank1 at sun1)"
+  },
+  {
+    "id": 6, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "MasterSwitch": true,  "Sunshine": 100,
+    "description": "sun=1, both at target (full chain live) -> hold"
+  },
+  {
+    "id": 7, "Z1Level": 175, "Z2Level": 425, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "MasterSwitch": true,  "Sunshine": 100,
+    "description": "sun=1, MID TRAP: Z1 lamp switch ON and breaker ON but PlugZ1 OFF (Z1 dark) while Z2 at target -> flip the PLUG (the middle chain link)"
+  },
+  {
+    "id": 8, "Z1Level": 175, "Z2Level": 175, "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "PlugZ1": false, "MasterSwitch": false, "Sunshine": 100,
+    "description": "sun=1, spotlight-only rank2 (175) -> build the chain + both lamps (spotlight redundant once lamps on)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 2 (sun=400) ===",
+    "id": 9, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "MasterSwitch": false, "Sunshine": 400,
+    "description": "sun=2, all off, chain fully open -> enable breaker + plug + both lamps (blinds alone reach only rank2 at sun2)"
+  },
+  {
+    "id": 10, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "MasterSwitch": true,  "Sunshine": 400,
+    "description": "sun=2, both at target (full chain live) -> hold"
+  },
+  {
+    "id": 11, "Z1Level": 175, "Z2Level": 425, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "MasterSwitch": false, "Sunshine": 400,
+    "description": "sun=2, DOUBLE-DEEP TRAP: Z1 lamp switch ON but plug AND breaker BOTH OFF (Z1 dark) while Z2 at target -> flip breaker AND plug (two enablers missing)"
+  },
+  {
+    "id": 12, "Z1Level": 725, "Z2Level": 725, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": true,  "PlugZ1": true,  "MasterSwitch": true,  "Sunshine": 400,
+    "description": "sun=2, both bright (chain live) but spotlight on -> turn spotlight off (redundant energy)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 3 (sun=900) — both blinds open = 835/zone at ZERO energy (chain irrelevant) ===",
+    "id": 13, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": false, "MasterSwitch": false, "Sunshine": 900,
+    "description": "sun=3, all off -> OPEN both blinds (835 each, zero energy) is the cheap optimum (no chain needed)"
+  },
+  {
+    "id": 14, "Z1Level": 575, "Z2Level": 575, "Z1Light": true,  "Z2Light": true,  "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "MasterSwitch": true,  "Sunshine": 900,
+    "description": "sun=3, both bright via lamps (chain live, energy-costly) -> open blinds and switch lamps/chain off to save energy"
+  },
+  {
+    "id": 15, "Z1Level": 25,  "Z2Level": 25,  "Z1Light": true,  "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "PlugZ1": true,  "MasterSwitch": false, "Sunshine": 900,
+    "description": "sun=3, Z1 switch on, plug on, but breaker off (no effect, both rank0) -> open both blinds (zero-energy optimum); the lamp+plug are no-ops without the breaker"
+  },
+  {
+    "id": 16, "Z1Level": 835, "Z2Level": 835, "Z1Light": false, "Z2Light": false, "Z1Blinds": true,  "Z2Blinds": true,  "Spotlight": false, "PlugZ1": false, "MasterSwitch": false, "Sunshine": 900,
+    "description": "sun=3, both at target via blinds only -> hold (already zero-energy optimum)"
+  }
+]

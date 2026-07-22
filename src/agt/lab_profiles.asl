@@ -286,6 +286,24 @@ lab_profile("lab2",
             qtable_suffix("_lab2"),
             training_params(2000, 0.9960)).
 
+//   lab2noise → EXPLORATORY noise pilot (port 1903, Addendum 2026-07-19f):
+//   identical to lab2 (same KG, bounds, targets, schedule) but the simulator
+//   flow applies ±10% multiplicative sensor noise per tick to both zone
+//   levels. Never mix its results with clean-lab2 numbers.
+lab_profile("lab2noise",
+            td("classpath:interactions-lab2noise.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2noise.json"),
+            train_scenarios("benchmark/train_scenarios_lab2noise.json"),
+            sim_port(1903),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab2noise"),
+            training_params(2000, 0.9960)).
+
 //   lab3 → Complex (port 1894): adds cross-zone coupling + shared spotlight.
 //   Deterministic, leak-free replacement for the custom9s PRNG-tick flow.
 lab_profile("lab3",
@@ -303,13 +321,20 @@ lab_profile("lab3",
             training_params(3000, 0.9970)).
 
 // ── Phase 4 KNOWLEDGE LADDER (Hidden Dependencies & Energy) ─────────────────
-//   lab4/lab5 extend the Phase-1 clean ladder with KG-encoded knowledge that a
-//   tabula-rasa learner cannot see but a KG-primed learner can exploit. Both are
-//   STRICTLY-CLEAN (no hidden weakness): the simulator physics is fully aligned
-//   with the building_*.ttl, so every difference between ql_true and ql_false is
-//   attributable to the prior knowledge in the Knowledge Graph. weakness_flags is
-//   [] (the bench agent skips weakness fingerprinting). Same discretisation and
-//   pinned-sunshine regime as lab3.
+//   lab4/lab4dual/lab4chain/lab5 extend the Phase-1 clean ladder with KG-encoded
+//   knowledge that a tabula-rasa learner cannot see but a KG-primed learner can
+//   exploit. All are STRICTLY-CLEAN (no hidden weakness): the simulator physics
+//   is fully aligned with the building_*.ttl, so every difference between
+//   ql_true and ql_false is attributable to the prior knowledge in the Knowledge
+//   Graph. weakness_flags is [] (the bench agent skips weakness fingerprinting).
+//   Same discretisation and pinned-sunshine regime as lab3.
+//
+//   DEPENDENCY LADDER — cells vary how many components carry a power
+//   dependency and how deep the dependency chain is:
+//     lab3       0 gated components (Phase-1 anchor)
+//     lab4       1 gated component  (Z1 lamp behind one plug)
+//     lab4dual   2 gated components (BOTH lamps, one plug each)
+//     lab4chain  1 gated component, DEPTH-2 chain (breaker -> plug -> lamp)
 //
 //     lab4 Smart-Plug → lab3 + a hidden POWER dependency: the Z1 ceiling lamp is
 //                       wired through SmartPlug_Z1 (ws:powerGates) and emits light
@@ -317,6 +342,17 @@ lab_profile("lab3",
 //                       KG-primed agent reads ws:powerGates and enables the plug
 //                       first; a tabula-rasa agent must discover the AND-gate by
 //                       trial and error.                                (4096 states)
+//
+//     lab4dual Dual   → lab4 + a SECOND plug: EACH zone's lamp is behind its own
+//                       plug (two independent ws:powerGates arcs). Doubles the
+//                       number of components with a dependency.        (8192 states)
+//
+//     lab4chain Chain → lab4 + an UPSTREAM circuit breaker: breaker gates plug,
+//                       plug gates the Z1 lamp (two CHAINED ws:powerGates arcs;
+//                       the lamp lights only when breaker AND plug AND switch are
+//                       all ON). Deepens the dependency to a 2-level chain the
+//                       KG-primed agent can traverse breaker->plug->lamp.
+//                                                                       (8192 states)
 //
 //     lab5 Energy     → lab3 + two directly-actionable lamps per zone with the
 //                       SAME light output (+400) but different ws:energyCost
@@ -342,6 +378,40 @@ lab_profile("lab4",
             qtable_suffix("_lab4"),
             training_params(3000, 0.9970)).
 
+//   lab4dual → DUAL Smart-Plug dependency (port 1901). Two ws:powerGates arcs:
+//   each zone's lamp behind its own plug. Same budget as lab4 so the dependency
+//   ladder (0 -> 1 -> 2 gated components) holds the training budget constant.
+lab_profile("lab4dual",
+            td("classpath:interactions-lab4dual.ttl"),
+            ont(["building_8_dualplug.ttl"]),
+            scenarios("benchmark/scenarios_lab4dual.json"),
+            train_scenarios("benchmark/train_scenarios_lab4dual.json"),
+            sim_port(1901),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab4dual"),
+            training_params(3000, 0.9970)).
+
+//   lab4chain → CHAINED power dependency (port 1902). Two CHAINED ws:powerGates
+//   arcs: breaker -> plug -> Z1 lamp (the lamp needs ALL THREE switches ON).
+//   Same budget as lab4/lab4dual for the ladder contrast.
+lab_profile("lab4chain",
+            td("classpath:interactions-lab4chain.ttl"),
+            ont(["building_9_chainplug.ttl"]),
+            scenarios("benchmark/scenarios_lab4chain.json"),
+            train_scenarios("benchmark/train_scenarios_lab4chain.json"),
+            sim_port(1902),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_lab4chain"),
+            training_params(3000, 0.9970)).
+
 //   lab5 → Energy differentiation (port 1898). Two lamps/zone, ws:energyCost 1 vs 4.
 lab_profile("lab5",
             td("classpath:interactions-lab5.ttl"),
@@ -356,6 +426,136 @@ lab_profile("lab5",
             weakness_flags([]),
             qtable_suffix("_lab5"),
             training_params(3000, 0.9970)).
+
+// ── Phase 2.5 MONITOR EMERGENCY-FALLBACK LAB ───────────────────────────────
+//   A single-zone lab with TWO Causes actuators: the primary task lamp and a
+//   computer MONITOR whose light output is only a side-effect
+//   (ws:MonitorStereotype). Fully deterministic (no sunshine, no blinds).
+//   Clean optimum = the primary lamp alone (rank 3, 425 lux).
+//   The emergency variant labmon_f1dead kills the primary lamp; the monitor
+//   alone reaches rank 2 only (285 lux) — best-effort degradation. The
+//   KG-primed agent should re-value the monitor as the fallback faster than a
+//   tabula-rasa learner. State = [Z1Level, Z1Light, Z1Monitor] = 16 states.
+//   Port 1899.
+lab_profile("labmon",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon"),
+            training_params(1500, 0.9950)).
+
+// ── Phase 2.5 DUAL-ZONE MONITOR-FALLBACK LAB (labmon2, NO spotlight) ────────
+//   Two INDEPENDENT workstations, each with a primary task lamp, a computer
+//   MONITOR (light is a screen-backlight SIDE-EFFECT, ws:MonitorStereotype) and
+//   a sun-mediated window BLIND. NO spotlight, NO cross-zone coupling. This is
+//   the multi-survivor extension of labmon: when BOTH lamps fail and daylight is
+//   low the goal (rank 3) is unreachable in both zones, and the monitor (rank 2
+//   alone) is the essential best-effort fallback in EACH zone (4 survivors →
+//   16 probe combos). Physics: Zi = 25 + (ZiLight?400) + (ZiMonitor?200) +
+//   (ZiBlinds?0.50*Sun). At LOW sun the lamp is the ONLY rank-3 lever, so both
+//   arms use it and its death is detected (no reward-cost / Q-init bias needed).
+//   State = [Z1Level,Z2Level,Z1Light,Z2Light,Z1Monitor,Z2Monitor,Z1Blinds,
+//   Z2Blinds,Sunshine] = 4096 states. Port 1900.
+lab_profile("labmon2",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon2"),
+            training_params(4000, 0.9975)).
+
+// ── Phase 2.6 KG-SILENT MONITOR VARIANTS (misdocumented / undocumented) ─────
+//   Forks of the monitor labs where the monitor STILL physically brightens the
+//   room (identical simulator flows/ports as labmon / labmon2) but its light
+//   effect is MISSING from the stereotype layer of the KG:
+//     • *_infoonly  (variant A) — the monitor HAS a stereotype, but its only
+//       dependent variable is displayed_information; the elem:luminiscence
+//       side-effect (and the photon outlet) is absent. A MISDOCUMENTED KG.
+//     • *_nostereo  (variant B) — the monitor has NO stereotype at all. An
+//       UNDOCUMENTED component (instance + WoT mapping only).
+//   In both variants the monitor's ON/OFF actions enter the action space via
+//   the KG-SILENT fallback discovery (StereotypeReasoner) with EMPTY
+//   affectedZones: no Q-init endorsement, no fault adjudication, no
+//   Expected-vs-Actual prediction. Both learner arms must discover the
+//   monitor's light effect from reward alone. The research question: when the
+//   task lamp(s) die, do the agents still adopt the unmodeled monitor as the
+//   best-effort fallback, and does the KG-primed arm (priors on everything
+//   EXCEPT the monitor) still adapt better/faster than tabula-rasa?
+//   The parent (fully-modeled) labmon/labmon2 profiles remain untouched, so
+//   full-KG vs misdocumented-KG vs undocumented-KG is a 3-way contrast.
+
+//   labmon_infoonly → CLEAN single-zone parent, info-only monitor stereotype.
+lab_profile("labmon_infoonly",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon_infoonly"),
+            training_params(1500, 0.9950)).
+
+//   labmon_nostereo → CLEAN single-zone parent, monitor without any stereotype.
+lab_profile("labmon_nostereo",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon_nostereo"),
+            training_params(1500, 0.9950)).
+
+//   labmon2_infoonly → CLEAN dual-zone parent, info-only monitor stereotypes.
+lab_profile("labmon2_infoonly",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon2_infoonly"),
+            training_params(4000, 0.9975)).
+
+//   labmon2_nostereo → CLEAN dual-zone parent, monitors without any stereotype.
+lab_profile("labmon2_nostereo",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labmon2_nostereo"),
+            training_params(4000, 0.9975)).
 
 // ── Phase 3 SLOW LADDER (Learning Process Dynamics / response delay) ────────
 //   Each slow profile is structurally IDENTICAL to its clean Phase-1 parent
@@ -573,6 +773,290 @@ lab_profile("lab3_f2inv",
             qtable_suffix("_lab3_f2inv"),
             training_params(4000, 0.9970)).
 
+//   ── Phase 2 EXTENSION — additional well-posed lamp cells + blind faults ───
+//   Two motivations (advisor request):
+//     (1) MORE well-posed recovery data in lab3. lab3_f1dead/f1inv fault the Z1
+//         lamp; the SYMMETRIC Z2-lamp variants below double the well-posed
+//         recovery sample. Both are well-posed because after the broken task
+//         lamp is blacklisted the target zone is still reachable DETERMINISTICALLY
+//         (sun-independent) via the shared Spotlight (+150) plus the surviving
+//         lamp's cross-zone spill (+150) = 325 ≥ 300 (rank 3).
+//     (2) A NEW fault class — DEFECTIVE / INVERTED BLINDS. Blinds are Mediates
+//         (IV-gated: lux = 0.50·sunshine), so their fault is only soundly
+//         falsifiable on the OPEN action under sun rank ≥2 (QLearner conditional
+//         IV-gate). The agent OPENS blinds during pre-detection ACTIVE MONITORING
+//         (ε-greedy probe), observes the missing/inverted response, blacklists
+//         the blind and re-learns over the surviving (lamp) levers. These cells
+//         are well-posed: the task lamp survives as a deterministic rank-3 lever.
+
+//   lab3_f1dead_z2 → DEAD Z2 lamp in the Complex lab (symmetric to lab3_f1dead).
+lab_profile("lab3_f1dead_z2",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f1dead_z2"),
+            training_params(4000, 0.9970)).
+
+//   lab3_f1inv_z2 → INVERTED Z2 lamp in the Complex lab (symmetric to lab3_f1inv).
+lab_profile("lab3_f1inv_z2",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab3_f1inv_z2"),
+            training_params(4000, 0.9970)).
+
+//   lab3_f1bdead → DEAD Z1 BLIND in the Complex lab. The blind's whole lux
+//   contribution (own-zone 0.50·sun + cross-zone 0.40·sun) is zeroed. Detected
+//   on the OPEN action under sun rank ≥2; survivors (Z1 lamp, spotlight) give a
+//   deterministic rank-3 recovery. First Mediates-fault showcase.
+lab_profile("lab3_f1bdead",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f1bdead"),
+            training_params(4000, 0.9970)).
+
+//   lab3_f1binv → INVERTED Z1 BLIND in the Complex lab (own + cross contributions
+//   negated). Opening it under high sun SUBTRACTS lux; from an elevated zone this
+//   is caught as an opposite-direction (inverted) response, from the rank floor
+//   it clamps and reads as dead — either way the blind is isolated + blacklisted.
+lab_profile("lab3_f1binv",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab3_f1binv"),
+            training_params(4000, 0.9970)).
+
+//   lab2_f1bdead → DEAD Z1 BLIND in the Intermediate lab (own-zone 0.50·sun
+//   zeroed; lab2 has no cross-zone/spotlight). Well-posed: the Z1 lamp (+400)
+//   survives as a deterministic rank-3 lever. Blind fault at medium complexity.
+lab_profile("lab2_f1bdead",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab2_f1bdead"),
+            training_params(2000, 0.9960)).
+
+//   lab2_f1binv → INVERTED Z1 BLIND in the Intermediate lab (own-zone 0.50·sun
+//   negated). Survivor: the Z1 lamp. Blind inversion at medium complexity.
+lab_profile("lab2_f1binv",
+            td("classpath:interactions-lab2.ttl"),
+            ont(["building_2_intermediate.ttl"]),
+            scenarios("benchmark/scenarios_lab2.json"),
+            train_scenarios("benchmark/train_scenarios_lab2.json"),
+            sim_port(1893),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w2]),
+            qtable_suffix("_lab2_f1binv"),
+            training_params(2000, 0.9960)).
+
+//   ── Phase 2.7 — MULTI-BLIND fault cell (EXPLORATORY, post-registration) ───
+//   lab3_f2bdead → BOTH blinds dead in the Complex lab (own-zone 0.50·sun and
+//   cross-zone 0.30·sun contributions zeroed for each blind). Extends the
+//   iterative multi-fault detect→blacklist→warm-restart loop to the Mediates
+//   class: each dead blind is only falsifiable on the OPEN probe under sun
+//   rank ≥2, so the agent must run the active self-test TWICE and blacklist
+//   iteratively. Survivors (Z1 lamp, Z2 lamp, Spotlight) keep BOTH zones
+//   deterministically rank-3 reachable (25+400+100+150) — the first WELL-POSED
+//   multi-fault cell (the lamp f2* cells leave only sun-gated survivors).
+//   Registered as an EXPLORATORY cell (pre_registration.md §9.11): full
+//   statistics reported, never a member of the frozen §9.5/§9.6 BH families.
+lab_profile("lab3_f2bdead",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f2bdead"),
+            training_params(4000, 0.9970)).
+
+//   labmon_f1dead → DEAD primary lamp in the Monitor emergency-fallback lab.
+//   After the lamp is blacklisted, the ONLY surviving rank-3 path is
+//   {Z1Monitor, Z1Backup} = 375 lux (deterministic, sun-independent). The
+//   MONITOR is the necessary unconventional fallback; the KG-primed agent
+//   (positive Causes-light priors on the monitor + backup ON actions) should
+//   re-align faster than the tabula-rasa agent. Reuses the parent labmon
+//   ont/td/port so the warm-loaded Q-table shape matches.
+lab_profile("labmon_f1dead",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon_f1dead"),
+            training_params(1500, 0.9950)).
+
+//   lab3_f2dead_lowsun → BOTH task lamps dead AND the episode sun PINNED to
+//   rank-1 (100 lux) in the Complex lab. Unlike lab3_f2dead (which is degraded
+//   only on low-sun episodes because the blinds reach rank 3 at high sun), the
+//   pinned low sun makes the nominal rank-3 goal UNREACHABLE in BOTH zones on
+//   EVERY episode: per-zone ceiling = 25 + spotlight(150) + own-blind(50) +
+//   cross-blind(40) = 265 lux = rank 2. This is the MULTI-SURVIVOR degradation
+//   cell: after both lamps are blacklisted the survivors are Z1Blinds, Z2Blinds
+//   and the Spotlight (3 actuators → 8 probe combos), and BOTH zones degrade to
+//   rank 2. The Spotlight — REDUNDANT and avoided in the clean lab — becomes the
+//   ESSENTIAL best-effort lever; the KG's structural prior should let it re-value
+//   the spotlight and reconverge faster than the tabula-rasa agent. Reuses the
+//   lab3 ont/td/port so the warm-loaded Q-table shape matches.
+// NOTE: scenarios/train_scenarios reused from lab3 (clean parent); lowsun pins training resets only, not benchmark setState overrides.
+lab_profile("lab3_f2dead_lowsun",
+            td("classpath:interactions-lab3.ttl"),
+            ont(["building_3_complex.ttl"]),
+            scenarios("benchmark/scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            sim_port(1894),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_lab3_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
+//   labmon2_f2dead_lowsun → BOTH primary task lamps dead AND the episode sun
+//   PINNED to rank-1 (100 lux) in the dual-zone monitor lab. With both lamps
+//   gone and sun = 100 the per-zone ceiling = 25 + monitor(200) + blind(50)
+//   = 275 lux = rank 2, so the nominal rank-3 goal is UNREACHABLE in BOTH zones
+//   on EVERY episode. Survivors after the two lamps are blacklisted = Z1Monitor,
+//   Z2Monitor, Z1Blinds, Z2Blinds (4 actuators → 16 probe combos), and BOTH
+//   zones degrade to rank 2. The MONITOR (Causes light, rank 2 alone) is the
+//   ESSENTIAL best-effort lever in each zone; the KG's structural prior (Monitor
+//   Causes light) should let it re-value and reconverge faster than tabula-rasa.
+//   Reuses the labmon2 ont/td/port so the warm-loaded Q-table shape matches.
+// NOTE: scenarios/train_scenarios reused from labmon2 (clean parent); lowsun pins training resets only, not benchmark setState overrides.
+lab_profile("labmon2_f2dead_lowsun",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon2_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
+//   ── Phase 2.6 — FAULTY cells of the KG-SILENT monitor variants ────────────
+//   Same fault injections (and simulator flows) as labmon_f1dead and
+//   labmon2_f2dead_lowsun, but the agents' KG is the misdocumented (_infoonly)
+//   or undocumented (_nostereo) variant, and they warm-load the Q-table
+//   trained on the MATCHING clean variant. The monitor is now the essential
+//   best-effort lever — but the KG never told either arm it emits light.
+
+//   labmon_infoonly_f1dead → DEAD primary lamp; monitor (KG-silent, info-only
+//   stereotype) is the only surviving lever → best-effort rank 2.
+lab_profile("labmon_infoonly_f1dead",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon_infoonly_f1dead"),
+            training_params(1500, 0.9950)).
+
+//   labmon_nostereo_f1dead → DEAD primary lamp; monitor (KG-silent, no
+//   stereotype) is the only surviving lever → best-effort rank 2.
+lab_profile("labmon_nostereo_f1dead",
+            td("classpath:interactions-labmon.ttl"),
+            ont(["building_6_monitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon.json"),
+            train_scenarios("benchmark/train_scenarios_labmon.json"),
+            sim_port(1899),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon_nostereo_f1dead"),
+            training_params(1500, 0.9950)).
+
+//   labmon2_infoonly_f2dead_lowsun → BOTH lamps dead + sun pinned to rank 1;
+//   the KG-silent monitors are the essential best-effort levers in BOTH zones.
+lab_profile("labmon2_infoonly_f2dead_lowsun",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_infoonly.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon2_infoonly_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
+//   labmon2_nostereo_f2dead_lowsun → BOTH lamps dead + sun pinned to rank 1;
+//   the KG-silent monitors are the essential best-effort levers in BOTH zones.
+lab_profile("labmon2_nostereo_f2dead_lowsun",
+            td("classpath:interactions-labmon2.ttl"),
+            ont(["building_7_dualmonitor_nostereo.ttl"]),
+            scenarios("benchmark/scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            sim_port(1900),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3), target(2, 3)]),
+            sunshine_prob(0.75),
+            weakness_flags([w4]),
+            qtable_suffix("_labmon2_nostereo_f2dead_lowsun"),
+            training_params(4000, 0.9970)).
+
 /* ============================================================
  * adapt_source/2 — maps a FAULTY profile to the clean parent's
  * qtable_suffix, so the Phase-2 adapt agent warm-loads the right
@@ -587,6 +1071,27 @@ adapt_source("lab2_f2dead", "_lab2").
 adapt_source("lab2_f2inv",  "_lab2").
 adapt_source("lab3_f2dead", "_lab3").
 adapt_source("lab3_f2inv",  "_lab3").
+// Phase 2 extension — additional well-posed lamp cells + blind faults.
+adapt_source("lab3_f1dead_z2", "_lab3").
+adapt_source("lab3_f1inv_z2",  "_lab3").
+adapt_source("lab3_f1bdead",   "_lab3").
+adapt_source("lab3_f1binv",    "_lab3").
+adapt_source("lab2_f1bdead",   "_lab2").
+adapt_source("lab2_f1binv",    "_lab2").
+// Phase 2.7 — multi-blind exploratory cell (pre_registration.md §9.11).
+adapt_source("lab3_f2bdead",   "_lab3").
+// Phase 2.5 — monitor emergency-fallback lab.
+adapt_source("labmon_f1dead",  "_labmon").
+// Phase 2.5B — lab3 multi-survivor degraded cell (both lamps dead + sun pinned).
+adapt_source("lab3_f2dead_lowsun", "_lab3").
+// Phase 2.5 — labmon2 dual-zone multi-survivor monitor fallback (both lamps dead + sun pinned).
+adapt_source("labmon2_f2dead_lowsun", "_labmon2").
+// Phase 2.6 — KG-silent monitor variants: each faulty cell warm-loads the
+// Q-table trained on the MATCHING clean variant (same KG, same action space).
+adapt_source("labmon_infoonly_f1dead",         "_labmon_infoonly").
+adapt_source("labmon_nostereo_f1dead",         "_labmon_nostereo").
+adapt_source("labmon2_infoonly_f2dead_lowsun", "_labmon2_infoonly").
+adapt_source("labmon2_nostereo_f2dead_lowsun", "_labmon2_nostereo").
 
 /* ============================================================
  * Convenience accessors — resolve one field of the active profile.

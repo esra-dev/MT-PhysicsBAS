@@ -1,0 +1,32 @@
+# IV Stats v2 (label-keyed) — ivTrialCount [4 IV ranks]
+SetSpotlight=OFF,0,0,0,0
+SetSpotlight=ON,0,0,0,0
+SetZ1Blinds=OFF,0,0,0,0
+SetZ1Blinds=ON,53,27,7,9
+SetZ1Eff=OFF,0,0,0,0
+SetZ1Eff=ON,0,0,0,0
+SetZ1Ineff=OFF,0,0,0,0
+SetZ1Ineff=ON,0,0,0,0
+SetZ2Blinds=OFF,0,0,0,0
+SetZ2Blinds=ON,17,306,9,1
+SetZ2Eff=OFF,0,0,0,0
+SetZ2Eff=ON,0,0,0,0
+SetZ2Ineff=OFF,0,0,0,0
+SetZ2Ineff=ON,0,0,0,0
+DO_NOTHING,0,0,0,0
+# ivSuccessCount [4 IV ranks]
+SetSpotlight=OFF,0,0,0,0
+SetSpotlight=ON,0,0,0,0
+SetZ1Blinds=OFF,0,0,0,0
+SetZ1Blinds=ON,0,0,4,0
+SetZ1Eff=OFF,0,0,0,0
+SetZ1Eff=ON,0,0,0,0
+SetZ1Ineff=OFF,0,0,0,0
+SetZ1Ineff=ON,0,0,0,0
+SetZ2Blinds=OFF,0,0,0,0
+SetZ2Blinds=ON,0,301,5,0
+SetZ2Eff=OFF,0,0,0,0
+SetZ2Eff=ON,0,0,0,0
+SetZ2Ineff=OFF,0,0,0,0
+SetZ2Ineff=ON,0,0,0,0
+DO_NOTHING,0,0,0,0

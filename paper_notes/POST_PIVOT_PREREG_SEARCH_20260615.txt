@@ -1,0 +1,49 @@
+[COMMANDS]
+git log --all --after=2026-06-10T19:56:56Z --format=%H%x09%cI%x09%s -- docs/pre_registration.md
+git ls-tree -r --name-only <ref> | Select-String -Pattern (?i)pre.?reg|protocol
+git grep -n -I -E lab1|lab2|lab3|fault detection|blacklist|warm restart|re-learn|cross-zone|phase1_kg_only|phase1_baseline|phase2_ <ref> -- docs/pre_registration.md
+
+[POST_PIVOT_HISTORY]
+NOT FOUND
+
+[REF] main@7ac37a10fe3b3c23bc2b54159c40142fd367e821
+[CANDIDATE_PATHS]
+docs/pre_registration.md
+[POST_PIVOT_TERMS_IN_PRE_REGISTRATION]
+NOT FOUND
+
+[REF] feature/qlearning-stereotype-comparison@9cfe38c292983347e08f6b6773243ee40fe5a001
+[CANDIDATE_PATHS]
+NOT FOUND
+[POST_PIVOT_TERMS_IN_PRE_REGISTRATION]
+NOT FOUND
+
+[REF] kg-crosszone-coupling@866297d54750c91f4595962f9c975d2f1704f629
+[CANDIDATE_PATHS]
+docs/pre_registration.md
+[POST_PIVOT_TERMS_IN_PRE_REGISTRATION]
+NOT FOUND
+
+[REF] kg-crosszone-coupling-bump@293bb07df96a2b51fcf9f68adfcd6f0245713682
+[CANDIDATE_PATHS]
+docs/pre_registration.md
+[POST_PIVOT_TERMS_IN_PRE_REGISTRATION]
+NOT FOUND
+
+[REF] kg-crosszone-ablation@e8d63e09be504f1dc206737ca8feb05299fe1031
+[CANDIDATE_PATHS]
+docs/pre_registration.md
+[POST_PIVOT_TERMS_IN_PRE_REGISTRATION]
+NOT FOUND
+
+[REF] phase2-fault-detection@985c7a18558b6d5cb96c018a395b0aae6389f410
+[CANDIDATE_PATHS]
+docs/pre_registration.md
+[POST_PIVOT_TERMS_IN_PRE_REGISTRATION]
+NOT FOUND
+
+[REF] origin/results@e9b9e3529cd71fce3ad9dfe5fa29c64793898b2e
+[CANDIDATE_PATHS]
+NOT FOUND
+[POST_PIVOT_TERMS_IN_PRE_REGISTRATION]
+NOT FOUND

@@ -1,0 +1,9 @@
+profile,metric,metric_tier,direction,censored_frac,n_paired,seeds_paired,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_one_sided_favorable,p_wilcoxon,cliffs_delta,q_bootstrap_bh,bh_family_m
+lab4,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,0.0037012337445815223,-0.0015338446148716266,0.009086362120706893,0.1682,0.0841,0.25,0.47,0.3364,8
+lab4,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,12.794731577192398,9.147497082360788,16.56399841613871,0.0,0.0,0.001953125,0.98,0.0,8
+lab4,episodes_to_threshold,secondary_censored,lower_better,0.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,8
+lab4,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,10.565486385824238,-22.994369294170394,41.55803164480178,0.5074,0.7463,0.625,0.28,0.6765333333333333,8
+lab5,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,0.002012181291269688,-0.0035393068824267713,0.0070356785595198324,0.4404,0.2202,0.4921875,0.47,0.6765333333333333,8
+lab5,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,16.012353263441888,12.33632747466216,19.063301191334574,0.0,0.0,0.001953125,1.0,0.0,8
+lab5,episodes_to_threshold,secondary_censored,lower_better,0.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,8
+lab5,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,82.84727839951645,12.489714306590702,146.1859627943956,0.0208,0.9896,0.064453125,0.58,0.055466666666666664,8

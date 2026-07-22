@@ -1,0 +1,100 @@
+%% Stage 4R2 component diagram, created 2026-06-17T18:51:33Z.
+%% Evidence inputs include protocol local-sha256:13bcc1aedb7a50cba1e81933017ba229bda2642db059f89ab0938ed9e7d5bd93:paper_notes/00_PROTOCOL.md:L1-L236
+%% and Stage3R2 handoff local-sha256:440aa36d3121a1fda187368957c4125f2e2ed6d8802c6d8509cbc5982f586fa4:paper_notes/STAGE3_R2_HANDOFF_20260617T153249Z.md:L1-L51.
+flowchart TB
+    subgraph Requirements["Advisor and claim model"]
+        Advisor["advisor_notes_and_other_info.txt\nP1 clean acceleration\nP2 fault recognition and relearning\nP3 process dynamics"]
+        Model["RESEARCH_MODEL.md\nRQ/status/result routing"]
+        Claims["CLAIM_DEPENDENCY_MAP.md\nclaim dependencies and unsafe claims"]
+    end
+
+    subgraph Jason["Jason agent layer"]
+        CleanAgent["illuminance_controller_agent_ql.asl\nclean training and evaluation"]
+        AdaptAgent["illuminance_controller_agent_adapt.asl\nfault detection, blacklist, warm restart"]
+        DynAgent["illuminance_controller_agent_dynamics.asl\nprobe delays, write dynamics, plan deadlines"]
+        Profiles["lab_profiles.asl\nclean, fault, and slow profile facts"]
+    end
+
+    subgraph JavaCartago["Java and CArtAgO layer"]
+        LabEnv["LabEnvironment.java\nruntime artifact bridge"]
+        QLearner["QLearner.java\nQ learning, action enumeration, fault guards"]
+        Stereo["StereotypeReasoner.java\nsemantic affordance/action priors"]
+        DynLearner["DynamicsLearner.java\nresponse-delay learner, TTL and CSV writer"]
+        Logger["BenchmarkLogger and output helpers\ntraining, recovery, and result CSVs"]
+    end
+
+    subgraph Semantic["Semantic Web layer"]
+        CleanTTL["building_*.ttl\nclean topology and affordances"]
+        FaultTTL["fault-profile TTL or generated flows\nexpected faulty behavior"]
+        SlowTTL["building_2_slow.ttl and building_3_slow.ttl\nslow response-delay annotations"]
+        TD["interactions-*.ttl\nThing Description affordance contracts"]
+        KGWrite["learned_dynamics.ttl\nws:responseDelay writeback"]
+    end
+
+    subgraph Physics["Node-RED physics layer"]
+        CleanFlow["simulator_flow_lab*.json\nclean physics"]
+        FaultFlow["generated faulty flows\nstuck/dead/inverted/multi faults"]
+        SlowFlow["simulator_flow_lab*_slow.json\nslow response physics"]
+    end
+
+    subgraph ConfigRun["Configuration and orchestration"]
+        Config["config/run_config.json\nexperiment profiles, goals, seeds"]
+        Gradle["build.gradle\ntaskTraining, taskBenchmark, taskAdapt, taskDynamics"]
+        PS1["PowerShell run scripts\nrun_full_project_parallel.ps1\nrun_phase2_adapt.ps1\nrun_phase3_dynamics.ps1"]
+        WF["GitHub workflows\nphase1/phase2/phase3 dispatch and artifacts"]
+    end
+
+    subgraph Analysis["Analysis and manuscript evidence"]
+        Phase1Script["phase1_extract_tables.mjs\nStage 6 result table extraction"]
+        Phase2Script["phase2_extract_results.mjs\nStage 8 result verification table"]
+        Phase3Script["analysis/phase3_dynamics.py\nPhase 3 delay/compliance/energy tables"]
+        Ledgers["SOURCE, CLAIM, RUN, GAP ledgers"]
+        ArchNotes["ARCHITECTURE_NOTES.md\nStage 4 and Stage 4R2 evidence notes"]
+    end
+
+    Advisor --> Model
+    Model --> Claims
+    Claims --> CleanAgent
+    Claims --> AdaptAgent
+    Claims --> DynAgent
+
+    Profiles --> CleanAgent
+    Profiles --> AdaptAgent
+    Profiles --> DynAgent
+    Config --> CleanAgent
+    Config --> AdaptAgent
+    Config --> DynAgent
+    Gradle --> PS1
+    PS1 --> CleanAgent
+    PS1 --> AdaptAgent
+    PS1 --> DynAgent
+    WF --> PS1
+
+    CleanAgent --> LabEnv
+    AdaptAgent --> LabEnv
+    DynAgent --> LabEnv
+    CleanAgent --> QLearner
+    AdaptAgent --> QLearner
+    DynAgent --> QLearner
+    QLearner --> Stereo
+    DynAgent --> DynLearner
+
+    LabEnv --> CleanFlow
+    LabEnv --> FaultFlow
+    LabEnv --> SlowFlow
+    Stereo --> CleanTTL
+    Stereo --> FaultTTL
+    Stereo --> TD
+    DynLearner --> SlowTTL
+    DynLearner --> TD
+    DynLearner --> KGWrite
+    DynLearner --> Logger
+    QLearner --> Logger
+
+    Logger --> Phase1Script
+    Logger --> Phase2Script
+    Logger --> Phase3Script
+    Phase1Script --> Ledgers
+    Phase2Script --> Ledgers
+    Phase3Script --> Ledgers
+    Ledgers --> ArchNotes

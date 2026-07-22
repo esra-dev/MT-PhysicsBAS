@@ -1,0 +1,3 @@
+profile,backend,n_seeds,n_scenarios,goal_rate,energy_compliance,mean_steady_power,mean_steps,mean_redundant
+lab4,general,20,16.0,1.0,1.0,1.5625,1.125,0.375
+lab5,general,20,16.0,1.0,0.55625,3.415625,0.6875,0.0625

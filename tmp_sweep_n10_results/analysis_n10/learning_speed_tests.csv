@@ -1,0 +1,13 @@
+profile,metric,metric_tier,direction,censored_frac,n_paired,seeds_paired,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_one_sided_favorable,p_wilcoxon,cliffs_delta,q_bootstrap_bh,bh_family_m
+custom3,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,0.07255225522552256,0.02441231623162316,0.1259327182718272,0.0008,0.0004,0.037109375,0.64,0.0016,12
+custom3,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,19.339808980898084,7.808336958695859,30.886078607860778,0.0008,0.0004,0.02734375,0.68,0.0016,12
+custom3,episodes_to_threshold,secondary_censored,lower_better,1.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,12
+custom3,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,805.0463876294803,396.51157089603623,1212.639036638063,0.0,1.0,0.009765625,0.84,0.0,12
+custom5,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,0.04053905390539054,0.0188018801880188,0.05864148914891488,0.0006,0.0003,0.01953125,0.84,0.0016,12
+custom5,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,-1.6122112211221094,-11.721681043104306,8.62185331033103,0.7674,0.6163,0.845703125,0.0,1.0,12
+custom5,episodes_to_threshold,secondary_censored,lower_better,1.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,12
+custom5,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,119.20280121601931,-144.0558637164355,366.22573828984355,0.3654,0.8173,0.4921875,0.22,0.5481,12
+custom9,auc_goal,primary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,-0.06171117111711172,-0.08240461546154616,-0.03617336733673369,0.0,1.0,0.00390625,-0.84,0.0,12
+custom9,auc_reward,secondary,higher_better,,10,1;2;3;4;5;6;7;8;9;10,-26.946174617461743,-34.02328070307031,-19.45527440244024,0.0,1.0,0.001953125,-1.0,0.0,12
+custom9,episodes_to_threshold,secondary_censored,lower_better,1.0,10,1;2;3;4;5;6;7;8;9;10,0.0,0.0,0.0,1.0,1.0,1.0,0.0,1.0,12
+custom9,mean_first_goal,secondary,lower_better,,10,1;2;3;4;5;6;7;8;9;10,117.10064287836974,-9.97341097868965,241.02824105571256,0.0656,0.9672,0.130859375,0.52,0.11245714285714288,12

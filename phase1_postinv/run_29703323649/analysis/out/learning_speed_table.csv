@@ -1,0 +1,17 @@
+profile,condition,metric,metric_tier,direction,n_seeds,mean,ci_lo,ci_hi
+lab2,ql_true,auc_goal,primary,higher_better,10,0.99783261087029,0.9955985328442812,0.9991663887962654
+lab2,ql_true,auc_reward,secondary,higher_better,10,209.1314438146049,206.04878292764255,212.41492872624207
+lab2,ql_true,episodes_to_threshold,secondary_censored,lower_better,10,99.0,99.0,99.0
+lab2,ql_true,mean_first_goal,secondary,lower_better,10,1280.0215711633284,1259.3458762617893,1301.7572287516123
+lab2,ql_false,auc_goal,primary,higher_better,10,0.9811770590196731,0.9753584528176059,0.9870456818939648
+lab2,ql_false,auc_reward,secondary,higher_better,10,205.58546182060687,200.83984244748248,209.9099583194398
+lab2,ql_false,episodes_to_threshold,secondary_censored,lower_better,10,99.0,99.0,99.0
+lab2,ql_false,mean_first_goal,secondary,lower_better,10,1301.051965577822,1290.3909200631417,1312.2002307077637
+lab3,ql_true,auc_goal,primary,higher_better,10,0.9976658886295432,0.9949816605535178,0.9995665221740578
+lab3,ql_true,auc_reward,secondary,higher_better,10,216.53007669223075,212.75271757252418,220.77112995998664
+lab3,ql_true,episodes_to_threshold,secondary_censored,lower_better,10,99.0,99.0,99.0
+lab3,ql_true,mean_first_goal,secondary,lower_better,10,1350.5532205660436,1332.5925500459102,1366.1022458838152
+lab3,ql_false,auc_goal,primary,higher_better,10,0.9833277759253084,0.9801267089029677,0.9868460320106703
+lab3,ql_false,auc_reward,secondary,higher_better,10,215.95688562854284,212.02247165721909,219.8513879626542
+lab3,ql_false,episodes_to_threshold,secondary_censored,lower_better,10,99.0,99.0,99.0
+lab3,ql_false,mean_first_goal,secondary,lower_better,10,1349.138414079706,1323.7629521812962,1372.3527286046246

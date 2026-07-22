@@ -1,0 +1,365 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick:  <https://brickschema.org/schema/Brick#> .
+@prefix elem:   <http://w3id.org/elementary#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
+@prefix sosa:   <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:    <http://example.org/was/lab#> .
+@prefix ws:     <http://example.org/was/lab/stereotypes#> .
+
+# ===========================================================================
+#  LAB "MONITOR" — EMERGENCY FALLBACK  (Phase 2.5 extension)
+# ---------------------------------------------------------------------------
+#  SELF-CONTAINED domain ontology. Loaded via ont(["building_6_monitor.ttl"])
+#  WITHOUT lab-ontology.ttl or wot-mappings.ttl, so nothing outside this file
+#  leaks into StereotypeReasoner discovery. Adding a Monitor slot here changes
+#  ONLY this lab's state space — every existing lab (lab1..lab5) and its
+#  warm-startable Q-tables are bit-for-bit unaffected.
+#
+#  RESEARCH QUESTION (advisor-aligned):
+#    A computer MONITOR is not a lighting device. Its PRIMARY output is
+#    displayed information; a modest increase in room illuminance is only a
+#    SIDE-EFFECT of the screen being on. Crucially it is a WEAK light: it cannot
+#    by itself raise the room to the goal illuminance rank. We ask whether a
+#    physics/KG-primed agent, when the primary task lamp fails and the goal
+#    becomes UNREACHABLE, recognises the monitor as an unconventional BEST-EFFORT
+#    fallback light source (getting AS CLOSE AS POSSIBLE to the goal) faster than
+#    a tabula-rasa agent — and correctly NOTIFIES the user of the shortfall.
+#
+#  Single zone, TWO Causes actuators:
+#    - CeilingLight_Z1  primary task lamp     (+400 lux → rank 3)  LampIncandescent
+#    - Monitor_Z1       screen, light side-effect (+260 lux → rank 2 only, WEAK) MonitorStereotype (NEW)
+#
+#  Physics (simulator_flow_labmon.json, port 1899):
+#     Z1Level = 25 (ambient)
+#            + (Z1Light   ? 400 : 0)     primary lamp (Causes, reaches rank 3)
+#            + (Z1Monitor ? 260 : 0)     monitor light side-effect (Causes, reaches rank 2 only)
+#  No sunshine, no blinds, no cross-zone: fully DETERMINISTIC.
+#  State vector = [Z1Level(0..3), Z1Light(0/1), Z1Monitor(0/1)]
+#              = 4 * 2 * 2 = 16 states. light_bounds [50,100,300] → rank 3 = >300.
+#
+#  Well-posedness (Phase 2.5b — proof-gated best-effort degradation):
+#    CLEAN lab:
+#      lamp on    → 425 = rank 3  (the ONLY single-action rank-3 lever)
+#      monitor on → 285 = rank 2  (insufficient for the goal)
+#    Because the lamp is the ONLY way to reach the goal, BOTH arms converge to
+#    it with NO cost signal and NO Q-init bias — so the lamp is on the greedy
+#    path and its death is exercised and DETECTED.
+#    FAULTY lab (labmon_f1dead, primary lamp DEAD):
+#      goal rank 3 is now UNREACHABLE. best achievable = rank 2 via the monitor.
+#    After the lamp is blacklisted the adapt agent runs a DETERMINISTIC
+#    reachability probe over the surviving actuators, PROVES rank 3 is
+#    unreachable, lowers the effective goal to the closest achievable rank
+#    (rank 2), NOTIFIES the user, and re-learns toward that best-effort target.
+#    The recovery-SPEED contrast is well-posed against the effective (best-
+#    effort) goal: does the KG-primed agent settle on the monitor fallback and
+#    reach rank 2 faster than the tabula-rasa agent? The monitor is "not
+#    something we willingly use" in the precise sense that it is WEAK — it can
+#    only get us CLOSE to the goal, never all the way — not that it is costly.
+# ===========================================================================
+
+
+# ===========================================================================
+# Property declarations (self-contained — mirrors lab-ontology.ttl + wot-mappings.ttl)
+# ===========================================================================
+
+brick:feeds   owl:equivalentProperty elem:feeds .
+sosa:observes owl:equivalentProperty elem:observes .
+
+elem:increases a owl:ObjectProperty ;
+    rdfs:label "increases (Causes shortcut)" .
+
+ws:zoneIndex a owl:DatatypeProperty ;
+    rdfs:label "Zone index" ; rdfs:range xsd:integer .
+
+ws:actionValue a owl:DatatypeProperty ;
+    rdfs:label "Action boolean value" ; rdfs:range xsd:boolean .
+
+ws:rankBound_1 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_2 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_3 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+
+ws:hasWoTActionSemanticType a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:hasWoTStateSemanticType  a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:stateVecIndex   a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateDomainSize a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
+
+
+# ===========================================================================
+# 1.  PHYSICAL MECHANISMS
+# ===========================================================================
+
+# Incandescent lamp: Causes mechanism (no independent variable → unconditional
+# positive effect on indoor illuminance).
+ws:pm_incandescent_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_incandescent_light_emission" ;
+    elem:hasManipulatedVariable elem:electrical_power_input ;
+    elem:hasDependentVariable   elem:luminiscence ;
+    elem:increases              elem:luminiscence .
+
+# Monitor operation: a computer display. Its PRIMARY dependent variable is the
+# information it shows on screen; raising indoor illuminance is a SIDE-EFFECT of
+# the backlight. Modelled as a Causes mechanism on illuminance (unconditional
+# positive sign) with MULTIPLE dependent variables. StereotypeReasoner's
+# actuator-discovery query keeps only the dependent variable whose quantity is
+# qudtqk:Illuminance, so the monitor contributes exactly one ON/OFF action pair
+# on the lighting stream even though it "does several things".
+ws:pm_monitor_operation a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_monitor_operation" ;
+    rdfs:comment """
+        A computer monitor converts electrical power into (a) displayed visual
+        information — its PRIMARY, intended output — and (b) a modest amount of
+        emitted visible light as a SIDE-EFFECT of the screen backlight. Only the
+        side-effect (elem:luminiscence, quantity Illuminance) is relevant to the
+        lighting-control task; the agent may exploit it as an unconventional
+        fallback light source when the primary lamp fails.
+    """ ;
+    elem:hasManipulatedVariable ws:monitor_power_input ;
+    elem:hasDependentVariable   ws:displayed_information ;   # PRIMARY output (not Illuminance → not actuated as a light)
+    elem:hasDependentVariable   elem:luminiscence ;          # SIDE-EFFECT (Illuminance → discovered as a light action)
+    elem:increases              elem:luminiscence .
+
+# Indoor illuminance sensing (passive measurement; not actuatable).
+ws:illuminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illuminance sensing" ;
+    elem:hasIndependentVariable elem:luminiscence ;
+    elem:hasDependentVariable   ws:sensedIlluminance .
+
+
+# ===========================================================================
+# 2.  PROCESS VARIABLES
+# ===========================================================================
+
+elem:electrical_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to light" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+ws:monitor_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to monitor" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower .
+
+# The monitor's PRIMARY output. Deliberately NOT an Illuminance quantity, so the
+# actuator-discovery FILTER EXISTS { ?dv elem:hasQuantity Illuminance } drops it.
+ws:displayed_information a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Displayed on-screen information" ;
+    elem:dealsWithStuff  ws:VisualInformation ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:DimensionlessRatio .
+
+elem:luminiscence a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor illuminance level" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor illuminance signal" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "100"^^xsd:decimal ;
+    ws:rankBound_3       "300"^^xsd:decimal .
+
+
+# ===========================================================================
+# 3.  PHYSICAL STUFF + STREAM KIND
+# ===========================================================================
+
+elem:photons a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visible light (photons)" .
+
+ws:VisualInformation a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visual information (pixels on screen)" .
+
+ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor lighting stream" .
+
+
+# ===========================================================================
+# 4.  COMPONENT STEREOTYPES
+# ===========================================================================
+
+ws:LampIncandescentStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Incandescent lamp stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_incandescent_light_emission ;
+    elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet .
+
+ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of incandescent lamp" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    elem:electrical_power_input .
+
+ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of incandescent lamp" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+# NEW stereotype — a computer monitor whose light output is a side-effect.
+ws:MonitorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Computer monitor stereotype" ;
+    rdfs:comment """
+        A monitor (display screen) driven by electrical power. Its PRIMARY
+        function is showing information; it also emits visible light as a
+        side-effect (pm_monitor_operation → elem:increases elem:luminiscence).
+        Consequently the KG advertises the monitor as a Causes light source that
+        the agent may fall back on when the primary lamp is unavailable.
+    """ ;
+    elem:hasPhysicalMechanism ws:pm_monitor_operation ;
+    elem:hasConnectionPoint  ws:cp_monitor_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_monitor_info_outlet ;
+    elem:hasConnectionPoint  ws:cp_monitor_photon_outlet .
+
+ws:cp_monitor_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of monitor" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:monitor_power_input .
+
+ws:cp_monitor_info_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "On-screen information outlet of monitor (primary)" ;
+    elem:dealsWithStuff        ws:VisualInformation ;
+    elem:isRelatedToVariable   ws:displayed_information .
+
+ws:cp_monitor_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Light outlet of monitor (side-effect)" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor light sensor stereotype" ;
+    elem:hasPhysicalMechanism ws:illuminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet .
+
+ws:cp_lightsensor_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable elem:luminiscence ;
+    elem:suitableFor         ws:IndoorLightingStream .
+
+ws:cp_lightsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:sensedIlluminance .
+
+
+# ===========================================================================
+# 5.  BUILDING TOPOLOGY (single zone)
+# ===========================================================================
+
+lab:Workstation a owl:Class ;
+    rdfs:label "Workstation" ;
+    rdfs:subClassOf brick:Space .
+
+lab:MonitorBuilding a brick:Building ;
+    rdfs:label "Lab Monitor (Emergency Fallback) Building" ;
+    brick:hasPart lab:Lab .
+
+lab:Lab a brick:Room ;
+    rdfs:label "Lab monitor room" ;
+    brick:hasPart lab:Zone1 .
+
+lab:Zone1 a lab:Workstation ;
+    rdfs:label "Workstation 1" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 1 .
+
+
+# ===========================================================================
+# 6.  COMPONENT INSTANCES (primary lamp, monitor, sensor)
+# ===========================================================================
+
+lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
+    rdfs:label "Indoor illuminance sensor equipment" ;
+    rdfs:subClassOf brick:Sensor_Equipment .
+
+lab:CeilingLight_Z1 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Primary incandescent task lamp – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:Monitor_Z1 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Computer monitor (display, light side-effect) – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:MonitorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorIlluminance_Z1 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:IndoorLightingStream a elem:Stream ;
+    rdfs:label "Indoor lighting process stream" ;
+    elem:hasStreamKind ws:IndoorLightingStream .
+
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 1" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+
+# ===========================================================================
+# 7.  TOPOLOGICAL CONNECTIONS (same-zone only — NO cross-zone feeds)
+# ===========================================================================
+
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z1 .
+lab:Monitor_Z1       brick:feeds  lab:LightSensor_Z1 .
+
+
+# ===========================================================================
+# 8.  COMPONENT ACTIONS
+# ===========================================================================
+
+ws:SetZ1Light_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Light_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z1 elem:hasComponentAction ws:SetZ1Light_ON, ws:SetZ1Light_OFF .
+
+ws:SetZ1Monitor_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Monitor_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Monitor_Z1 elem:hasComponentAction ws:SetZ1Monitor_ON, ws:SetZ1Monitor_OFF .
+
+
+# ===========================================================================
+# 9.  STATE VECTOR SLOT REGISTRY  (length 3 → [Z1Level, Z1Light, Z1Monitor])
+# ===========================================================================
+
+lab:Slot_ZoneLevel_Z1
+    ws:stateVecIndex   0 ;
+    ws:stateDomainSize 4 ;
+    ws:stateSlotRole   "zone_level" ;
+    ws:zoneIndex       1 .
+
+
+# ===========================================================================
+# 10.  WoT ACTION / STATE MAPPINGS  (the discovery gate)
+# ===========================================================================
+
+lab:CeilingLight_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:stateVecIndex            1 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .
+
+lab:Monitor_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Monitor" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Monitor" ;
+    ws:stateVecIndex            2 ;
+    ws:stateDomainSize          2 ;
+    ws:stateSlotRole            "boolean_actuator" .

@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "profile": "lab1",
+  "stereotype": "false",
+  "run_mode": "phase1",
+  "timestamp": "2026-07-10T16:02:30.1227249+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_false_lab1.csv",
+    "qtable_initial_stereotypes_false_lab1.csv",
+    "metrics_stereotypes_false_lab1.csv",
+    "iv_stats_stereotypes_false_lab1.json",
+    "coverage_stereotypes_false_lab1.csv",
+    "first_goal_stereotypes_false_lab1.csv",
+    "learned_stereotypes_false_lab1.ttl"
+  ]
+}

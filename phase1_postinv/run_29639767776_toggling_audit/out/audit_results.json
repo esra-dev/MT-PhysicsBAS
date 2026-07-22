@@ -1,0 +1,147 @@
+{
+  "registration": "THESIS_STATE_REPORT.md Addendum 2026-07-18c \u00a71",
+  "run": 29639767776,
+  "lab": "lab3",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "G3": {
+    "pass": true,
+    "hashes": {
+      "qtable_initial_stereotypes_true_lab3.csv": {
+        "regen_A": "a900d6961140228c00b16573201bf879ac37643868d7c26359b597cc65c94611",
+        "regen_B": "a900d6961140228c00b16573201bf879ac37643868d7c26359b597cc65c94611"
+      },
+      "qtable_initial_stereotypes_true_lab3_zone1.csv": {
+        "regen_A": "bcab3ce0025e9d028c694983c44786036ae69f134732b85419d52b178c75e41d",
+        "regen_B": "bcab3ce0025e9d028c694983c44786036ae69f134732b85419d52b178c75e41d"
+      },
+      "qtable_initial_stereotypes_true_lab3_zone2.csv": {
+        "regen_A": "94bb0d30386d65496b63715371a5d3025c07a128ca5bb9f1bb0b01e0ac97adc1",
+        "regen_B": "94bb0d30386d65496b63715371a5d3025c07a128ca5bb9f1bb0b01e0ac97adc1"
+      }
+    }
+  },
+  "init_table_rows": 2048,
+  "G1": {
+    "pass": true,
+    "ql_true": {
+      "episodes": 800,
+      "exact": 800,
+      "frac": 1.0
+    },
+    "ql_false": {
+      "episodes": 800,
+      "exact": 800,
+      "frac": 1.0
+    }
+  },
+  "G2": {
+    "pass": true,
+    "pooled_frac": 1.0,
+    "pooled_qualifying": 1885,
+    "pooled_ok": 1885,
+    "ql_true": {
+      "qualifying": 1050,
+      "pass": 1050,
+      "unmappable": 0,
+      "frac": 1.0
+    },
+    "ql_false": {
+      "qualifying": 835,
+      "pass": 835,
+      "unmappable": 0,
+      "frac": 1.0
+    }
+  },
+  "event_tallies": {
+    "ql_true": {
+      "D1_flips": 1050,
+      "D2_toggles": 545,
+      "D3_greedy_toggles": 545,
+      "toggle_stuck_split": {
+        "stuck": 0,
+        "greedy": 545
+      }
+    },
+    "ql_false": {
+      "D1_flips": 455,
+      "D2_toggles": 90,
+      "D3_greedy_toggles": 90,
+      "toggle_stuck_split": {
+        "stuck": 0,
+        "greedy": 90
+      }
+    }
+  },
+  "S1": {
+    "pass": true,
+    "greedy_frac_of_toggles": 1.0
+  },
+  "descriptive_cycling_delta": {
+    "D1_flip_delta_true_minus_false": 595,
+    "D2_toggle_delta_true_minus_false": 455,
+    "toggle_share_of_delta": 0.7647058823529411
+  },
+  "pooled_unique_greedy_toggle_pairs": 13,
+  "minimum_data": {
+    "pass": false,
+    "n": 13,
+    "required": 20
+  },
+  "P1": {
+    "pass": false,
+    "median_visits": 159,
+    "threshold": 5,
+    "visits": [
+      234,
+      234,
+      158,
+      155,
+      153,
+      153,
+      159,
+      159,
+      126,
+      123,
+      424,
+      190,
+      194
+    ],
+    "descriptive_nontoggle_median": 194,
+    "descriptive_nontoggle_n": 9
+  },
+  "P2": {
+    "pass": true,
+    "rate": 1.0,
+    "successes": 13,
+    "n": 13,
+    "tie_adjusted_chance": 0.2727272727272727,
+    "required_rate": 0.4727272727272727,
+    "mc_p": 9.99990000099999e-06,
+    "mc_draws": 100000,
+    "mc_seed": 20260718
+  },
+  "P3": {
+    "pass": false,
+    "indeterminate": true,
+    "control_aligns": false,
+    "states": 13,
+    "excluded_no_preference": 0,
+    "decidable": 13,
+    "rate": 0.07692307692307693,
+    "successes": 1,
+    "tie_adjusted_chance": 0.2727272727272727,
+    "mc_p": 0.983990160098399
+  },
+  "decision": "INDETERMINATE (insufficient toggling to instrument)"
+}

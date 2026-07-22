@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "profile": "lab1",
+  "stereotype": "false",
+  "run_mode": "phase1_kg_xzone",
+  "timestamp": "2026-06-13T08:12:27.3004915+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_false_lab1.csv",
+    "qtable_initial_stereotypes_false_lab1.csv",
+    "metrics_stereotypes_false_lab1.csv",
+    "iv_stats_stereotypes_false_lab1.json",
+    "coverage_stereotypes_false_lab1.csv",
+    "first_goal_stereotypes_false_lab1.csv",
+    "learned_stereotypes_false_lab1.ttl"
+  ]
+}

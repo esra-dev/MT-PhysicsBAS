@@ -1,0 +1,655 @@
+<!DOCTYPE html><html><head>
+      <title>PHASE4</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\esrad\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.30\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-details{margin:0;padding:0;border:none}.markdown-preview .md-toc summary.md-toc-link-wrapper{cursor:pointer;list-style-position:outside}.markdown-preview .md-toc summary.md-toc-link-wrapper::marker{font-size:.85em}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='0']{margin-left:12px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='1']{margin-left:28px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='2']{margin-left:44px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='3']{margin-left:60px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='4']{margin-left:76px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='5']{margin-left:80px}.markdown-preview a.tag,.markdown-preview a.tag:active,.markdown-preview a.tag:link,.markdown-preview a.tag:visited,.markdown-preview span.tag:not(.token){display:inline-block;background-color:var(--vscode-badge-background,rgba(127,127,127,.18));color:var(--vscode-badge-foreground,currentColor);border-radius:2em;font-size:.85em;font-weight:500;padding:.05em .55em;line-height:1.5;white-space:nowrap;text-decoration:none;text-shadow:none;box-shadow:none;transition:background-color .12s ease,opacity .12s ease}.markdown-preview a.tag{cursor:pointer}.markdown-preview a.tag:focus,.markdown-preview a.tag:hover{background-color:var(--vscode-badge-background,rgba(127,127,127,.32));color:var(--vscode-badge-foreground,currentColor);opacity:.85;text-decoration:none;outline:0}.markdown-preview .wikilink-embed-content{border-left:3px solid var(--vscode-textBlockQuote-border,rgba(128,128,128,.3));background:var(--vscode-textBlockQuote-background,rgba(128,128,128,.05));margin:.5em 0;padding:.5em .75em;border-radius:0 3px 3px 0}.markdown-preview .wikilink-embed-content.wikilink-embed-error{border-left-color:var(--vscode-errorForeground,#cf222e);color:var(--vscode-errorForeground,#cf222e);font-style:italic;opacity:.8}.markdown-preview .wikilink-embed-content h1:first-child,.markdown-preview .wikilink-embed-content h2:first-child,.markdown-preview .wikilink-embed-content h3:first-child,.markdown-preview .wikilink-embed-content h4:first-child,.markdown-preview .wikilink-embed-content h5:first-child,.markdown-preview .wikilink-embed-content h6:first-child{margin-top:.25em}.markdown-preview .wikilink-embed-content .wikilink-embed-content{margin:.25em 0;padding:.25em .5em}.markdown-preview .block-id{display:none}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));border:4px solid var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));background-clip:content-box}.scrollbar-style::-webkit-scrollbar-thumb:hover{background-color:var(--vscode-scrollbarSlider-hoverBackground,rgba(120,120,120,.66))}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));border:4px solid var(--vscode-scrollbarSlider-background,rgba(150,150,150,.66));background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb:hover{background-color:var(--vscode-scrollbarSlider-hoverBackground,rgba(120,120,120,.66))}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-details{margin:0;padding:0;border:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='0']{padding-left:0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='1']{padding-left:16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='2']{padding-left:32px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='3']{padding-left:48px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='4']{padding-left:64px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='5']{padding-left:80px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. -->
+<script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script>
+    </head>
+    <body for="html-export">
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="phase-4--hidden-dependencies-energy-aware-goals-and-the-kg-vs-llm-comparison">Phase 4 — Hidden Dependencies, Energy-Aware Goals, and the KG-vs-LLM Comparison </h1>
+<p><strong>Project:</strong> MT-Esra (Knowledge-Guided RL for Building Automation)<br>
+<strong>Stack:</strong> JaCaMo (Jason AgentSpeak BDI + CArtAgO) · Q-Learning · Knowledge Graph / Stereotypes · Node-RED labs<br>
+<strong>Branch:</strong> <code>phase4-dependencies-energy</code><br>
+<strong>Builds on:</strong> Phase 1 "clean lab ladder" (<code>lab1</code>/<code>lab2</code>/<code>lab3</code>), which already compares a KG-primed Q-learner (<code>ql_true</code>) against a tabula-rasa Q-learner (<code>ql_false</code>).</p>
+<hr>
+<h2 id="1-what-changed-conceptually">1. What changed conceptually </h2>
+<p>Phase 1 proved that KG-priming <strong>accelerates learning in clean labs</strong>. Phase 2 added <strong>fault detection</strong>, Phase 3 added <strong>temporal-dynamics learning</strong>. Phase 4 adds the two capabilities the advisor asked for and frames the overarching comparison against an LLM:</p>
+<ol>
+<li>
+<p><strong>Hidden dependencies (lab4 — smart plug).</strong> The Zone-1 ceiling lamp is wired behind a <em>smart plug</em>. The lamp emits light <strong>only when both its own switch AND the plug are ON</strong>. The dependency is <em>known in the knowledge graph</em> (<code>ws:powerGates</code> / <code>ws:poweredBy</code>). The KG-primed learner enables the plug first; the tabula-rasa learner must discover the dependency by trial and error (and is punished by the no-effect penalty for switching the lamp while the plug is off).</p>
+</li>
+<li>
+<p><strong>Energy-aware goals (lab5 — efficient vs inefficient lamps).</strong> Each zone has <strong>two directly-actionable lamps with identical brightness (+400 lux) but different energy cost</strong> (efficient = 1 unit/tick, inefficient = 4 units/tick), encoded as <code>ws:energyCost</code> in the KG. The goal is energy-aware: <em>"both zones bright AND steady-state power ≤ budget."</em> Energy is <strong>not</strong> part of the Q-reward; only the KG-primed agent — through a new <strong>non-fading energy prior</strong> — prefers the efficient lamp (or the zero-energy blinds when daylight suffices). The tabula-rasa agent is energy-blind.</p>
+</li>
+<li>
+<p><strong>The overarching KG-vs-LLM framing.</strong> An <strong>offline, reproducible LLM baseline</strong> (<a href="../analysis/phase4_llm_baseline.py">analysis/phase4_llm_baseline.py</a>) plays the same scenarios with a <em>general-knowledge</em> controller that sees commonsense device facts (a lamp brightens a room, a blind admits free daylight) but <strong>not</strong> the KG's hidden facts (no wiring diagram, no per-device energy datasheet). This operationalises the thesis claim: <em>the KG informs the agent better than an LLM is informed by its general knowledge.</em></p>
+</li>
+</ol>
+<blockquote>
+<p><strong>The most important comparison remains within-lab <code>ql_true</code> vs <code>ql_false</code></strong> (KG-primed vs tabula-rasa Q-learning), measured to statistical significance across seeds. The LLM baseline is the <em>framing</em> layer on top.</p>
+</blockquote>
+<h3 id="separation-of-concerns">Separation of concerns </h3>
+<p>Unlike Phases 2–3, Phase 4 <strong>does</strong> touch the two core Java files — but <strong>only additively, gated, and backward-compatibly</strong> (explicitly approved):</p>
+<ul>
+<li>Every new behaviour is <strong>off by default</strong>. The energy prior weight defaults to <code>0.0</code>; the power-gate query returns nothing unless a KG declares <code>ws:powerGates</code>. Labs 1–4 are bit-for-bit unaffected even when the energy knob is set, because only lab5's KG declares <code>ws:energyCost</code>.</li>
+<li>No Phase 1/2/3 lab profile, ontology, simulator flow, scenario set, Gradle task, runner default, analysis script, or workflow is modified. Phase 1–3 results remain reproducible.</li>
+</ul>
+<hr>
+<h2 id="2-the-two-new-labs">2. The two new labs </h2>
+<p>Both labs fork the Phase 1 <code>lab3</code> template (two zones, target rank 3 = "bright", deterministic Node-RED physics, <strong>no</strong> <code>Math.random</code> in the per-tick update, sun ∈ {0, 100, 400, 900}). Shared physics constants: <code>AMBIENT=25</code>, <code>LAMP_PRIMARY=+400</code> (own zone), <code>LAMP_CROSS=+150</code> (adjacent zone), <code>BLIND_PRIMARY=0.50·sun</code>, <code>BLIND_CROSS=0.40·sun</code>, <code>SPOTLIGHT=+150</code> (both zones). Discretisation bounds <code>[50,100,300]</code> → rank 0/1/2/3; target rank 3 means zone level ≥ 300.</p>
+<h3 id="21-lab4--smart-plug-dependency-port-1897-suffix-_lab4">2.1 lab4 — smart-plug dependency (port 1897, suffix <code>_lab4</code>) </h3>
+<table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Knowledge graph</td>
+<td><a href="../src/resources/building_4_smartplug.ttl">src/resources/building_4_smartplug.ttl</a></td>
+</tr>
+<tr>
+<td>WoT Thing Description</td>
+<td><a href="../src/resources/interactions-lab4.ttl">src/resources/interactions-lab4.ttl</a></td>
+</tr>
+<tr>
+<td>Node-RED simulator</td>
+<td><a href="../simulator/simulator_flow_lab4.json">simulator/simulator_flow_lab4.json</a></td>
+</tr>
+<tr>
+<td>Benchmark scenarios</td>
+<td><a href="../benchmark/scenarios_lab4.json">benchmark/scenarios_lab4.json</a></td>
+</tr>
+<tr>
+<td>Training scenarios</td>
+<td><a href="../benchmark/train_scenarios_lab4.json">benchmark/train_scenarios_lab4.json</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>State vector (9 slots):</strong> <code>[Z1Level, Z2Level, Z1Light, Z2Light, Z1Blinds, Z2Blinds, Spotlight, PlugZ1, Sunshine]</code>. The new slot is <code>PlugZ1</code> (index 7). 4096 reachable states.</p>
+<p><strong>Hidden dependency (AND-gate):</strong> the Zone-1 lamp's contribution is</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>z1lamp_on = Z1Light AND PlugZ1
+z1_level   = 25 + (z1lamp_on ? 400 : 0) + (Z2Light ? 150 : 0)
+                + (Z1Blinds ? 0.50·sun : 0) + (Z2Blinds ? 0.40·sun : 0) + (Spotlight ? 150 : 0)
+</code></pre><p>Zone-2's lamp is directly actionable (no plug). Energy per tick = <code>(z1lamp_on?1) + (Z2Light?1) + (Spotlight?2)</code>; the plug draws nothing on its own.</p>
+<p><strong>How the KG encodes it:</strong> <code>building_4_smartplug.ttl</code> declares a <code>ws:SmartPlugStereotype</code> (so the plug is <em>discovered</em> as an actuator), and the dependency triple</p>
+<pre data-role="codeBlock" data-info="turtle" class="language-turtle turtle"><code><span class="token function"><span class="token prefix">lab<span class="token punctuation">:</span></span><span class="token local-name">SmartPlug_Z1</span></span>   <span class="token function"><span class="token prefix">ws<span class="token punctuation">:</span></span><span class="token local-name">powerGates</span></span>  <span class="token function"><span class="token prefix">lab<span class="token punctuation">:</span></span><span class="token local-name">CeilingLight_Z1</span></span> <span class="token punctuation">.</span>
+<span class="token function"><span class="token prefix">lab<span class="token punctuation">:</span></span><span class="token local-name">CeilingLight_Z1</span></span> <span class="token function"><span class="token prefix">ws<span class="token punctuation">:</span></span><span class="token local-name">poweredBy</span></span>  <span class="token function"><span class="token prefix">lab<span class="token punctuation">:</span></span><span class="token local-name">SmartPlug_Z1</span></span> <span class="token punctuation">.</span>
+</code></pre><h3 id="22-lab5--energy-aware-port-1898-suffix-_lab5">2.2 lab5 — energy-aware (port 1898, suffix <code>_lab5</code>) </h3>
+<table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Knowledge graph</td>
+<td><a href="../src/resources/building_5_energy.ttl">src/resources/building_5_energy.ttl</a></td>
+</tr>
+<tr>
+<td>WoT Thing Description</td>
+<td><a href="../src/resources/interactions-lab5.ttl">src/resources/interactions-lab5.ttl</a></td>
+</tr>
+<tr>
+<td>Node-RED simulator</td>
+<td><a href="../simulator/simulator_flow_lab5.json">simulator/simulator_flow_lab5.json</a></td>
+</tr>
+<tr>
+<td>Benchmark scenarios</td>
+<td><a href="../benchmark/scenarios_lab5.json">benchmark/scenarios_lab5.json</a></td>
+</tr>
+<tr>
+<td>Training scenarios</td>
+<td><a href="../benchmark/train_scenarios_lab5.json">benchmark/train_scenarios_lab5.json</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>State vector (10 slots):</strong> <code>[Z1Level, Z2Level, Z1Eff, Z1Ineff, Z2Eff, Z2Ineff, Z1Blinds, Z2Blinds, Spotlight, Sunshine]</code>. Two lamps per zone. 8192 reachable states.</p>
+<p><strong>Identical brightness, different cost:</strong> within a zone, <code>anyLamp = Eff OR Ineff</code> contributes <code>+400</code> once (turning <em>both</em> on wastes energy for no extra light). Cross-zone <code>+150</code> from <code>anyLamp</code>. Energy per tick:</p>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>power = (Z1Eff?1) + (Z1Ineff?4) + (Z2Eff?1) + (Z2Ineff?4) + (Spotlight?2)
+</code></pre><p><strong>How the KG encodes it:</strong> each lamp instance carries a <code>ws:energyCost</code> datatype property (efficient = 1, inefficient = 4, spotlight = 2, blinds = 0):</p>
+<pre data-role="codeBlock" data-info="turtle" class="language-turtle turtle"><code><span class="token function"><span class="token prefix">lab<span class="token punctuation">:</span></span><span class="token local-name">EffLight_Z1</span></span>   <span class="token function"><span class="token prefix">ws<span class="token punctuation">:</span></span><span class="token local-name">energyCost</span></span> <span class="token number">1</span> <span class="token punctuation">.</span>
+<span class="token function"><span class="token prefix">lab<span class="token punctuation">:</span></span><span class="token local-name">IneffLight_Z1</span></span> <span class="token function"><span class="token prefix">ws<span class="token punctuation">:</span></span><span class="token local-name">energyCost</span></span> <span class="token number">4</span> <span class="token punctuation">.</span>
+</code></pre><p><strong>Energy budget:</strong> <a href="../benchmark/scenarios_lab5.json">benchmark/scenarios_lab5.json</a> adds an <code>energyBudget</code> field (default <strong>2</strong>) per scenario. A budget of 2 is satisfied by two efficient lamps (1 + 1) or by free daylight (blinds = 0); it is <em>violated</em> by any inefficient lamp (4), a redundant double-lamp, or the spotlight (+2 on top).</p>
+<hr>
+<h2 id="3-new-kg-vocabulary">3. New KG vocabulary </h2>
+<table>
+<thead>
+<tr>
+<th>Predicate</th>
+<th>Type</th>
+<th>Lab</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ws:powerGates</code></td>
+<td>object property</td>
+<td>lab4</td>
+<td><code>plug ws:powerGates lamp</code> — the lamp emits light only when the plug's state slot is ON</td>
+</tr>
+<tr>
+<td><code>ws:poweredBy</code></td>
+<td>object property</td>
+<td>lab4</td>
+<td>inverse of <code>ws:powerGates</code> (documentary)</td>
+</tr>
+<tr>
+<td><code>ws:plugPowerSwitch</code></td>
+<td>process var</td>
+<td>lab4</td>
+<td>the plug's manipulated variable (so the <code>SmartPlugStereotype</code> is discoverable)</td>
+</tr>
+<tr>
+<td><code>ws:energyCost</code></td>
+<td>datatype property (<code>owl:DatatypeProperty</code>)</td>
+<td>lab5</td>
+<td>per-actuator energy draw used by the energy prior</td>
+</tr>
+</tbody>
+</table>
+<p>Both KGs are <strong>self-contained</strong> — they parse standalone (no shared lab-ontology / WoT-mappings import), as asserted by the regression test in §6.</p>
+<hr>
+<h2 id="4-core-java-changes-additive-gated-backward-compatible">4. Core Java changes (additive, gated, backward-compatible) </h2>
+<h3 id="41-stereotypereasonerjava--discover-the-plug-gate-and-the-energy-cost">4.1 <code>StereotypeReasoner.java</code> — discover the plug gate and the energy cost </h3>
+<p><a href="../src/env/tools/StereotypeReasoner.java">src/env/tools/StereotypeReasoner.java</a>:</p>
+<ul>
+<li><strong><code>ActionInfo.energyCost</code></strong> — new <code>double</code> field, default <code>0.0</code>.</li>
+<li><strong>Actuator-discovery query</strong> gains an <code>OPTIONAL { ?comp ws:energyCost ?energyCost }</code>; the value is parsed onto <code>ActionInfo.energyCost</code> (max across rows). Absent ⇒ stays <code>0.0</code>.</li>
+<li><strong><code>POWER_GATE_QUERY</code> + <code>discoverPowerGates()</code></strong> — for every <code>gate ws:powerGates lamp</code>, the gated lamp's <strong>ON</strong> action is marked <strong>IV-gated on the plug's state slot</strong>: <code>hasIV = true</code>, <code>ivStateVecIndex = plugSlot (7)</code>, <code>ivMinRank = 1</code>. This <strong>reuses the existing instrumental-variable (IV) machinery</strong> verbatim — no rule was changed. The lamp-on action is now penalised when the plug is off and rewarded when it is on; the plug-on action (which has no IV) keeps its unconditional enabler bonus, so the agent learns <em>enable the plug first</em>.</li>
+<li>The constructor calls <code>discoverPowerGates()</code> after <code>discoverActuators()</code>. With no <code>ws:powerGates</code> triples the query is empty and nothing changes (labs 1–3).</li>
+</ul>
+<h3 id="42-qlearnerjava--the-non-fading-energy-prior">4.2 <code>QLearner.java</code> — the non-fading energy prior </h3>
+<p><a href="../src/env/tools/QLearner.java">src/env/tools/QLearner.java</a>:</p>
+<pre data-role="codeBlock" data-info="java" class="language-java java"><code><span class="token comment">// Static knob, default 0.0 (OFF). build.gradle forwards -Pstereo.energyPriorWeight.</span>
+<span class="token constant">ENERGY_PRIOR_WEIGHT</span> <span class="token operator">=</span> <span class="token function">parseDoubleProp</span><span class="token punctuation">(</span><span class="token string">"stereo.energyPriorWeight"</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Inside greedyAction(), a persistent NON-FADING term (unlike the decaying KG prior):</span>
+<span class="token keyword keyword-if">if</span> <span class="token punctuation">(</span>useStereotypes <span class="token operator">&amp;&amp;</span> <span class="token constant">ENERGY_PRIOR_WEIGHT</span> <span class="token operator">&gt;</span> <span class="token number">0</span>
+        <span class="token operator">&amp;&amp;</span> actionInfos <span class="token operator">!=</span> <span class="token keyword keyword-null">null</span> <span class="token operator">&amp;&amp;</span> a <span class="token operator">&lt;</span> actionInfos<span class="token punctuation">.</span>length <span class="token operator">&amp;&amp;</span> actionInfos<span class="token punctuation">[</span>a<span class="token punctuation">]</span> <span class="token operator">!=</span> <span class="token keyword keyword-null">null</span>
+        <span class="token operator">&amp;&amp;</span> actionInfos<span class="token punctuation">[</span>a<span class="token punctuation">]</span><span class="token punctuation">.</span>wotValue                 <span class="token comment">// an ON action</span>
+        <span class="token operator">&amp;&amp;</span> actionInfos<span class="token punctuation">[</span>a<span class="token punctuation">]</span><span class="token punctuation">.</span>energyCost <span class="token operator">&gt;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    q <span class="token operator">-=</span> <span class="token constant">ENERGY_PRIOR_WEIGHT</span> <span class="token operator">*</span> actionInfos<span class="token punctuation">[</span>a<span class="token punctuation">]</span><span class="token punctuation">.</span>energyCost<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre><p>This is the <strong>only</strong> way the KG-primed agent prefers the efficient lamp, because energy is deliberately <strong>not</strong> in the Q-reward (<code>computeZoneReward</code> is unchanged). The term is <strong>triple-gated</strong>: <code>useStereotypes</code> (so <code>ql_false</code> never sees it), <code>ENERGY_PRIOR_WEIGHT &gt; 0</code>, and <code>energyCost &gt; 0</code>. At weight 2.0 the inefficient lamp (cost 4) is penalised −8 and the efficient lamp (cost 1) only −2, so the agent prefers efficiency without ever being told "energy is in the reward." Because labs 1–4 have no <code>ws:energyCost</code>, the term is inert there even when the knob is set.</p>
+<h3 id="43-wiring">4.3 Wiring </h3>
+<ul>
+<li><a href="../build.gradle">build.gradle</a> forwards <code>stereo.energyPriorWeight</code> to the JVM.</li>
+<li><a href="../config/run_config.json">config/run_config.json</a>: the global default <code>learning.stereo_energy_prior_weight = 0.0</code>, and a new <strong><code>phase4</code> run-mode profile</strong> sets <code>learning_overrides.stereo_energy_prior_weight = 2.0</code> (3000 episodes, KG prior + PBRS + adaptive-trust on, same timing as <code>phase1</code>). <a href="../run_full_project.ps1">run_full_project.ps1</a> passes the knob through to <strong>both</strong> training and benchmarking.</li>
+<li><a href="../src/agt/lab_profiles.asl">src/agt/lab_profiles.asl</a>: <code>lab4</code>/<code>lab5</code> profile entries (ports 1897/1898, targets rank 3, <code>training_params(3000, 0.9970)</code>).</li>
+<li><code>lab4</code>/<code>lab5</code> are <strong>not</strong> in the default <code>$TrainProfiles</code> set, so a plain <code>phase1</code> run is unchanged; they are selected per-cell with <code>-OnlyProfiles</code>.</li>
+</ul>
+<hr>
+<h2 id="5-analysis-scripts">5. Analysis scripts </h2>
+<h3 id="51-analysisphase4_energypy--the-one-new-metric">5.1 <code>analysis/phase4_energy.py</code> — the one new metric </h3>
+<p><a href="../analysis/phase4_energy.py">analysis/phase4_energy.py</a> computes <strong>lab5 energy-budget compliance</strong>, the only metric not already produced by <code>sweep_report.py</code>. For each replica (seed) it reads the <strong>final</strong> <code>ActuatorState</code> from <code>bench_step_log_&lt;mode&gt;.csv</code>, computes the deterministic steady-state power from the KG power formula, and scores:</p>
+<ul>
+<li><code>goal_rate</code> — fraction of scenarios reaching the goal.</li>
+<li><code>energy_compliance</code> — fraction with <strong>GoalReached AND power ≤ budget</strong> (higher better).</li>
+<li><code>mean_steady_power</code> — average final power (lower better).</li>
+<li><code>over_budget_rate</code> — fraction over budget (lower better).</li>
+</ul>
+<p>It then runs the same statistics as Phase 1/3 — paired bootstrap CIs, Wilcoxon signed-rank, Cliff's delta, BH-FDR — across seeds for <code>ql_true − ql_false</code>, writing <code>phase4_energy_ci.csv</code> and <code>phase4_energy_paired.csv</code>. lab4 (no budget) collapses <code>energy_compliance</code> to <code>goal_rate</code>.</p>
+<h3 id="52-analysisphase4_llm_baselinepy--the-offline-llm-baseline">5.2 <code>analysis/phase4_llm_baseline.py</code> — the offline LLM baseline </h3>
+<p><a href="../analysis/phase4_llm_baseline.py">analysis/phase4_llm_baseline.py</a> replays the <em>same</em> <code>scenarios_lab4.json</code> / <code>scenarios_lab5.json</code> with a <strong>general-knowledge controller</strong> (an offline LLM proxy) that:</p>
+<ul>
+<li>sees commonsense device facts and live brightness feedback, but <strong>not</strong> the KG's hidden wiring/energy facts;</li>
+<li>discovers the lab4 plug only by feedback (a "switch did nothing" observation);</li>
+<li>treats the lab5 efficient and inefficient lamps as <strong>indistinguishable</strong> (an unbiased coin), because brightness alone cannot tell them apart.</li>
+</ul>
+<p>It emits <code>phase4_llm_summary.csv</code> (mirroring the energy columns) and <code>phase4_llm_prompts_&lt;profile&gt;.jsonl</code> (the exact natural-language prompts, for auditing or replay against a real model via <code>--backend cached --responses &lt;jsonl&gt;</code>). It is fully offline and deterministic — <strong>never wired to a live API in CI</strong> — so the baseline is reproducible.</p>
+<hr>
+<h2 id="6-regression-test">6. Regression test </h2>
+<p><a href="../src/test/java/tools/Phase4KgDiscoveryTest.java">src/test/java/tools/Phase4KgDiscoveryTest.java</a> (JUnit 5, runs in the normal <code>gradlew test</code>):</p>
+<ul>
+<li><strong><code>lab4SmartPlugGatesTheZ1Lamp</code></strong> — loads <code>building_4_smartplug.ttl</code> and asserts the Z1 lamp's ON action is IV-gated on slot 7 with <code>ivMinRank == 1</code>, the plug's ON action is <em>not</em> IV-gated (it is the enabler), and lab4 <code>energyCost == 0</code>.</li>
+<li><strong><code>lab5ParsesPerActuatorEnergyCost</code></strong> — loads <code>building_5_energy.ttl</code> and asserts <code>SetZ1Eff</code> cost 1, <code>SetZ1Ineff</code> cost 4, <code>SetSpotlight</code> cost 2, inefficient &gt; efficient.</li>
+</ul>
+<p>Both tests pass; the full pre-existing suite stays green (no regressions).</p>
+<hr>
+<h2 id="7-the-phase-4-workflow">7. The Phase 4 workflow </h2>
+<p><a href="../.github/workflows/phase4.yml">.github/workflows/phase4.yml</a> forks <code>phase1.yml</code> exactly (same <code>setup → train → bench → aggregate</code> DAG, same JitPack-retry / Node-RED 4 / free-disk-space hardening) with Phase-4 defaults and an extended aggregate job.</p>
+<p><strong>Four jobs:</strong></p>
+<ol>
+<li><strong>setup</strong> — compile once, cache <code>build/classes</code>, materialise the profile and seed matrices.</li>
+<li><strong>train</strong> — matrix <code>profile × stereo(true,false) × seed</code>; each cell runs <code>run_full_project.ps1 -RunMode phase4 -OnlyProfiles &lt;p&gt; -OnlyStereo &lt;s&gt; -RunSeed &lt;n&gt; -SkipBenchmark</code>. Uploads the trained Q-tables.</li>
+<li><strong>bench</strong> — matrix <code>profile × mode(rule_based,ql_false,ql_true) × seed</code>; benchmarks against the trained Q-tables, uploads <code>bench_step_log_*</code> / <code>benchmark_results_*</code>.</li>
+<li><strong>aggregate</strong> — reconstructs the <code>results_seed&lt;N&gt;/&lt;profile&gt;/&lt;mode&gt;/</code> layout and runs <strong>three</strong> analyses:
+<ul>
+<li><code>sweep_report.py --seeds-mode</code> → learning-speed headline (AUC, first-goal, redundant actions, goal rate, energy);</li>
+<li><code>phase4_energy.py</code> → lab5 energy-budget compliance;</li>
+<li><code>phase4_llm_baseline.py</code> → the offline LLM baseline.<br>
+It writes a job summary, uploads <code>phase4-consolidated</code>, and (optionally) publishes to the <code>results</code> branch.</li>
+</ul>
+</li>
+</ol>
+<p>Every <code>(profile × stereo × seed)</code> and <code>(profile × mode × seed)</code> cell runs <strong>concurrently</strong>, so wall-clock is set by the slowest single cell, not the cell count.</p>
+<hr>
+<h2 id="8-how-to-run-it-via-github-actions">8. How to run it via GitHub Actions </h2>
+<ol>
+<li>
+<p>Push the <code>phase4-dependencies-energy</code> branch (and, if you want it dispatchable from the default branch, merge it so <code>phase4.yml</code> is on <code>main</code> — GitHub only lists <code>workflow_dispatch</code> workflows that exist on the default branch).</p>
+</li>
+<li>
+<p>In the repo, open <strong>Actions → "Phase 4 (Dependencies + Energy, KG vs LLM framing)" → Run workflow</strong>.</p>
+</li>
+<li>
+<p>Inputs (all have sensible defaults):</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>profiles</code></td>
+<td><code>lab4,lab5</code></td>
+<td>which Phase-4 labs to run</td>
+</tr>
+<tr>
+<td><code>seeds</code></td>
+<td><code>1,2,3,4,5,6,7,8,9,10</code></td>
+<td>10 seeds give the lab4 efficiency wins and the lab5 <code>mean_steady_power</code> result at Wilcoxon p&lt;0.05; the pre-registered lab5 <code>energy_compliance</code> primary has ties that need <strong>n = 20</strong> (<code>1..20</code>) to cross p&lt;0.05 (it is bootstrap-significant already at n = 10). Use <code>1,2,3,4,5</code> for a faster replication.</td>
+</tr>
+<tr>
+<td><code>run_mode</code></td>
+<td><code>phase4</code></td>
+<td>3000 episodes, KG arm energy-prior 2.0. <code>dev</code> (50 ep) for a quick plumbing check.</td>
+</tr>
+<tr>
+<td><code>run_llm_baseline</code></td>
+<td><code>true</code></td>
+<td>also compute the offline LLM baseline</td>
+</tr>
+<tr>
+<td><code>publish_results</code></td>
+<td><code>true</code></td>
+<td>push the consolidated outputs to the <code>results</code> branch</td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p>Click <strong>Run workflow</strong>.</p>
+</li>
+</ol>
+<p><strong>Quick first run:</strong> set <code>seeds = 1,2,3</code> to confirm the whole pipeline end-to-end in a fraction of the time, then run the full <code>1..10</code> for the statistics.</p>
+<hr>
+<h2 id="9-how-long-it-takes">9. How long it takes </h2>
+<p>GitHub-hosted runners execute the matrix in parallel, so the wall-clock is dominated by <strong>one</strong> training cell plus queueing, not the total number of cells.</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Cells (10 seeds, 2 labs)</th>
+<th>Per-cell</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>setup</td>
+<td>1</td>
+<td>~3–6 min</td>
+<td>compile + cache</td>
+</tr>
+<tr>
+<td>train</td>
+<td>2 labs × 2 stereo × 10 seeds = <strong>40</strong></td>
+<td>~40–60 min</td>
+<td><code>phase4</code> = 3000 episodes; 180-min timeout/cell</td>
+</tr>
+<tr>
+<td>bench</td>
+<td>2 labs × 3 modes × 10 seeds = <strong>60</strong></td>
+<td>~5–15 min</td>
+<td>90-min timeout/cell</td>
+</tr>
+<tr>
+<td>aggregate</td>
+<td>1</td>
+<td>~5–10 min</td>
+<td>three analyses + publish</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Expected wall-clock:</strong> roughly <strong>1.5–2.5 hours</strong> end-to-end at 10 seeds, subject to runner availability (GitHub free tier limits concurrency, which can serialise some cells). A <code>seeds = 1,2,3</code> smoke typically finishes in <strong>under an hour</strong>. A <code>run_mode = dev</code> dispatch finishes in <strong>~20–30 minutes</strong>.</p>
+<hr>
+<h2 id="10-what-results-to-expect">10. What results to expect </h2>
+<p><strong>Headline (within-lab <code>ql_true</code> vs <code>ql_false</code>, paired across seeds):</strong></p>
+<ul>
+<li><strong>lab4 (dependency):</strong> the KG-primed agent reaches the first goal <strong>sooner</strong> and with <strong>fewer redundant actions</strong> — it enables the plug before switching the lamp, while the tabula-rasa agent wastes actions toggling a dead lamp. Final goal-rate converges to parity (both eventually solve it); the <em>speed</em> and <em>redundancy</em> gaps are the finding.</li>
+<li><strong>lab5 (energy):</strong> the KG-primed agent achieves <strong>higher energy-budget compliance</strong> and <strong>lower steady-state power</strong> at equal goal-rate — it picks the efficient lamp / free daylight, while the tabula-rasa agent is energy-blind and frequently lands on the inefficient lamp.</li>
+</ul>
+<p><strong>KG-vs-LLM framing (offline baseline, current numbers from <a href="../analysis/phase4_llm_baseline.py">analysis/phase4_llm_baseline.py</a>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>goal_rate</th>
+<th>energy_compliance</th>
+<th>mean_steady_power</th>
+<th>mean_redundant</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lab4</td>
+<td>1.00</td>
+<td>1.00</td>
+<td>1.56</td>
+<td>0.375</td>
+</tr>
+<tr>
+<td>lab5</td>
+<td>1.00</td>
+<td><strong>0.556</strong></td>
+<td>3.39</td>
+<td>0.06</td>
+</tr>
+</tbody>
+</table>
+<p>Reading: the general-knowledge LLM proxy <em>reaches</em> the goal but, on lab5, complies with the energy budget only <strong>~56%</strong> of the time — it cannot tell the efficient lamp from the inefficient one without the KG. The KG-primed <code>ql_true</code> agent is expected to reach <strong>~100%</strong> compliance, which is the quantified "the KG informs the agent better than the LLM's general knowledge" result. On lab4 the LLM eventually discovers the plug via feedback, so the differentiator there is the <strong>redundant-action</strong> count, not goal-rate.</p>
+<blockquote>
+<p>These LLM numbers are deterministic and reproducible; the <code>ql_true</code>/<code>ql_false</code> numbers come from the actual CI run and are confirmed with Wilcoxon p-values, bootstrap CIs, and BH-FDR q-values.</p>
+</blockquote>
+<hr>
+<h2 id="10a-certified-results-n--20-run-27905392725">10a. Certified results (n = 20, run <code>27905392725</code>) </h2>
+<p>The confirmatory dispatch was <strong>seeds <code>1..20</code>, <code>run_mode = phase4</code></strong> (3000 episodes/seed, 5 benchmark runs/scenario, <code>stereo.energyPriorWeight = 2.0</code> for the KG arm), <code>publish_results = true</code>. The run completed green end-to-end (202 jobs, 0 failures). All paired tests are <code>ql_true − ql_false</code> (KG-primed minus tabula-rasa), Wilcoxon signed-rank with bootstrap CIs and BH-FDR.</p>
+<p><strong>lab5 — energy (pre-registered primary = <code>energy_compliance</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th><code>ql_true</code></th>
+<th><code>ql_false</code></th>
+<th>Δ (true−false)</th>
+<th>95% CI</th>
+<th>Wilcoxon p</th>
+<th>Cliff δ</th>
+<th>BH q</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>energy_compliance</strong></td>
+<td><strong>0.784</strong></td>
+<td>0.683</td>
+<td><strong>+0.101</strong></td>
+<td>[0.066, 0.138]</td>
+<td><strong>0.00093</strong></td>
+<td>0.69</td>
+<td><strong>0.0</strong></td>
+</tr>
+<tr>
+<td>mean_steady_power</td>
+<td>1.148</td>
+<td>1.539</td>
+<td>−0.391</td>
+<td>[−0.599, −0.183]</td>
+<td>0.0038</td>
+<td>−0.47</td>
+<td>0.00024</td>
+</tr>
+<tr>
+<td>over_budget_rate</td>
+<td>0.208</td>
+<td>0.298</td>
+<td>−0.090</td>
+<td>[−0.131, −0.051]</td>
+<td>0.00092</td>
+<td>−0.64</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>goal_rate</td>
+<td>0.991</td>
+<td>0.975</td>
+<td>+0.016</td>
+<td>[−0.003, 0.034]</td>
+<td>0.13 (ns)</td>
+<td>0.21</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The KG-primed agent reaches <strong>higher energy-budget compliance and ~25% lower steady-state power with no loss of goal-rate</strong> (in fact a slight, non-significant gain) — the energy win is not bought by sacrificing the goal.</p>
+<p><strong>lab4 — dependency (efficiency, paired, BH family m = 28):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Δ (true−false)</th>
+<th>Wilcoxon p</th>
+<th>Cliff δ</th>
+<th>BH q</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>avg_steps</td>
+<td>−0.496</td>
+<td>0.0045</td>
+<td>−0.43</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>avg_dev</td>
+<td>−0.589</td>
+<td>0.0089</td>
+<td>−0.51</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>avg_wasted</td>
+<td>−0.504</td>
+<td>0.0051</td>
+<td>−0.46</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>avg_redundant</td>
+<td>−0.558</td>
+<td>0.0051</td>
+<td>−0.44</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>goal_rate / energy_compliance</td>
+<td>+0.023</td>
+<td>0.014</td>
+<td>0.35</td>
+<td>0.00024</td>
+</tr>
+</tbody>
+</table>
+<p>Four efficiency metrics plus goal-rate are significant after BH correction (<code>avg_cycling</code> Δ −0.053 is directional at p = 0.086, the smallest effect). The KG-primed agent enables the smart-plug before switching the lamp, so it spends materially fewer steps and redundant actions than the energy/dependency-blind agent.</p>
+<p><strong>KG-primed Q-learning vs LLM (offline general-knowledge proxy, n = 20):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>backend</th>
+<th>goal_rate</th>
+<th>energy_compliance</th>
+<th>mean_steady_power</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lab5</td>
+<td>KG-primed <code>ql_true</code></td>
+<td>0.991</td>
+<td><strong>0.784</strong></td>
+<td><strong>1.148</strong></td>
+</tr>
+<tr>
+<td>lab5</td>
+<td>LLM (general)</td>
+<td>1.00</td>
+<td>0.556</td>
+<td>3.42</td>
+</tr>
+<tr>
+<td>lab4</td>
+<td>KG-primed <code>ql_true</code></td>
+<td>1.00</td>
+<td>1.00</td>
+<td>1.00</td>
+</tr>
+<tr>
+<td>lab4</td>
+<td>LLM (general)</td>
+<td>1.00</td>
+<td>1.00</td>
+<td>1.56</td>
+</tr>
+</tbody>
+</table>
+<p>The LLM proxy reaches the goal via general reasoning but, lacking the lab-specific lamp-cost physics encoded in the KG, complies with the lab5 energy budget only ~56% of the time and draws roughly <strong>3× the steady-state power</strong> of the KG-primed agent — the quantified statement that <em>the KG informs the agent better than the LLM's general knowledge on energy-aware control</em>.</p>
+<blockquote>
+<p>Source artefacts: <code>analysis/out/phase4_energy_paired.csv</code>, <code>phase4_energy_ci.csv</code>, <code>paired_tests.csv</code>, <code>phase4_llm_summary.csv</code> in the <code>phase4-consolidated</code> artifact of run <code>27905392725</code> (also published to the <code>results</code> branch). The n = 10 dispatch (<code>27903687624</code>) reproduces the same directions; <code>energy_compliance</code> is bootstrap-significant at n = 10 (p = 0.043) and crosses the Wilcoxon threshold at n = 20.</p>
+</blockquote>
+<hr>
+<h2 id="11-where-to-find-the-results">11. Where to find the results </h2>
+<p>After a dispatch completes:</p>
+<ul>
+<li><strong>Job summary</strong> — the run's <strong>Summary</strong> page renders the key tables inline (<code>learning_speed_tests.csv</code>, <code>paired_tests.csv</code>, <code>phase4_energy_paired.csv</code>, <code>phase4_energy_ci.csv</code>, <code>phase4_llm_summary.csv</code>, <code>summary_table_ci.csv</code>).</li>
+<li><strong><code>phase4-consolidated</code> artifact</strong> (Actions → run → Artifacts) — the full <code>analysis/out/**</code>, per-seed benchmark trees, Q-tables, learned TTLs, and raw CSVs.</li>
+<li><strong><code>results</code> branch</strong> (if <code>publish_results = true</code>) — a versioned snapshot published by <a href="../scripts/version_artifacts.ps1">scripts/version_artifacts.ps1</a>.</li>
+</ul>
+<p>Key files inside <code>analysis/out/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>learning_speed_tests.csv</code></td>
+<td>AUC / first-goal / episodes-to-threshold, <code>ql_true − ql_false</code> paired</td>
+</tr>
+<tr>
+<td><code>paired_tests.csv</code></td>
+<td>redundant-action and same-goal-rate paired tests</td>
+</tr>
+<tr>
+<td><code>phase4_energy_ci.csv</code></td>
+<td>per profile/mode compliance + power with 95% CI</td>
+</tr>
+<tr>
+<td><code>phase4_energy_paired.csv</code></td>
+<td><code>ql_true − ql_false</code> energy-compliance, Wilcoxon p + Cliff's δ + BH q</td>
+</tr>
+<tr>
+<td><code>phase4_llm_summary.csv</code></td>
+<td>offline LLM baseline (goal-rate, compliance, power, redundant)</td>
+</tr>
+<tr>
+<td><code>phase4_llm_prompts_&lt;profile&gt;.jsonl</code></td>
+<td>the exact prompts the LLM proxy saw (auditable)</td>
+</tr>
+<tr>
+<td><code>summary_table_ci.csv</code></td>
+<td>multi-seed summary with 95% CIs</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="12-local-smoke-optional">12. Local smoke (optional) </h2>
+<p>A fast end-to-end plumbing check (no statistics) without GitHub Actions:</p>
+<pre data-role="codeBlock" data-info="powershell" class="language-powershell powershell"><code><span class="token comment"># 50-episode dev run for one lab (needs Node-RED + Java 21 via gradlew):</span>
+<span class="token punctuation">.</span><span class="token operator">/</span>run_full_project<span class="token punctuation">.</span>ps1 <span class="token operator">-</span>RunMode dev <span class="token operator">-</span>OnlyProfiles lab5 <span class="token operator">-</span>RunSeed 1 <span class="token operator">-</span>SkipPreflight
+
+<span class="token comment"># then score the produced flat-layout CSVs:</span>
+python analysis/phase4_energy<span class="token punctuation">.</span>py <span class="token operator">--</span>root <span class="token punctuation">.</span> <span class="token operator">--</span>profile lab5 <span class="token operator">--</span>out analysis/out
+
+<span class="token comment"># and the offline LLM baseline (no simulator needed):</span>
+python analysis/phase4_llm_baseline<span class="token punctuation">.</span>py <span class="token operator">--</span>profile lab4 <span class="token operator">--</span>profile lab5 <span class="token operator">--</span>emit-prompts
+</code></pre><p>The full statistical result requires the multi-seed GitHub Actions run in §8.</p>
+<hr>
+<h2 id="13-file-manifest">13. File manifest </h2>
+<p><strong>New files</strong></p>
+<ul>
+<li><code>src/resources/building_4_smartplug.ttl</code>, <code>src/resources/interactions-lab4.ttl</code>, <code>simulator/simulator_flow_lab4.json</code></li>
+<li><code>src/resources/building_5_energy.ttl</code>, <code>src/resources/interactions-lab5.ttl</code>, <code>simulator/simulator_flow_lab5.json</code></li>
+<li><code>benchmark/scenarios_lab4.json</code>, <code>benchmark/train_scenarios_lab4.json</code>, <code>benchmark/scenarios_lab5.json</code>, <code>benchmark/train_scenarios_lab5.json</code></li>
+<li><code>analysis/phase4_energy.py</code>, <code>analysis/phase4_llm_baseline.py</code></li>
+<li><code>src/test/java/tools/Phase4KgDiscoveryTest.java</code></li>
+<li><code>.github/workflows/phase4.yml</code></li>
+<li><code>docs/PHASE4.md</code> (this file)</li>
+</ul>
+<p><strong>Modified files (additive, backward-compatible)</strong></p>
+<ul>
+<li><code>src/env/tools/StereotypeReasoner.java</code> — <code>ActionInfo.energyCost</code>, <code>ws:energyCost</code> discovery, <code>POWER_GATE_QUERY</code> + <code>discoverPowerGates()</code></li>
+<li><code>src/env/tools/QLearner.java</code> — <code>ENERGY_PRIOR_WEIGHT</code> non-fading energy term in <code>greedyAction</code></li>
+<li><code>src/env/tools/LabEnvironment.java</code> — two backward-compatible robustness fixes required by lab5's renamed actuators (see §14)</li>
+<li><code>build.gradle</code> — forward <code>stereo.energyPriorWeight</code></li>
+<li><code>config/run_config.json</code> — global default + <code>phase4</code> run-mode profile + metadata block + sim/port/suffix maps</li>
+<li><code>src/agt/lab_profiles.asl</code> — <code>lab4</code>/<code>lab5</code> profile entries</li>
+<li><code>run_full_project.ps1</code>, <code>run_full_project_parallel.ps1</code> — <code>lab4</code>/<code>lab5</code> simulators, energy-prior passthrough, <code>phase4</code> run mode</li>
+</ul>
+<hr>
+<h2 id="14-labenvironmentjava-robustness-fixes-required-by-lab5s-renamed-actuators">14. <code>LabEnvironment.java</code> robustness fixes (required by lab5's renamed actuators) </h2>
+<p>lab5 is the first lab to <strong>rename its lamp actuators</strong> away from the Phase-1 <code>SetZ1Light</code>/<code>SetZ2Light</code> convention (to <code>SetZ1Eff</code>/<code>SetZ1Ineff</code>/<code>SetZ2Eff</code>/<code>SetZ2Ineff</code>) and the first to add a per-scenario <strong><code>energyBudget</code></strong> field. Two places in <code>LabEnvironment.java</code> had baked-in assumptions that those changes broke. Both fixes are additive and <strong>bit-for-bit backward-compatible with labs 1–4</strong>.</p>
+<h3 id="141-generic-simulator-url-derivation-the-critical-one">14.1 Generic simulator-URL derivation (the critical one) </h3>
+<p><code>deriveSimulatorUrl(path)</code> recovers the simulator base URL (for <code>/reset</code> and <code>/setState</code>) from the Thing Description by taking any action's invoke-form target (which points at <code>…/was/rl/action</code>) and swapping the suffix. The original code looked up a <strong>hardcoded</strong> semantic type:</p>
+<pre data-role="codeBlock" data-info="java" class="language-java java"><code><span class="token comment">// BEFORE — breaks on any lab without a SetZ1Light action</span>
+<span class="token keyword keyword-this">this</span><span class="token punctuation">.</span>td<span class="token punctuation">.</span><span class="token function">getFirstActionBySemanticType</span><span class="token punctuation">(</span><span class="token string">"http://example.org/was#SetZ1Light"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre><p>labs 1–4 all expose a <code>SetZ1Light</code> action, so this worked. lab5 has <strong>no</strong> <code>SetZ1Light</code> (its lamps are <code>SetZ1Eff</code>/<code>SetZ1Ineff</code>/…), so the lookup returned empty → the <code>/setState</code> and <code>/reset</code> URLs could not be derived → <strong>both calls were silently skipped (a logged warning, no failure)</strong>. The consequence was severe and silent: during <strong>training</strong> the simulator was never reset between episodes, and during <strong>benchmarking</strong> the per-scenario start state was never applied — so every lab5 episode ran from stale simulator state. The fix derives the URL from <em>any</em> action, independent of naming:</p>
+<pre data-role="codeBlock" data-info="java" class="language-java java"><code><span class="token comment">// AFTER — naming-agnostic; every action's form targets …/was/rl/action</span>
+<span class="token keyword keyword-private">private</span> <span class="token class-name">String</span> <span class="token function">deriveSimulatorUrl</span><span class="token punctuation">(</span><span class="token class-name">String</span> path<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword keyword-for">for</span> <span class="token punctuation">(</span><span class="token class-name">ActionAffordance</span> action <span class="token operator">:</span> <span class="token keyword keyword-this">this</span><span class="token punctuation">.</span>td<span class="token punctuation">.</span><span class="token function">getActions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">Optional</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Form</span><span class="token punctuation">&gt;</span></span> f <span class="token operator">=</span> action<span class="token punctuation">.</span><span class="token function">getFirstFormForOperationType</span><span class="token punctuation">(</span><span class="token constant">TD</span><span class="token punctuation">.</span>invokeAction<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword keyword-if">if</span> <span class="token punctuation">(</span>f<span class="token punctuation">.</span><span class="token function">isPresent</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword keyword-return">return</span> f<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getTarget</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">replaceAll</span><span class="token punctuation">(</span><span class="token string">"/action$"</span><span class="token punctuation">,</span> path<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword keyword-return">return</span> <span class="token keyword keyword-null">null</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre><p>Because every action in every lab's TD points at the same <code>…/was/rl/action</code> base, picking the first action yields an identical base URL to the old <code>SetZ1Light</code> lookup for labs 1–4 — so their training/benchmark behaviour is unchanged, while lab5 (and any future lab with custom actuator names) now resets and applies scenario state correctly. Verified end-to-end: a lab5 dev smoke shows zero "could not derive" warnings, <code>setState → 200</code> POSTs in both training and benchmark logs, populated <code>bench_step_log</code> rows carrying the energy actuators, and realistic per-scenario energy (vs. the pre-fix symptom of <code>Steps=0</code>, <code>GoalReached=1</code> for every scenario and a runaway <code>TotalEnergyCost</code>).</p>
+<h3 id="142-energybudget-is-scenario-metadata-not-a-state-key">14.2 <code>energyBudget</code> is scenario metadata, not a state key </h3>
+<p><code>extractScenarioKV()</code> translates a scenario JSON object into simulator state keys, validating each against the Thing Description. lab5 scenarios add an <code>energyBudget</code> field (consumed <em>only</em> by the bench-time compliance metric in <code>phase4_energy.py</code>, never sent to the simulator). It is now skipped alongside the other non-state keys (<code>id</code>, <code>description</code>, <code>comment</code>), so the WoT input validator no longer rejects a lab5 scenario. Labs 1–4 carry no <code>energyBudget</code>, so nothing changes for them.</p>
+
+      </div>
+      
+      
+    
+    
+    
+    
+    
+    
+  
+    </body></html>

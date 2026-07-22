@@ -1,5 +1,14 @@
 # KG Cross‑Zone Coupling Stereotypes — Implementation Notes (lab3)
 
+> **PROVENANCE (2026-07-19) — historical implementation notes, pre-retune and
+> pre-inversion.** This document was written when the lab3 spill physics was the
+> original **+50 lux / 0.25·Sun**; those magnitudes were superseded on 2026-07-08 by the
+> current **+100 lux / 0.30·Sun** (the §1 audit percentages and the §Source Index
+> simulator entries describe the then-current state). The GH Actions runs listed in the
+> §Source Index are all pre-inversion instrument (action-space inversion 2026-07-10,
+> `docs/ACTION_SPACE_INVERSION.md`). Current record:
+> `docs/_audit/THESIS_STATE_REPORT.md` §4.1/§5.
+
 **Status:** implemented, compiles, audited. Default behaviour of the headline
 factorial arm is **unchanged** (zero blast radius) until the new lever is
 explicitly enabled.
@@ -418,6 +427,46 @@ be run the same way — again ≤2 queued at a time:
 gh workflow run phase1.yml --ref main                  -f run_mode=phase1_full -f seeds=1,2,3,4,5,6,7,8,9,10 -f publish_results=false
 gh workflow run phase1.yml --ref kg-crosszone-coupling -f run_mode=phase1_full -f seeds=1,2,3,4,5,6,7,8,9,10 -f publish_results=false
 ```
+
+---
+
+## Source Index
+
+All paths relative to the workspace root.
+
+### §1 — Prediction error table
+
+| Item | Detail |
+|---|---|
+| Tool | `analysis/crosszone_prediction_audit.py --structural-only` |
+| Input ontology | `src/resources/building_3_complex.ttl` |
+| Input simulator | `simulator/simulator_flow_lab3.json` (spill magnitudes: lamp +50 lux, blind 0.25·Sun) |
+| Discretisation bounds | `[50, 100, 300]` lux, 4 ranks, read from `src/resources/building_3_complex.ttl` (`ws:ivRankBound`) |
+| Space enumerated | 32 actuator configs × 4 sun levels × off→on toggles = 256 cross-zone transition pairs |
+| Result (legacy) | 80.5 % cross-zone predictions WRONG (206/256) |
+| Result (fixed) | 0 cross-zone claims when `--secondary-zero` flag is passed |
+
+### Implementation files
+
+| File | Protected? | What changed / role |
+|---|---|---|
+| `src/resources/building_3_complex.ttl` | no | Additive: `ws:connSource`, `ws:connTarget`, `ws:SecondaryCouplingStream`, `ws:PrimaryOpticalCoupling`, `ws:WeakOpticalCoupling`, 8 reified `elem:InternalConnection` instances (4 WEAK cross-zone + 4 PRIMARY same-zone). |
+| `src/env/tools/StereotypeReasoner.java` | **yes (approved)** | `CouplingClass` enum, `couplingClass` field (default PRIMARY), `CROSS_ZONE_FEEDS_QUERY` OPTIONAL join, `discoverCrossZoneFeeds` reader, Part A `getActionPrediction` skip, Part B `CROSS_ZONE_BONUS_MAG` + Rule 6, `buildUntargetedCrossZoneEffects()` (ablation). |
+| `build.gradle` | no | `_httpKeys` += `'stereo.crossZoneBonus'` (JVM system-property forwarding). |
+| `run_full_project.ps1` | no | Forwards `-Pstereo.crossZoneBonus=<cross_zone_bonus>`; `phase1_kg_xzone` added to `[ValidateSet]`. |
+| `run_full_project_parallel.ps1` | no | `phase1_kg_xzone` added to `[ValidateSet]`. |
+| `config/run_config.json` | no | `learning.cross_zone_bonus = 0.0` global default; profile `phase1_kg_xzone` = `phase1_kg_only` + `cross_zone_bonus = 3.0`. |
+| `analysis/crosszone_prediction_audit.py` | no | `--secondary-zero` flag; reads `building_3_complex.ttl` + `simulator_flow_lab3.json`. |
+| `.github/workflows/phase1.yml` | no | Retry loop (5 attempts, backoff) on both "Install Node-RED" steps (commit `e8d63e0`, branch `kg-crosszone-ablation`). |
+
+### GH Actions runs that validated this change
+
+| Run ID | Branch | Profile | Seeds | Result |
+|---|---|---|---|---|
+| `27461188614` | `kg-crosszone-coupling-bump` (`8a98cd8`) | `phase1_kg_xzone` | 1–10 | Part B confirmed; lab2 anchor ✓ |
+| `27462446044` | `kg-crosszone-coupling-bump` (`8a98cd8`) | `phase1_kg_xzone` | 11–20 | Replication ✓ |
+| `27464846574` | `kg-crosszone-ablation` (`e8d63e0`) | `phase1_kg_xzone_rand` | 1–10 | Mechanism ablation ✓ |
+| `27440842780` | `kg-crosszone-coupling` (`866297d`) | `phase1_kg_xzone` | 1–10 | As-is (pre-bump) baseline |
 
 ---
 

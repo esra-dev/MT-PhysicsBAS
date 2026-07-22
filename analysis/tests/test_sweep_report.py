@@ -102,6 +102,72 @@ def test_cliffs_delta_partial_overlap():
     assert sr._cliffs_delta(a, b) == pytest.approx(0.0)
 
 
+def test_exact_signflip_has_nonzero_resolution_and_is_two_sided():
+    a = [1.0] * 20
+    b = [0.0] * 20
+    assert sr._paired_signflip_p(a, b) == pytest.approx(2 / (2 ** 20))
+    assert sr._paired_signflip_p(b, a) == pytest.approx(2 / (2 ** 20))
+
+
+def test_signflip_and_sign_test_handle_ties():
+    assert sr._paired_signflip_p([1, 2, 3], [1, 2, 3]) == 1.0
+    assert sr._exact_sign_test_p([1, 2, 4], [1, 3, 3]) == 1.0
+
+
+def test_paired_rank_biserial_extremes():
+    assert sr._paired_rank_biserial([2, 3, 4], [1, 2, 3]) == 1.0
+    assert sr._paired_rank_biserial([1, 2, 3], [2, 3, 4]) == -1.0
+    assert sr._paired_rank_biserial([1, 2], [1, 2]) == 0.0
+
+
+def test_phase1_v2_decomposition_handles_zero_thresholds_and_opposite_signs():
+    from analysis.phase1_v2_registered_family import _decomposition
+
+    assert _decomposition(0.0, 1.0)["category"] == "undefined_arm_c_zero"
+    assert _decomposition(3.0, -1.0)["category"] == \
+        "opposite_signs_not_reproduction"
+    assert _decomposition(-3.0, 1.0)["category"] == \
+        "opposite_signs_not_reproduction"
+    assert _decomposition(3.0, 0.5)["category"] == "less_than_one_third"
+    assert _decomposition(3.0, 1.5)["category"] == \
+        "between_one_third_and_two_thirds"
+    assert _decomposition(3.0, 2.5)["category"] == "more_than_two_thirds"
+
+
+def test_phase1_v2_registered_reader_orders_seed_directories_numerically(
+        tmp_path, monkeypatch):
+    from analysis import phase1_v2_registered_family as family
+
+    lexicographic = [(seed, tmp_path / f"results_seed{seed}")
+                     for seed in (1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                                  2, 20, 3, 4, 5, 6, 7, 8, 9)]
+    monkeypatch.setattr(family.sr, "find_seed_roots", lambda _root: lexicographic)
+    ordered = family._ordered_seed_roots(tmp_path)
+    assert [seed for seed, _ in ordered] == list(range(1, 21))
+
+
+def test_corrected_auc_is_episode_mean():
+    assert sr._auc_normalised([0, 1, 1, 0]) == pytest.approx(0.5)
+
+
+def test_corrected_first_goal_rejects_legacy_schema(tmp_path):
+    path = tmp_path / "legacy.csv"
+    path.write_text("StartStateIndex,FirstGoalEpisode\n1,7\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="rejects legacy"):
+        sr._read_first_goal_mean(path, require_v2=True)
+
+
+def test_corrected_first_goal_includes_censored_rows(tmp_path):
+    path = tmp_path / "v2.csv"
+    path.write_text(
+        "ProtocolVersion,ScenarioId,Presentations,FirstSuccessPresentation,Censored,AnalysisPresentation,TerminalAtStartPresentations\n"
+        "phase1-v2,1,300,1,false,1,300\n"
+        "phase1-v2,5,300,,true,301,0\n",
+        encoding="utf-8",
+    )
+    assert sr._read_first_goal_mean(path, require_v2=True) == pytest.approx(151.0)
+
+
 # ---------------------------------------------------------------------------
 # Benjamini-Hochberg
 # ---------------------------------------------------------------------------

@@ -47,6 +47,7 @@
       "exec_delay_ms_bench": 100
     },
     "phase1": {
+      "note": "DEFAULT-STACK mode == factorial arm D (KG prior ON, PBRS ON, adaptive-trust ON). The learning_overrides below are value-identical to the inherited global learning block; they are declared EXPLICITLY (2026-07-18) so that no phase1-family profile silently inherits its accelerator stack — silent inheritance is how a defaults dispatch produced the arm-confounded run 29105464710 (THESIS_STATE_REPORT.md, Addendum 2026-07-13). For the arm-C HEADLINE use phase1_kg_only. Phase-2 clean warm-start training also runs this profile (full stack, intentional): do NOT change these values, add a new profile instead.",
       "tick": "0.05",
       "num_episodes": 3000,
       "max_steps_per_episode": 20,
@@ -55,7 +56,11 @@
       "exec_max_steps_ql": 20,
       "bench_runs": 5,
       "exec_max_steps_bench": 20,
-      "exec_delay_ms_bench": 100
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "pbrs",
+        "adaptive_trust": true
+      }
     },
     "phase1_baseline": {
       "note": "Factorial arm A (negative control): KG prior OFF, PBRS OFF, adaptive-trust OFF. KG is zeroed via stereo_prior_scale=0 + stereo_init_bonus=0, which triggers the supported H5 ablation in QLearner (zero Q-init AND zero greedy prior) so the ql_true arm becomes a true no-op overlay (≈ ql_false). Confirms the harness carries no built-in bias. Same timing as phase1.",
@@ -91,6 +96,83 @@
         "adaptive_trust": false
       }
     },
+    "phase1_redundancy_only": {
+      "note": "AUDIT CONTROL ARM (registered in THESIS_STATE_REPORT.md Addendum 2026-07-19e): ontology-free redundancy heuristic. Identical to phase1_kg_only except stereo_redundancy_only=true — the ql_true arm keeps ONLY the registry-derived redundancy discouragement (soft prior -1 on setting an already-set actuator + init Rule 1), which is computed from the WoT action registry and the current state vector with no KG triple consulted; the knowledge layer (IV gate, cross-zone rules, shared-actuator rule, constructive init bonus) is disabled. ql_false stays tabula-rasa. The within-mode ql_true-vs-ql_false delta measures how much of the arm-C anchor is explained by trivially derivable redundancy knowledge alone. Same timing as phase1.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "none",
+        "adaptive_trust": false,
+        "stereo_redundancy_only": true
+      }
+    },
+    "phase1_v2_kg_only": {
+      "note": "CORRECTED PROTOCOL V2 arm C: KG prior only versus paired tabula rasa. Fixed 3000-episode horizon, strict ordered scenario IDs, paired RNG, first-goal presentations and benchmark metric schema v2.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {"reward_shaping": "none", "adaptive_trust": false}
+    },
+    "phase1_v2_redundancy_only": {
+      "note": "CORRECTED PROTOCOL V2 registry-only redundancy control versus paired tabula rasa.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {"reward_shaping": "none", "adaptive_trust": false, "stereo_redundancy_only": true}
+    },
+    "phase1_v2_baseline": {
+      "note": "CORRECTED PROTOCOL V2 arm A negative control: both arms have no KG prior, PBRS or adaptive trust.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {"stereo_prior_scale": 0.0, "stereo_init_bonus": 0.0, "reward_shaping": "none", "adaptive_trust": false}
+    },
+    "phase1_v2_pbrs_only": {
+      "note": "CORRECTED PROTOCOL V2 arm B control: PBRS on, KG prior and adaptive trust off.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {"stereo_prior_scale": 0.0, "stereo_init_bonus": 0.0, "reward_shaping": "pbrs", "adaptive_trust": false}
+    },
     "phase1_kg_only_ib5": {
       "note": "Factorial arm C variant — identical to phase1_kg_only (KG prior ON, PBRS OFF, adaptive-trust OFF) but with the optimistic Q-init bonus lowered 15 -> 5. Tests the diagnosed lab3 hypothesis: that the +15 init bonus over-explores the ~2048-state lab3 space and delays first-goal. Compare its lab3 ql_true-vs-ql_false delta against phase1_kg_only (bonus=15); the lab2 win should be preserved. Same timing as phase1.",
       "tick": "0.05",
@@ -104,6 +186,40 @@
       "exec_delay_ms_bench": 100,
       "learning_overrides": {
         "stereo_init_bonus": 5.0,
+        "reward_shaping": "none",
+        "adaptive_trust": false
+      }
+    },
+    "phase1_kg_only_e750": {
+      "note": "Arm-C prior-decay-horizon sensitivity sweep, LOW point (state report residual flag #1: E = 10000 is the least externally constrained load-bearing constant). Identical to phase1_kg_only except stereo_prior_decay_episodes 10000 -> 750, the auto quarter-budget value QLearner.setTrainingBudgetEpisodes would pick for the 3000-episode phase1 budget (set explicitly so the value never depends on call order). Registered sweep: E in {750, 3000, 10000} on lab2,lab3 x seeds 1..5; the E=10000 point is phase1_kg_only itself (arm-C run of record, seeds 1..5 subset). Epsilon schedule, timing and the arm-C overrides are held fixed so ONLY the decay horizon varies.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "stereo_prior_decay_episodes": 750,
+        "reward_shaping": "none",
+        "adaptive_trust": false
+      }
+    },
+    "phase1_kg_only_e3000": {
+      "note": "Arm-C prior-decay-horizon sensitivity sweep, MID point: identical to phase1_kg_only except stereo_prior_decay_episodes 10000 -> 3000 (= the training budget, so the prior reaches its floor exactly at the end of training). See phase1_kg_only_e750 for the registered sweep design.",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "stereo_prior_decay_episodes": 3000,
         "reward_shaping": "none",
         "adaptive_trust": false
       }
@@ -190,11 +306,20 @@
     "custom9s": 1891,
     "lab1": 1892,
     "lab2": 1893,
+    "lab2noise": 1903,
     "lab3": 1894,
     "lab2_slow": 1895,
     "lab3_slow": 1896,
     "lab4": 1897,
-    "lab5": 1898
+    "lab5": 1898,
+    "labmon": 1899,
+    "labmon2": 1900,
+    "lab4dual": 1901,
+    "lab4chain": 1902,
+    "labmon_infoonly": 1899,
+    "labmon_nostereo": 1899,
+    "labmon2_infoonly": 1900,
+    "labmon2_nostereo": 1900
   },
   "simulator_flow_map": {
     "custom2": "simulator_flow_custom2.json",
@@ -208,11 +333,20 @@
     "custom9s": "simulator_flow_custom9s.json",
     "lab1": "simulator_flow_lab1.json",
     "lab2": "simulator_flow_lab2.json",
+    "lab2noise": "simulator_flow_lab2noise.json",
     "lab3": "simulator_flow_lab3.json",
     "lab2_slow": "simulator_flow_lab2_slow.json",
     "lab3_slow": "simulator_flow_lab3_slow.json",
     "lab4": "simulator_flow_lab4.json",
-    "lab5": "simulator_flow_lab5.json"
+    "lab5": "simulator_flow_lab5.json",
+    "lab4dual": "simulator_flow_lab4dual.json",
+    "lab4chain": "simulator_flow_lab4chain.json",
+    "labmon": "simulator_flow_labmon.json",
+    "labmon2": "simulator_flow_labmon2.json",
+    "labmon_infoonly": "simulator_flow_labmon.json",
+    "labmon_nostereo": "simulator_flow_labmon.json",
+    "labmon2_infoonly": "simulator_flow_labmon2.json",
+    "labmon2_nostereo": "simulator_flow_labmon2.json"
   },
   "qtable_suffix_map": {
     "custom2": "_custom2",
@@ -226,11 +360,20 @@
     "custom9s": "_custom9s",
     "lab1": "_lab1",
     "lab2": "_lab2",
+    "lab2noise": "_lab2noise",
     "lab3": "_lab3",
     "lab2_slow": "_lab2_slow",
     "lab3_slow": "_lab3_slow",
     "lab4": "_lab4",
-    "lab5": "_lab5"
+    "lab5": "_lab5",
+    "lab4dual": "_lab4dual",
+    "lab4chain": "_lab4chain",
+    "labmon": "_labmon",
+    "labmon2": "_labmon2",
+    "labmon_infoonly": "_labmon_infoonly",
+    "labmon_nostereo": "_labmon_nostereo",
+    "labmon2_infoonly": "_labmon2_infoonly",
+    "labmon2_nostereo": "_labmon2_nostereo"
   },
   "expected_state_vec_dim": {
     "custom2": 13,
@@ -244,11 +387,20 @@
     "custom9s": 8,
     "lab1": 2,
     "lab2": 7,
+    "lab2noise": 7,
     "lab3": 8,
     "lab2_slow": 7,
     "lab3_slow": 8,
     "lab4": 9,
-    "lab5": 10
+    "lab5": 10,
+    "lab4dual": 10,
+    "lab4chain": 10,
+    "labmon": 3,
+    "labmon2": 9,
+    "labmon_infoonly": 3,
+    "labmon_nostereo": 3,
+    "labmon2_infoonly": 9,
+    "labmon2_nostereo": 9
   },
   "http_client": {
     "connect_timeout_ms": 2000,
@@ -272,8 +424,8 @@
     "adaptive_trust_floor": 0.1
   },
   "phase2": {
-    "description": "Phase 2 fault-detection / blacklist / re-learn (run_phase2_adapt.ps1 + .github/workflows/phase2.yml). Each adapt profile injects one or more component faults into the named parent clean lab, warm-loads that lab's clean Phase-1 Q-table (qtable_final_stereotypes_<bool><clean_source_suffix>.csv), then runs the adapt agent (taskAdapt) which detects each defect via the KG Expected-vs-Actual check, blacklists BOTH polarities of every broken component (iteratively), and re-learns over the survivors. Recovery = reconverge_episode - detect_episode (lower is better; the headline compares ql_true < ql_false). Single-fault (f1*) and multi-fault (f2*) variants span lab1/lab2/lab3 complexities and {dead, inverted} fault modes. Only CAUSES lamps/spotlight are injected; healthy Mediates blinds are excluded from detection. lab1_f1dead is degenerate (single actuator; the blacklist guard preserves the last actuator) so it is a detection-only showcase with recovery=N/A. Parent ports/flows are reused because only one faulty variant runs at a time.",
-    "adapt_profiles": ["lab1_f1dead", "lab2_f1dead", "lab2_f1inv", "lab2_f2dead", "lab2_f2inv", "lab3_f1dead", "lab3_f1inv", "lab3_f2dead", "lab3_f2inv"],
+    "description": "Phase 2 fault-detection / blacklist / re-learn (run_phase2_adapt.ps1 + .github/workflows/phase2.yml). Each adapt profile injects one or more component faults into the named parent clean lab, warm-loads that lab's clean Phase-1 Q-table (qtable_final_stereotypes_<bool><clean_source_suffix>.csv), then runs the adapt agent (taskAdapt) which detects each defect via the KG Expected-vs-Actual check, blacklists BOTH polarities of every broken component (iteratively), and re-learns over the survivors. Recovery = reconverge_episode - detect_episode (lower is better; the headline compares ql_true < ql_false). Single-fault (f1*) and multi-fault (f2*) variants span lab1/lab2/lab3 complexities and {dead, inverted} fault modes, over BOTH mechanism classes: CAUSES lamps (passive Expected-vs-Actual detection) and Mediates blinds (Phase 2.4+ — detected via the active OPEN self-test probe under sun rank >= 2; f1b* single-blind cells, and the Phase 2.7 exploratory multi-blind cell lab3_f2bdead, pre_registration.md 9.11). lab1_f1dead is degenerate (single actuator; the blacklist guard preserves the last actuator) so it is a detection-only showcase with recovery=N/A. Parent ports/flows are reused because only one faulty variant runs at a time.",
+    "adapt_profiles": ["lab1_f1dead", "lab2_f1dead", "lab2_f1inv", "lab2_f2dead", "lab2_f2inv", "lab3_f1dead", "lab3_f1inv", "lab3_f2dead", "lab3_f2inv", "lab3_f1dead_z2", "lab3_f1inv_z2", "lab3_f1bdead", "lab3_f1binv", "lab2_f1bdead", "lab2_f1binv", "lab3_f2bdead", "labmon_f1dead", "lab3_f2dead_lowsun", "labmon2_f2dead_lowsun", "labmon_infoonly_f1dead", "labmon_nostereo_f1dead", "labmon2_infoonly_f2dead_lowsun", "labmon2_nostereo_f2dead_lowsun"],
     "adapt_modes": ["ql_true", "ql_false"],
     "smoke_episodes": 200,
     "parent_profile": {
@@ -285,7 +437,21 @@
       "lab3_f1dead": "lab3",
       "lab3_f1inv": "lab3",
       "lab3_f2dead": "lab3",
-      "lab3_f2inv": "lab3"
+      "lab3_f2inv": "lab3",
+      "lab3_f1dead_z2": "lab3",
+      "lab3_f1inv_z2": "lab3",
+      "lab3_f1bdead": "lab3",
+      "lab3_f1binv": "lab3",
+      "lab2_f1bdead": "lab2",
+      "lab2_f1binv": "lab2",
+      "lab3_f2bdead": "lab3",
+      "labmon_f1dead": "labmon",
+      "lab3_f2dead_lowsun": "lab3",
+      "labmon2_f2dead_lowsun": "labmon2",
+      "labmon_infoonly_f1dead": "labmon_infoonly",
+      "labmon_nostereo_f1dead": "labmon_nostereo",
+      "labmon2_infoonly_f2dead_lowsun": "labmon2_infoonly",
+      "labmon2_nostereo_f2dead_lowsun": "labmon2_nostereo"
     },
     "simulator_port_map": {
       "lab1_f1dead": 1892,
@@ -296,7 +462,21 @@
       "lab3_f1dead": 1894,
       "lab3_f1inv": 1894,
       "lab3_f2dead": 1894,
-      "lab3_f2inv": 1894
+      "lab3_f2inv": 1894,
+      "lab3_f1dead_z2": 1894,
+      "lab3_f1inv_z2": 1894,
+      "lab3_f1bdead": 1894,
+      "lab3_f1binv": 1894,
+      "lab2_f1bdead": 1893,
+      "lab2_f1binv": 1893,
+      "lab3_f2bdead": 1894,
+      "labmon_f1dead": 1899,
+      "lab3_f2dead_lowsun": 1894,
+      "labmon2_f2dead_lowsun": 1900,
+      "labmon_infoonly_f1dead": 1899,
+      "labmon_nostereo_f1dead": 1899,
+      "labmon2_infoonly_f2dead_lowsun": 1900,
+      "labmon2_nostereo_f2dead_lowsun": 1900
     },
     "simulator_flow_map": {
       "lab1_f1dead": "simulator_flow_lab1_f1dead.json",
@@ -307,7 +487,21 @@
       "lab3_f1dead": "simulator_flow_lab3_f1dead.json",
       "lab3_f1inv": "simulator_flow_lab3_f1inv.json",
       "lab3_f2dead": "simulator_flow_lab3_f2dead.json",
-      "lab3_f2inv": "simulator_flow_lab3_f2inv.json"
+      "lab3_f2inv": "simulator_flow_lab3_f2inv.json",
+      "lab3_f1dead_z2": "simulator_flow_lab3_f1dead_z2.json",
+      "lab3_f1inv_z2": "simulator_flow_lab3_f1inv_z2.json",
+      "lab3_f1bdead": "simulator_flow_lab3_f1bdead.json",
+      "lab3_f1binv": "simulator_flow_lab3_f1binv.json",
+      "lab2_f1bdead": "simulator_flow_lab2_f1bdead.json",
+      "lab2_f1binv": "simulator_flow_lab2_f1binv.json",
+      "lab3_f2bdead": "simulator_flow_lab3_f2bdead.json",
+      "labmon_f1dead": "simulator_flow_labmon_f1dead.json",
+      "lab3_f2dead_lowsun": "simulator_flow_lab3_f2dead_lowsun.json",
+      "labmon2_f2dead_lowsun": "simulator_flow_labmon2_f2dead_lowsun.json",
+      "labmon_infoonly_f1dead": "simulator_flow_labmon_f1dead.json",
+      "labmon_nostereo_f1dead": "simulator_flow_labmon_f1dead.json",
+      "labmon2_infoonly_f2dead_lowsun": "simulator_flow_labmon2_f2dead_lowsun.json",
+      "labmon2_nostereo_f2dead_lowsun": "simulator_flow_labmon2_f2dead_lowsun.json"
     },
     "qtable_suffix_map": {
       "lab1_f1dead": "_lab1_f1dead",
@@ -318,7 +512,21 @@
       "lab3_f1dead": "_lab3_f1dead",
       "lab3_f1inv": "_lab3_f1inv",
       "lab3_f2dead": "_lab3_f2dead",
-      "lab3_f2inv": "_lab3_f2inv"
+      "lab3_f2inv": "_lab3_f2inv",
+      "lab3_f1dead_z2": "_lab3_f1dead_z2",
+      "lab3_f1inv_z2": "_lab3_f1inv_z2",
+      "lab3_f1bdead": "_lab3_f1bdead",
+      "lab3_f1binv": "_lab3_f1binv",
+      "lab2_f1bdead": "_lab2_f1bdead",
+      "lab2_f1binv": "_lab2_f1binv",
+      "lab3_f2bdead": "_lab3_f2bdead",
+      "labmon_f1dead": "_labmon_f1dead",
+      "lab3_f2dead_lowsun": "_lab3_f2dead_lowsun",
+      "labmon2_f2dead_lowsun": "_labmon2_f2dead_lowsun",
+      "labmon_infoonly_f1dead": "_labmon_infoonly_f1dead",
+      "labmon_nostereo_f1dead": "_labmon_nostereo_f1dead",
+      "labmon2_infoonly_f2dead_lowsun": "_labmon2_infoonly_f2dead_lowsun",
+      "labmon2_nostereo_f2dead_lowsun": "_labmon2_nostereo_f2dead_lowsun"
     },
     "clean_source_suffix": {
       "lab1_f1dead": "_lab1",
@@ -329,7 +537,21 @@
       "lab3_f1dead": "_lab3",
       "lab3_f1inv": "_lab3",
       "lab3_f2dead": "_lab3",
-      "lab3_f2inv": "_lab3"
+      "lab3_f2inv": "_lab3",
+      "lab3_f1dead_z2": "_lab3",
+      "lab3_f1inv_z2": "_lab3",
+      "lab3_f1bdead": "_lab3",
+      "lab3_f1binv": "_lab3",
+      "lab2_f1bdead": "_lab2",
+      "lab2_f1binv": "_lab2",
+      "lab3_f2bdead": "_lab3",
+      "labmon_f1dead": "_labmon",
+      "lab3_f2dead_lowsun": "_lab3",
+      "labmon2_f2dead_lowsun": "_labmon2",
+      "labmon_infoonly_f1dead": "_labmon_infoonly",
+      "labmon_nostereo_f1dead": "_labmon_nostereo",
+      "labmon2_infoonly_f2dead_lowsun": "_labmon2_infoonly",
+      "labmon2_nostereo_f2dead_lowsun": "_labmon2_nostereo"
     },
     "expected_state_vec_dim": {
       "lab1_f1dead": 2,
@@ -340,7 +562,21 @@
       "lab3_f1dead": 8,
       "lab3_f1inv": 8,
       "lab3_f2dead": 8,
-      "lab3_f2inv": 8
+      "lab3_f2inv": 8,
+      "lab3_f1dead_z2": 8,
+      "lab3_f1inv_z2": 8,
+      "lab3_f1bdead": 8,
+      "lab3_f1binv": 8,
+      "lab2_f1bdead": 7,
+      "lab2_f1binv": 7,
+      "lab3_f2bdead": 8,
+      "labmon_f1dead": 3,
+      "lab3_f2dead_lowsun": 8,
+      "labmon2_f2dead_lowsun": 9,
+      "labmon_infoonly_f1dead": 3,
+      "labmon_nostereo_f1dead": 3,
+      "labmon2_infoonly_f2dead_lowsun": 9,
+      "labmon2_nostereo_f2dead_lowsun": 9
     }
   },
   "phase3": {
@@ -389,8 +625,8 @@
     ]
   },
   "phase4": {
-    "description": "Phase 4 hidden-dependency + energy labs (run via .github/workflows/phase4.yml, reusing run_full_project.ps1 with -OnlyProfiles lab4|lab5 and -RunMode phase4). Two STRICTLY-CLEAN labs extend the Phase-1 clean ladder with KG-encoded knowledge a tabula-rasa learner cannot see: lab4 (smart-plug AND-gate: the Z1 ceiling lamp emits light only when both its switch AND SmartPlug_Z1 are ON; the KG declares ws:powerGates and the reasoner gates the lamp's ON action on the plug state by reusing the IV-gate machinery) and lab5 (two directly-actionable lamps per zone with identical +400 lux output but different ws:energyCost 1 vs 4; energy is NOT in the Q-reward, so only the KG-primed agent — via the non-fading energy prior stereo_energy_prior_weight — prefers the efficient lamp / zero-energy blinds). The headline is the within-lab ql_true (KG-primed) vs ql_false (tabula-rasa) delta on first-goal episode, learning AUC, redundant-action count, goal rate, energy, and (lab5) energy-budget compliance. Statistical treatment mirrors phase1/phase3: paired across seeds (default 1..10), Wilcoxon signed-rank + bootstrap 95% CIs + BH-FDR + Cliff's delta. lab5 compliance is scored at benchmark time from the deterministic steady-state power of the final actuator configuration recorded in bench_step_log_<mode>.csv (power = Z1Eff*1 + Z1Ineff*4 + Z2Eff*1 + Z2Ineff*4 + Spotlight*2); compliant = GoalReached AND power <= energyBudget (per-scenario, default 2). BenchmarkLogger CSV schema is UNCHANGED so Phases 1-3 outputs are untouched.",
-    "phase4_profiles": ["lab4", "lab5"],
+    "description": "Phase 4 hidden-dependency + energy labs (run via .github/workflows/phase4.yml, reusing run_full_project.ps1 with -OnlyProfiles <lab> and -RunMode phase4). Four STRICTLY-CLEAN labs extend the Phase-1 clean ladder with KG-encoded knowledge a tabula-rasa learner cannot see. DEPENDENCY LADDER (cells vary how many components carry a dependency and how deep the chain is): lab4 (ONE smart-plug AND-gate: the Z1 ceiling lamp emits light only when both its switch AND SmartPlug_Z1 are ON; the KG declares ws:powerGates and the reasoner gates the lamp's ON action on the plug state by reusing the IV-gate machinery), lab4dual (TWO parallel plug dependencies: each zone's lamp behind its own plug — two ws:powerGates arcs), lab4chain (DEPTH-2 serial chain: circuit breaker gates the plug, the plug gates the Z1 lamp — two chained ws:powerGates arcs, so the lamp needs breaker AND plug AND switch all ON). ENERGY: lab5 (two directly-actionable lamps per zone with identical +400 lux output but different ws:energyCost 1 vs 4; energy is NOT in the Q-reward, so only the KG-primed agent — via the non-fading energy prior stereo_energy_prior_weight — prefers the efficient lamp / zero-energy blinds). The headline is the within-lab ql_true (KG-primed) vs ql_false (tabula-rasa) delta on first-goal episode, learning AUC, redundant-action count, goal rate, energy, and (lab5) energy-budget compliance. Statistical treatment mirrors phase1/phase3: paired across seeds, Wilcoxon signed-rank + bootstrap 95% CIs + BH-FDR + Cliff's delta. lab5 compliance is scored at benchmark time from the deterministic steady-state power of the final actuator configuration recorded in bench_step_log_<mode>.csv (power = Z1Eff*1 + Z1Ineff*4 + Z2Eff*1 + Z2Ineff*4 + Spotlight*2); compliant = GoalReached AND power <= energyBudget (per-scenario, default 2). The dependency labs carry no energyBudget, so phase4_energy.py collapses their compliance to goal_rate and the learning-speed/redundancy story comes from sweep_report.py. BenchmarkLogger CSV schema is UNCHANGED so Phases 1-3 outputs are untouched.",
+    "phase4_profiles": ["lab4", "lab4dual", "lab4chain", "lab5"],
     "phase4_modes": ["rule_based", "ql_false", "ql_true"],
     "run_mode": "phase4",
     "energy_prior_weight": 2.0,
@@ -398,19 +634,27 @@
     "power_formula": "Z1Eff*1 + Z1Ineff*4 + Z2Eff*1 + Z2Ineff*4 + Spotlight*2",
     "simulator_port_map": {
       "lab4": 1897,
-      "lab5": 1898
+      "lab5": 1898,
+      "lab4dual": 1901,
+      "lab4chain": 1902
     },
     "simulator_flow_map": {
       "lab4": "simulator_flow_lab4.json",
-      "lab5": "simulator_flow_lab5.json"
+      "lab5": "simulator_flow_lab5.json",
+      "lab4dual": "simulator_flow_lab4dual.json",
+      "lab4chain": "simulator_flow_lab4chain.json"
     },
     "qtable_suffix_map": {
       "lab4": "_lab4",
-      "lab5": "_lab5"
+      "lab5": "_lab5",
+      "lab4dual": "_lab4dual",
+      "lab4chain": "_lab4chain"
     },
     "expected_state_vec_dim": {
       "lab4": 9,
-      "lab5": 10
+      "lab5": 10,
+      "lab4dual": 10,
+      "lab4chain": 10
     }
   },
   "dry_run": false

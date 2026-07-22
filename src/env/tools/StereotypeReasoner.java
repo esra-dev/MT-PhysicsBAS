@@ -60,6 +60,15 @@ public class StereotypeReasoner {
                                        //       drawn per tick when this actuator is ON. 0.0 when the
                                        //       KG declares no cost (labs 1-4), which makes the
                                        //       non-fading energy prior in QLearner inert for them.
+        public boolean kgSilent = false; // Phase 2.6 (monitor KG-silent variants): true when this
+                                       //       actuator was discovered only via its WoT mapping —
+                                       //       the KG has NO stereotype claim that it affects
+                                       //       illuminance (missing stereotype, or a stereotype
+                                       //       whose DVs are all non-Illuminance). affectedZones is
+                                       //       empty, so the ontology makes no zone-level claim:
+                                       //       no Q-init bonus/penalty beyond bit-level redundancy,
+                                       //       no fault adjudication, no prediction. Both arms can
+                                       //       still ACT on it and learn its effect from reward.
         public String label;           // human-readable label
 
         public ActionInfo() {
@@ -107,9 +116,20 @@ public class StereotypeReasoner {
         "PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>\n";
 
     /**
-     * Discover all actuatable components via elem:hasComponentAction: those with a
-     * stereotype whose mechanism has a manipulated variable AND that affect the
-     * target DV (illuminance). Each row is one action (ON or OFF).
+     * STEREOTYPE ENRICHMENT query (knowledge layer). Since the action-space
+     * inversion, this query no longer defines the action space — it ANNOTATES
+     * the WoT-enumerated actions (see {@link #WOT_CONTRACT_ACTUATOR_QUERY})
+     * with physics knowledge: which zone(s) the action's Illuminance effect
+     * targets, whether the mechanism is IV-gated (Mediates) and at which
+     * minimum IV rank, and the declared electrical energy cost. One row per
+     * (component, zone, mechanism-DV, action-polarity); rows for the same
+     * action are merged. An action never matched by this query stays
+     * KG-SILENT: the stereotype layer makes no illuminance claim about it.
+     *
+     * The ORDER BY is retained from the pre-inversion discovery so that the
+     * FIRST enrichment row of each action — which fixes hasIV/ivMinRank —
+     * is the same row the old code used to create the action, preserving
+     * exact metadata equivalence (verified by RegistryGoldenCheck).
      */
     private static final String ACTUATOR_DISCOVERY_QUERY = PREFIXES +
         "SELECT ?comp ?zone ?zoneIdx ?dvLabel ?iv ?ivMinRank " +
@@ -137,6 +157,39 @@ public class StereotypeReasoner {
         "  OPTIONAL { ?comp ws:energyCost               ?energyCost . }\n" +
         "}\n" +
         "ORDER BY ?zoneIdx ?wotActionType ?actionValue";
+
+    /**
+     * WoT-CONTRACT ENUMERATION query (capability layer) — the PRIMARY and ONLY
+     * source of the action space since the action-space inversion.
+     *
+     * The action space is defined by what the Thing Description contract
+     * exposes: every component carrying ws:hasWoTActionSemanticType together
+     * with elem:hasComponentAction / ws:actionValue contributes one action per
+     * declared polarity — REGARDLESS of whether the stereotype layer knows
+     * anything about the component's physics. Actions are created KG-SILENT
+     * (kgSilent=true, empty affectedZones, no IV binding) and subsequently
+     * annotated by the stereotype enrichment pass
+     * ({@link #ACTUATOR_DISCOVERY_QUERY}); whatever the enrichment does not
+     * match stays KG-SILENT: actionable, but with no illuminance claim, no
+     * Q-init endorsement, no fault adjudication, no Expected-vs-Actual
+     * prediction (Phase 2.6 monitor variants).
+     *
+     * This separation makes the epistemic contract explicit: the TD defines
+     * what BOTH learner arms can DO; the Knowledge Graph defines only what
+     * the KG-primed arm KNOWS about doing it. The canonical action ordering
+     * is therefore stereotype-free: ORDER BY wotActionType, then OFF before
+     * ON. Persisted per-action artifacts are label-remapped on load, so this
+     * ordering is not load-bearing for saved Q-tables/sidecars.
+     */
+    private static final String WOT_CONTRACT_ACTUATOR_QUERY = PREFIXES +
+        "SELECT ?comp ?wotActionType ?wotStateType ?actionValue\n" +
+        "WHERE {\n" +
+        "  ?comp  ws:hasWoTActionSemanticType   ?wotActionType .\n" +
+        "  ?comp  elem:hasComponentAction       ?action .\n" +
+        "  ?action ws:actionValue               ?actionValue .\n" +
+        "  OPTIONAL { ?comp ws:hasWoTStateSemanticType ?wotStateType . }\n" +
+        "}\n" +
+        "ORDER BY ?wotActionType ?actionValue";
 
     /**
      * Discover cross-zone feed arcs: actuatable components that feed sensors
@@ -309,6 +362,25 @@ public class StereotypeReasoner {
      */
     private static final double CROSS_ZONE_BONUS_MAG =
         Double.parseDouble(System.getProperty("stereo.crossZoneBonus", "0.0"));
+
+    /**
+     * AUDIT CONTROL ARM (profile phase1_redundancy_only; registered in
+     * THESIS_STATE_REPORT.md Addendum 2026-07-19e) — ontology-free
+     * redundancy-heuristic mode. Override with -Dstereo.redundancyOnly=true
+     * (default false). When enabled, the ONLY prior signal this reasoner emits
+     * is the redundancy discouragement, which is computed purely from the
+     * WoT-contract action registry plus the current state vector
+     * ({@link #isRedundant}: stateVec[ai.stateVecBitIndex] ==
+     * ai.expectedBitValue — no stereotype/KG triple is consulted; both fields
+     * are assigned in discoverActuators pass 1, before any enrichment).
+     * Everything the knowledge layer adds on top is disabled: the IV-unsat
+     * soft prior, and init Rules 2-6 (IV gate, cross-zone overshoot,
+     * shared-actuator, constructive bonus, cross-zone exploration bonus).
+     * The arm answers: how much of the KG-primed advantage is explained by
+     * trivially derivable "don't set an already-set actuator" knowledge alone?
+     */
+    private static final boolean REDUNDANCY_ONLY =
+        Boolean.parseBoolean(System.getProperty("stereo.redundancyOnly", "false"));
 
 
     // -----------------------------------------------------------------------
@@ -538,22 +610,65 @@ public class StereotypeReasoner {
     }
 
     /**
-     * Run ACTUATOR_DISCOVERY_QUERY and build the action registry.
-     * With elem:hasComponentAction, each SPARQL result row is already one action
-     * (ON or OFF) — no manual splitting needed. Multi-zone actuators appear in
-     * multiple rows (one per zone), merged by (wotActionType + actionValue) key.
-     * Then append DO_NOTHING as the final action.
+     * Build the action registry — ACTION-SPACE INVERSION architecture.
+     *
+     * Pass 1 (capability layer): enumerate the COMPLETE action space from the
+     * WoT TD contract alone ({@link #WOT_CONTRACT_ACTUATOR_QUERY}). Every
+     * WoT-mapped, action-bearing component contributes one action per declared
+     * polarity, initially KG-SILENT (empty affectedZones, no IV binding). This
+     * is the action set BOTH learner arms share; the stereotype layer can no
+     * longer add or remove an action.
+     *
+     * Pass 2 (knowledge layer): enrich the enumerated actions with stereotype
+     * physics ({@link #ACTUATOR_DISCOVERY_QUERY}): affected zones, Mediates IV
+     * binding + ivMinRank, energy cost. Rows for the same action are merged;
+     * hasIV/ivMinRank are fixed by the FIRST enrichment row (same row order as
+     * the pre-inversion discovery, so metadata is bit-for-bit equivalent —
+     * verified by RegistryGoldenCheck against config/golden_registry).
+     *
+     * Actions never matched by pass 2 stay KG-SILENT (Phase 2.6): actionable,
+     * but with no illuminance claim — no Q-init endorsement (Rule 5), no
+     * shared-actuator / cross-zone penalties (Rules 3/4), no fault
+     * adjudication, no Expected-vs-Actual prediction. Their true physical
+     * effect is learnable by reward only.
+     *
+     * DO_NOTHING is appended as the final action, as before.
      */
     private void discoverActuators(OntModel model) {
         // Key: wotActionType + "|" + actionValue → ActionInfo
         Map<String, ActionInfo> actionMap = new java.util.LinkedHashMap<>();
 
+        // ── Pass 1: WoT-contract enumeration (capability layer) ─────────────
+        try (QueryExecution qe = QueryExecutionFactory.create(WOT_CONTRACT_ACTUATOR_QUERY, model)) {
+            ResultSet rs = qe.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution qs = rs.next();
+                String wotAction = qs.contains("wotActionType") ? qs.getLiteral("wotActionType").getString() : null;
+                if (wotAction == null) continue;
+                boolean actionValue = qs.getLiteral("actionValue").getBoolean();
+                String key = wotAction + "|" + actionValue;
+                if (actionMap.containsKey(key)) continue; // shared wotActionType across components
+
+                ActionInfo ai = new ActionInfo();
+                ai.wotActionType = wotAction;
+                ai.wotValue = actionValue;
+                ai.wotStateType = qs.contains("wotStateType") ? qs.getLiteral("wotStateType").getString() : null;
+                ai.hasIV = false;
+                ai.ivStateVecIndex = -1;
+                ai.expectedBitValue = actionValue ? 1 : 0;
+                ai.kgSilent = true; // until enriched by pass 2
+                String fragment = wotAction.substring(wotAction.lastIndexOf('#') + 1);
+                ai.label = fragment + "=" + (actionValue ? "ON" : "OFF");
+                actionMap.put(key, ai);
+            }
+        }
+
+        // ── Pass 2: stereotype enrichment (knowledge layer) ──────────────────
         try (QueryExecution qe = QueryExecutionFactory.create(ACTUATOR_DISCOVERY_QUERY, model)) {
             ResultSet rs = qe.execSelect();
             while (rs.hasNext()) {
                 QuerySolution qs = rs.next();
                 String wotAction = qs.contains("wotActionType") ? qs.getLiteral("wotActionType").getString() : null;
-                String wotState = qs.contains("wotStateType") ? qs.getLiteral("wotStateType").getString() : null;
                 int zoneIdx = qs.getLiteral("zoneIdx").getInt() - 1; // convert to 0-based
                 boolean actionValue = qs.getLiteral("actionValue").getBoolean();
                 boolean hasIV = qs.contains("iv") && qs.get("iv") != null;
@@ -569,17 +684,24 @@ public class StereotypeReasoner {
                 String key = wotAction + "|" + actionValue;
                 ActionInfo ai = actionMap.get(key);
                 if (ai == null) {
-                    ai = new ActionInfo();
-                    ai.wotActionType = wotAction;
-                    ai.wotValue = actionValue;
-                    ai.wotStateType = wotState;
+                    // A stereotype claim about an action the WoT contract does
+                    // not expose — knowledge without capability. The agent
+                    // cannot act on it, so it cannot enter the action space.
+                    LOGGER.warning("discoverActuators: stereotype enrichment row for " + key
+                                 + " has no WoT-contract enumeration (missing"
+                                 + " ws:hasWoTActionSemanticType / elem:hasComponentAction"
+                                 + " consistency) — ignored.");
+                    continue;
+                }
+                if (ai.kgSilent) {
+                    // First enrichment row for this action: fixes the IV
+                    // binding exactly as the pre-inversion discovery did (the
+                    // enrichment query keeps the same ORDER BY, so the "first
+                    // row" is the same row that used to CREATE the action).
+                    ai.kgSilent = false;
                     ai.hasIV = actionValue && hasIV; // IV only matters for activation
                     ai.ivStateVecIndex = (actionValue && hasIV) ? sunshineIndex : -1;
                     ai.ivMinRank = (actionValue && hasIV) ? ivMinRank : 1;
-                    ai.expectedBitValue = actionValue ? 1 : 0;
-                    String fragment = wotAction.substring(wotAction.lastIndexOf('#') + 1);
-                    ai.label = fragment + "=" + (actionValue ? "ON" : "OFF");
-                    actionMap.put(key, ai);
                 }
                 ai.affectedZones.add(zoneIdx);
                 // Phase 4 (lab5): keep the largest declared cost across the
@@ -587,9 +709,19 @@ public class StereotypeReasoner {
                 // practice; max is a safe reducer).
                 if (energyCost > ai.energyCost) ai.energyCost = energyCost;
 
-                LOGGER.fine("  Discovered: " + wotAction + " value=" + actionValue
+                LOGGER.fine("  Enriched: " + wotAction + " value=" + actionValue
                           + " zone=" + zoneIdx + " hasIV=" + hasIV
                           + " ivMinRank=" + ivMinRank + " energyCost=" + energyCost);
+            }
+        }
+
+        // Phase 2.6 — announce actions the stereotype layer is silent about.
+        for (ActionInfo ai : actionMap.values()) {
+            if (ai.kgSilent) {
+                LOGGER.warning("  KG-SILENT actuator action: " + ai.label
+                             + " — WoT-mapped but the stereotype layer makes no"
+                             + " illuminance claim for it (missing/partial stereotype)."
+                             + " No priors, no fault adjudication; learnable by reward only.");
             }
         }
 
@@ -631,7 +763,8 @@ public class StereotypeReasoner {
         for (ActionInfo ai : actions) {
             LOGGER.info("  Action " + ai.actionIndex + ": " + ai.label
                       + " zones=" + ai.affectedZones
-                      + " svBit=" + ai.stateVecBitIndex + " hasIV=" + ai.hasIV);
+                      + " svBit=" + ai.stateVecBitIndex + " hasIV=" + ai.hasIV
+                      + (ai.kgSilent ? " KG-SILENT" : ""));
         }
 
         // S2-1 (audit Step 2): fail loud if SPARQL discovery yielded zero
@@ -1041,7 +1174,8 @@ public class StereotypeReasoner {
             // intentional (redundancy wins over IV gating).
             if (isRedundant(stateVec, i)) {
                 priors[i] = -PRIOR_REDUNDANT_MAG; // soft-discouraged: redundant
-            } else if (ai.wotValue && !isIVSatisfied(stateVec, i)) {
+            } else if (!REDUNDANCY_ONLY && ai.wotValue && !isIVSatisfied(stateVec, i)) {
+                // Knowledge-layer signal — disabled in redundancy-only mode.
                 priors[i] = -PRIOR_IV_UNSAT_MAG;  // soft-discouraged: IV not satisfied
             } else {
                 priors[i] = 0.0;
@@ -1075,6 +1209,14 @@ public class StereotypeReasoner {
             if (stateVec[ai.stateVecBitIndex] == ai.expectedBitValue) {
                 return -100.0 * INIT_PENALTY_SCALE; // Absolute worst — wasted action
             }
+        }
+
+        // AUDIT CONTROL ARM: in redundancy-only mode the knowledge layer is
+        // disabled — only Rule 1 (registry-derived redundancy, above) may
+        // fire; Rules 2-6 (IV gate, cross-zone, shared-actuator, constructive
+        // bonus, cross-zone bonus) are all KG-derived and are skipped.
+        if (REDUNDANCY_ONLY) {
+            return 0.0;
         }
 
         // Rule 2: IV gate (Mediates) — state-dependent hard penalty.
@@ -1172,25 +1314,30 @@ public class StereotypeReasoner {
     // -----------------------------------------------------------------------
 
     /**
-     * Save ivTrialCount and ivSuccessCount to a simple CSV-based JSON file.
-     * Format: two sections separated by a header comment line, each containing
-     * numActions rows of 4 comma-separated integer values.
+     * Save ivTrialCount and ivSuccessCount to a simple sectioned CSV file.
+     *
+     * Action-space inversion: format v2 keys every row by action LABEL
+     * (e.g. "SetZ1Blinds=ON,0,3,12,25") instead of relying on row position,
+     * so the stats survive any change in discovery ordering. Two sections
+     * separated by comment lines, one row per action.
      *
      * @param filename  Destination file path.
      */
     public void saveIVStats(String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
-            pw.println("# IV Stats — ivTrialCount [numActions=" + numActions + "][4]");
+            pw.println("# IV Stats v2 (label-keyed) — ivTrialCount [4 IV ranks]");
             for (int a = 0; a < numActions; a++) {
-                pw.println(ivTrialCount[a][0] + "," + ivTrialCount[a][1] + ","
+                pw.println(actions[a].label + ","
+                         + ivTrialCount[a][0] + "," + ivTrialCount[a][1] + ","
                          + ivTrialCount[a][2] + "," + ivTrialCount[a][3]);
             }
-            pw.println("# ivSuccessCount [numActions=" + numActions + "][4]");
+            pw.println("# ivSuccessCount [4 IV ranks]");
             for (int a = 0; a < numActions; a++) {
-                pw.println(ivSuccessCount[a][0] + "," + ivSuccessCount[a][1] + ","
+                pw.println(actions[a].label + ","
+                         + ivSuccessCount[a][0] + "," + ivSuccessCount[a][1] + ","
                          + ivSuccessCount[a][2] + "," + ivSuccessCount[a][3]);
             }
-            LOGGER.info("saveIVStats: written to " + filename);
+            LOGGER.info("saveIVStats: written to " + filename + " (v2, label-keyed)");
         } catch (IOException e) {
             LOGGER.warning("saveIVStats: failed to write " + filename + " — " + e.getMessage());
         }
@@ -1201,39 +1348,53 @@ public class StereotypeReasoner {
      * If the file is missing or malformed the method logs a warning and returns
      * without modifying the arrays (allowing execution to proceed without stats).
      *
+     * Action-space inversion: only the v2 label-keyed format is loaded. A
+     * legacy v1 file (rows keyed by position) cannot be trusted across a
+     * discovery-ordering change and is REFUSED with a warning — re-train to
+     * regenerate.
+     *
      * @param filename  Source file path.
      */
     public void loadIVStats(String filename) {
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
-            // Read ivTrialCount section
             String header1 = br.readLine(); // comment line
             if (header1 == null || !header1.startsWith("# IV Stats")) {
                 LOGGER.warning("loadIVStats: unexpected format in " + filename + " — skipping");
                 return;
             }
-            for (int a = 0; a < numActions; a++) {
-                String line = br.readLine();
-                if (line == null) break;
-                String[] parts = line.split(",");
-                for (int r = 0; r < Math.min(4, parts.length); r++) {
-                    ivTrialCount[a][r] = Integer.parseInt(parts[r].trim());
-                }
-            }
-            // Read ivSuccessCount section
-            String header2 = br.readLine(); // comment line
-            if (header2 == null || !header2.startsWith("# ivSuccessCount")) {
-                LOGGER.warning("loadIVStats: missing ivSuccessCount section in " + filename + " — trial counts loaded only");
+            if (!header1.startsWith("# IV Stats v2")) {
+                LOGGER.severe("loadIVStats: " + filename + " is a legacy POSITIONAL"
+                    + " v1 file — IGNORED after the action-space inversion"
+                    + " (row order is not trustworthy across discovery changes)."
+                    + " Re-train to regenerate a label-keyed v2 file.");
                 return;
             }
-            for (int a = 0; a < numActions; a++) {
-                String line = br.readLine();
-                if (line == null) break;
+            Map<String, Integer> byLabel = new HashMap<>();
+            for (int a = 0; a < numActions; a++) byLabel.put(actions[a].label, a);
+            java.util.Set<String> unknown = new java.util.TreeSet<>();
+            boolean inSuccessSection = false;
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                if (line.startsWith("#")) {
+                    if (line.startsWith("# ivSuccessCount")) inSuccessSection = true;
+                    continue;
+                }
                 String[] parts = line.split(",");
-                for (int r = 0; r < Math.min(4, parts.length); r++) {
-                    ivSuccessCount[a][r] = Integer.parseInt(parts[r].trim());
+                if (parts.length < 5) continue;
+                Integer a = byLabel.get(parts[0].trim());
+                if (a == null) { unknown.add(parts[0].trim()); continue; }
+                int[][] target = inSuccessSection ? ivSuccessCount : ivTrialCount;
+                for (int r = 0; r < 4; r++) {
+                    target[a][r] = Integer.parseInt(parts[r + 1].trim());
                 }
             }
-            LOGGER.info("loadIVStats: loaded from " + filename);
+            if (!unknown.isEmpty()) {
+                LOGGER.warning("loadIVStats: " + filename
+                    + " — unknown action labels skipped: " + unknown);
+            }
+            LOGGER.info("loadIVStats: loaded from " + filename + " (v2, label-keyed)");
         } catch (IOException | NumberFormatException e) {
             LOGGER.warning("loadIVStats: failed to load " + filename + " — " + e.getMessage() + " — IV stats will be empty");
         }
