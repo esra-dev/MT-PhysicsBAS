@@ -1207,6 +1207,16 @@ Sources: `analysis/out_phase2_registered/phase2_recovery_ci.csv`
 
 ## 7. Phase 3 — Process Dynamics / Response-Delay Learning
 
+> **Protocol notice (2026-07-22) — historical, protocol-affected pending the
+> phase3-v2 rerun.** The §7 energy figures are wall-clock cumulative-
+> accumulator reads (defect class (c) of the Phase-1 withdrawal) and are
+> withdrawn; runs 27621106006 and 29166356524 are reclassified historical in
+> full so the corrected campaign yields exactly one run of record for all
+> Phase-3 metrics. The tick-based delay-accuracy and deadline-compliance
+> headlines are structurally immune to the protocol defects (no training, no
+> scenario scheduling) and are expected to reproduce; the corrected run
+> governs regardless. See `docs/PHASE3_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+
 ### 7.1 Design
 
 No Q-table training. The dynamics agent (`illuminance_controller_agent_dynamics.asl`)
