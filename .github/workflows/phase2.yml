@@ -55,8 +55,12 @@ on:
 permissions:
   contents: read
 
+# Each dispatch runs in its own concurrency group: GitHub keeps at most one
+# pending run per group and CANCELS earlier pending ones, which would silently
+# drop queued registered dispatches. Per-matrix max-parallel bounds the
+# aggregate runner load instead (mirrors the Phase-1 v2 campaign).
 concurrency:
-  group: phase2
+  group: phase2-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -143,6 +147,7 @@ jobs:
     timeout-minutes: 180   # phase1 (3000 eps) ~50 min/cell; 3x safety margin
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         parent: ${{ fromJson(needs.setup.outputs.parents_json) }}
         stereo: ["true", "false"]
@@ -239,6 +244,7 @@ jobs:
     timeout-minutes: 180
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         mode:    ["ql_true", "ql_false"]
