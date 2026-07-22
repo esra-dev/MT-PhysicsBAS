@@ -1296,6 +1296,14 @@ the deadline.*
 
 ## 8. Phase 4 [PRE-INVERSION RECORD — SUPERSEDED] — Hidden Dependencies + Energy-Aware Goals + LLM Baseline
 
+> **Protocol notice (2026-07-22) — historical, protocol-affected pending the
+> phase4-v2 rerun.** The post-inversion §10 ladder record (run `29193486193`)
+> referenced below is ALSO withdrawn: its training ran under the defective
+> protocol-v1 scenario scheduler (~30% unseeded random resets; scenarios
+> 11/13/16 never presented), its benchmark used the legacy wall-clock
+> energy/first-goal schema, and its run mode stacked PBRS + adaptive trust.
+> See `docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+
 *Current Phase-4 scope and results: Addendum 2026-07-12d/e and
 `PHASE4_DEPENDENCY_LADDER.md` §10. The LLM baseline named in this heading is
 **out of scope** as of 2026-07-12; the heading is kept because it names what run

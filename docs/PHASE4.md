@@ -1,5 +1,12 @@
 # Phase 4 — Hidden Dependencies and Energy-Aware Goals
 
+> **WITHDRAWN — historical, protocol-affected (2026-07-22).** All Phase-4
+> results (pre-inversion AND the post-inversion run `29193486193`) are
+> superseded pending the protocol-v2 rerun — defective scenario scheduling at
+> training, legacy wall-clock energy and first-goal metrics, and a
+> PBRS+trust-stacked run mode. See
+> `docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+
 > **⚠️ Three updates supersede parts of this document (2026-07-12) — see
 > [PHASE4_DEPENDENCY_LADDER.md](PHASE4_DEPENDENCY_LADDER.md):**
 > 1. **All results in §10/§10a are PRE-INVERSION** (run 27905392725 predates the action-space

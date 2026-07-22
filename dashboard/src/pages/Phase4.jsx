@@ -100,6 +100,11 @@ export default function Phase4() {
   return (
     <div className="page">
       <h1>Phase 4 · The Knowledge Ladder</h1>
+      <div className="warn"><b>Protocol-v1 results are withdrawn (2026-07-22).</b> Every
+        number on this page is historical, protocol-affected evidence (defective
+        training scheduler, legacy wall-clock energy/first-goal metrics, stacked
+        PBRS+trust run mode) pending the Phase-4 protocol-v2 rerun — see
+        docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md.</div>
       <div className="q"><b>Question (the thesis core):</b> can the KG encode facts a tabula-rasa learner <b>fundamentally cannot
         see</b> — a hidden wiring dependency and a per-device energy datasheet — and does the primed agent exploit them,
         provably, better than an LLM's general knowledge?</div>

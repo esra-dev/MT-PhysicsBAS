@@ -1,5 +1,18 @@
 # Phase 4 Extension — The Dependency Ladder (smart-plug variants) + post-inversion re-certification
 
+> **WITHDRAWN — historical, protocol-affected (2026-07-22).** Every empirical
+> number in this document (including the §10 run of record `29193486193`) is
+> superseded pending the Phase-4 protocol-v2 rerun: the training scheduler at
+> the run-of-record commit silently substituted unseeded random resets for
+> missing scenario IDs (~30% of episodes; training scenarios 11/13/16 were
+> never presented), the benchmark used the legacy schema (wall-clock
+> `avg_energy`, invalid legacy `mean_first_goal`), and the run-mode stacked
+> PBRS + adaptive trust — the same arm-D confound the Phase-1 correction
+> eliminated. `phase4_energy.py`'s steady-power measurement is itself
+> deterministic, but it scored defect-trained policies. See
+> `docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`. This document is
+> retained as the historical record until the corrected rewrite.
+
 **Date:** 2026-07-12 (implemented on branch `kg-crosszone-coupling-mid`, post action-space inversion)
 **Builds on:** [PHASE4.md](PHASE4.md) (lab4 smart-plug + lab5 energy, certified pre-inversion) and
 [ACTION_SPACE_INVERSION.md](ACTION_SPACE_INVERSION.md) (WoT-contract enumeration, 2026-07-10).
