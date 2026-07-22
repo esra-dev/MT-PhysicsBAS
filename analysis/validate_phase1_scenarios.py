@@ -89,6 +89,20 @@ def validate_all(root: Path = ROOT) -> list[str]:
                     f"{simulator}: expected current physics token is missing: {token!r}")
         for prefix in ("scenarios", "train_scenarios"):
             errors.extend(validate_file(root / "benchmark" / f"{prefix}_{lab}.json", lab))
+    dashboard = root / "dashboard" / "src" / "lib" / "physics.js"
+    dashboard_text = dashboard.read_text(encoding="utf-8")
+    dashboard_required = (
+        "Z1 = 25 + (Z1Light ? 400 : 0)",
+        "return { Z1: 25 + contrib(s.Z1Light, 400, f.Z1Light) }",
+        "(Z2Light?100)",
+        "(Z2Blinds?0.30·Sun)",
+    )
+    for token in dashboard_required:
+        if token not in dashboard_text:
+            errors.append(f"{dashboard}: expected current physics token is missing: {token!r}")
+    for token in ("0.10·Sun", "0.10 * sun"):
+        if token in dashboard_text:
+            errors.append(f"{dashboard}: stale lab1 physics token {token!r}")
     return errors
 
 
@@ -99,7 +113,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Phase-1 scenario validation passed (6 files; IDs unique; lux matches physics).")
+    print("Phase-1 scenario/dashboard validation passed (IDs unique; lux matches physics).")
     return 0
 
 

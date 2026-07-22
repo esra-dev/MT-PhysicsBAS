@@ -44,10 +44,10 @@ export const LABS = {
     actuators: [
       { id: 'Z1Light', kind: 'lamp', zone: 'Z1', label: 'Ceiling lamp', mech: 'Causes +400' },
     ],
-    formula: 'Z1 = 25 + 0.10·Sun + (Z1Light ? 400)',
-    kg: 'Z1Light Causes Z1Level — “switch the lamp on”. Sun is a pure distractor (≤ 90 lux).',
-    compute(s, sun, f = {}) {
-      return { Z1: 25 + 0.10 * sun + contrib(s.Z1Light, 400, f.Z1Light) };
+    formula: 'Z1 = 25 + (Z1Light ? 400 : 0)',
+    kg: 'Z1Light Causes Z1Level — “switch the lamp on”. Sunshine does not affect lab1 physics.',
+    compute(s, _sun, f = {}) {
+      return { Z1: 25 + contrib(s.Z1Light, 400, f.Z1Light) };
     },
   },
 

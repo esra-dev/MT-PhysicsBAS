@@ -2,6 +2,10 @@
 
 **Status: binding withdrawal notice, committed before the Phase 1 protocol-v2 rerun.**
 
+**Completion update (2026-07-22):** the registered correction campaign has completed.
+Current evidence is `docs/phase1_results_v2.md`; the future-tense chronology below is
+retained exactly as the pre-data withdrawal record.
+
 The existing Phase 1 numerical results are historical, protocol-affected findings. They
 must not be presented as thesis-final evidence. In particular, this notice withdraws the
 current interpretation of the pooled-20 `mean_first_goal` difference of +53.30 episodes,

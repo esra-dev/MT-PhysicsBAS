@@ -17,6 +17,15 @@ except ImportError:  # direct `python analysis/phase1_v2_registered_family.py`
 EXPECTED_SEEDS = list(range(1, 21))
 
 
+def _ordered_seed_roots(root: Path) -> list[tuple[int, Path]]:
+    """Return the declared seed set in numeric order, independent of path sorting."""
+    seeds = sorted(sr.find_seed_roots(root / "benchmark"), key=lambda item: item[0])
+    actual = [seed for seed, _ in seeds]
+    if actual != EXPECTED_SEEDS:
+        raise ValueError(f"Expected seeds 1..20 under {root}, got {actual}")
+    return seeds
+
+
 def _decomposition(c_mean: float, r_mean: float) -> dict:
     """Apply the frozen one-third/two-thirds rule without hiding sign conflicts."""
     if c_mean == 0:
@@ -40,9 +49,7 @@ def _decomposition(c_mean: float, r_mean: float) -> dict:
 
 
 def _speed(root: Path) -> tuple[dict, dict]:
-    seeds = sr.find_seed_roots(root / "benchmark")
-    if [seed for seed, _ in seeds] != EXPECTED_SEEDS:
-        raise ValueError(f"Expected seeds 1..20 under {root}, got {[s for s, _ in seeds]}")
+    seeds = _ordered_seed_roots(root)
     return (
         sr._collect_learning_speed_by_cell(seeds, True, 100, 0.5, "phase1-v2"),
         sr._collect_learning_speed_by_cell(seeds, False, 100, 0.5, "phase1-v2"),
@@ -63,7 +70,7 @@ def _effect(on: dict, off: dict, profile: str, metric: str) -> dict[int, float]:
 
 
 def _cycling(root: Path) -> dict[int, float]:
-    seeds = sr.find_seed_roots(root / "benchmark")
+    seeds = _ordered_seed_roots(root)
     values = sr._collect_per_seed_values(seeds)["avg_cycling"]
     on = values[("lab3", "ql_true")]
     off = values[("lab3", "ql_false")]

@@ -1,5 +1,12 @@
 # Pre-Registration of Hypotheses
 
+> **PHASE 1 STATUS (2026-07-22).** The Phase 1 addenda below are retained as the
+> chronological protocol-v1 record but their empirical outcomes are protocol-affected and
+> not current evidence. The binding correction registration is
+> `docs/phase1_correction_registration_2026-07-21.md`, its pre-data queue addendum is
+> `docs/phase1_correction_registration_2026-07-21a.md`, and the corrected result is
+> `docs/phase1_results_v2.md`. Registrations for other phases are unaffected.
+
 > **HISTORICAL REGISTRATION.** This document is retained unchanged as the registration
 > history for older protocols. It does not register Phase 1 protocol v2. See
 > `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.

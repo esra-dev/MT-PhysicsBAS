@@ -23,6 +23,15 @@ repositories {
     maven { url = uri('https://jitpack.io') }
 }
 
+// Reproduce the concrete executed SPARQL result and KG-induced lab2 action
+// ranking quoted in docs/audit/phase1_audit_2026-07-19.md.
+tasks.register('phase1SparqlEvidence', JavaExec) {
+    group = 'verification'
+    description = 'Print the Phase-1 lab2 SPARQL audit evidence.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tools.Phase1SparqlEvidence'
+}
+
 // Keep Logback as the single SLF4J runtime provider. JaCaMo / WoT transitive
 // dependencies also bring slf4j-nop and reload4j bindings, which makes SLF4J
 // warn on stderr during preflight and can trip the PowerShell runner.

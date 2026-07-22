@@ -1,12 +1,16 @@
 # Phase 1 — Statistical Analysis of the `phase1_kg_xzone` Run (cross-zone spill *as-is*)
 
+> **HISTORICAL, PROTOCOL-AFFECTED (2026-07-21).** In addition to the provenance limits
+> below, the scheduler and metric defects withdraw this run as thesis-final evidence.
+> The corrected protocol-v2 results supersede it regardless of direction.
+
 > **PROVENANCE (2026-07-19) — pre-inversion, superseded-physics record.** This run
 > predates the action-space inversion of 2026-07-10 (`docs/ACTION_SPACE_INVERSION.md`),
 > and its lab3 spill physics — the original **+50 lux / 0.25·Sun** stated below — was
 > superseded on 2026-07-08 by the current intermediate magnitudes (**+100 lux /
 > 0.30·Sun**). Quote the numbers below only as pre-inversion, original-physics
-> measurements. The Phase-1 headline of record is the post-inversion arm-C run
-> 29639767776 (`docs/_audit/THESIS_STATE_REPORT.md` §5.2).
+> measurements. The phrase “headline of record” below means the historical 2026-07-19
+> status only. The current record is `docs/phase1_results_v2.md`.
 
 **Run:** GitHub Actions *Phase 1 #11*, workflow `phase1.yml`
 **Ref / commit:** `kg-crosszone-coupling` @ `866297d`

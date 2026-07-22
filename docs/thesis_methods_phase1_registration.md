@@ -1,103 +1,172 @@
-# Phase-1 Methods — Registration & Disclosure (thesis-ready draft)
+# Phase 1 methods — corrected protocol v2 and registration disclosure
 
-> **SUPERSEDED METHODS DRAFT (2026-07-21).** This describes protocol-v1 and must not be
-> used as the final Phase 1 Methods section. Its empirical results and inferential claims
-> are protocol-affected. See `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md` and the
-> forthcoming protocol-v2 correction registration.
+**Current thesis-ready methods draft, corrected campaign completed 2026-07-21 and
+archived/analyzed 2026-07-22.**
 
-**Status:** drop-in Methods subsection for the Phase-1 chapter. Drafted 2026-07-19
-from THESIS_STATE_REPORT.md Addendum 2026-07-19b §3 (the canonical paragraph, quoted
-verbatim in §1 below) plus the three additional disclosures required by the 2026-07-19
-Phase-1 audit (`docs/audit/phase1_audit_2026-07-19.md`, Part B6/D5). Nothing in this
-document changes any statistic; it is provenance only. All June-2026 run IDs cited
-below are pre-inversion-instrument runs, cited here as historical timeline anchors.
+## Research question
 
----
+Phase 1 tests whether a tabular Q-learning controller that receives structured prior
+knowledge learns differently from an otherwise paired controller that receives no such
+prior. The test is restricted to three deterministic, clean simulated illuminance-control
+laboratories. It is not a claim about real buildings.
 
-## 1. Canonical registration-timing paragraph (use verbatim in Methods)
+## Laboratories
 
-> **Registration timing (Phase 1).** The Phase-1 design addendum (§7 of the
-> pre-registration document: hypotheses H-CL1–H-CL4, primary-metric tiers, and BH
-> families) was committed as `ef7aaf2` and pushed on 2026-06-19 at 10:59 UTC. Timing
-> here is anchored to GitHub Actions run-creation timestamps — assigned server-side
-> at dispatch and not editable afterwards — rather than to git commit dates, which
-> are client-set; the push instant is fixed by the CI runs that push itself
-> triggered (27821722610, 27821723294). By this clock, registration postdates every
-> Phase-1 training run analysed in the pre-inversion analysis documents: the first
-> dispatch of the Phase-1 workflow (run 27305796237, 2026-06-10 20:56 UTC), the
-> factorial-arm run behind the pre-inversion headline table (run 27336756264,
-> 2026-06-11), and the cross-zone as-is, bumped, seeds-11–20, and mechanism-ablation
-> runs (runs 27440842780, 27461188614, 27462446044, 27464846574; 2026-06-12 to
-> 2026-06-13) — a lag of 8.6 days after the first dispatch and 6.0 days after the
-> last of these runs. The addendum's own text moreover cites the completed analysis
-> write-ups, so it postdates not only data collection but the written analyses; the
-> statement that its hypotheses reflect pre-analysis intent rests on author
-> assertion and is not supported by the commit record. All Phase-1 results from the
-> June 2026 runs are therefore reported as confirmatory-with-post-hoc-registration
-> (Munafò et al., 2017) and never as pre-registered. The Phase-1 headline of record
-> stands on different footing: the post-inversion arm-C run 29639767776 was
-> dispatched on 2026-07-18 at 09:48 UTC, 29 days after the §7 hypothesis and metric
-> families were frozen, and the commit it executed (`e631877`, the run's
-> server-recorded head) already contained both the frozen §7 families and the
-> addendum registering that re-run as an outstanding duty — for the headline table,
-> registration verifiably precedes dispatch.
+Lab1 contains one zone and one Boolean task light. Lab2 contains two independent zones,
+each with a Boolean 400-lux task light and a Boolean blind that admits `0.50*Sunshine`.
+Lab3 adds symmetric 100-lux task-light spill, `0.30*Sunshine` blind spill, and one shared
+150-lux spotlight. Every zone has 25 lux of fixed ambient light. The exact equations are
+implemented in `simulator/simulator_flow_lab{1,2,3}.json:130` and audited line by line in
+`docs/audit/phase1_audit_2026-07-19.md`, A2.
 
-## 2. Three additional disclosures (2026-07-19 audit; include in Methods, condensed if needed)
+Clean-lab physics is deterministic. Sunshine is fixed within a scenario; sensor noise,
+occupancy, continuous dimming, actuator lag, and weather trajectories are absent. The
+controller observes discretized illuminance ranks with bounds 50/100/300 and sunshine
+ranks with bounds 50/200/600. The goal is rank 3 in every zone
+(`src/agt/lab_profiles.asl:260-321`).
 
-1. **Commit-message labeling.** The commit that added the §7 Phase-1 registration
-   (`ef7aaf2`) carries the message *"docs(phase3): add §8 pre-registration addendum +
-   Phase 3 results section to paper_results_section"* — it names only Phase 3,
-   although the same commit added 171 lines to `docs/pre_registration.md` including
-   the entire Phase-1 §7 addendum. A reader auditing the history by commit messages
-   would not find the Phase-1 registration event; the thesis must not imply the
-   registration was a separately visible, labelled act.
+## Controller and knowledge treatment
 
-2. **Registered-vs-executed configuration mismatch.** §7.2 registers the
-   configuration under test as run profile **`phase1_kg_xzone`** —
-   `cross_zone_bonus = 3.0` (targeted) and `num_episodes = 10000`. The headline of
-   record (arm C, **`phase1_kg_only`**, runs 29639767776 + 29692725784) executes
-   `cross_zone_bonus = 0.0` and an **effective 3000-episode budget** (the CI runner
-   patches every profile to the run-config `num_episodes`; see the budget-correction
-   note in THESIS_STATE_REPORT.md §4.1). The H-CL1–H-CL4 hypotheses are
-   metric-and-direction statements that carry over to the headline arm, but the
-   frozen §7 configuration block does **not** describe the headline configuration.
-   Registration cover for the headline arm comes from the later dated addenda: the
-   arm-C re-run registered as an outstanding duty (Addendum 2026-07-13, contained in
-   dispatched head `e631877`) and the seeds-11–20 extension + pooled-20 m = 3 family
-   (Addendum 2026-07-18c, contained in dispatched head `02ed6c1`). State this
-   two-layer structure explicitly rather than citing "§7" as if it covered the
-   executed configuration.
+The action list is enumerated from the Web of Things contract for both arms. A SPARQL
+enrichment query annotates those common actions with affected zones, causal or mediated
+mechanism, outdoor-light dependence, minimum independent-variable rank, topology, and
+optional energy metadata (`src/env/tools/StereotypeReasoner.java:111-192`). Thus the KG arm
+does not receive extra actions.
 
-3. **Family-assignment inconsistency inside §7.** The H-CL1 hypothesis text
-   prescribes "BH family m = 42 (all benchmark paired tests)" for `auc_goal`, and
-   H-CL4 does the same for `auc_reward` — but both metrics live in
-   `learning_speed_tests.csv`, which §7.4 assigns to the **m = 12 learning-speed
-   family**. The executed analyses used the per-file families as implemented in
-   `analysis/sweep_report.py` (m = 12 learning-speed / m = 42 benchmark for a
-   three-lab run), and the pooled-20 primary used the separately registered m = 3
-   family. Report this as a drafting error in the registration, state the executed
-   family next to every quoted q-value, and do not present the §7 text as if it were
-   internally consistent.
+The Q-learner keeps one Q-table per zone and chooses the action with the greatest sum of
+zone values. Its Bellman parameters are `alpha=0.1` and `gamma=0.9`; epsilon begins at 0.3
+and is bounded below by 0.01 (`src/env/tools/QLearner.java:53-60,566-611`). Epsilon decay is
+0.992/0.996/0.997 in lab1/lab2/lab3 respectively
+(`src/agt/lab_profiles.asl:260-321`). This cross-lab asymmetry does not differ between arms
+inside a lab but prevents a one-factor causal interpretation of differences between labs.
 
-## 3. Labeling rules for the results chapter (mandatory)
+Per-zone reward is clipped to `[-50,+50]` and rewards rank progress, first target arrival,
+and target holding; it penalizes time, regression, losing the target, ineffective action,
+and do-nothing away from target. Energy and switching are not in the reward
+(`src/env/tools/QLearner.java:2555-2612`).
 
-- **Every number from a June-2026 run** (27305796237 through 27464846574, incl. the
-  pre-inversion headline 27336756264 and the xzone family) carries the label
-  *confirmatory-with-post-hoc-registration* — and, since the action-space inversion
-  of 2026-07-10, additionally *pre-inversion instrument, superseded as headline
-  evidence*.
-- **The June seeds-11–20 xzone replication (run 27462446044)** is labelled a
-  *sighted, unregistered seed-replication* (dispatched 16 minutes after the
-  seeds-1–10 results were available, with no registration in existence at either
-  dispatch); it must not be called an independent pre-registered confirmation.
-- **The July headline runs** (29639767776; extension 29692725784) are labelled
-  *registered-at-dispatch* (registration ⊂ dispatched tree, verifiable from run
-  metadata + `git show`), with the pooled-20 m = 3 family as the confirmatory
-  statistics and everything else descriptive.
-- **Single-shot rule:** seeds 11–20 was the one registered seed extension; any
-  further extension requires a fresh registration that first discloses the pooled-20
-  outcome (Addendum 2026-07-19c §5).
+In arm C, KG-derived initialization and a decaying soft greedy prior are active; PBRS and
+adaptive trust are off. The no-KG pair starts with zero Q-values and no prior. In the
+redundancy-only control, the treatment label receives only a state/action-derived penalty
+for requesting an actuator value it already has. In baseline, the prior and PBRS are off
+for both labels. In PBRS-only, both labels receive potential-based reward shaping but no
+KG prior. Exact configurations are `phase1_v2_kg_only`,
+`phase1_v2_redundancy_only`, `phase1_v2_baseline`, and `phase1_v2_pbrs_only` in
+`config/run_config.json:116-174`.
 
-Cross-references: THESIS_STATE_REPORT.md §5.5 (caveats), Addenda 2026-07-19b
-(timeline), 2026-07-18c (registration), 2026-07-19c (Plan B report), 2026-07-19d
-(pooled-20 descriptive supersession); `docs/audit/phase1_audit_2026-07-19.md` Part B6.
+## Training protocol v2
+
+Each mode is run on lab1, lab2, and lab3 with seeds 1-20. Both labels use the same
+seed-derived random stream at initialization. Treatment-dependent actions may make later
+trajectories diverge. Every lab/label/seed cell completes exactly 3,000 episodes; early
+stopping is disabled.
+
+The scheduler cycles through the actual ordered objects in the training-scenario file. It
+selects by zero-based file position and returns the object's real ID. A duplicate, missing,
+or unknown ID is fatal; random simulator reset is never a fallback
+(`src/env/tools/ScenarioCatalog.java:34-90`;
+`src/env/tools/LabEnvironment.java:700-719`). After assigning a scenario, the agent waits
+250 ms before observing and recording its settled start state
+(`src/agt/illuminance_controller_agent_ql.asl:207-232`).
+
+Every training row stores its real scenario ID. `TRAINING_OK.json` stores protocol version,
+ordered IDs and SHA-256 hash, fixed horizon, paired-RNG version, benchmark schema, run seed,
+and fallback count. The archive validator requires protocol `phase1-v2`, horizon 3,000,
+paired RNG `common-seed-v1`, schema `phase1-benchmark-v2`, and fallback count zero
+(`analysis/validate_phase1_v2_archive.py`).
+
+## First-success outcome
+
+`mean_first_goal_presentations` is scenario based. For each declared scenario, the file
+records total presentations, first successful presentation, censor flag, and analysis
+presentation. A successful scenario uses its first successful presentation number; a
+never-solved scenario uses total presentations plus one. Terminal-at-start and never-solved
+scenarios are retained. The seed metric is the arithmetic mean over every declared
+scenario. Corrected analysis rejects legacy state-index files and rejects paired arms with
+different scenario rows (`src/env/tools/QLearner.java:1910-2200`;
+`analysis/sweep_report.py:1060-1120`).
+
+## Benchmark protocol v2
+
+Benchmarking loads trained Q-tables and does not update them. Every declared scenario is
+run five times for each of rule-based, QL-no-KG, and QL-KG, with a 20-step cap. An action is
+dispatched, the simulator is allowed to update, and only then is the effect observed and
+logged (`src/agt/illuminance_controller_agent_bench.asl:300-405`).
+
+Cycling starts from the scenario's settled actuator state, so the first change counts.
+`PolicyEnergyCost` sums instantaneous active-actuator cost once per decision: one unit per
+task light, two per spotlight, and zero per blind. The simulator's wall-clock
+`TotalEnergyCost` is retained only as `LegacyWallClockTotalEnergyCost` and is not an outcome
+(`src/env/tools/BenchmarkLogger.java:132-208`; `src/env/tools/Phase1PolicyEnergy.java`).
+
+## Registered outcomes and statistics
+
+The corrected primary family has exactly five two-sided paired seed-level tests:
+
+1. arm-C lab2 `auc_goal`;
+2. redundancy-only lab2 `auc_goal`;
+3. arm-C minus redundancy-only lab2 treatment-effect difference;
+4. arm-C lab3 `mean_first_goal_presentations`;
+5. arm-C lab3 `avg_cycling`.
+
+`auc_goal` is the fraction of all 3,000 training episodes that reached goal. Corrected
+first-goal is defined above. `avg_cycling` is the mean reversal count across benchmark
+rows. Lab1, baseline, PBRS-only, deterministic policy energy, deviation, goal rate, and all
+other metrics are registered controls/descriptives, not additional discoveries.
+
+For `n<=20`, the null test enumerates every sign assignment of the nonzero paired
+differences and reports an exact two-sided sign-flip p-value. If more than 20 nonzero pairs
+were ever analyzed, one million random sign flips with a plus-one correction would be used.
+The analysis also reports an exact sign test, mean and median paired differences, paired
+rank-biserial effect size, and a 10,000-draw paired-bootstrap 95% confidence interval.
+Bootstrap is estimation only. Cliff's delta is labelled unpaired descriptive context.
+Benjamini-Hochberg adjustment is applied once across the five sign-flip p-values. No p- or
+q-value is printed as zero (`analysis/sweep_report.py:413-610`;
+`analysis/phase1_v2_registered_family.py`).
+
+The descriptive redundancy reproduction fraction is the redundancy mean effect divided by
+the arm-C mean effect. Less than one third is “little,” one third through two thirds is
+“partial,” and more than two thirds is “most.” Zero denominators are undefined and
+opposite signs are reported as a conflict, not as reproduction.
+
+## Execution and archiving
+
+One GitHub Actions workflow run contains 120 training jobs and 180 benchmark jobs plus
+setup and aggregation. Four mode-specific workflow runs completed successfully from commit
+`d344238`, with each matrix limited to ten parallel jobs. Every raw input, result,
+provenance file, artifact hash, and complete SHA-256 inventory is permanently committed
+under `phase1_v2_corrected/`. `analysis/reproduce_phase1_v2.py` rebuilds all corrected
+numeric CSV output from those committed archives, canonicalizes numeric cells to 12
+significant digits to remove platform-only floating-representation noise, and requires
+byte equality of the canonical outputs.
+
+## Registration chronology and required disclosure
+
+The June 2026 Phase 1 registration was pushed approximately 8.6 days after the first
+relevant dispatch and cited completed analyses. June results therefore never had genuine
+prospective registration. July protocol-v1 runs were registered before dispatch, but a
+prospective timestamp could not rescue the later-discovered scheduler, first-goal, and
+wall-clock-energy defects.
+
+All protocol-v1 empirical results, including pooled-20, redundancy, baseline, PBRS, and
+noise-pilot outcomes, are historical protocol-affected findings. The binding withdrawal is
+`docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
+Protocol v2 disclosed all previously seen results and froze the design before data in
+`docs/phase1_correction_registration_2026-07-21.md` (commit `87ae528`). The queue addendum
+`docs/phase1_correction_registration_2026-07-21a.md` was committed as `d344238` before any
+corrected campaign dispatch. The four workflow run IDs are `29848584965`, `29848587274`,
+`29848589682`, and `29848592010`, all on `d344238`. Corrected outcomes replace the old
+narrative regardless of direction.
+
+After artifact download, the registered-family reader initially stopped before producing
+a statistic because seed-directory names were lexicographically rather than numerically
+ordered. A tested integer-sort correction left the seed set and every registered formula
+unchanged. Full reproduction then exposed only Linux/Windows last-bit float serialization
+differences, leading to the canonical 12-significant-digit comparison described above.
+Both post-data execution corrections are disclosed in
+`docs/phase1_correction_analysis_deviation_2026-07-22.md`; original artifacts and their
+GitHub SHA-256 inventories were not modified.
+
+The corrected numerical results and interpretation are reported separately in
+`docs/phase1_results_v2.md` so that this document remains a methods and registration record.

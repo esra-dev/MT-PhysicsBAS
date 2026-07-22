@@ -134,6 +134,18 @@ def test_phase1_v2_decomposition_handles_zero_thresholds_and_opposite_signs():
     assert _decomposition(3.0, 2.5)["category"] == "more_than_two_thirds"
 
 
+def test_phase1_v2_registered_reader_orders_seed_directories_numerically(
+        tmp_path, monkeypatch):
+    from analysis import phase1_v2_registered_family as family
+
+    lexicographic = [(seed, tmp_path / f"results_seed{seed}")
+                     for seed in (1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                                  2, 20, 3, 4, 5, 6, 7, 8, 9)]
+    monkeypatch.setattr(family.sr, "find_seed_roots", lambda _root: lexicographic)
+    ordered = family._ordered_seed_roots(tmp_path)
+    assert [seed for seed, _ in ordered] == list(range(1, 21))
+
+
 def test_corrected_auc_is_episode_mean():
     assert sr._auc_normalised([0, 1, 1, 0]) == pytest.approx(0.5)
 

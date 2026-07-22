@@ -1,83 +1,55 @@
 # Results
 
-> **PHASE 1 RESULTS WITHDRAWN (2026-07-21).** In addition to the older provenance
-> warning below, every Phase 1 empirical result in this draft is protocol-affected and
-> not thesis-final evidence. See `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+## Phase 1: Knowledge-guided learning in clean simulated laboratories
 
-> **PROVENANCE (2026-07-19) — historical draft (pre-inversion, superseded).** Every run
-> cited in this draft predates the action-space inversion of 2026-07-10
-> (`docs/ACTION_SPACE_INVERSION.md`), and its lab3 numbers were measured under
-> since-superseded spill physics (original +50 lux / 0.25·Sun and bumped +150 lux /
-> 0.40·Sun; retuned 2026-07-08 to the current +100 lux / 0.30·Sun). Do not quote as
-> current evidence — the citable record is `docs/_audit/THESIS_STATE_REPORT.md` §5/§9.1
-> (Phase-1 headline: post-inversion arm-C run 29639767776, `cross_zone_bonus = 0`).
+Phase 1 was rerun under corrective protocol v2 after the legacy scenario scheduler,
+first-goal outcome, and wall-clock energy metric were found to be invalid. Four registered
+workflow runs compared the bundled knowledge-graph (KG) prior, a cheap redundancy-only
+heuristic, and two label controls across three laboratories and 20 paired seeds. Every cell
+used the same declared scenario schedule, zero random fallbacks, and a fixed 3,000-episode
+horizon. The current data are runs `29848584965`, `29848587274`, `29848589682`, and
+`29848592010`; protocol-v1 results are historical only.
 
-We tested a simple idea: if you give a Q-learning agent some physics knowledge
-about its environment up front (through a knowledge graph), does it learn faster
-and waste fewer actions than the same agent starting from scratch? We checked
-this on three clean labs of increasing difficulty — a trivial one-zone room, a
-two-zone room, and a tougher two-zone room where the zones leak light into each
-other. Each lab was run with ten paired random seeds, and we compared the
-knowledge-primed agent against a tabula-rasa one with everything else held
-identical, so any difference comes from the knowledge alone. We report
-bootstrap confidence intervals, Cliff's δ effect sizes, and Wilcoxon tests with
-FDR correction.
+The registered five-test family gives a narrower conclusion than the earlier draft. In
+lab2, the KG-prior arm increased the fraction of successful training episodes by
+`0.003700` (95% bootstrap CI `[0.002700,0.004917]`, two-sided exact sign-flip
+`p=1.91×10⁻⁶`, BH `q=9.54×10⁻⁶`, paired rank-biserial `r=1.00`). The ontology-free
+redundancy heuristic produced `+0.002583` (`q=1.72×10⁻⁴`, `r=0.914`). Its mean was 69.8%
+of arm C's mean, crossing the registered two-thirds threshold: cheap redundancy information
+reproduces **most** of the effect. Arm C still exceeded redundancy by `+0.001117`
+(`[0.000767,0.001467]`, `q=7.63×10⁻⁵`, `r=1.00`). Thus the lab2 result supports a small
+additional bundled KG-prior effect, but the ontology cannot honestly receive credit for the
+whole advantage.
 
-On the mid-size lab the result is clear and strong. The primed agent learns
-markedly faster (area under the goal curve +0.020, q < 0.001, δ = 1.0) and uses
-roughly 40% fewer redundant actions (q < 0.001), all while being more reliably
-successful (success 0.96 → 1.00, q = 0.009). The trivial lab shows no
-difference at all, which is exactly what we want: when a task is solved
-instantly there is nothing to accelerate, so the method neither helps nor hurts.
-A negative control that switched the knowledge off in both agents produced no
-significant difference anywhere, confirming the speed-up really does come from
-the knowledge and not from some quirk of the setup.
+The corrected lab3 outcomes overturn the old headline. The KG arm's mean first-success
+difference is only `+0.110` scenario presentations (`[-0.060,+0.305]`, `q=0.304`), and its
+cycling difference is `+0.07375` (`[-0.02313,+0.17375]`, `q=0.215`). Neither differs from
+zero. The old `+53.30 episode` first-goal regression was dominated by the broken legacy
+measurement and is not evidence.
 
-The hardest lab marks the method's limit, and it taught us something useful.
-At the *original* (sub-rank) cross-zone spill magnitude, the primed agent did not
-learn faster — it actually reached its goal-curve fraction slightly later and cycled
-more. Lowering the prior's strength made things worse, not better, so the problem is
-not simply "too much optimism."
-Looking at the prior itself explains why: the knowledge graph captures the
-cross-zone light leakage correctly, but it only encodes the *direction* of an
-effect, not its *size*. It therefore treats a tiny cross-zone spill the same as
-a dominant same-room light. Because the agent sees illuminance in coarse bands,
-that small spill almost never actually changes the neighbour's reading — and
-indeed, across every possible state transition in this lab the cross-zone
-prediction is wrong **80.5%** of the time (versus 30% for the main same-room
-effect). So the prior keeps steering early exploration toward effects that don't
-materialise. Raising the cross-zone spill to a *rank-moving* magnitude removed this
-barrier: the cycling penalty disappeared, the goal-curve penalty was removed, and the
-KG agent converged to a near-oracle economy (avg_steps 0.85 vs oracle 0.81). A
-mechanism ablation — targeting an identical optimism budget at an arbitrary spill
-component rather than the KG-declared neighbour — recovered only ≈64% of the
-reward-learning advantage (δ dropping from 1.0 to 0.58), directly attributing the
-remaining ≈36% to knowing *which* component spills where. The fix for tightly coupled
-rooms is therefore to ensure the coupling is physically rank-moving: the direction-only
-structural knowledge alone is then sufficient to accelerate learning.
+The registered descriptives are mixed. On lab2, arm C improves final benchmark goal rate
+by `+0.04875`, reduces steps by `1.33375`, deviation by `3.67313`, deterministic policy
+energy by `1.28000`, and cycling by `0.38312`. On lab3, however, its full-horizon training
+success fraction is slightly lower (`auc_goal −0.002300`,
+`[-0.003467,−0.001067]`). Final benchmark goal rate and cycling do not differ, while
+deterministic policy energy is `+1.0744` policy-cost units higher
+(`[+0.5981,+1.5394]`). The energy outcome is credible as a deterministic step metric but
+is descriptive, uses arbitrary actuator weights, and is not watt-hours.
 
-**In short:** in clean environments, priming a Q-learner with physics knowledge
-makes it learn faster and act more efficiently at no cost to success — and on
-the discriminating lab, with slightly better success. The benefit is cleanly
-attributable to the knowledge itself and holds up to moderate complexity; in
-strongly coupled rooms the direction-only prior hits a well-understood perceptual
-limit; once the cross-zone coupling is physically rank-moving, the structural knowledge
-alone is sufficient to gain measurable learning advantages.
+The baseline and PBRS-only controls are exactly equal between labels for all corrected
+training and benchmark outcomes. Only the deliberately retained legacy wall-clock energy
+diagnostic varies slightly, confirming why it was withdrawn. Lab1 is a saturated null in
+both arm C and redundancy-only.
 
-| Lab (states) | Learning speed (AUC-goal) | First goal | Redundant actions | Goal success |
-|---|---|---|---|---|
-| Trivial (~8) | no difference (floor) | n.s. | tie | tie (1.00) |
-| Medium (~1k) | **+0.020** (q < 0.001, δ = 1.0) | n.s. (trend −17 ep) | **−40%** (q < 0.001) | **+0.044** (q = 0.009) |
-| Complex (~2k) | −0.004 (n.s., ceiling) | n.s. | n.s. (trend better) | tie (KG = 1.000) |
+In short, the corrected experiment supports a small lab2 advantage inside this discrete
+simulator. Most of the mean effect comes from cheaply derivable redundancy suppression; a
+smaller residual arm-C advantage remains. Phase 1 does not support the old lab3 first-goal
+or cycling penalty, but it does expose a small adverse lab3 training-success difference and
+a descriptive policy-energy cost. It cannot establish real-building benefit or that a KG
+is cheaper than an equivalent hand-coded table.
 
-*Differences are knowledge-primed minus tabula-rasa, paired over 10 seeds. Primary
-run: `phase1_kg_xzone` profile, bumped cross-zone physics, GH Actions run
-`27461188614`, branch `kg-crosszone-coupling-bump`@`8a98cd8`. For AUC-goal and
-success higher is better; for first-goal and redundant actions lower is better.*
-
-*Complex lab n.s. AUC-goal reflects a ceiling effect — both agents reach ≈99% goal-rate
-after the physics bump; `auc_reward` +14.3 (q < 0.001, δ = 1.0) confirms the KG agent
-achieves substantially higher rewards throughout training despite the ceiling.*
+Source: `docs/phase1_results_v2.md` and
+`phase1_v2_corrected/analysis/registered/phase1_v2_registered_family.csv`.
 
 ---
 
@@ -162,50 +134,38 @@ Pre-registration: [`docs/pre_registration.md`](pre_registration.md) §8.
 
 ## Source Index
 
-All numbers in this section are read from the following files. All paths relative to the workspace root.
+Phase 1 numbers above are read from the following committed protocol-v2 files. All paths
+are relative to the workspace root.
 
-### CI run metadata (primary)
+### Phase 1 workflow runs
 
-| Property | Value |
+| Mode | GitHub run | Commit | Seeds |
+|---|---:|---|---:|
+| KG only / arm C | `29848584965` | `d344238` | 1–20 |
+| Redundancy only | `29848587274` | `d344238` | 1–20 |
+| Baseline label control | `29848589682` | `d344238` | 1–20 |
+| PBRS-only label control | `29848592010` | `d344238` | 1–20 |
+
+### Phase 1 data and analysis files
+
+| File | Content |
 |---|---|
-| GH Actions run | `27461188614` |
-| Workflow | `.github/workflows/phase1.yml` |
-| Branch | `kg-crosszone-coupling-bump` |
-| Commit | `8a98cd8` |
-| Profile (`run_mode`) | `phase1_kg_xzone` |
-| Seeds | 1–10 |
-| `cross_zone_bonus` | 3.0 |
-| `stereo_init_bonus` | 15.0 |
+| `phase1_v2_corrected/analysis/registered/phase1_v2_registered_family.csv` | Frozen five-test family, intervals, exact tests, effect sizes, and BH q-values. |
+| `phase1_v2_corrected/analysis/registered/phase1_v2_decomposition.json` | Registered one-third/two-thirds attribution rule and realized 69.8% share. |
+| `phase1_v2_corrected/analysis/phase1_v2_controls_and_descriptives.csv` | Every corrected within-mode training and benchmark contrast with source run ID. |
+| `phase1_v2_corrected/analysis/phase1_v2_protocol_gate_summary.json` | Cell counts, horizons, schemas, paired schedule checks, first-goal rows, and fallback totals. |
+| `phase1_v2_corrected/run_*/analysis/out/SHA256SUMS.csv` | GitHub-produced artifact integrity inventories. |
+| `phase1_v2_corrected/SHA256SUMS.csv` | Complete permanent campaign inventory. |
 
-### Data files
+### Phase 1 statistics pipeline and disclosure
 
-| File | Metric(s) sourced | Section |
-|---|---|---|
-| `phase1_xzone_bumped/analysis/out/summary_table_ci.csv` | `goal_rate` mean by arm/lab; `avg_redundant` mean (−40% calculation) | Summary table, trivial/medium/complex rows |
-| `phase1_xzone_bumped/analysis/out/paired_tests.csv` | `auc_goal` Δ = +0.020; `goal_rate` Δ = +0.044, q = 0.009; `avg_redundant` Δ, q < 0.001 | Summary table deltas + q-values |
-| `phase1_xzone_bumped/analysis/out/learning_speed_tests.csv` | `mean_first_goal` n.s. trend −17 ep; `auc_reward` +14.3 (q < 0.001, δ = 1.0) | Summary table first-goal, ceiling footnote |
-
-### Mechanism ablation (§ lab3 discussion)
-
-| Property | Value |
+| File | Role |
 |---|---|
-| GH Actions run | `27464846574` |
-| Branch | `kg-crosszone-ablation` (`e8d63e0`) |
-| Profile | `phase1_kg_xzone_rand` (untargeted mode) |
-| Data | `phase1_xzone_ablation/analysis/out/learning_speed_tests.csv` |
-| Result cited | targeted auc_reward +14.3 → untargeted +9.2 (≈64% retained, ≈36% attributable to KG targeting) |
+| `analysis/phase1_v2_registered_family.py` | Exact registered family and decomposition. |
+| `analysis/reproduce_phase1_v2.py` | Raw-data rebuild and canonical byte-equivalence gate. |
+| `docs/phase1_results_v2.md` | Full corrected interpretation, including adverse and null outcomes. |
+| `docs/phase1_correction_analysis_deviation_2026-07-22.md` | Post-download seed-order and cross-platform serialization corrections. |
 
-### Statistics pipeline
-
-| Script | Functions used | Multiplicity correction |
-|---|---|---|
-| `analysis/sweep_report.py` | `aggregate_seeds()`, `learning_speed_tests()`, `_bh_qvalues()` | BH-FDR, confirmatory m=42, learning-speed m=12 |
-
-### Full analysis docs
-
-| Doc | Content |
-|---|---|
-| [phase1_xzone_bumped_analysis.md](phase1_xzone_bumped_analysis.md) | Primary run (seeds 1–10) full analysis |
-| [phase1_xzone_replication_s11_20_analysis.md](phase1_xzone_replication_s11_20_analysis.md) | Replication (seeds 11–20) |
-| [phase1_xzone_ablation_analysis.md](phase1_xzone_ablation_analysis.md) | Mechanism ablation |
-| [phase1_xzone_asis_analysis.md](phase1_xzone_asis_analysis.md) | Pre-bump as-is baseline |
+All protocol-v1 Phase 1 reports and xzone analyses are historical protocol-affected
+development records only. Their binding status is recorded in
+`docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.

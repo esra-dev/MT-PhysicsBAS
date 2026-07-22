@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -30,6 +33,7 @@ NUMERIC_TABLES = (
     "learning_speed_table.csv",
     "learning_speed_tests.csv",
 )
+FLOAT_TEXT = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
 
 
 def _discover(campaign: Path) -> dict[str, Path]:
@@ -47,13 +51,35 @@ def _discover(campaign: Path) -> dict[str, Path]:
     return found
 
 
+def _canonical_csv_bytes(path: Path) -> bytes:
+    """Serialize numeric CSV cells identically across Python/OS float repr details."""
+    output = io.StringIO(newline="")
+    with path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.reader(handle)
+        writer = csv.writer(output, lineterminator="\n")
+        for row in reader:
+            canonical: list[str] = []
+            for value in row:
+                if FLOAT_TEXT.fullmatch(value) and ("." in value or "e" in value.lower()):
+                    rendered = format(float(value), ".12g")
+                    canonical.append("0" if rendered == "-0" else rendered)
+                else:
+                    canonical.append(value)
+            writer.writerow(canonical)
+    return output.getvalue().encode("utf-8")
+
+
 def _compare(expected: Path, actual: Path) -> None:
     if not expected.is_file():
         raise FileNotFoundError(f"committed result table missing: {expected}")
     if not actual.is_file():
         raise FileNotFoundError(f"rebuild did not produce: {actual}")
-    if expected.read_bytes() != actual.read_bytes():
-        raise ValueError(f"byte comparison failed: {expected} != {actual}")
+    expected_bytes = (_canonical_csv_bytes(expected) if expected.suffix == ".csv"
+                      else expected.read_bytes())
+    actual_bytes = (_canonical_csv_bytes(actual) if actual.suffix == ".csv"
+                    else actual.read_bytes())
+    if expected_bytes != actual_bytes:
+        raise ValueError(f"canonical byte comparison failed: {expected} != {actual}")
 
 
 def _run(command: list[str]) -> None:
@@ -97,6 +123,21 @@ def reproduce(campaign: Path, work: Path) -> None:
     _compare(expected_registered / "phase1_v2_decomposition.json",
              registered / "phase1_v2_decomposition.json")
 
+    compiled = work / "phase1_v2_controls_and_descriptives.csv"
+    _run([
+        sys.executable, "analysis/phase1_v2_compile_controls.py", str(campaign),
+        "--out", str(compiled),
+    ])
+    _compare(campaign / "analysis/phase1_v2_controls_and_descriptives.csv", compiled)
+
+    protocol_summary = work / "phase1_v2_protocol_gate_summary.json"
+    _run([
+        sys.executable, "analysis/phase1_v2_protocol_summary.py", str(campaign),
+        "--out", str(protocol_summary),
+    ])
+    _compare(campaign / "analysis/phase1_v2_protocol_gate_summary.json",
+             protocol_summary)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -109,7 +150,7 @@ def main() -> int:
     else:
         with tempfile.TemporaryDirectory(prefix="phase1-v2-reproduce-") as temp:
             reproduce(args.campaign, Path(temp))
-    print("All corrected Phase-1 numeric CSVs are byte-equivalent.")
+    print("All corrected Phase-1 canonical numeric CSVs are byte-equivalent.")
     return 0
 
 

@@ -1,5 +1,11 @@
 # Phase 1 → Phase 2 — Change Documentation
 
+> **HISTORICAL, PROTOCOL-AFFECTED PHASE-1 NARRATIVE (2026-07-21).** This transition
+> document predates protocol v2. Every empirical Phase-1 assertion below, including the
+> sentence that Phase 1 “proved” acceleration, is withdrawn as thesis-final evidence.
+> See `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`; the current result is
+> `docs/phase1_results_v2.md` and the corrected audit.
+
 **Project:** MT-Esra (Knowledge-Guided RL for Building Automation)
 **Stack:** JaCaMo (Jason AgentSpeak BDI + CArtAgO) · Q-Learning · Knowledge Graph / Stereotypes · Node-RED labs
 **Branch:** `phase2-fault-detection` (off the Phase 1 anchor `kg-crosszone-coupling-bump`)

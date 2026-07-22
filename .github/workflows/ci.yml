@@ -105,6 +105,11 @@ jobs:
         run: |
           python3 -m pip install pytest numpy
           python3 -m pytest -q analysis/tests
+      - name: Enforce exhaustive Phase-1 claim ledger and audit provenance tags
+        run: |
+          python3 analysis/phase1_claim_ledger_lint.py
+          python3 analysis/build_phase1_claim_ledger.py --output /tmp/phase1_claim_ledger.csv
+          cmp docs/audit/phase1_claim_ledger.csv /tmp/phase1_claim_ledger.csv
       - name: Phase-1 provenance golden check
         run: python3 analysis/check_provenance.py
       - name: Build dashboard

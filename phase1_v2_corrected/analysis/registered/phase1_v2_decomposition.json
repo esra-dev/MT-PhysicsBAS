@@ -1,0 +1,7 @@
+{
+  "arm_c_mean_effect": 0.0036999999999999976,
+  "category": "more_than_two_thirds",
+  "redundancy_mean_effect": 0.002583333333333315,
+  "redundancy_share": 0.6981981981981937,
+  "rule": "redundancy share of arm-C lab2 mean effect: <1/3 little; 1/3..2/3 partial; >2/3 most"
+}

@@ -1,12 +1,16 @@
 # Phase 1 — Replication Analysis of the Bumped Cross-Zone Run (seeds 11–20)
 
+> **HISTORICAL, PROTOCOL-AFFECTED (2026-07-21).** In addition to the provenance limits
+> below, the scheduler and metric defects withdraw this run as thesis-final evidence.
+> The corrected protocol-v2 results supersede it regardless of direction.
+
 > **PROVENANCE (2026-07-19) — pre-inversion, superseded-physics record.** This run
 > predates the action-space inversion of 2026-07-10 (`docs/ACTION_SPACE_INVERSION.md`),
 > and its **bumped** lab3 spill physics (**+150 lux / 0.40·Sun**) was superseded on
 > 2026-07-08 by the current intermediate magnitudes (**+100 lux / 0.30·Sun**). Quote the
-> numbers below only as pre-inversion, bumped-physics measurements. The Phase-1 headline
-> of record is the post-inversion arm-C run 29639767776
-> (`docs/_audit/THESIS_STATE_REPORT.md` §5.2).
+> numbers below only as pre-inversion, bumped-physics measurements. The phrase “headline
+> of record” below means the historical 2026-07-19 status only. The current record is
+> `docs/phase1_results_v2.md`.
 
 **Run:** GitHub Actions *Phase 1*, workflow `phase1.yml`, run `27462446044`
 **Ref / commit:** `kg-crosszone-coupling-bump` @ `8a98cd8`
