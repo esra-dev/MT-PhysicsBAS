@@ -55,7 +55,9 @@ HISTORICAL_DEFAULT = (
     "phase1_postinv/historical_raw/run_29692725784"
 )
 CORRECTED_DEFAULT = "phase1_v2_corrected/analysis/registered/phase1_v2_registered_family.csv"
-CORRECTED_RUN_IDS = {"29848584965", "29848587274", "29848589682", "29848592010"}
+# A tuple is intentional: some claims cite several corrected runs, so evidence
+# selection must not depend on Python's randomized set iteration order.
+CORRECTED_RUN_IDS = ("29848584965", "29848587274", "29848589682", "29848592010")
 
 
 def _headings(lines: list[str]) -> list[str]:
@@ -209,7 +211,10 @@ def build(sources_path: Path, output: Path) -> int:
             })
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=FIELDS)
+        # csv's default Excel dialect writes CRLF on every platform.  An
+        # explicit LF terminator keeps the committed ledger byte-identical on
+        # Windows and Linux, which the CI regeneration gate requires.
+        writer = csv.DictWriter(handle, fieldnames=FIELDS, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     return len(rows)

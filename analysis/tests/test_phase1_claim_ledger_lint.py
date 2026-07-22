@@ -118,12 +118,21 @@ def test_builder_emits_complete_human_readable_ledger(tmp_path, monkeypatch):
     (evidence / "phase1_v2_registered_family.csv").write_text(
         "result\n", encoding="utf-8")
     assert ledger_builder.build(sources, output) == 1
+    assert b"\r\n" not in output.read_bytes()
+    assert output.read_bytes().endswith(b"\n")
     with output.open(encoding="utf-8", newline="") as handle:
         row = next(csv.DictReader(handle))
     assert row["claim_text"] == "auc_goal changed by +0.25 for n=20"
     assert row["value"] == "+0.25;20"
     assert row["classification"] == "corrected_result"
     assert ledger_lint.lint(output, sources) == []
+
+
+def test_corrected_evidence_selection_is_stably_ordered():
+    line = "runs 29848589682, 29848587274, and 29848584965"
+    assert ledger_builder._corrected_evidence(line) == (
+        "phase1_v2_corrected/run_29848584965/ARCHIVE_MANIFEST.md"
+    )
 
 
 def test_claim_ledger_rejects_zero_corrected_p_value(tmp_path, monkeypatch):
