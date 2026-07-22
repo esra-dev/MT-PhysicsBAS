@@ -1,0 +1,5 @@
+action_label,action_value,samples,delay_ticks,delay_seconds,std_ticks,response_class
+SetZ1Blinds=ON,true,8,12.1250,60.6250,0.3536,delayed
+SetZ1Light=ON,true,8,1.1250,5.6250,0.3536,instantaneous
+SetZ2Blinds=ON,true,8,12.0000,60.0000,0.0000,delayed
+SetZ2Light=ON,true,8,1.1250,5.6250,0.3536,instantaneous

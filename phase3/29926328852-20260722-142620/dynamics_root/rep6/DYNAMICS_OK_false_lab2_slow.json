@@ -1,0 +1,11 @@
+{
+  "status": "ok",
+  "protocol_version": "phase3-v2",
+  "energy_meter": "tick-v1",
+  "profile": "lab2_slow",
+  "mode": "ql_false",
+  "replica": 6,
+  "blind_delay_ticks": 12,
+  "seconds_per_tick": 5.0,
+  "probes_override": 0
+}

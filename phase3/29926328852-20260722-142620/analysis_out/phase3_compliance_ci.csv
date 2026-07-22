@@ -1,0 +1,5 @@
+profile,mode,n_replicas,n_goals_total,overall_compliance_mean,overall_compliance_ci_lo,overall_compliance_ci_hi,tight_compliance_mean,tight_compliance_ci_lo,tight_compliance_ci_hi,loose_compliance_mean,loose_compliance_ci_lo,loose_compliance_ci_hi,total_tick_energy_mean,total_tick_energy_ci_lo,total_tick_energy_ci_hi,total_energy_wallclock_legacy_mean,total_energy_wallclock_legacy_ci_lo,total_energy_wallclock_legacy_ci_hi,mean_actual_delay_mean,mean_actual_delay_ci_lo,mean_actual_delay_ci_hi
+lab2_slow,ql_false,10,6,0.5,0.5,0.5,0.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,60.916666666666664,60.500000000000014,61.333333333333336
+lab2_slow,ql_true,10,6,0.9833333333333332,0.95,1.0,0.9666666666666668,0.8999999999999998,1.0,1.0,1.0,1.0,3.7,3.3,4.1,3.7,3.3,4.1,33.833333333333336,33.33333333333333,34.416666666666664
+lab3_slow,ql_false,10,6,0.5,0.5,0.5,0.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,60.5,60.16666666666667,60.833333333333336
+lab3_slow,ql_true,10,6,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,3.1,3.0,3.3,3.1,3.0,3.3,33.41666666666667,32.91666666666667,34.08333333333333
