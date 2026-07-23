@@ -1,0 +1,2 @@
+DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate,NominalGoal,BestEffortRank,RankShortfall,DegradedMode,BlacklistEvents,DetectorVersion,ProtocolVersion
+http://example.org/was#SetZ1Light,0,690,690,-1,0.4000,3,0,3,1,http://example.org/was#SetZ1Light@0,fault-detector-v2,phase2-v2

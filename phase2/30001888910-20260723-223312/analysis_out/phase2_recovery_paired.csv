@@ -1,0 +1,13 @@
+profile,metric,recovery_tier,in_registered_family,n_paired,seeds_paired,ql_true_mean,ql_false_mean,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_bootstrap_one_sided_true_faster,p_wilcoxon,cliffs_delta,ql_true_faster,q_bootstrap_bh,bh_family_m
+lab3_f1inv,RecoveryEpisodes,descriptive,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,549.2,695.8,-146.6,-373.8025,100.9,0.2262,0.8869,0.193359375,-0.3,True,nan,0
+lab3_f1inv_z2,RecoveryEpisodes,descriptive,False,9,seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,744.4444444444445,876.8888888888889,-132.44444444444446,-517.4444444444445,351.3333333333333,0.5148,0.7431,0.25,-0.2839506172839506,True,nan,0
+lab3_f1bdead,RecoveryEpisodes,confirmatory,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,126.5,165.5,-39.0,-141.5,47.1,0.44,0.7809,0.546875,-0.28,True,nan,0
+lab3_f1binv,RecoveryEpisodes,confirmatory,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,183.3,211.5,-28.2,-124.8,100.4,0.5962,0.7023,0.232421875,-0.46,True,nan,0
+lab3_f2bdead,RecoveryEpisodes,confirmatory,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,200.0,190.2,9.8,-50.2,80.50249999999997,0.8086,0.4043,0.921875,-0.13,False,nan,0
+lab3_f1inv,DetectEpisode,,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f2inv,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1inv_z2,DetectEpisode,,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1bdead,DetectEpisode,,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,5.0,5.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f1binv,DetectEpisode,,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,5.0,5.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab3_f2bdead,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,5.0,5.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+labmon2_nostereo_f2dead_lowsun,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
