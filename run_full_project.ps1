@@ -422,7 +422,17 @@ function Get-ExpectedTrainingArtifacts {
 
 function Get-Phase1ScenarioProvenance {
     param([string]$Profile)
-    $scenarioFile = Join-Path $ScriptRoot "benchmark\train_scenarios_${Profile}.json"
+    # Variant profiles (labmon_infoonly etc.) share their base lab's scenario
+    # file; config train_scenarios_alias maps profile -> base. This mirrors the
+    # lab_profiles.asl train_scenarios() mapping the agent itself uses — the
+    # 2026-07-22 Phase-2 dispatches failed pre-data on the name-derived path.
+    $scenarioBase = $Profile
+    $aliasMap = $Cfg.train_scenarios_alias
+    if ($aliasMap) {
+        $aliasProp = $aliasMap.PSObject.Properties[$Profile]
+        if ($null -ne $aliasProp) { $scenarioBase = $aliasProp.Value }
+    }
+    $scenarioFile = Join-Path $ScriptRoot "benchmark\train_scenarios_${scenarioBase}.json"
     if (-not (Test-Path -LiteralPath $scenarioFile)) {
         throw "Protocol-v2 scenario file missing: $scenarioFile"
     }
@@ -444,7 +454,8 @@ function Get-Phase1ScenarioProvenance {
         $sha.Dispose()
     }
     return [pscustomobject]@{
-        file = "benchmark/train_scenarios_${Profile}.json"
+        # Record the RESOLVED file (after any alias), never the name-derived one.
+        file = "benchmark/train_scenarios_${scenarioBase}.json"
         ids = $ids
         hash = $hash
     }

@@ -311,6 +311,12 @@
       }
     }
   },
+  "train_scenarios_alias": {
+    "labmon_infoonly": "labmon",
+    "labmon_nostereo": "labmon",
+    "labmon2_infoonly": "labmon2",
+    "labmon2_nostereo": "labmon2"
+  },
   "profiles_to_run": ["lab1", "lab2", "lab3"],
   "stereo_modes": ["true", "false"],
   "bench_modes": ["rule_based", "ql_false", "ql_true"],

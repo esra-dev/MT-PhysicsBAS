@@ -55,3 +55,23 @@ def test_every_dispatchable_profile_is_in_known_profiles():
     assert not missing, (
         "run_full_project.ps1: profiles referenced by run_config.json but "
         f"missing from $KnownProfiles: {missing}")
+
+
+def test_every_trainable_profile_resolves_a_scenario_file():
+    """The 2026-07-22 Phase-2 dispatches failed pre-data because a variant
+    parent profile (labmon2_infoonly) had no name-derived scenario file. Every
+    profile a protocol-v2 training cell can run must resolve to an existing
+    train_scenarios JSON, via its own name or the train_scenarios_alias map."""
+    cfg = _config()
+    alias = cfg.get("train_scenarios_alias", {})
+    trainable = set(cfg.get("profiles_to_run", []))
+    trainable |= set(cfg["phase4"]["phase4_profiles"])
+    trainable |= set(cfg["phase2"]["parent_profile"].values())
+    missing = []
+    for profile in sorted(trainable):
+        base = alias.get(profile, profile)
+        if not (ROOT / "benchmark" / f"train_scenarios_{base}.json").is_file():
+            missing.append(f"{profile} -> train_scenarios_{base}.json")
+    assert not missing, (
+        "profiles without a resolvable protocol-v2 scenario file "
+        f"(add benchmark file or train_scenarios_alias entry): {missing}")
