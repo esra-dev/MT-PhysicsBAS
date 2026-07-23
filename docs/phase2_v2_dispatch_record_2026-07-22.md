@@ -17,3 +17,32 @@ registration head before dispatch). Identical inputs across dispatches:
 Until all four aggregates complete, only operational status is inspected.
 Failed cells/dispatches are preserved and documented; any re-dispatch uses
 byte-identical inputs with both run IDs recorded here.
+
+## Amendment 2026-07-23 — pre-data dispatch failure and re-dispatch
+
+All four dispatches above **failed pre-data**: `Get-Phase1ScenarioProvenance`
+derived the protocol-v2 scenario file from the profile name, but the four
+monitor-variant parents (`labmon_infoonly`, `labmon_nostereo`,
+`labmon2_infoonly`, `labmon2_nostereo`) share their base lab's scenario file
+— every such clean-training cell threw
+`Protocol-v2 scenario file missing: benchmark/train_scenarios_<variant>.json`
+and the entire adapt matrix was skipped (`needs: train_clean`). **No
+adaptation cell ran in any of the four runs, so no data-bearing cell exists
+or was replaced.** The failed runs are preserved as operational history.
+
+Fix (commit `680f25a9`): config `train_scenarios_alias` maps each variant
+profile to its base lab, mirroring the `lab_profiles.asl` mapping the agent
+itself uses; the runner records the resolved file in TRAINING_OK; a new guard
+test (`analysis/tests/test_runner_allowlists.py`) makes an unresolvable
+scenario file a local test failure. CI run `29987410238` green on the fix
+head before re-dispatch.
+
+Re-dispatches (2026-07-23, 09:00 UTC, dispatch head `680f25a9`,
+byte-identical inputs):
+
+| Dispatch | Failed run (pre-data) | Re-dispatch run |
+|---|---|---|
+| A1 | `29923594983` | `29993457632` |
+| A2 | `29923609054` | `29993470827` |
+| B1 | `29923621835` | `29993484405` |
+| B2 | `29923634620` | `29993497191` |
