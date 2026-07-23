@@ -589,3 +589,47 @@ Per the §7.2 null-risk note, boundaries are findings, not failures:
    `avg_dev`/`avg_cycling` are marginally *higher* for the KG arm — the energy prior
    trades a little settling behaviour for a large steady-power reduction; lab5's
    contrast is energy, not learning speed, by design.
+
+## 11. Corrected results of record (protocol v2, 2026-07-22)
+
+Everything above this section is the withdrawn protocol-v1 record (see the
+banner at the top of this document). The corrected campaign is registered in
+`docs/phase4_correction_registration_2026-07-22.md` and archived under
+`phase4_v2_corrected/` (runs `29926341581` seeds 1–10 and `29926354783` seeds
+11–20, head `90e53f8b`, run-mode `phase4_v2`: fixed 3,000-episode horizon,
+strict by-position scenario scheduling, v2 benchmark schema, arm-C convention,
+deterministic policy-energy weights). Source:
+`phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv` and
+`phase4_v2_ladder_trend.csv`; reproduction:
+`python analysis/reproduce_phase4_v2.py phase4_v2_corrected`.
+
+### 11.1 Registered family (m=4, n=20, exact two-sided sign-flip + BH)
+
+| Member | Mean Δ (ql_true − ql_false) | 95% bootstrap CI | sign-flip p | BH q | rank-biserial | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| lab4 `avg_redundant` | −0.69500 | [−0.98562, −0.43750] | 3.815×10⁻⁶ | 5.086×10⁻⁶ | −0.990 | Supported (KG fewer redundant actions) |
+| lab4dual `avg_redundant` | −0.74500 | [−0.97375, −0.53187] | 3.815×10⁻⁶ | 5.086×10⁻⁶ | −0.990 | Supported |
+| lab4chain `avg_redundant` | −0.73438 | [−0.88500, −0.58500] | 1.907×10⁻⁶ | 5.086×10⁻⁶ | −1.000 | Supported |
+| lab5 `energy_compliance` | +0.04313 | [+0.01438, +0.07063] | 0.009444 | 0.009444 | +0.683 | Supported (KG more within-budget goals) |
+
+### 11.2 The ladder-growth prediction does not reproduce
+
+The registered ordered secondary — does the redundancy advantage grow with
+dependency depth? — is null: d(lab4chain) − d(lab4) = −0.03938
+(95% CI [−0.35813, +0.28812], sign-flip p = 0.823), with both descriptive
+depth contrasts also null (lab4dual − lab4: −0.05000, p = 0.808;
+lab4chain − lab4dual: +0.01062, p = 0.943). Under the corrected protocol the
+KG advantage is approximately **constant (~−0.7 redundant actions) at every
+dependency depth**; the withdrawn monotone pattern (−0.33 / −0.93 / −1.46)
+was an artifact of the defective scheduler, not a property of dependency
+depth. The corrected lab5 energy-compliance benefit (+0.043) is likewise
+smaller than the withdrawn +0.096 but remains supported.
+
+### 11.3 Reading
+
+Phase 4's corrected claim is therefore: knowing the dependency structure
+buys a stable, significant reduction in redundant actuation wherever a hidden
+gate exists — but the size of that reduction does not scale with how deep the
+gate chain is — and knowing per-device energy costs buys a small, significant
+increase in within-budget goal attainment. All values are
+simulator-conditional; no real-building claim is made.

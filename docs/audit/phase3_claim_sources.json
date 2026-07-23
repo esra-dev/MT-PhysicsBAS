@@ -1,6 +1,9 @@
 {
   "sources": [
     "docs/PHASE3_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md",
-    "docs/phase3_correction_registration_2026-07-22.md"
+    "docs/phase3_correction_registration_2026-07-22.md",
+    "docs/phase34_v2_dispatch_record_2026-07-22.md",
+    "phase3_v2_corrected/CAMPAIGN_MANIFEST.md",
+    "phase3_v2_corrected/run_29926328852/ARCHIVE_MANIFEST.md"
   ]
 }

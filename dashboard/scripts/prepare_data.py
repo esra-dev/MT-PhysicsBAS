@@ -362,31 +362,93 @@ def build_phase2():
     print("phase2.json written")
 
 
+# Phase-3/4 corrected sources: derived solely from the committed protocol-v2
+# campaign archives, like build_phase1. CI regenerates and byte-compares.
+PHASE3_V2_RUN = 29926328852
+PHASE3_V2_OUT = ROOT / "phase3_v2_corrected" / f"run_{PHASE3_V2_RUN}" / "analysis" / "out"
+PHASE4_V2_RUNS = {"seeds_1_10": 29926341581, "seeds_11_20": 29926354783}
+PHASE4_V2_REGISTERED = ROOT / "phase4_v2_corrected" / "analysis" / "registered"
+PHASE34_HEAD_SHA = "90e53f8b087fc390a7ad51a0187b81c89c21c64e"
+PHASE4_FAMILY_NAMES = {
+    "lab4": "lab4 avg_redundant",
+    "lab4dual": "lab4dual avg_redundant",
+    "lab4chain": "lab4chain avg_redundant",
+    "lab5": "lab5 energy_compliance",
+}
+# Favourable direction per registered member (negative = KG better for the
+# redundancy cells, positive = KG better for lab5 energy compliance).
+PHASE4_FAVOURABLE_SIGN = {"avg_redundant": -1.0, "energy_compliance": 1.0}
+
+
+def _dump(obj, name):
+    with open(OUT / name, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(obj, handle, indent=2)
+        handle.write("\n")
+
+
 def build_phase3():
-    a = ROOT / "analysis" / "out"
     obj = {
-        "delay": read_csv_rows(a / "phase3_delay_accuracy.csv"),
-        "compliance": read_csv_rows(a / "phase3_compliance_ci.csv"),
+        "protocol_version": "phase3-v2",
+        "status": "current thesis evidence",
+        "run": PHASE3_V2_RUN,
+        "head_sha": PHASE34_HEAD_SHA,
+        "energy_meter": "tick-v1",
+        "delay": read_csv_rows(PHASE3_V2_OUT / "phase3_delay_accuracy.csv"),
+        "compliance": read_csv_rows(PHASE3_V2_OUT / "phase3_compliance_ci.csv"),
+        "source": f"phase3_v2_corrected/run_{PHASE3_V2_RUN}/analysis/out",
     }
-    json.dump(obj, open(OUT / "phase3.json", "w"), separators=(",", ":"))
-    print("phase3.json written")
+    _dump(obj, "phase3.json")
+    print("phase3.json written (protocol v2, derived from phase3_v2_corrected/)")
 
 
 def build_phase4():
-    a = ROOT / "analysis" / "out"
-    summary = [r for r in read_csv_rows(a / "summary_table.csv")
-               if r["profile"] in ("lab4", "lab5") and r["mode"] in MODES]
-    llm_detail = []
-    f = a / "phase4_llm_detail_lab5.csv"
-    if f.exists():
-        llm_detail = [r for r in read_csv_rows(f) if r["seed"] == "1"]
+    family = []
+    for row in read_csv_rows(PHASE4_V2_REGISTERED / "phase4_v2_registered_family.csv"):
+        q = float(row["q_signflip_bh_m4"])
+        mean = float(row["mean_paired_difference"])
+        favourable = PHASE4_FAVOURABLE_SIGN[row["metric"]] * mean > 0
+        if q <= 0.05:
+            verdict = "supported" if favourable else "adverse"
+        else:
+            verdict = "null"
+        family.append({
+            "name": PHASE4_FAMILY_NAMES[row["registered_cell"]],
+            "cell": row["registered_cell"],
+            "metric": row["metric"],
+            "mean_ql_true": float(row["mean_ql_true"]),
+            "mean_ql_false": float(row["mean_ql_false"]),
+            "mean": mean,
+            "ci_lo": float(row["ci_lo_bootstrap"]),
+            "ci_hi": float(row["ci_hi_bootstrap"]),
+            "p": float(row["p_signflip_two_sided"]),
+            "q": q,
+            "rank_biserial": float(row["paired_rank_biserial"]),
+            "verdict": verdict,
+        })
+    if len(family) != 4:
+        raise SystemExit("phase4 registered family: unexpected row count")
+    ladder = []
+    for row in read_csv_rows(PHASE4_V2_REGISTERED / "phase4_v2_ladder_trend.csv"):
+        ladder.append({
+            "contrast": row["contrast"],
+            "role": row["role"],
+            "mean": float(row["mean_difference_of_differences"]),
+            "ci_lo": float(row["ci_lo_bootstrap"]),
+            "ci_hi": float(row["ci_hi_bootstrap"]),
+            "p": float(row["p_signflip_two_sided"]),
+        })
     obj = {
-        "summary": summary,
-        "llm_summary": read_csv_rows(a / "phase4_llm_summary.csv"),
-        "llm_detail_lab5": llm_detail,
+        "protocol_version": "phase1-v2",
+        "run_mode": "phase4_v2",
+        "status": "current thesis evidence",
+        "runs": PHASE4_V2_RUNS,
+        "head_sha": PHASE34_HEAD_SHA,
+        "registered_family": family,
+        "ladder_trend": ladder,
+        "source": "phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv",
     }
-    json.dump(obj, open(OUT / "phase4.json", "w"), separators=(",", ":"))
-    print("phase4.json written")
+    _dump(obj, "phase4.json")
+    print("phase4.json written (protocol v2, derived from phase4_v2_corrected/)")
 
 
 BUILDERS = {

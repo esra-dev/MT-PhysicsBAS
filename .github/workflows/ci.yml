@@ -119,10 +119,12 @@ jobs:
           done
       - name: Phase-1 provenance golden check
         run: python3 analysis/check_provenance.py
-      - name: Dashboard Phase-1 data must be a byte-identical derivation
+      - name: Dashboard phase data must be byte-identical derivations
         run: |
           python3 dashboard/scripts/prepare_data.py --only phase1
-          git diff --exit-code -- dashboard/public/data/phase1.json
+          python3 dashboard/scripts/prepare_data.py --only phase3
+          python3 dashboard/scripts/prepare_data.py --only phase4
+          git diff --exit-code -- dashboard/public/data/phase1.json dashboard/public/data/phase3.json dashboard/public/data/phase4.json
       - name: Build dashboard
         working-directory: dashboard
         run: |

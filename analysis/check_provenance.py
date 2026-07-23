@@ -184,6 +184,91 @@ def check(root: Path = ROOT) -> list[str]:
             require("phase1-v2" in text or "protocol v2" in text or "protocol-v2" in text,
                     f"{rel}: current protocol-v2 source is not identified")
 
+    errors.extend(check_phase34(root))
+    return errors
+
+
+# Phase-3/4 corrected-campaign pins (2026-07-22). Same contract as the Phase-1
+# pins above: committed workflow inputs must identify the registered dispatch,
+# the registered family means are frozen, and the dashboard must expose only
+# corrected data.
+PHASE34_HEAD = "90e53f8b087fc390a7ad51a0187b81c89c21c64e"
+PHASE34_REF = "refs/heads/phase234-correction-2026-07-22"
+PHASE3_RUN = "29926328852"
+PHASE4_RUNS = {"29926341581": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+               "29926354783": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]}
+PHASE4_EXPECTED = {
+    "lab4": -0.6950000000000001,
+    "lab4dual": -0.7450000000000001,
+    "lab4chain": -0.734375,
+    "lab5": 0.043125000000000024,
+}
+
+
+def check_phase34(root: Path) -> list[str]:
+    errors: list[str] = []
+
+    def require(condition: bool, message: str) -> None:
+        if not condition:
+            errors.append(message)
+
+    p3_inputs = root / f"phase3_v2_corrected/run_{PHASE3_RUN}/analysis/out/workflow_inputs.json"
+    require(p3_inputs.is_file(), f"missing {p3_inputs.name} for phase3 run {PHASE3_RUN}")
+    if p3_inputs.is_file():
+        data = _json(p3_inputs)
+        require(str(data.get("run_id")) == PHASE3_RUN, "phase3 workflow inputs: wrong run_id")
+        require(data.get("head_sha") == PHASE34_HEAD, "phase3 workflow inputs: wrong head_sha")
+        require(data.get("ref") == PHASE34_REF, "phase3 workflow inputs: wrong ref")
+
+    for run_id, seeds in PHASE4_RUNS.items():
+        inputs_path = root / f"phase4_v2_corrected/run_{run_id}/analysis/out/workflow_inputs.json"
+        require(inputs_path.is_file(), f"missing workflow inputs for phase4 run {run_id}")
+        if not inputs_path.is_file():
+            continue
+        data = _json(inputs_path)
+        require(str(data.get("run_id")) == run_id, f"phase4 run {run_id}: wrong run_id")
+        require(data.get("run_mode") == "phase4_v2", f"phase4 run {run_id}: wrong run_mode")
+        require(data.get("head_sha") == PHASE34_HEAD, f"phase4 run {run_id}: wrong head_sha")
+        require(data.get("ref") == PHASE34_REF, f"phase4 run {run_id}: wrong ref")
+        require(data.get("seeds") == seeds, f"phase4 run {run_id}: wrong seeds")
+
+    family_path = root / "phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv"
+    require(family_path.is_file(), "missing phase4 registered family CSV")
+    if family_path.is_file():
+        with family_path.open(encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        require({row.get("registered_cell") for row in rows} == set(PHASE4_EXPECTED),
+                "phase4 registered cells differ from the frozen family")
+        for row in rows:
+            cell = row.get("registered_cell", "")
+            for field in ("p_signflip_two_sided", "q_signflip_bh_m4"):
+                try:
+                    value = float(row[field])
+                except (KeyError, TypeError, ValueError):
+                    errors.append(f"phase4 {cell}: invalid {field}")
+                    continue
+                require(math.isfinite(value) and 0.0 < value <= 1.0,
+                        f"phase4 {cell}: {field} must be finite and in (0, 1]")
+            if cell in PHASE4_EXPECTED:
+                try:
+                    actual = float(row["mean_paired_difference"])
+                except (KeyError, TypeError, ValueError):
+                    errors.append(f"phase4 {cell}: invalid mean_paired_difference")
+                else:
+                    require(math.isclose(actual, PHASE4_EXPECTED[cell], rel_tol=0.0, abs_tol=1e-15),
+                            f"phase4 {cell}: registered mean changed ({actual!r})")
+
+    for name, expected_keys, forbidden in (
+            ("phase3.json", {"protocol_version": "phase3-v2"}, ("llm",)),
+            ("phase4.json", {"run_mode": "phase4_v2"}, ("llm_summary", "llm_detail_lab5", "summary"))):
+        path = root / "dashboard" / "public" / "data" / name
+        require(path.is_file(), f"missing dashboard {name}")
+        if path.is_file():
+            data = _json(path)
+            for key, expected in expected_keys.items():
+                require(data.get(key) == expected, f"dashboard {name}: {key} != {expected}")
+            for key in forbidden:
+                require(key not in data, f"dashboard {name}: withdrawn key {key!r} present")
     return errors
 
 

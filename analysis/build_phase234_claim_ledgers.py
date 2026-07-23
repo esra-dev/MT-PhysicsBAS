@@ -46,18 +46,34 @@ PHASES = {
         "sources": Path("docs/audit/phase3_claim_sources.json"),
         "ledger": Path("docs/audit/phase3_claim_ledger.csv"),
         "corrected_prefix": "phase3_v2_corrected/",
-        "corrected_run_ids": (),
+        "corrected_run_ids": ("29926328852",),
         "historical_tokens": ("27621106006", "29166356524", "protocol-affected"),
         "historical_evidence": "phase3_postinv/;phase3_download/",
+        # Docs whose numeric lines ARE the corrected record: default them to
+        # corrected_result against the campaign's canonical table.
+        "corrected_docs": {
+            "phase3_v2_corrected/CAMPAIGN_MANIFEST.md":
+                "phase3_v2_corrected/run_29926328852/analysis/out/phase3_compliance_ci.csv",
+            "phase3_v2_corrected/run_29926328852/ARCHIVE_MANIFEST.md":
+                "phase3_v2_corrected/run_29926328852/SHA256SUMS.csv",
+        },
     },
     "4": {
         "sources": Path("docs/audit/phase4_claim_sources.json"),
         "ledger": Path("docs/audit/phase4_claim_ledger.csv"),
         "corrected_prefix": "phase4_v2_corrected/",
-        "corrected_run_ids": (),
+        "corrected_run_ids": ("29926341581", "29926354783"),
         "historical_tokens": ("29193486193", "27905392725", "27903687624",
                               "protocol-affected"),
         "historical_evidence": "phase4_postinv/run_29193486193/",
+        "corrected_docs": {
+            "phase4_v2_corrected/CAMPAIGN_MANIFEST.md":
+                "phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv",
+            "phase4_v2_corrected/run_29926341581/ARCHIVE_MANIFEST.md":
+                "phase4_v2_corrected/run_29926341581/SHA256SUMS.csv",
+            "phase4_v2_corrected/run_29926354783/ARCHIVE_MANIFEST.md":
+                "phase4_v2_corrected/run_29926354783/SHA256SUMS.csv",
+        },
     },
 }
 
@@ -66,9 +82,14 @@ def _make_classifier(config):
     prefix = config["corrected_prefix"]
     run_ids = config["corrected_run_ids"]
     tokens = config["historical_tokens"]
+    corrected_docs = config.get("corrected_docs", {})
 
     def classify(doc, lineno, line, heading):
         lower = line.lower()
+        if doc in corrected_docs and not any(
+                token in lower for token in (t.lower() for t in tokens)):
+            return ("corrected_result", corrected_docs[doc],
+                    "current protocol-v2 result; committed archive", "match")
         if prefix in line or any(run_id in line for run_id in run_ids):
             evidence = prefix + "CAMPAIGN_MANIFEST.md"
             for word in line.replace("`", " ").split():

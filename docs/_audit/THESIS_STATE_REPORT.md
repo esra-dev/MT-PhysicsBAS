@@ -1216,6 +1216,16 @@ Sources: `analysis/out_phase2_registered/phase2_recovery_ci.csv`
 > headlines are structurally immune to the protocol defects (no training, no
 > scenario scheduling) and are expected to reproduce; the corrected run
 > governs regardless. See `docs/PHASE3_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+>
+> **Corrected run of record (completed 2026-07-22): run `29926328852`,
+> archived at `phase3_v2_corrected/run_29926328852/`.** The delay headline
+> reproduces (slowest-actuator learned delay 12.125–12.1875 ticks vs truth
+> 12; rel. error 1.04–1.56% in all four cells). Compliance reproduces with
+> one disclosed deviation: KG arm 59/60 goal-attempts met on lab2_slow (one
+> tight-goal miss in one replica) and 60/60 on lab3_slow, vs the zero-delay
+> baseline's 30/60 in both profiles. Tick-integrated energy (descriptive,
+> meter `tick-v1`): KG 3.1–3.7 units per replica vs 0. Source:
+> `phase3_v2_corrected/CAMPAIGN_MANIFEST.md`.
 
 ### 7.1 Design
 
@@ -1303,6 +1313,17 @@ the deadline.*
 > 11/13/16 never presented), its benchmark used the legacy wall-clock
 > energy/first-goal schema, and its run mode stacked PBRS + adaptive trust.
 > See `docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+>
+> **Corrected runs of record (completed 2026-07-22): `29926341581` +
+> `29926354783`, archived at `phase4_v2_corrected/`.** All four registered
+> family members are supported (n=20, exact sign-flip, BH m=4): lab4
+> `avg_redundant` −0.69500 (q=5.086×10⁻⁶), lab4dual −0.74500 (q=5.086×10⁻⁶),
+> lab4chain −0.73438 (q=5.086×10⁻⁶), lab5 `energy_compliance` +0.04313
+> (q=0.009444). The withdrawn ladder-growth headline does NOT reproduce:
+> d(lab4chain)−d(lab4) = −0.03938 (p=0.823) — the advantage is ~constant
+> across dependency depth; the monotone −0.33/−0.93/−1.46 pattern was a
+> protocol artifact. Current record: `PHASE4_DEPENDENCY_LADDER.md` §11;
+> source: `phase4_v2_corrected/analysis/registered/`.
 
 *Current Phase-4 scope and results: Addendum 2026-07-12d/e and
 `PHASE4_DEPENDENCY_LADDER.md` §10. The LLM baseline named in this heading is

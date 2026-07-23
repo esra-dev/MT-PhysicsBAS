@@ -80,8 +80,10 @@ function DelayResults() {
         })}
       </div>
       <p className="note">Loose deadlines (“within 5 min”) are met by both planners (100%) — the contrast is <i>tight</i> goals,
-        where only the delay-aware planner knows the blind cannot deliver in time. Single evaluation replica per lab
-        (deterministic planner); reported descriptively, not as a significance test.</p>
+        where only the delay-aware planner knows the blind cannot deliver in time. Ten replicas per cell under
+        protocol phase3-v2 (deterministic planner; replicas sample measurement jitter); reported descriptively,
+        not as a significance test. Energy is the deterministic tick-integrated meter (tick-v1) — the withdrawn
+        wall-clock accumulator survives only as a labelled legacy diagnostic.</p>
     </>
   );
 }
@@ -93,6 +95,9 @@ export default function Phase3() {
   return (
     <div className="page">
       <h1>Phase 3 · The Slow Ladder</h1>
+      <div className="q"><b>Current evidence:</b> protocol <code>phase3-v2</code>, run 29926328852, replicas 1–10,
+        tick-integrated energy (tick-v1). Earlier Phase-3 runs are historical, protocol-affected records —
+        see docs/PHASE3_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md.</div>
       <div className="q"><b>Question:</b> the static KG knows <i>what</i> each actuator does but not <i>how fast</i>. Can the agent
         <b> measure</b> each actuator's response delay online, <b>write it back</b> into the KG (<code>ws:responseDelay</code>), and
         <b> use it</b> to satisfy time-bounded goals?</div>
