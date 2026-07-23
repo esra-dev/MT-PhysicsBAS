@@ -55,6 +55,11 @@ param(
     # Used by CI matrices (one job per profile x mode cell). Default = all.
     [string]$OnlyModes = "",
 
+    # Resolve the protocol-v2 scenario file for every known profile through the
+    # REAL Get-Phase1ScenarioProvenance path and exit (0 = all resolve). Run by
+    # CI so an unresolvable profile is caught before any dispatch.
+    [switch]$ScenarioProvenanceCheckOnly,
+
     [switch]$SkipTraining,
     [switch]$SkipBenchmark,
 
@@ -425,9 +430,15 @@ function Get-Phase1ScenarioProvenance {
     # Variant profiles (labmon_infoonly etc.) share their base lab's scenario
     # file; config train_scenarios_alias maps profile -> base. This mirrors the
     # lab_profiles.asl train_scenarios() mapping the agent itself uses — the
-    # 2026-07-22 Phase-2 dispatches failed pre-data on the name-derived path.
+    # 2026-07-22 Phase-2 dispatches failed pre-data on the name-derived path,
+    # and the 2026-07-23 re-dispatches failed again because this lookup read an
+    # undefined variable ($Cfg) that PowerShell silently treats as $null. The
+    # alias lives on the Read-RunConfig result ($RunConfig); the
+    # -ScenarioProvenanceCheckOnly switch executes this exact path for every
+    # known profile so the class is caught locally and in CI.
     $scenarioBase = $Profile
-    $aliasMap = $Cfg.train_scenarios_alias
+    $aliasMap = $null
+    if ($RunConfig) { $aliasMap = $RunConfig.train_scenarios_alias }
     if ($aliasMap) {
         $aliasProp = $aliasMap.PSObject.Properties[$Profile]
         if ($null -ne $aliasProp) { $scenarioBase = $aliasProp.Value }
@@ -436,7 +447,10 @@ function Get-Phase1ScenarioProvenance {
     if (-not (Test-Path -LiteralPath $scenarioFile)) {
         throw "Protocol-v2 scenario file missing: $scenarioFile"
     }
-    $rows = @(Get-Content -LiteralPath $scenarioFile -Raw -Encoding UTF8 | ConvertFrom-Json)
+    # Parameter-passing (not piping) keeps the JSON array's elements intact
+    # under Windows PowerShell 5.1; piping through ConvertFrom-Json emits the
+    # whole array as ONE item there (pwsh 7 enumerates), collapsing $rows.
+    $rows = @((ConvertFrom-Json (Get-Content -LiteralPath $scenarioFile -Raw -Encoding UTF8)))
     $ids = @($rows | Where-Object { $_.PSObject.Properties['id'] } | ForEach-Object { [int]$_.id })
     if ($ids.Count -ne $rows.Count) {
         throw "Protocol-v2 scenario entry is missing an ID: $scenarioFile"
@@ -459,6 +473,30 @@ function Get-Phase1ScenarioProvenance {
         ids = $ids
         hash = $hash
     }
+}
+
+# ── Provenance-resolution self-check (-ScenarioProvenanceCheckOnly) ─────────
+# Executes the real scenario-file resolution for every known profile. Both
+# Phase-2 dispatch failures (2026-07-22 name-derived path, 2026-07-23 dead
+# alias lookup) would have been caught by running this locally or in CI.
+if ($ScenarioProvenanceCheckOnly) {
+    Write-Header "Protocol-v2 scenario-provenance resolution check ($($KnownProfiles.Count) profiles)"
+    $provenanceFailed = $false
+    foreach ($profileName in $KnownProfiles) {
+        try {
+            $prov = Get-Phase1ScenarioProvenance -Profile $profileName
+            Write-OK ("{0,-22} -> {1} ({2} IDs)" -f $profileName, $prov.file, $prov.ids.Count)
+        } catch {
+            Write-Fail ("{0,-22} -> {1}" -f $profileName, $_.Exception.Message)
+            $provenanceFailed = $true
+        }
+    }
+    if ($provenanceFailed) {
+        Write-Fail "Scenario-provenance resolution check FAILED."
+        exit 1
+    }
+    Write-OK "All known profiles resolve a protocol-v2 scenario file."
+    exit 0
 }
 
 function Assert-TrainingManifestsComplete {

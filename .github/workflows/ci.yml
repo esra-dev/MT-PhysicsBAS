@@ -146,6 +146,11 @@ jobs:
         run: chmod +x ./gradlew
       - name: Run preflight (skip simulator probe)
         run: ./gradlew --no-daemon preflight -Pprofiles=lab1,lab2,lab3 -PskipSimProbe
+      - name: Scenario-provenance resolution check (all known profiles)
+        shell: pwsh
+        run: |
+          ./run_full_project.ps1 -RunMode phase1_v2_kg_only -ScenarioProvenanceCheckOnly
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Smoke training: end-to-end check that one (profile x stereo) training

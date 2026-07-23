@@ -100,6 +100,9 @@ return [pscustomobject]@{
     Path              = $ConfigPath
     RunMode           = $RunMode
     profile           = $profileHt
+    # Variant clean profiles (labmon_infoonly etc.) share their base lab's
+    # protocol-v2 scenario file; consumed by Get-Phase1ScenarioProvenance.
+    train_scenarios_alias = $cfg.train_scenarios_alias
     profiles_to_run   = @($cfg.profiles_to_run)
     stereo_modes      = @($cfg.stereo_modes)
     bench_modes       = @($cfg.bench_modes)
