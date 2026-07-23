@@ -46,3 +46,35 @@ byte-identical inputs):
 | A2 | `29923609054` | `29993470827` |
 | B1 | `29923621835` | `29993484405` |
 | B2 | `29923634620` | `29993497191` |
+
+## Amendment 2026-07-23b — second pre-data failure and third dispatch
+
+The 09:00 re-dispatches **also failed pre-data, from the same symptom with a
+different cause**: the `680f25a9` alias fix read `$Cfg`, a variable that does
+not exist in `run_full_project.ps1` (its config object is `$RunConfig`), and
+PowerShell silently treats an undefined variable as `$null` — so the alias
+no-oped and every `labmon2_nostereo` clean-training cell in B1
+(`29993484405`) and B2 (`29993497191`) failed with the identical
+`Protocol-v2 scenario file missing` error; their adapt matrices were skipped.
+A1 (`29993457632`) and A2 (`29993470827`) were **cancelled pre-data** as
+doomed to the same failure in their three variant parents. As before, no
+adaptation cell ran in any round-2 run — no data-bearing cell exists or was
+replaced.
+
+Fix (commit `19f4f3ff`): the alias is exposed on the `Read-RunConfig` result
+and read from `$RunConfig`; the scenario JSON is parsed by parameter passing
+(a piped `ConvertFrom-Json` collapses the array under Windows PowerShell 5.1
+— a latent incompatibility the new check exposed); and a
+`-ScenarioProvenanceCheckOnly` switch executes the REAL resolution path for
+all 14 known profiles — verified green locally on PS 5.1 and added to the CI
+preflight job. CI run `30000661399` green on the fix head before dispatch.
+
+Third dispatches (2026-07-23, 11:06 UTC, dispatch head `19f4f3ff`,
+byte-identical inputs):
+
+| Dispatch | Round-1 run | Round-2 run | Round-3 run |
+|---|---|---|---|
+| A1 | `29923594983` | `29993457632` (cancelled) | `30001857104` |
+| A2 | `29923609054` | `29993470827` (cancelled) | `30001867521` |
+| B1 | `29923621835` | `29993484405` | `30001878310` |
+| B2 | `29923634620` | `29993497191` | `30001888910` |
