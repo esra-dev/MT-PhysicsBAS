@@ -1,0 +1,17 @@
+profile,metric,recovery_tier,in_registered_family,n_paired,seeds_paired,ql_true_mean,ql_false_mean,mean_diff_true_minus_false,ci_lo,ci_hi,p_bootstrap,p_bootstrap_one_sided_true_faster,p_wilcoxon,cliffs_delta,ql_true_faster,q_bootstrap_bh,bh_family_m
+lab2_f1bdead,RecoveryEpisodes,confirmatory,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,59.2,140.6,-81.4,-134.9025,-38.1,0.0,1.0,0.001953125,-0.92,True,nan,0
+lab2_f1binv,RecoveryEpisodes,descriptive,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,288.4,240.1,48.3,-37.2,141.7,0.2934,0.1467,0.556640625,0.34,False,nan,0
+labmon_f1dead,RecoveryEpisodes,descriptive,True,3,seed11;seed13;seed14,50.0,51.666666666666664,-1.6666666666666667,-3.0,-1.0,0.0,1.0,0.25,-1.0,True,nan,0
+labmon2_f2dead_lowsun,RecoveryEpisodes,confirmatory,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,218.5,374.1,-155.6,-265.405,-52.09750000000004,0.0034,0.9983,0.01953125,-0.6,True,nan,0
+lab1_f1dead,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f1dead,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f1inv,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f2dead,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f2inv,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f1bdead,DetectEpisode,,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,6.0,6.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+lab2_f1binv,DetectEpisode,,True,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,6.0,6.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+labmon_f1dead,DetectEpisode,,False,3,seed11;seed13;seed14,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+labmon2_f2dead_lowsun,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.2,-0.2,-0.6,0.0,0.6958,1.0,1.0,-0.1,True,nan,0
+labmon_infoonly_f1dead,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+labmon_nostereo_f1dead,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
+labmon2_infoonly_f2dead_lowsun,DetectEpisode,,False,10,seed11;seed12;seed13;seed14;seed15;seed16;seed17;seed18;seed19;seed20,0.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,False,nan,0
