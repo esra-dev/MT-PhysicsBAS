@@ -3,6 +3,11 @@
     "docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md",
     "docs/phase2_correction_registration_2026-07-22.md",
     "docs/phase2_v2_dispatch_record_2026-07-22.md",
-    "docs/thesis_chapter_phase2.md"
+    "docs/thesis_chapter_phase2.md",
+    "phase2_v2_corrected/CAMPAIGN_MANIFEST.md",
+    "phase2_v2_corrected/run_30001857104/ARCHIVE_MANIFEST.md",
+    "phase2_v2_corrected/run_30001867521/ARCHIVE_MANIFEST.md",
+    "phase2_v2_corrected/run_30001878310/ARCHIVE_MANIFEST.md",
+    "phase2_v2_corrected/run_30001888910/ARCHIVE_MANIFEST.md"
   ]
 }

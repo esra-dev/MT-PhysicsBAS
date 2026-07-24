@@ -32,15 +32,31 @@ PHASES = {
         "sources": Path("docs/audit/phase2_claim_sources.json"),
         "ledger": Path("docs/audit/phase2_claim_ledger.csv"),
         "corrected_prefix": "phase2_v2_corrected/",
-        # Corrected run IDs are appended in the archive commit (Stage 5).
-        "corrected_run_ids": ("29923594983", "29923609054", "29923621835",
-                              "29923634620"),
+        # Round-3 runs of record plus the two documented pre-data failure
+        # rounds (all dispatch identifiers; the classifier maps them to the
+        # committed campaign manifest once it exists).
+        "corrected_run_ids": ("30001857104", "30001867521", "30001878310",
+                              "30001888910", "29923594983", "29923609054",
+                              "29923621835", "29923634620", "29993457632",
+                              "29993470827", "29993484405", "29993497191"),
         "historical_tokens": ("29148475671", "29151540231", "29155539633",
                               "29157197853", "29163456132", "29187088096",
                               "28590019536", "28745352239", "28913465680",
                               "-306.5", "-71.4", "-147.6", "+122.3", "+85.0",
                               "protocol-affected"),
         "historical_evidence": "phase2_postinv/;phase2_f2bdead/",
+        "corrected_docs": {
+            "phase2_v2_corrected/CAMPAIGN_MANIFEST.md":
+                "phase2_v2_corrected/analysis/registered/phase2_v2_registered_family.csv",
+            "phase2_v2_corrected/run_30001857104/ARCHIVE_MANIFEST.md":
+                "phase2_v2_corrected/run_30001857104/SHA256SUMS.csv",
+            "phase2_v2_corrected/run_30001867521/ARCHIVE_MANIFEST.md":
+                "phase2_v2_corrected/run_30001867521/SHA256SUMS.csv",
+            "phase2_v2_corrected/run_30001878310/ARCHIVE_MANIFEST.md":
+                "phase2_v2_corrected/run_30001878310/SHA256SUMS.csv",
+            "phase2_v2_corrected/run_30001888910/ARCHIVE_MANIFEST.md":
+                "phase2_v2_corrected/run_30001888910/SHA256SUMS.csv",
+        },
     },
     "3": {
         "sources": Path("docs/audit/phase3_claim_sources.json"),
