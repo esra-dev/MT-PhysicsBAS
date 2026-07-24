@@ -1,0 +1,41 @@
+{
+  "status": "ok",
+  "protocol_version": "phase2-v2",
+  "detector_version": "fault-detector-v2",
+  "metric_schema": "phase2-recovery-v2",
+  "settled_start_state": true,
+  "scenario_fallback_count": 0,
+  "profile": "labmon2_f2dead_lowsun",
+  "parent_profile": "labmon2",
+  "mode": "ql_true",
+  "run_seed": 18,
+  "adapt_episodes_effective": 250,
+  "adapt_episodes_override": 0,
+  "train_scenarios_file": "benchmark/train_scenarios_labmon2.json",
+  "ordered_scenario_ids": [
+    1,
+    2,
+    5,
+    6,
+    7,
+    9,
+    10,
+    12,
+    13,
+    16
+  ],
+  "scenario_schedule_sha256": "c0400237fef152b0e05c43fe9c20fceb7afe93757776c2952152cf92d822a721",
+  "parent_qtable_files": [
+    "qtable_final_stereotypes_true_labmon2_infoonly_trust.csv",
+    "qtable_final_stereotypes_true_labmon2_infoonly_visits.csv",
+    "qtable_final_stereotypes_true_labmon2_infoonly_zone1.csv",
+    "qtable_final_stereotypes_true_labmon2_infoonly_zone2.csv",
+    "qtable_final_stereotypes_true_labmon2_infoonly.csv",
+    "qtable_final_stereotypes_true_labmon2_trust.csv",
+    "qtable_final_stereotypes_true_labmon2_visits.csv",
+    "qtable_final_stereotypes_true_labmon2_zone1.csv",
+    "qtable_final_stereotypes_true_labmon2_zone2.csv",
+    "qtable_final_stereotypes_true_labmon2.csv"
+  ],
+  "parent_qtable_sha256": "242c7ec33dd09f7572cb7c80c80fd1ddd2e323181db9f076c0b249d2fd34bc8a"
+}

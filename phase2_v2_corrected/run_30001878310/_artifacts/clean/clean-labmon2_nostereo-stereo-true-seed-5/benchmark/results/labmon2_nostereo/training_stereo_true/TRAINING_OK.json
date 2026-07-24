@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "profile": "labmon2_nostereo",
+  "stereotype": "true",
+  "run_seed": 5,
+  "run_mode": "phase1_v2_kg_only",
+  "protocol_version": "phase1-v2",
+  "ordered_scenario_ids": [
+    1,
+    2,
+    5,
+    6,
+    7,
+    9,
+    10,
+    12,
+    13,
+    16
+  ],
+  "scenario_schedule_sha256": "c0400237fef152b0e05c43fe9c20fceb7afe93757776c2952152cf92d822a721",
+  "scenario_file": "benchmark/train_scenarios_labmon2.json",
+  "fixed_horizon_episodes": 3000,
+  "paired_rng_version": "common-seed-v1",
+  "metric_schema": "phase1-benchmark-v2",
+  "policy_energy_weights": "",
+  "scenario_fallback_count": 0,
+  "timestamp": "2026-07-23T12:04:30.5919959+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_true_labmon2_nostereo.csv",
+    "qtable_initial_stereotypes_true_labmon2_nostereo.csv",
+    "metrics_stereotypes_true_labmon2_nostereo.csv",
+    "iv_stats_stereotypes_true_labmon2_nostereo.json",
+    "coverage_stereotypes_true_labmon2_nostereo.csv",
+    "first_goal_stereotypes_true_labmon2_nostereo.csv",
+    "learned_stereotypes_true_labmon2_nostereo.ttl"
+  ]
+}

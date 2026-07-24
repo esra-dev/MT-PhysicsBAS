@@ -1,0 +1,33 @@
+{
+  "head_sha": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+  "profiles": [
+    "lab3_f1dead",
+    "lab3_f1inv",
+    "lab3_f2dead",
+    "lab3_f2inv",
+    "lab3_f1dead_z2",
+    "lab3_f1inv_z2",
+    "lab3_f1bdead",
+    "lab3_f1binv",
+    "lab3_f2bdead",
+    "lab3_f2dead_lowsun",
+    "labmon2_nostereo_f2dead_lowsun"
+  ],
+  "publish_results": true,
+  "ref": "refs/heads/phase234-correction-2026-07-22",
+  "run_id": 30001878310,
+  "run_mode": "phase1_v2_kg_only",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "workflow": ".github/workflows/phase1.yml"
+}
