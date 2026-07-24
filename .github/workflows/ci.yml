@@ -110,12 +110,22 @@ jobs:
           python3 analysis/phase1_claim_ledger_lint.py
           python3 analysis/build_phase1_claim_ledger.py --output /tmp/phase1_claim_ledger.csv
           cmp docs/audit/phase1_claim_ledger.csv /tmp/phase1_claim_ledger.csv
+      - name: Enforce Phase-2/3/4 claim ledgers
+        run: |
+          for p in 2 3 4; do
+            python3 analysis/build_phase234_claim_ledgers.py --phase $p --lint
+            python3 analysis/build_phase234_claim_ledgers.py --phase $p --output /tmp/phase${p}_claim_ledger.csv
+            cmp docs/audit/phase${p}_claim_ledger.csv /tmp/phase${p}_claim_ledger.csv
+          done
       - name: Phase-1 provenance golden check
         run: python3 analysis/check_provenance.py
-      - name: Dashboard Phase-1 data must be a byte-identical derivation
+      - name: Dashboard phase data must be byte-identical derivations
         run: |
           python3 dashboard/scripts/prepare_data.py --only phase1
-          git diff --exit-code -- dashboard/public/data/phase1.json
+          python3 dashboard/scripts/prepare_data.py --only phase2
+          python3 dashboard/scripts/prepare_data.py --only phase3
+          python3 dashboard/scripts/prepare_data.py --only phase4
+          git diff --exit-code -- dashboard/public/data/phase1.json dashboard/public/data/phase2.json dashboard/public/data/phase3.json dashboard/public/data/phase4.json
       - name: Build dashboard
         working-directory: dashboard
         run: |
@@ -137,6 +147,11 @@ jobs:
         run: chmod +x ./gradlew
       - name: Run preflight (skip simulator probe)
         run: ./gradlew --no-daemon preflight -Pprofiles=lab1,lab2,lab3 -PskipSimProbe
+      - name: Scenario-provenance resolution check (all known profiles)
+        shell: pwsh
+        run: |
+          ./run_full_project.ps1 -RunMode phase1_v2_kg_only -ScenarioProvenanceCheckOnly
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Smoke training: end-to-end check that one (profile x stereo) training

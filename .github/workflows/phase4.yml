@@ -58,9 +58,9 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10"
       run_mode:
-        description: "run_config.json profile: phase4 (3000x20, KG arm energyPriorWeight=2.0, recommended) | dev (50x20, quick gate)"
+        description: "run_config.json profile: phase4_v2 (corrected protocol: fixed 3000-episode horizon, strict scenario IDs, v2 bench schema, deterministic policy-energy weights — required for corrected campaigns) | phase4 (legacy) | dev (50x20, quick gate)"
         required: false
-        default: "phase4"
+        default: "phase4_v2"
       publish_results:
         description: "Push consolidated results to 'results' branch"
         type: boolean
@@ -70,12 +70,15 @@ on:
 permissions:
   contents: read
 
+# Each dispatch runs in its own concurrency group: GitHub keeps at most one
+# pending run per group and CANCELS earlier pending ones, which would silently
+# drop a queued registered dispatch. Per-matrix max-parallel bounds runner load.
 concurrency:
-  group: phase4
+  group: phase4-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
-  RUN_MODE: ${{ github.event.inputs.run_mode || 'phase4' }}
+  RUN_MODE: ${{ github.event.inputs.run_mode || 'phase4_v2' }}
   PROFILES: ${{ github.event.inputs.profiles || 'lab4,lab4dual,lab4chain,lab5' }}
   SEEDS:    ${{ github.event.inputs.seeds    || '1,2,3,4,5,6,7,8,9,10' }}
 
@@ -145,6 +148,7 @@ jobs:
     timeout-minutes: 180    # phase4 (3000 eps) ~50 min/cell; 3x safety margin
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         stereo:  ["true", "false"]
@@ -269,6 +273,7 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         mode:    ["rule_based", "ql_false", "ql_true"]
@@ -583,6 +588,18 @@ jobs:
             --scenarios-dir benchmark \
             --out analysis/out \
             --iters 10000
+      - name: Record immutable workflow inputs
+        shell: bash
+        run: |
+          python analysis/write_workflow_provenance.py \
+            --out analysis/out/workflow_inputs.json \
+            --run-id "${{ github.run_id }}" \
+            --sha "${{ github.sha }}" \
+            --ref "${{ github.ref }}" \
+            --run-mode "$RUN_MODE" \
+            --profiles "$PROFILES" \
+            --seeds "$SEEDS" \
+            --publish-results "${{ github.event.inputs.publish_results }}"
       - name: Run learning curves (multi-seed bands)
         if: always()
         run: |

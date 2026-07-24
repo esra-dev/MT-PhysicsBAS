@@ -1037,6 +1037,23 @@ dead, the previously redundant spotlight flips to essential, KG arm re-learns 1.
 
 ## 6. Phase 2 — Fault Detection, Blacklist, Re-Learn
 
+> **Protocol notice (2026-07-22) — historical, protocol-affected; corrected
+> record complete (2026-07-24).** Every §6 empirical value (the §9.10 record
+> of 3/8 Tier-1 supported, the detection-null family, the Phase-2.6/2.7
+> descriptives, and every "zero false positives"/"recall 100%" claim) is
+> withdrawn: the adaptation scheduler drew silent unseeded random resets, and
+> the detector blacklisted healthy components in the runs of record. See
+> `docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+> **Corrected runs of record: `30001857104`/`30001867521`/`30001878310`/
+> `30001888910`, archived at `phase2_v2_corrected/`. Corrected Tier-1
+> outcome: 2 supported (lab2_f1bdead −92.65 q=1.0×10⁻⁵; labmon2_f2dead_lowsun
+> −168.75 q=1.1×10⁻³), 3 adverse (the lab3 dead-lamp cells, censoring-driven:
+> the KG arm never detects — 0/20 — because the detector-v2 maskability
+> abstain and the knowledge-shaped policy interact), 3 null. Zero
+> false-positive blacklist events anywhere.** Current record:
+> `docs/thesis_chapter_phase2.md` §10; source:
+> `phase2_v2_corrected/analysis/registered/`.
+
 ### 6.1 Design
 
 The advisor's redirection rendered in code (13_logic_report.md §2.4): the pre-trained
@@ -1207,6 +1224,26 @@ Sources: `analysis/out_phase2_registered/phase2_recovery_ci.csv`
 
 ## 7. Phase 3 — Process Dynamics / Response-Delay Learning
 
+> **Protocol notice (2026-07-22) — historical, protocol-affected pending the
+> phase3-v2 rerun.** The §7 energy figures are wall-clock cumulative-
+> accumulator reads (defect class (c) of the Phase-1 withdrawal) and are
+> withdrawn; runs 27621106006 and 29166356524 are reclassified historical in
+> full so the corrected campaign yields exactly one run of record for all
+> Phase-3 metrics. The tick-based delay-accuracy and deadline-compliance
+> headlines are structurally immune to the protocol defects (no training, no
+> scenario scheduling) and are expected to reproduce; the corrected run
+> governs regardless. See `docs/PHASE3_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+>
+> **Corrected run of record (completed 2026-07-22): run `29926328852`,
+> archived at `phase3_v2_corrected/run_29926328852/`.** The delay headline
+> reproduces (slowest-actuator learned delay 12.125–12.1875 ticks vs truth
+> 12; rel. error 1.04–1.56% in all four cells). Compliance reproduces with
+> one disclosed deviation: KG arm 59/60 goal-attempts met on lab2_slow (one
+> tight-goal miss in one replica) and 60/60 on lab3_slow, vs the zero-delay
+> baseline's 30/60 in both profiles. Tick-integrated energy (descriptive,
+> meter `tick-v1`): KG 3.1–3.7 units per replica vs 0. Source:
+> `phase3_v2_corrected/CAMPAIGN_MANIFEST.md`.
+
 ### 7.1 Design
 
 No Q-table training. The dynamics agent (`illuminance_controller_agent_dynamics.asl`)
@@ -1285,6 +1322,25 @@ the deadline.*
 ---
 
 ## 8. Phase 4 [PRE-INVERSION RECORD — SUPERSEDED] — Hidden Dependencies + Energy-Aware Goals + LLM Baseline
+
+> **Protocol notice (2026-07-22) — historical, protocol-affected pending the
+> phase4-v2 rerun.** The post-inversion §10 ladder record (run `29193486193`)
+> referenced below is ALSO withdrawn: its training ran under the defective
+> protocol-v1 scenario scheduler (~30% unseeded random resets; scenarios
+> 11/13/16 never presented), its benchmark used the legacy wall-clock
+> energy/first-goal schema, and its run mode stacked PBRS + adaptive trust.
+> See `docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+>
+> **Corrected runs of record (completed 2026-07-22): `29926341581` +
+> `29926354783`, archived at `phase4_v2_corrected/`.** All four registered
+> family members are supported (n=20, exact sign-flip, BH m=4): lab4
+> `avg_redundant` −0.69500 (q=5.086×10⁻⁶), lab4dual −0.74500 (q=5.086×10⁻⁶),
+> lab4chain −0.73438 (q=5.086×10⁻⁶), lab5 `energy_compliance` +0.04313
+> (q=0.009444). The withdrawn ladder-growth headline does NOT reproduce:
+> d(lab4chain)−d(lab4) = −0.03938 (p=0.823) — the advantage is ~constant
+> across dependency depth; the monotone −0.33/−0.93/−1.46 pattern was a
+> protocol artifact. Current record: `PHASE4_DEPENDENCY_LADDER.md` §11;
+> source: `phase4_v2_corrected/analysis/registered/`.
 
 *Current Phase-4 scope and results: Addendum 2026-07-12d/e and
 `PHASE4_DEPENDENCY_LADDER.md` §10. The LLM baseline named in this heading is

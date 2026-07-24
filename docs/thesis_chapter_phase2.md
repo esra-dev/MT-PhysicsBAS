@@ -1,5 +1,19 @@
 # Phase 2 — Fault Detection, Blacklisting, and Re-Learning
 
+> **WITHDRAWN — historical, protocol-affected (2026-07-22); corrected record
+> in §10 (2026-07-24).** Every empirical number in §1–§9 is superseded: the
+> adaptation scheduler silently substituted unseeded random resets for
+> missing scenario IDs (~17–30% of episodes), start states were recorded before
+> the settle wait, and the fault detector blacklisted **healthy** components in
+> the withdrawn runs of record (all four lab3 single-lamp cells: every replica,
+> both arms; lab2_f1bdead: 4/10 vanilla vs 0/10 KG, treatment-correlated inside
+> the strongest registered cell, including one wrong primary). The §1–§9
+> "zero false positives" and "recall 100%" claims are **false** for those runs.
+> See `docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`. The corrected
+> protocol-v2 campaign (registration
+> `docs/phase2_correction_registration_2026-07-22.md`) is reported in **§10**,
+> which governs; §1–§9 are retained as the historical record.
+
 > **Thesis chapter draft** (2026-07-12). Confirmatory numbers are the
 > post-inversion runs of record (`pre_registration.md` §9.10, commit `6c727b6`,
 > CI runs 29148475671 / 29151540231 / 29155539633 / 29157197853 / 29163456132);
@@ -535,3 +549,87 @@ KG asserts that a blind mediates daylight, not that its motor takes a minute.
 Phase 3 turns to exactly that gap — learning actuator response dynamics
 online, writing them back into the KG, and exploiting them for time-bounded
 goals — completing the loop in which the learner repays the knowledge graph.
+
+## 10 Corrected results of record (protocol v2, 2026-07-24)
+
+Everything above this section is the withdrawn protocol-v1 record (see the
+banner). The corrected campaign is registered in
+`docs/phase2_correction_registration_2026-07-22.md` and archived under
+`phase2_v2_corrected/` (runs `30001857104`/`30001867521`/`30001878310`/
+`30001888910`, head `19f4f3ff`; two pre-data dispatch-failure rounds are
+documented in `docs/phase2_v2_dispatch_record_2026-07-22.md`). Instrument:
+by-position scenario scheduling with fatal missing IDs, settled start-state
+recording, protocol-v2 parents (fixed 3,000-episode horizon), seeds 1–20,
+detector v2 (`fault-detector-v2`: structural-maskability abstain on
+no-response evidence; inverted evidence never gated), full blacklist-event
+recording, and explicit censoring at horizon+1 — a seed pair is never
+dropped. Source:
+`phase2_v2_corrected/analysis/registered/phase2_v2_registered_family.csv` and
+`phase2_v2_detection_family.csv`; reproduction:
+`python analysis/reproduce_phase2_v2.py phase2_v2_corrected`.
+
+### 10.1 Registered Tier-1 recovery family (m=8, n=20): 2 supported, 3 adverse, 3 null
+
+| Cell | KG mean | TR mean | Mean Δ | 95% CI | sign-flip p | BH q | Verdict |
+|---|---:|---:|---:|---:|---:|---:|---|
+| lab2_f1bdead | 58.8 | 151.4 | −92.65 | [−141.80, −50.25] | 1.907×10⁻⁶ | 1.017×10⁻⁵ | Supported |
+| labmon2_f2dead_lowsun | 184.8 | 353.6 | −168.75 | [−246.30, −92.95] | 5.741×10⁻⁴ | 1.148×10⁻³ | Supported |
+| lab3_f1dead | 4001.0 | 1934.6 | +2066.40 | [+1300.75, +2836.45] | 9.766×10⁻⁴ | 1.563×10⁻³ | **Adverse** |
+| lab3_f1dead_z2 | 4001.0 | 489.0 | +3512.00 | [+3062.70, +3807.80] | 3.815×10⁻⁶ | 1.017×10⁻⁵ | **Adverse** |
+| lab3_f2dead_lowsun | 4001.0 | 346.9 | +3654.15 | [+3252.00, +3869.65] | 3.815×10⁻⁶ | 1.017×10⁻⁵ | **Adverse** |
+| lab3_f1bdead | 116.0 | 136.0 | −19.95 | [−76.60, +30.00] | 0.521 | 0.595 | Null |
+| lab3_f1binv | 175.2 | 191.7 | −16.45 | [−82.75, +58.90] | 0.673 | 0.673 | Null |
+| labmon_f1dead | 557.9 | 776.5 | −218.60 | [−653.65, +288.05] | 0.227 | 0.302 | Null |
+
+A cell value of 4001.0 is the censoring bound (horizon 4,000 + 1): the arm
+never detected the fault in that replica, so it never adapted. The three
+adverse cells are entirely censoring-driven — KG-arm detection is 0/20 in
+each, versus 11/20, 19/20, and 19/20 tabula-rasa detections.
+
+### 10.2 The false-positive/false-negative trade, exactly quantified
+
+The corrected campaign resolves the withdrawn record's false-positive scandal
+in both directions at once:
+
+1. **Zero false positives, verified.** The complete `BlacklistEvents` record
+   (every blacklist event, component and episode) shows **no healthy
+   component was blacklisted in any of 38 cells × 20 replicas × both arms**.
+   The architectural claim of structurally-prevented false positives is true
+   under detector v2 — it was false under the withdrawn detector.
+2. **Recall is no longer 100%, and the loss is policy-dependent.** Detector
+   v2 abstains from a dead-verdict while any co-feeder of the adjudicated
+   zone is active. In labs whose zones have co-feeders (lab3: shared
+   spotlight + cross-zone lamp/blind arcs; labmon: the monitor), a dead lamp
+   is detectable only from a state with every masker off. The
+   knowledge-primed policy — using exactly its structural knowledge to
+   restore light through the spotlight, blinds, or cross-zone lamp — never
+   visits such states: KG-arm detection is 0/20 in every lab3 dead-lamp cell
+   (including the descriptive lab3_f2dead), while the tabula-rasa arm's
+   noisier exploration reaches unmasked states and detects. Inverted faults
+   detect at episode ≈0 in both arms everywhere (opposite-sign evidence is
+   never gated), all lab1/lab2 cells detect perfectly in both arms, and the
+   blind cells detect identically in both arms via the active probe (5–6
+   episodes).
+
+### 10.3 Detection family (m=8, detector v2 — a new instrument)
+
+Blind cells and inverted-lamp cells are exact ties between arms (differences
+0.00–0.05, p = 1); the two dead-lamp members are adverse for the reason
+above. These results are not numerically comparable to the withdrawn
+detection record.
+
+### 10.4 What Phase 2 now supports
+
+The corrected claim is two-sided and sharper than the withdrawn one.
+Knowledge accelerates re-learning where detection succeeds and the fault
+demotes previously-relied-on levers: daylight substitution (lab2_f1bdead,
+1.9× faster) and spotlight-free dual-zone triage (labmon2_f2dead_lowsun,
+1.9× faster) replicate as the cells where structural knowledge pays. But the
+same structural knowledge **suppresses dead-fault detectability** in
+cross-coupled labs, because the policy it shapes keeps masking actuators
+active — an operational blind spot in which the agent runs its broken frozen
+policy indefinitely. Together with the retained Spotlight adjudication
+exclusion, the honest architectural statement is: instant, false-positive-free
+isolation is achievable, but its recall is contingent on the policy visiting
+falsifiable states — and knowledge-shaped policies can be exactly the ones
+that never do. All values are simulator-conditional.

@@ -39,9 +39,9 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10"
       run_mode:
-        description: "run_config.json profile for the CLEAN warm-start training: phase1 (3000x20, recommended) | dev (50x20, fast smoke)."
+        description: "run_config.json profile for the CLEAN warm-start training: phase1_v2_kg_only (protocol v2: fixed 3000-episode horizon, TRAINING_OK manifests — required for corrected campaigns) | phase1 (legacy) | dev (50x20, fast smoke)."
         required: false
-        default: "phase1"
+        default: "phase1_v2_kg_only"
       adapt_episodes:
         description: "Re-learn budget per adapt cell. 0 = each profile's training_params default. Recovery now ends early when the greedy policy is stable for fault.recover.window (default 50) episodes. Set e.g. 200 for a fast pipeline smoke."
         required: false
@@ -55,12 +55,16 @@ on:
 permissions:
   contents: read
 
+# Each dispatch runs in its own concurrency group: GitHub keeps at most one
+# pending run per group and CANCELS earlier pending ones, which would silently
+# drop queued registered dispatches. Per-matrix max-parallel bounds the
+# aggregate runner load instead (mirrors the Phase-1 v2 campaign).
 concurrency:
-  group: phase2
+  group: phase2-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
-  RUN_MODE:       ${{ github.event.inputs.run_mode       || 'phase1' }}
+  RUN_MODE:       ${{ github.event.inputs.run_mode       || 'phase1_v2_kg_only' }}
   ADAPT_PROFILES: ${{ github.event.inputs.adapt_profiles || 'lab1_f1dead,lab2_f1dead,lab2_f1inv,lab2_f2dead,lab2_f2inv,lab3_f1dead,lab3_f1inv,lab3_f2dead,lab3_f2inv,lab3_f1dead_z2,lab3_f1inv_z2,lab3_f1bdead,lab3_f1binv,lab2_f1bdead,lab2_f1binv' }}
   SEEDS:          ${{ github.event.inputs.seeds          || '1,2,3,4,5,6,7,8,9,10' }}
   ADAPT_EPISODES: ${{ github.event.inputs.adapt_episodes || '0' }}
@@ -143,6 +147,7 @@ jobs:
     timeout-minutes: 180   # phase1 (3000 eps) ~50 min/cell; 3x safety margin
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         parent: ${{ fromJson(needs.setup.outputs.parents_json) }}
         stereo: ["true", "false"]
@@ -222,8 +227,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: clean-${{ matrix.parent }}-stereo-${{ matrix.stereo }}-seed-${{ matrix.seed }}
+          # The training_stereo_* directory carries the protocol-v2 provenance:
+          # TRAINING_OK.json plus the per-episode metrics and first-goal CSVs.
           path: |
             qtable_final_stereotypes_${{ matrix.stereo }}_${{ matrix.parent }}*.csv
+            benchmark/results/${{ matrix.parent }}/training_stereo_${{ matrix.stereo }}/**
             log/train_${{ matrix.parent }}_stereo_${{ matrix.stereo }}.log
           if-no-files-found: error
           retention-days: 30
@@ -236,6 +244,7 @@ jobs:
     timeout-minutes: 180
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix:
         profile: ${{ fromJson(needs.setup.outputs.profiles_json) }}
         mode:    ["ql_true", "ql_false"]
@@ -306,7 +315,7 @@ jobs:
         # would shadow another cell's real result. Guarantee a clean slate.
         shell: bash
         run: |
-          rm -f recovery_stereotypes_*.csv metrics_adapted_stereotypes_*.csv qtable_adapted_stereotypes_*.csv
+          rm -f recovery_stereotypes_*.csv metrics_adapted_stereotypes_*.csv qtable_adapted_stereotypes_*.csv ADAPT_OK_stereotypes_*.json
           echo "workspace scrubbed"
       - name: Regenerate faulty Node-RED flows (deterministic from clean flows)
         shell: pwsh
@@ -335,6 +344,7 @@ jobs:
             recovery_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
             qtable_adapted_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
             metrics_adapted_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.csv
+            ADAPT_OK_stereotypes_${{ steps.m.outputs.bool }}_${{ matrix.profile }}.json
             log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.log
             log/adapt_${{ matrix.profile }}_${{ matrix.mode }}.err.log
             run_phase2_adapt.log
@@ -367,6 +377,11 @@ jobs:
         with:
           pattern: adapt-*
           path: _artifacts/adapt
+      - name: Download all clean warm-start artefacts (parent provenance)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: clean-*
+          path: _artifacts/clean
       - name: Reconstruct per-seed recovery layout
         shell: bash
         run: |
@@ -380,8 +395,9 @@ jobs:
             mkdir -p "recovery_root/seed${seed}"
             # recovery_* drives the headline analysis; metrics_adapted_* carries
             # the per-episode GoalReached series so reviewers can audit that a
-            # "recovered" (stable) policy is also goal-reaching (Phase 2.2).
-            for f in "${d}"recovery_stereotypes_*.csv "${d}"metrics_adapted_stereotypes_*.csv; do
+            # "recovered" (stable) policy is also goal-reaching (Phase 2.2);
+            # ADAPT_OK_* is the protocol-v2 gate manifest for the cell.
+            for f in "${d}"recovery_stereotypes_*.csv "${d}"metrics_adapted_stereotypes_*.csv "${d}"ADAPT_OK_stereotypes_*.json; do
               [ -e "$f" ] || continue
               cp -n "$f" "recovery_root/seed${seed}/" 2>/dev/null || true
             done
@@ -393,6 +409,18 @@ jobs:
           python analysis/phase2_recovery.py \
             --root recovery_root \
             --out analysis/out
+      - name: Record immutable workflow inputs
+        shell: bash
+        run: |
+          python analysis/write_workflow_provenance.py \
+            --out analysis/out/workflow_inputs.json \
+            --run-id "${{ github.run_id }}" \
+            --sha "${{ github.sha }}" \
+            --ref "${{ github.ref }}" \
+            --run-mode "$RUN_MODE" \
+            --profiles "$ADAPT_PROFILES" \
+            --seeds "$SEEDS" \
+            --publish-results "${{ github.event.inputs.publish_results }}"
       - name: Generate job summary
         if: always()
         shell: bash
@@ -430,6 +458,7 @@ jobs:
           path: |
             analysis/out/**
             recovery_root/**
+            _artifacts/clean/**
           retention-days: 90
       - name: Publish to 'results' branch
         if: ${{ github.event.inputs.publish_results == 'true' }}

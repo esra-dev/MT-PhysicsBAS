@@ -1073,3 +1073,27 @@ permitted.
 ---
 
 *Commit this file before the first `summary_table_ci.csv` is produced by CI. `git log docs/pre_registration.md` must show a timestamp earlier than any commit on the `results` branch containing paper-sweep aggregated outputs.*
+
+### 9.12 Registered corrective amendment — protocol v2 (added 2026-07-22 pre-data; results 2026-07-24)
+
+**Every §9 empirical result through §9.11 is historical, protocol-affected
+evidence.** The §9.10 record (3/8 Tier-1 supported, detection null) and the
+§9.11 exploratory result were produced under three protocol defects — the
+adaptation loops requested contiguous scenario IDs against non-contiguous
+files (silent unseeded random resets in ~17–30% of episodes), start states
+were recorded before the settle wait, and the detector blacklisted healthy
+components (treatment-correlated inside the strongest cell) — documented in
+`docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+
+The corrective campaign is registered in
+`docs/phase2_correction_registration_2026-07-22.md` (pre-data; seeds 1–20;
+detector v2; explicit censoring; families of §9.5/§9.6 unchanged in
+membership) and archived under `phase2_v2_corrected/` (runs `30001857104`,
+`30001867521`, `30001878310`, `30001888910`; two pre-data dispatch-failure
+rounds documented in `docs/phase2_v2_dispatch_record_2026-07-22.md`).
+**Corrected outcome (governs): Tier-1 2 supported / 3 adverse / 3 null;
+zero false-positive blacklist events anywhere; KG-arm dead-lamp detection
+0/20 in every cross-coupled lab3 cell (policy-dependent recall loss of the
+structural-maskability abstain).** Full report:
+`docs/thesis_chapter_phase2.md` §10 and
+`phase2_v2_corrected/CAMPAIGN_MANIFEST.md`.

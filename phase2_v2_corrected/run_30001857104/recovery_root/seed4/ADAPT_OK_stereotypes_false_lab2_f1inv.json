@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "protocol_version": "phase2-v2",
+  "detector_version": "fault-detector-v2",
+  "metric_schema": "phase2-recovery-v2",
+  "settled_start_state": true,
+  "scenario_fallback_count": 0,
+  "profile": "lab2_f1inv",
+  "parent_profile": "lab2",
+  "mode": "ql_false",
+  "run_seed": 4,
+  "adapt_episodes_effective": 120,
+  "adapt_episodes_override": 0,
+  "train_scenarios_file": "benchmark/train_scenarios_lab2.json",
+  "ordered_scenario_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    9,
+    10,
+    12,
+    13,
+    16
+  ],
+  "scenario_schedule_sha256": "cc93966bd8e94da606755e972bff3461381c731c7b07ef9e3f6506b7b3f90461",
+  "parent_qtable_files": [
+    "qtable_final_stereotypes_false_lab2_trust.csv",
+    "qtable_final_stereotypes_false_lab2_visits.csv",
+    "qtable_final_stereotypes_false_lab2_zone1.csv",
+    "qtable_final_stereotypes_false_lab2_zone2.csv",
+    "qtable_final_stereotypes_false_lab2.csv"
+  ],
+  "parent_qtable_sha256": "828411dc1740a8cf7ebf50a1f8fa780e1fb1a5e26fedc14a88e4e2e04c3953be"
+}

@@ -1,1 +1,95 @@
-{"summary":[{"profile":"lab4","mode":"ql_false","scenarios":"32","goal_rate":"0.9375","avg_steps":"3.3125","avg_dev":"6.90625","avg_energy":"11.875","avg_wasted":"3.1875","avg_cycling":"0.84375","avg_redundant":"4.03125","w1_unmodelled":"0","w2_inversion":"0","w3_delayed":"0","w4_dropped":"0","w5_topology":"0"},{"profile":"lab4","mode":"ql_true","scenarios":"32","goal_rate":"1.0","avg_steps":"0.875","avg_dev":"2.8125","avg_energy":"10.125","avg_wasted":"0.8125","avg_cycling":"0.3125","avg_redundant":"1.125","w1_unmodelled":"0","w2_inversion":"0","w3_delayed":"0","w4_dropped":"0","w5_topology":"0"},{"profile":"lab4","mode":"rule_based","scenarios":"32","goal_rate":"1.0","avg_steps":"1.125","avg_dev":"2.75","avg_energy":"9.75","avg_wasted":"1.03125","avg_cycling":"0.5625","avg_redundant":"1.59375","w1_unmodelled":"0","w2_inversion":"0","w3_delayed":"0","w4_dropped":"0","w5_topology":"0"},{"profile":"lab5","mode":"ql_false","scenarios":"32","goal_rate":"0.96875","avg_steps":"1.34375","avg_dev":"3.84375","avg_energy":"16.5","avg_wasted":"1.15625","avg_cycling":"0.59375","avg_redundant":"1.75","w1_unmodelled":"0","w2_inversion":"0","w3_delayed":"0","w4_dropped":"0","w5_topology":"0"},{"profile":"lab5","mode":"ql_true","scenarios":"32","goal_rate":"0.90625","avg_steps":"2.90625","avg_dev":"4.78125","avg_energy":"24.53125","avg_wasted":"2.875","avg_cycling":"2.09375","avg_redundant":"4.96875","w1_unmodelled":"0","w2_inversion":"0","w3_delayed":"0","w4_dropped":"0","w5_topology":"0"},{"profile":"lab5","mode":"rule_based","scenarios":"32","goal_rate":"1.0","avg_steps":"0.6875","avg_dev":"1.9375","avg_energy":"13.75","avg_wasted":"0.5625","avg_cycling":"0.25","avg_redundant":"0.8125","w1_unmodelled":"0","w2_inversion":"0","w3_delayed":"0","w4_dropped":"0","w5_topology":"0"}],"llm_summary":[{"profile":"lab4","backend":"general","n_seeds":"10","n_scenarios":"16.0","goal_rate":"1.0","energy_compliance":"1.0","mean_steady_power":"1.5625","mean_steps":"1.125","mean_redundant":"0.375"},{"profile":"lab5","backend":"general","n_seeds":"10","n_scenarios":"16.0","goal_rate":"1.0","energy_compliance":"0.55625","mean_steady_power":"3.3875","mean_steps":"0.6875","mean_redundant":"0.0625"}],"llm_detail_lab5":[{"profile":"lab5","backend":"general","seed":"1","scenario_id":"1","sunshine":"0","goal_reached":"1","steps":"2","redundant_actions":"0","steady_power":"8.0","energy_budget":"2.0","compliant":"0","trace":"SetZ1Ineff=true;SetZ2Ineff=true"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"2","sunshine":"0","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"2.0","energy_budget":"2.0","compliant":"1","trace":""},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"3","sunshine":"0","goal_reached":"1","steps":"1","redundant_actions":"0","steady_power":"5.0","energy_budget":"2.0","compliant":"0","trace":"SetZ1Ineff=true"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"4","sunshine":"0","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"8.0","energy_budget":"2.0","compliant":"0","trace":""},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"5","sunshine":"100","goal_reached":"1","steps":"2","redundant_actions":"0","steady_power":"8.0","energy_budget":"2.0","compliant":"0","trace":"SetZ1Ineff=true;SetZ2Ineff=true"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"6","sunshine":"100","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"2.0","energy_budget":"2.0","compliant":"1","trace":""},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"7","sunshine":"100","goal_reached":"1","steps":"1","redundant_actions":"0","steady_power":"2.0","energy_budget":"2.0","compliant":"1","trace":"SetZ2Eff=true"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"8","sunshine":"100","goal_reached":"1","steps":"1","redundant_actions":"1","steady_power":"5.0","energy_budget":"2.0","compliant":"0","trace":"SetZ1Eff=false"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"9","sunshine":"400","goal_reached":"1","steps":"2","redundant_actions":"0","steady_power":"4.0","energy_budget":"2.0","compliant":"0","trace":"SetZ1Blinds=true;SetZ1Ineff=true"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"10","sunshine":"400","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"2.0","energy_budget":"2.0","compliant":"1","trace":""},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"11","sunshine":"400","goal_reached":"1","steps":"1","redundant_actions":"0","steady_power":"1.0","energy_budget":"2.0","compliant":"1","trace":"SetZ1Blinds=true"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"12","sunshine":"400","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"5.0","energy_budget":"2.0","compliant":"0","trace":""},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"13","sunshine":"900","goal_reached":"1","steps":"1","redundant_actions":"0","steady_power":"0.0","energy_budget":"2.0","compliant":"1","trace":"SetZ1Blinds=true"},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"14","sunshine":"900","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"2.0","energy_budget":"2.0","compliant":"1","trace":""},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"15","sunshine":"900","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"8.0","energy_budget":"2.0","compliant":"0","trace":""},{"profile":"lab5","backend":"general","seed":"1","scenario_id":"16","sunshine":"900","goal_reached":"1","steps":"0","redundant_actions":"0","steady_power":"0.0","energy_budget":"2.0","compliant":"1","trace":""}]}
+{
+  "protocol_version": "phase1-v2",
+  "run_mode": "phase4_v2",
+  "status": "current thesis evidence",
+  "runs": {
+    "seeds_1_10": 29926341581,
+    "seeds_11_20": 29926354783
+  },
+  "head_sha": "90e53f8b087fc390a7ad51a0187b81c89c21c64e",
+  "registered_family": [
+    {
+      "name": "lab4 avg_redundant",
+      "cell": "lab4",
+      "metric": "avg_redundant",
+      "mean_ql_true": 0.8875,
+      "mean_ql_false": 1.5825,
+      "mean": -0.6950000000000001,
+      "ci_lo": -0.985625,
+      "ci_hi": -0.4375,
+      "p": 3.814697265625e-06,
+      "q": 5.086263020833333e-06,
+      "rank_biserial": -0.9904761904761905,
+      "verdict": "supported"
+    },
+    {
+      "name": "lab4dual avg_redundant",
+      "cell": "lab4dual",
+      "metric": "avg_redundant",
+      "mean_ql_true": 1.131875,
+      "mean_ql_false": 1.876875,
+      "mean": -0.745,
+      "ci_lo": -0.9737500000000001,
+      "ci_hi": -0.531875,
+      "p": 3.814697265625e-06,
+      "q": 5.086263020833333e-06,
+      "rank_biserial": -0.9904761904761905,
+      "verdict": "supported"
+    },
+    {
+      "name": "lab4chain avg_redundant",
+      "cell": "lab4chain",
+      "metric": "avg_redundant",
+      "mean_ql_true": 0.934375,
+      "mean_ql_false": 1.66875,
+      "mean": -0.734375,
+      "ci_lo": -0.885,
+      "ci_hi": -0.585,
+      "p": 1.9073486328125e-06,
+      "q": 5.086263020833333e-06,
+      "rank_biserial": -1.0,
+      "verdict": "supported"
+    },
+    {
+      "name": "lab5 energy_compliance",
+      "cell": "lab5",
+      "metric": "energy_compliance",
+      "mean_ql_true": 0.753125,
+      "mean_ql_false": 0.71,
+      "mean": 0.043125000000000004,
+      "ci_lo": 0.01437500000000001,
+      "ci_hi": 0.07062500000000001,
+      "p": 0.0093994140625,
+      "q": 0.0093994140625,
+      "rank_biserial": 0.6833333333333333,
+      "verdict": "supported"
+    }
+  ],
+  "ladder_trend": [
+    {
+      "contrast": "lab4chain_minus_lab4",
+      "role": "registered_ordered_secondary",
+      "mean": -0.03937500000000001,
+      "ci_lo": -0.358125,
+      "ci_hi": 0.28812499999999996,
+      "p": 0.8234596252441406
+    },
+    {
+      "contrast": "lab4dual_minus_lab4",
+      "role": "descriptive",
+      "mean": -0.05,
+      "ci_lo": -0.43062500000000004,
+      "ci_hi": 0.3425000000000001,
+      "p": 0.8078632354736328
+    },
+    {
+      "contrast": "lab4chain_minus_lab4dual",
+      "role": "descriptive",
+      "mean": 0.010624999999999996,
+      "ci_lo": -0.23937500000000003,
+      "ci_hi": 0.28812499999999996,
+      "p": 0.9428291320800781
+    }
+  ],
+  "source": "phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv"
+}

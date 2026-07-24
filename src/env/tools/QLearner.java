@@ -287,6 +287,13 @@ public class QLearner extends Artifact {
     private int[]     faultObsN;       // [nActions] — falsifiable observations of the action
     private int[]     faultDeadN;      // [nActions] — observations with no zone response (dead)
     private int[]     faultInvertN;    // [nActions] — observations with inverted zone response
+    // Fault-detector v2: version tag written to the recovery log, and a full
+    // audit trail of every blacklist event (component@episode). The runs of
+    // record could not even NAME a secondary-blacklisted component — the
+    // corrected schema records every event.
+    public static final String FAULT_DETECTOR_VERSION = "fault-detector-v2";
+    public static final String PHASE2_PROTOCOL_VERSION = "phase2-v2";
+    private final java.util.List<String> blacklistEvents = new java.util.ArrayList<>();
     // Phase 2.2 — component-attributable residual guard. When a Causes actuator
     // is blacklisted its physical state is frozen (e.g. a stuck inverted lamp
     // that keeps subtracting lux), so the ZONES it feeds no longer carry a
@@ -1204,7 +1211,19 @@ public class QLearner extends Artifact {
                     // suspect co-feeder — lamps have DISJOINT primary zones and the
                     // only shared multi-zone feeder is the healthy Spotlight — so a
                     // genuine dead lamp is never gated.
-                    if (zoneHasSuspectCoFeeder(z, actionIdx)) { ambiguous = true; continue; }
+                    // Fault-detector v2: ALSO abstain when any HEALTHY co-feeder of
+                    // this zone is currently active — its lux can hold the rank
+                    // across the probed toggle, so the null response proves nothing
+                    // about THIS component. The runs of record showed this exact
+                    // configuration (e.g. lamp OFF under an open blind at high sun)
+                    // blacklisting healthy components. Detection is deferred to a
+                    // step where the zone has no active co-feeder; inverted
+                    // (opposite-sign) evidence remains ungated.
+                    if (zoneHasSuspectCoFeeder(z, actionIdx)
+                            || zoneHasMaskingCoFeeder(z, actionIdx, before)) {
+                        ambiguous = true;
+                        continue;
+                    }
                     claimed++;
                     noResp++;
                 } else {
@@ -1315,6 +1334,56 @@ public class QLearner extends Artifact {
     }
 
     /**
+     * Fault-detector v2 — does any actuator OTHER than {@code selfAction}'s
+     * component structurally feed {@code zone} AND currently hold an ACTIVE
+     * state bit in {@code before}? An active co-feeder's lux contribution can
+     * hold the zone's discretised rank across the probed component's toggle
+     * (e.g. an open blind under strong sun keeps a zone at rank 3 while a
+     * healthy lamp switches off), so a null rank response is NOT attributable
+     * to the probed component. Unlike {@link #zoneHasSuspectCoFeeder}, this
+     * gate does not require the masker to already look faulty — the runs of
+     * record showed HEALTHY active co-feeders producing false "dead" verdicts
+     * and instant blacklists of healthy components. Co-feeders are matched on
+     * the static {@code affectedZones} coupling AND the KG's cross-zone
+     * feeds arcs (both coupling classes: even a weak spill can complete a
+     * masking sum). Opposite-sign (inverted) evidence is never gated by this
+     * predicate — only no-response evidence is.
+     */
+    static boolean maskingCoFeederPresent(StereotypeReasoner.ActionInfo[] infos,
+                                          java.util.List<StereotypeReasoner.CrossZoneEffect> crossZone,
+                                          int zone, int selfAction, int[] before) {
+        if (infos == null || before == null) return false;
+        StereotypeReasoner.ActionInfo self =
+            (selfAction >= 0 && selfAction < infos.length) ? infos[selfAction] : null;
+        String selfType = (self != null) ? self.wotActionType : null;
+        for (int b = 0; b < infos.length; b++) {
+            StereotypeReasoner.ActionInfo bi = infos[b];
+            if (bi == null || bi.wotActionType == null) continue;          // DO_NOTHING
+            if (selfType != null && selfType.equals(bi.wotActionType)) continue; // same component
+            boolean feedsZone = bi.affectedZones != null && bi.affectedZones.contains(zone);
+            if (!feedsZone && crossZone != null) {
+                for (StereotypeReasoner.CrossZoneEffect cz : crossZone) {
+                    if (cz.actionIndex == b && cz.targetZoneIdx == zone) {
+                        feedsZone = true;
+                        break;
+                    }
+                }
+            }
+            if (!feedsZone) continue;
+            int bit = bi.stateVecBitIndex;
+            if (bit >= 0 && bit < before.length && before[bit] == 1) return true;
+        }
+        return false;
+    }
+
+    /** Instance wrapper for {@link #maskingCoFeederPresent}. */
+    private boolean zoneHasMaskingCoFeeder(int zone, int selfAction, int[] before) {
+        java.util.List<StereotypeReasoner.CrossZoneEffect> crossZone =
+            (reasoner != null) ? reasoner.getCrossZoneEffects() : null;
+        return maskingCoFeederPresent(actionInfos, crossZone, zone, selfAction, before);
+    }
+
+    /**
      * Blacklist a defective component: remove BOTH its ON and OFF actions from
      * the action space so the policy can never select them again. DO_NOTHING is
      * never removed, and the last surviving actuator action is protected so the
@@ -1323,6 +1392,22 @@ public class QLearner extends Artifact {
      */
     @OPERATION
     public void blacklistComponent(String wotActionType, OpFeedbackParam<Integer> nRemoved) {
+        blacklistComponentImpl(wotActionType, -1, nRemoved);
+    }
+
+    /**
+     * Fault-detector v2 entry point: identical to {@link #blacklistComponent}
+     * but records the adaptation episode of the event so the recovery log can
+     * name EVERY blacklisted component with its episode, not just the primary.
+     */
+    @OPERATION
+    public void blacklistComponentAt(String wotActionType, int episode,
+                                     OpFeedbackParam<Integer> nRemoved) {
+        blacklistComponentImpl(wotActionType, episode, nRemoved);
+    }
+
+    private void blacklistComponentImpl(String wotActionType, int episode,
+                                        OpFeedbackParam<Integer> nRemoved) {
         int removed = 0;
         if (wotActionType == null || wotActionType.isEmpty() || blacklisted == null) {
             nRemoved.set(0);
@@ -1359,6 +1444,9 @@ public class QLearner extends Artifact {
                 for (int z : ai.affectedZones)
                     if (z >= 0 && z < zoneCauseContaminated.length) zoneCauseContaminated[z] = true;
             }
+        }
+        if (removed > 0) {
+            blacklistEvents.add(wotActionType + "@" + episode);
         }
         nRemoved.set(removed);
     }
@@ -1478,13 +1566,18 @@ public class QLearner extends Artifact {
                                 int nominalGoal, int bestEffortRank, boolean degraded) {
         boolean exists = new java.io.File(filename).exists();
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename, true))) {
-            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate,NominalGoal,BestEffortRank,RankShortfall,DegradedMode");
+            // Protocol phase2-v2 columns: BlacklistEvents names EVERY blacklisted
+            // component with its episode ("uri@ep;uri@ep"), DetectorVersion and
+            // ProtocolVersion pin the instrument that produced the row.
+            if (!exists) pw.println("DefectComponent,DetectEpisode,ReconvergeEpisode,RecoveryEpisodes,SecondaryDetectEpisode,RecoveredGoalRate,NominalGoal,BestEffortRank,RankShortfall,DegradedMode,BlacklistEvents,DetectorVersion,ProtocolVersion");
             int rec = (reconvergeEp >= 0 && detectEp >= 0) ? (reconvergeEp - detectEp) : -1;
             int shortfall = (nominalGoal >= 0 && bestEffortRank >= 0) ? (nominalGoal - bestEffortRank) : 0;
-            pw.printf("%s,%d,%d,%d,%d,%.4f,%d,%d,%d,%d%n",
+            pw.printf("%s,%d,%d,%d,%d,%.4f,%d,%d,%d,%d,%s,%s,%s%n",
                 blacklistedLabel == null ? "" : blacklistedLabel,
                 detectEp, reconvergeEp, rec, secondaryDetectEp, recoveredGoalRate,
-                nominalGoal, bestEffortRank, shortfall, degraded ? 1 : 0);
+                nominalGoal, bestEffortRank, shortfall, degraded ? 1 : 0,
+                String.join(";", blacklistEvents),
+                FAULT_DETECTOR_VERSION, PHASE2_PROTOCOL_VERSION);
             LOGGER.info("saveRecoveryLog: appended recovery row to " + filename);
         } catch (IOException e) {
             LOGGER.warning("saveRecoveryLog: failed " + filename + " — " + e.getMessage());

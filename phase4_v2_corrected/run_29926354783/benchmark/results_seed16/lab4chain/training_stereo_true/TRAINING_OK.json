@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "profile": "lab4chain",
+  "stereotype": "true",
+  "run_seed": 16,
+  "run_mode": "phase4_v2",
+  "protocol_version": "phase1-v2",
+  "ordered_scenario_ids": [
+    1,
+    2,
+    5,
+    6,
+    7,
+    9,
+    10,
+    11,
+    13,
+    16
+  ],
+  "scenario_schedule_sha256": "fd9853f1f45941e5a3fcea9f866b30ce9592eb8fb2e99875c07dc1e4cbf195e3",
+  "scenario_file": "benchmark/train_scenarios_lab4chain.json",
+  "fixed_horizon_episodes": 3000,
+  "paired_rng_version": "common-seed-v1",
+  "metric_schema": "phase1-benchmark-v2",
+  "policy_energy_weights": "ineff:4,eff:1,spotlight:2,plug:0,masterswitch:0,light:1,blind:0",
+  "scenario_fallback_count": 0,
+  "timestamp": "2026-07-22T16:02:09.8568855+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_true_lab4chain.csv",
+    "qtable_initial_stereotypes_true_lab4chain.csv",
+    "metrics_stereotypes_true_lab4chain.csv",
+    "iv_stats_stereotypes_true_lab4chain.json",
+    "coverage_stereotypes_true_lab4chain.csv",
+    "first_goal_stereotypes_true_lab4chain.csv",
+    "learned_stereotypes_true_lab4chain.ttl"
+  ]
+}

@@ -352,41 +352,199 @@ def build_phase1(out_dir=None):
     print("phase1.json written (protocol v2, derived from phase1_v2_corrected/)")
 
 
+# Phase-2 corrected sources (protocol phase2-v2, detector fault-detector-v2).
+PHASE2_V2_REGISTERED = ROOT / "phase2_v2_corrected" / "analysis" / "registered"
+PHASE2_V2_RUNS = {"A1": 30001857104, "A2": 30001867521,
+                  "B1": 30001878310, "B2": 30001888910}
+PHASE2_HEAD_SHA = "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9"
+PHASE2_NICE = {
+    "lab3_f1dead": "lab3 · Z1 lamp dead",
+    "lab3_f1dead_z2": "lab3 · Z2 lamp dead",
+    "lab3_f1bdead": "lab3 · Z1 blind dead",
+    "lab3_f1binv": "lab3 · Z1 blind inverted",
+    "lab2_f1bdead": "lab2 · Z1 blind dead",
+    "labmon_f1dead": "labmon · lamp dead",
+    "lab3_f2dead_lowsun": "lab3 · both lamps dead, low sun",
+    "labmon2_f2dead_lowsun": "labmon2 · both lamps dead, low sun",
+    "lab3_f1inv": "lab3 · Z1 lamp inverted",
+    "lab3_f1inv_z2": "lab3 · Z2 lamp inverted",
+    "lab2_f1binv": "lab2 · Z1 blind inverted",
+}
+
+
+def _phase2_family(name, verdict_metric):
+    rows = []
+    for row in read_csv_rows(PHASE2_V2_REGISTERED / name):
+        q = float(row["q_signflip_bh_m8"])
+        mean = float(row["mean_paired_difference"])
+        if verdict_metric and q <= 0.05:
+            verdict = "supported" if mean < 0 else "adverse"
+        elif verdict_metric:
+            verdict = "null"
+        else:
+            verdict = ""
+        entry = {
+            "cell": row["registered_cell"],
+            "name": PHASE2_NICE.get(row["registered_cell"], row["registered_cell"]),
+            "mean_ql_true": float(row["mean_ql_true"]),
+            "mean_ql_false": float(row["mean_ql_false"]),
+            "mean": mean,
+            "ci_lo": float(row["ci_lo_bootstrap"]),
+            "ci_hi": float(row["ci_hi_bootstrap"]),
+            "p": float(row["p_signflip_two_sided"]),
+            "q": q,
+            "censored_ql_true": int(row["censored_ql_true"]),
+            "censored_ql_false": int(row["censored_ql_false"]),
+        }
+        if verdict_metric:
+            entry["verdict"] = verdict
+        rows.append(entry)
+    return rows
+
+
+# Genuinely-faulty components per fault suffix; any blacklist event naming a
+# component outside this set is a false positive.
+PHASE2_FAULT_MAP = {
+    "f1dead": ("SetZ1Light",), "f1inv": ("SetZ1Light",),
+    "f2dead": ("SetZ1Light", "SetZ2Light"), "f2inv": ("SetZ1Light", "SetZ2Light"),
+    "f1bdead": ("SetZ1Blinds",), "f1binv": ("SetZ1Blinds",),
+    "f1dead_z2": ("SetZ2Light",), "f1inv_z2": ("SetZ2Light",),
+    "f2bdead": ("SetZ1Blinds", "SetZ2Blinds"),
+    "f2dead_lowsun": ("SetZ1Light", "SetZ2Light"),
+}
+
+
+def _phase2_false_positive_events():
+    count = 0
+    for recovery in (ROOT / "phase2_v2_corrected").glob(
+            "run_*/recovery_root/seed*/recovery_stereotypes_*.csv"):
+        profile = recovery.stem.split("_", 3)[3]
+        # Longest-suffix match handles variant profiles
+        # (labmon2_infoonly_f2dead_lowsun -> f2dead_lowsun).
+        genuine = ()
+        for suffix in sorted(PHASE2_FAULT_MAP, key=len, reverse=True):
+            if profile.endswith("_" + suffix):
+                genuine = PHASE2_FAULT_MAP[suffix]
+                break
+        if not genuine:
+            raise SystemExit(f"phase2 FP scan: unrecognized fault profile {profile}")
+        rows = read_csv_rows(recovery)
+        if not rows:
+            continue
+        for event in (rows[-1].get("BlacklistEvents") or "").split(";"):
+            if event and event.split("@")[0].split("#")[-1] not in genuine:
+                count += 1
+    return count
+
+
 def build_phase2():
-    reg = ROOT / "analysis" / "out_phase2_registered"
+    tier1 = _phase2_family("phase2_v2_registered_family.csv", True)
+    detection = _phase2_family("phase2_v2_detection_family.csv", False)
+    if len(tier1) != 8 or len(detection) != 8:
+        raise SystemExit("phase2 registered families: unexpected row counts")
     obj = {
-        "ci": read_csv_rows(reg / "phase2_recovery_ci.csv"),
-        "paired": read_csv_rows(reg / "phase2_recovery_paired.csv"),
+        "protocol_version": "phase2-v2",
+        "detector_version": "fault-detector-v2",
+        "status": "current thesis evidence",
+        "runs": PHASE2_V2_RUNS,
+        "head_sha": PHASE2_HEAD_SHA,
+        "adapt_horizon": 4000,
+        "tier1": tier1,
+        "detection": detection,
+        "false_positive_blacklist_events": _phase2_false_positive_events(),
+        "source": "phase2_v2_corrected/analysis/registered/phase2_v2_registered_family.csv",
     }
-    json.dump(obj, open(OUT / "phase2.json", "w"), separators=(",", ":"))
-    print("phase2.json written")
+    _dump(obj, "phase2.json")
+    print("phase2.json written (protocol v2, derived from phase2_v2_corrected/)")
+
+
+# Phase-3/4 corrected sources: derived solely from the committed protocol-v2
+# campaign archives, like build_phase1. CI regenerates and byte-compares.
+PHASE3_V2_RUN = 29926328852
+PHASE3_V2_OUT = ROOT / "phase3_v2_corrected" / f"run_{PHASE3_V2_RUN}" / "analysis" / "out"
+PHASE4_V2_RUNS = {"seeds_1_10": 29926341581, "seeds_11_20": 29926354783}
+PHASE4_V2_REGISTERED = ROOT / "phase4_v2_corrected" / "analysis" / "registered"
+PHASE34_HEAD_SHA = "90e53f8b087fc390a7ad51a0187b81c89c21c64e"
+PHASE4_FAMILY_NAMES = {
+    "lab4": "lab4 avg_redundant",
+    "lab4dual": "lab4dual avg_redundant",
+    "lab4chain": "lab4chain avg_redundant",
+    "lab5": "lab5 energy_compliance",
+}
+# Favourable direction per registered member (negative = KG better for the
+# redundancy cells, positive = KG better for lab5 energy compliance).
+PHASE4_FAVOURABLE_SIGN = {"avg_redundant": -1.0, "energy_compliance": 1.0}
+
+
+def _dump(obj, name):
+    with open(OUT / name, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(obj, handle, indent=2)
+        handle.write("\n")
 
 
 def build_phase3():
-    a = ROOT / "analysis" / "out"
     obj = {
-        "delay": read_csv_rows(a / "phase3_delay_accuracy.csv"),
-        "compliance": read_csv_rows(a / "phase3_compliance_ci.csv"),
+        "protocol_version": "phase3-v2",
+        "status": "current thesis evidence",
+        "run": PHASE3_V2_RUN,
+        "head_sha": PHASE34_HEAD_SHA,
+        "energy_meter": "tick-v1",
+        "delay": read_csv_rows(PHASE3_V2_OUT / "phase3_delay_accuracy.csv"),
+        "compliance": read_csv_rows(PHASE3_V2_OUT / "phase3_compliance_ci.csv"),
+        "source": f"phase3_v2_corrected/run_{PHASE3_V2_RUN}/analysis/out",
     }
-    json.dump(obj, open(OUT / "phase3.json", "w"), separators=(",", ":"))
-    print("phase3.json written")
+    _dump(obj, "phase3.json")
+    print("phase3.json written (protocol v2, derived from phase3_v2_corrected/)")
 
 
 def build_phase4():
-    a = ROOT / "analysis" / "out"
-    summary = [r for r in read_csv_rows(a / "summary_table.csv")
-               if r["profile"] in ("lab4", "lab5") and r["mode"] in MODES]
-    llm_detail = []
-    f = a / "phase4_llm_detail_lab5.csv"
-    if f.exists():
-        llm_detail = [r for r in read_csv_rows(f) if r["seed"] == "1"]
+    family = []
+    for row in read_csv_rows(PHASE4_V2_REGISTERED / "phase4_v2_registered_family.csv"):
+        q = float(row["q_signflip_bh_m4"])
+        mean = float(row["mean_paired_difference"])
+        favourable = PHASE4_FAVOURABLE_SIGN[row["metric"]] * mean > 0
+        if q <= 0.05:
+            verdict = "supported" if favourable else "adverse"
+        else:
+            verdict = "null"
+        family.append({
+            "name": PHASE4_FAMILY_NAMES[row["registered_cell"]],
+            "cell": row["registered_cell"],
+            "metric": row["metric"],
+            "mean_ql_true": float(row["mean_ql_true"]),
+            "mean_ql_false": float(row["mean_ql_false"]),
+            "mean": mean,
+            "ci_lo": float(row["ci_lo_bootstrap"]),
+            "ci_hi": float(row["ci_hi_bootstrap"]),
+            "p": float(row["p_signflip_two_sided"]),
+            "q": q,
+            "rank_biserial": float(row["paired_rank_biserial"]),
+            "verdict": verdict,
+        })
+    if len(family) != 4:
+        raise SystemExit("phase4 registered family: unexpected row count")
+    ladder = []
+    for row in read_csv_rows(PHASE4_V2_REGISTERED / "phase4_v2_ladder_trend.csv"):
+        ladder.append({
+            "contrast": row["contrast"],
+            "role": row["role"],
+            "mean": float(row["mean_difference_of_differences"]),
+            "ci_lo": float(row["ci_lo_bootstrap"]),
+            "ci_hi": float(row["ci_hi_bootstrap"]),
+            "p": float(row["p_signflip_two_sided"]),
+        })
     obj = {
-        "summary": summary,
-        "llm_summary": read_csv_rows(a / "phase4_llm_summary.csv"),
-        "llm_detail_lab5": llm_detail,
+        "protocol_version": "phase1-v2",
+        "run_mode": "phase4_v2",
+        "status": "current thesis evidence",
+        "runs": PHASE4_V2_RUNS,
+        "head_sha": PHASE34_HEAD_SHA,
+        "registered_family": family,
+        "ladder_trend": ladder,
+        "source": "phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv",
     }
-    json.dump(obj, open(OUT / "phase4.json", "w"), separators=(",", ":"))
-    print("phase4.json written")
+    _dump(obj, "phase4.json")
+    print("phase4.json written (protocol v2, derived from phase4_v2_corrected/)")
 
 
 BUILDERS = {

@@ -12,6 +12,9 @@ from pathlib import Path
 LABS = ("lab1", "lab2", "lab3")
 STEREOS = ("true", "false")
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
+# Phase-4 corrected archives reuse this validator with labs=("lab4",
+# "lab4dual", "lab4chain", "lab5"); the default keeps the Phase-1 CLI and the
+# reproduce_phase1_v2.py behaviour byte-for-byte unchanged.
 
 
 def _data_rows(path: Path) -> list[dict]:
@@ -20,14 +23,15 @@ def _data_rows(path: Path) -> list[dict]:
                 if row and not next(iter(row.values()), "").startswith("#")]
 
 
-def validate(root: Path, expected_seeds: range = range(1, 21)) -> list[str]:
+def validate(root: Path, expected_seeds: range = range(1, 21),
+             labs: tuple[str, ...] = LABS) -> list[str]:
     errors: list[str] = []
     for seed in expected_seeds:
         seed_root = root / "benchmark" / f"results_seed{seed}"
         if not seed_root.is_dir():
             errors.append(f"missing seed root: {seed_root}")
             continue
-        for lab in LABS:
+        for lab in labs:
             manifests: dict[str, dict] = {}
             first_goal_rows: dict[str, list[tuple[int, int]]] = {}
             for stereo in STEREOS:
@@ -124,14 +128,17 @@ def validate(root: Path, expected_seeds: range = range(1, 21)) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
+    parser.add_argument("--labs", default=",".join(LABS),
+                        help="comma-separated lab list (default: %(default)s)")
     args = parser.parse_args()
-    errors = validate(args.root)
+    labs = tuple(name.strip() for name in args.labs.split(",") if name.strip())
+    errors = validate(args.root, labs=labs)
     if errors:
-        print("Phase-1 v2 archive validation FAILED:")
+        print("Protocol-v2 archive validation FAILED:")
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Phase-1 v2 archive validation passed (20 seeds × 3 labs).")
+    print(f"Protocol-v2 archive validation passed (20 seeds × {len(labs)} labs).")
     return 0
 
 

@@ -28,6 +28,8 @@
           "note":                  { "type": "string" },
           "protocol_version":      { "enum": ["phase1-v2"] },
           "metric_schema":         { "enum": ["phase1-benchmark-v2"] },
+          "policy_energy_weights": { "type": "string",
+                                     "pattern": "^([a-z0-9_]+:[0-9]+(\\.[0-9]+)?)(,[a-z0-9_]+:[0-9]+(\\.[0-9]+)?)*$" },
           "learning_overrides":    {
             "type": "object",
             "properties": {

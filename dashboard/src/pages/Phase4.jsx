@@ -5,21 +5,6 @@ import Replay from '../components/Replay.jsx';
 import { HBarChart, Legend, Tile } from '../components/charts.jsx';
 import { useData, fmt } from '../lib/useData.js';
 
-// Certified n = 20 results, CI run 27905392725 (docs/PHASE4.md §10a).
-const LAB5_CERT = [
-  { metric: 'energy_compliance', t: 0.784, f: 0.683, d: '+0.101', ci: '[0.066, 0.138]', p: '0.00093', delta: '0.69', q: '≈0', primary: true },
-  { metric: 'mean_steady_power', t: 1.148, f: 1.539, d: '−0.391', ci: '[−0.599, −0.183]', p: '0.0038', delta: '−0.47', q: '0.00024' },
-  { metric: 'over_budget_rate', t: 0.208, f: 0.298, d: '−0.090', ci: '[−0.131, −0.051]', p: '0.00092', delta: '−0.64', q: '≈0' },
-  { metric: 'goal_rate', t: 0.991, f: 0.975, d: '+0.016', ci: '[−0.003, 0.034]', p: '0.13 (ns)', delta: '0.21', q: '—' },
-];
-const LAB4_CERT = [
-  { metric: 'avg_steps', d: '−0.496', p: '0.0045', delta: '−0.43', q: '≈0' },
-  { metric: 'avg_dev', d: '−0.589', p: '0.0089', delta: '−0.51', q: '≈0' },
-  { metric: 'avg_wasted', d: '−0.504', p: '0.0051', delta: '−0.46', q: '≈0' },
-  { metric: 'avg_redundant', d: '−0.558', p: '0.0051', delta: '−0.44', q: '≈0' },
-  { metric: 'goal / energy compliance', d: '+0.023', p: '0.014', delta: '0.35', q: '0.00024' },
-];
-
 function Lab4Trap() {
   const lab = LABS.lab4;
   const trap = useMemo(() => ({ ...offState(lab), Z1Light: true, PlugZ1: false }), []);
@@ -39,70 +24,103 @@ function Lab4Trap() {
   );
 }
 
-function EnergyResults() {
-  const { data } = useData('phase4.json');
-  const llm = data?.llm_summary?.find((r) => r.profile === 'lab5');
-  const groups = [
-    {
-      name: 'energy compliance',
-      note: 'goal reached AND steady power ≤ budget (higher better)',
-      bars: [
-        { label: 'KG-primed', value: 0.784, color: 'var(--kg)' },
-        { label: 'tabula-rasa', value: 0.683, color: 'var(--tr)' },
-        { label: 'LLM (general knowledge)', value: llm ? +llm.energy_compliance : 0.556, color: 'var(--ctx)' },
-      ],
-    },
-    {
-      name: 'steady-state power',
-      note: 'power units after the episode settles (lower better, budget = 2)',
-      bars: [
-        { label: 'KG-primed', value: 1.148, color: 'var(--kg)' },
-        { label: 'tabula-rasa', value: 1.539, color: 'var(--tr)' },
-        { label: 'LLM (general knowledge)', value: llm ? +llm.mean_steady_power : 3.39, color: 'var(--ctx)' },
-      ],
-    },
-  ];
+function RegisteredFamily({ rows }) {
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="data">
+        <thead><tr><th>registered member</th><th className="num">KG</th>
+          <th className="num">TR</th><th className="num">mean Δ</th>
+          <th className="num">95% CI</th><th className="num">exact p</th>
+          <th className="num">BH q</th><th>verdict</th></tr></thead>
+        <tbody>{rows.map((row) => (
+          <tr key={row.name} className={row.verdict === 'supported' ? 'hl' : ''}>
+            <td>{row.name}</td>
+            <td className="num">{fmt(row.mean_ql_true, 4)}</td>
+            <td className="num">{fmt(row.mean_ql_false, 4)}</td>
+            <td className="num">{fmt(row.mean, 5)}</td>
+            <td className="num">[{fmt(row.ci_lo, 5)}, {fmt(row.ci_hi, 5)}]</td>
+            <td className="num">{fmt(row.p, 7)}</td>
+            <td className="num">{fmt(row.q, 7)}</td>
+            <td>{row.verdict}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function LadderTrend({ rows }) {
+  return (
+    <div className="card">
+      <h3>The ladder-growth prediction did not survive the correction</h3>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="data">
+          <thead><tr><th>depth contrast (Δ of per-seed Δs)</th><th>role</th>
+            <th className="num">mean</th><th className="num">95% CI</th>
+            <th className="num">exact p</th></tr></thead>
+          <tbody>{rows.map((row) => (
+            <tr key={row.contrast}>
+              <td>{row.contrast.replaceAll('_', ' ')}</td>
+              <td>{row.role === 'registered_ordered_secondary' ? 'registered secondary' : 'descriptive'}</td>
+              <td className="num">{fmt(row.mean, 5)}</td>
+              <td className="num">[{fmt(row.ci_lo, 5)}, {fmt(row.ci_hi, 5)}]</td>
+              <td className="num">{fmt(row.p, 3)}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <p className="note">The withdrawn record showed the redundancy advantage growing monotonically with
+        dependency depth (−0.33 / −0.93 / −1.46). Under the corrected protocol the advantage is
+        approximately <b>constant (~−0.7) at every depth</b> — every depth contrast is null. The
+        monotone pattern was an artifact of the defective scheduler, not a property of dependency depth.</p>
+    </div>
+  );
+}
+
+function EnergyResult({ lab5 }) {
+  const groups = [{
+    name: 'energy compliance',
+    note: 'goal reached AND steady power ≤ budget (higher better; n = 20 seeds)',
+    bars: [
+      { label: 'KG-primed', value: lab5.mean_ql_true, color: 'var(--kg)' },
+      { label: 'tabula-rasa', value: lab5.mean_ql_false, color: 'var(--tr)' },
+    ],
+  }];
   return (
     <>
       <Legend items={[
         { color: 'var(--kg)', label: 'KG-primed (ql_true, n = 20 seeds)' },
-        { color: 'var(--tr)', label: 'tabula-rasa (ql_false, n = 20 seeds)' },
-        { color: 'var(--ctx)', label: 'LLM proxy (deterministic, exploratory)' }]} />
-      <HBarChart groups={groups} xMax={4} fmt={(v) => fmt(v, 2)} />
+        { color: 'var(--tr)', label: 'tabula-rasa (ql_false, n = 20 seeds)' }]} />
+      <HBarChart groups={groups} xMax={1} fmt={(v) => fmt(v, 3)} />
       <p className="note">
         The energy cost is <b>not in the reward</b> — the only path to energy-awareness is the KG's
-        <code> ws:energyCost</code> datasheet (efficient lamp 1, inefficient 4, spotlight 2, blinds 0), applied as a
-        non-fading prior on greedy action choice. The LLM proxy reaches the goal but, without the lab-specific datasheet,
-        lands on the inefficient lamp: seed-1 trace for scenario 1 is <code>SetZ1Ineff, SetZ2Ineff</code> → power 8, budget 2.
-        LLM rows are single deterministic outputs (no CI) — illustrative framing, not a confirmatory test.
+        <code> ws:energyCost</code> datasheet (efficient lamp 1, inefficient 4, spotlight 2, blinds 0),
+        applied as a non-fading prior on greedy action choice. The corrected benefit
+        (+{fmt(lab5.mean, 4)}, q = {fmt(lab5.q, 4)}) is smaller than the withdrawn +0.096 but remains
+        supported. Compliance uses the deterministic steady power of the final actuator state against
+        the per-scenario budget — never the withdrawn wall-clock accumulator.
       </p>
-      <details className="tblview"><summary>table view — certified lab5 paired tests (n = 20, run 27905392725)</summary><div className="inner">
-        <table className="data">
-          <thead><tr><th>metric</th><th className="num">KG</th><th className="num">TR</th><th className="num">Δ</th><th className="num">95% CI</th><th className="num">Wilcoxon p</th><th className="num">Cliff δ</th><th className="num">BH q</th></tr></thead>
-          <tbody>
-            {LAB5_CERT.map((r) => (
-              <tr key={r.metric} className={r.primary ? 'hl' : ''}>
-                <td>{r.metric}{r.primary ? ' (primary)' : ''}</td>
-                <td className="num">{r.t}</td><td className="num">{r.f}</td><td className="num">{r.d}</td>
-                <td className="num">{r.ci}</td><td className="num">{r.p}</td><td className="num">{r.delta}</td><td className="num">{r.q}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div></details>
     </>
   );
 }
 
 export default function Phase4() {
   const [labId, setLabId] = useState('lab4');
+  const { data } = useData('phase4.json');
   const lab = LABS[labId];
+  if (!data) return <p className="loading">loading corrected Phase 4 evidence…</p>;
+  const lab5 = data.registered_family.find((row) => row.cell === 'lab5');
   return (
     <div className="page">
       <h1>Phase 4 · The Knowledge Ladder</h1>
-      <div className="q"><b>Question (the thesis core):</b> can the KG encode facts a tabula-rasa learner <b>fundamentally cannot
-        see</b> — a hidden wiring dependency and a per-device energy datasheet — and does the primed agent exploit them,
-        provably, better than an LLM's general knowledge?</div>
+      <div className="q"><b>Current evidence:</b> protocol <code>{data.run_mode}</code>, runs {data.runs.seeds_1_10} +
+        {' '}{data.runs.seeds_11_20}, 20 paired seeds, fixed 3,000-episode training, registered m=4 family.</div>
+      <div className="warn"><b>Protocol-v1 results are withdrawn.</b> The former ladder-growth headline
+        (−0.33/−0.93/−1.46) and all wall-clock energy figures are historical only — see
+        docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md.</div>
+      <div className="q"><b>Question:</b> can the KG encode facts a tabula-rasa learner <b>fundamentally cannot
+        see</b> — a hidden wiring dependency and a per-device energy datasheet — and does the primed agent
+        measurably exploit them?</div>
 
       <div className="toolbar" role="tablist">
         {['lab4', 'lab5'].map((id) => (
@@ -125,20 +143,6 @@ export default function Phase4() {
           <div className="card">
             <Replay lab={lab} title="Replay — watch the tabula-rasa agent fight the AND-gate" />
           </div>
-          <h2>Certified result — efficiency under a hidden dependency (n = 20)</h2>
-          <div className="card">
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data">
-                <thead><tr><th>metric (Δ = KG − TR, lower better except last)</th><th className="num">Δ</th><th className="num">Wilcoxon p</th><th className="num">Cliff δ</th><th className="num">BH q</th></tr></thead>
-                <tbody>{LAB4_CERT.map((r) => (
-                  <tr key={r.metric}><td>{r.metric}</td><td className="num">{r.d}</td><td className="num">{r.p}</td><td className="num">{r.delta}</td><td className="num">{r.q}</td></tr>
-                ))}</tbody>
-              </table>
-            </div>
-            <p className="note">Both arms eventually solve lab4 (goal-rate parity is the design) — the finding is the KG arm gets
-              there with materially <b>fewer steps, less deviation, and fewer wasted/redundant actions</b>, because it never
-              wastes moves on a power-gated lamp. Source: run 27905392725, docs/PHASE4.md §10a.</p>
-          </div>
         </>
       ) : (
         <>
@@ -153,20 +157,26 @@ export default function Phase4() {
           <div className="card">
             <Replay lab={lab} title="Replay — which lamp does each agent reach for?" />
           </div>
-          <h2>Certified result — energy compliance only the KG can buy (n = 20)</h2>
-          <div className="tiles">
-            <Tile label="energy compliance (primary endpoint)" value="0.784"
-              delta="vs 0.683 tabula-rasa · Wilcoxon p = 0.00093 · Cliff δ = 0.69" deltaDir="up" />
-            <Tile label="steady-state power" value="1.15" unit="units"
-              delta="vs 1.54 tabula-rasa (−25%) · vs 3.4 LLM proxy (−66%)" deltaDir="up" />
-            <Tile label="goal-rate cost of the energy win" value="none"
-              delta="+0.016 (ns) — the saving is not bought with failures" deltaDir="flat" />
-          </div>
           <div className="card">
-            <EnergyResults />
+            <EnergyResult lab5={lab5} />
           </div>
         </>
       )}
+
+      <h2>Registered family of four (corrected)</h2>
+      <div className="card">
+        <RegisteredFamily rows={data.registered_family} />
+        <p className="note">Two-sided exact paired sign-flip tests over seeds 1–20; bootstrap intervals estimate
+          means; BH correction is applied once across these four rows. Negative Δ is favourable for the
+          redundancy cells, positive for lab5 energy compliance. The corrected claim: knowing the dependency
+          structure buys a stable reduction in redundant actuation wherever a hidden gate exists, and the
+          energy datasheet buys a small within-budget gain — all simulator-conditional.</p>
+      </div>
+
+      <LadderTrend rows={data.ladder_trend} />
+
+      <p className="note">Sources: runs {data.runs.seeds_1_10} and {data.runs.seeds_11_20};
+        {' '}<code>{data.source}</code>; docs/PHASE4_DEPENDENCY_LADDER.md §11.</p>
     </div>
   );
 }

@@ -1,0 +1,31 @@
+{
+  "status": "ok",
+  "protocol_version": "phase2-v2",
+  "detector_version": "fault-detector-v2",
+  "metric_schema": "phase2-recovery-v2",
+  "settled_start_state": true,
+  "scenario_fallback_count": 0,
+  "profile": "labmon_nostereo_f1dead",
+  "parent_profile": "labmon_nostereo",
+  "mode": "ql_true",
+  "run_seed": 18,
+  "adapt_episodes_effective": 66,
+  "adapt_episodes_override": 0,
+  "train_scenarios_file": "benchmark/train_scenarios_labmon.json",
+  "ordered_scenario_ids": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    7
+  ],
+  "scenario_schedule_sha256": "ea28b3f588e33b500b94852c51d67369d94d3f2333ca7a6767ca737b901e119a",
+  "parent_qtable_files": [
+    "qtable_final_stereotypes_true_labmon_nostereo_trust.csv",
+    "qtable_final_stereotypes_true_labmon_nostereo_visits.csv",
+    "qtable_final_stereotypes_true_labmon_nostereo_zone1.csv",
+    "qtable_final_stereotypes_true_labmon_nostereo.csv"
+  ],
+  "parent_qtable_sha256": "5ebc7f00cffc2326f445c796f6a4cdb26c675a3749f8560f82936d78ab9c4909"
+}

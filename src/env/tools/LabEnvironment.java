@@ -779,6 +779,35 @@ public class LabEnvironment extends Artifact {
     }
 
     /**
+     * Phase-3 protocol v2 — read the cumulative energy accumulator AND the
+     * simulator tick counter from ONE status fetch. Energy deltas between two
+     * timed reads are exact sums of per-tick instantaneous cost over exactly
+     * (tick1 - tick0) simulator ticks, so any metric built from paired deltas
+     * is deterministic in simulator time — unlike a single cumulative read,
+     * whose value depends on elapsed wall-clock history. {@code tick} is -1
+     * when the flow publishes no Tick key.
+     */
+    @OPERATION
+    public void readEnergyCostTimed(OpFeedbackParam<Double> totalCost,
+                                    OpFeedbackParam<Integer> tick) {
+        try {
+            Map<String, Object> status = fetchRawStatus();
+            Object v = status.get("http://example.org/was#TotalEnergyCost");
+            double cost = (v instanceof Double) ? (Double) v : 0.0;
+            Object tickObj = status.get("http://example.org/was#Tick");
+            int tickVal = (tickObj instanceof Double)
+                        ? (int) Math.round((Double) tickObj)
+                        : -1;
+            totalCost.set(cost);
+            tick.set(tickVal);
+            LOGGER.info("readEnergyCostTimed: TotalEnergyCost=" + cost + " tick=" + tickVal);
+        } catch (IOException e) {
+            LOGGER.warning("readEnergyCostTimed: failed: " + e.getMessage());
+            failed("readEnergyCostTimed: " + e.getMessage());
+        }
+    }
+
+    /**
      * Derive a simulator URL by replacing the path suffix of the action endpoint.
      * Handles both http:// and classpath: TD sources. Returns null if the URL
      * cannot be determined.

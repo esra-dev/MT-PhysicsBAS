@@ -1,0 +1,12 @@
+{
+  "sources": [
+    "docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md",
+    "docs/phase4_correction_registration_2026-07-22.md",
+    "docs/PHASE4.md",
+    "docs/PHASE4_DEPENDENCY_LADDER.md",
+    "docs/phase34_v2_dispatch_record_2026-07-22.md",
+    "phase4_v2_corrected/CAMPAIGN_MANIFEST.md",
+    "phase4_v2_corrected/run_29926341581/ARCHIVE_MANIFEST.md",
+    "phase4_v2_corrected/run_29926354783/ARCHIVE_MANIFEST.md"
+  ]
+}
