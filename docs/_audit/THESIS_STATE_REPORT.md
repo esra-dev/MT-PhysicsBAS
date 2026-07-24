@@ -1037,6 +1037,23 @@ dead, the previously redundant spotlight flips to essential, KG arm re-learns 1.
 
 ## 6. Phase 2 — Fault Detection, Blacklist, Re-Learn
 
+> **Protocol notice (2026-07-22) — historical, protocol-affected; corrected
+> record complete (2026-07-24).** Every §6 empirical value (the §9.10 record
+> of 3/8 Tier-1 supported, the detection-null family, the Phase-2.6/2.7
+> descriptives, and every "zero false positives"/"recall 100%" claim) is
+> withdrawn: the adaptation scheduler drew silent unseeded random resets, and
+> the detector blacklisted healthy components in the runs of record. See
+> `docs/PHASE2_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`.
+> **Corrected runs of record: `30001857104`/`30001867521`/`30001878310`/
+> `30001888910`, archived at `phase2_v2_corrected/`. Corrected Tier-1
+> outcome: 2 supported (lab2_f1bdead −92.65 q=1.0×10⁻⁵; labmon2_f2dead_lowsun
+> −168.75 q=1.1×10⁻³), 3 adverse (the lab3 dead-lamp cells, censoring-driven:
+> the KG arm never detects — 0/20 — because the detector-v2 maskability
+> abstain and the knowledge-shaped policy interact), 3 null. Zero
+> false-positive blacklist events anywhere.** Current record:
+> `docs/thesis_chapter_phase2.md` §10; source:
+> `phase2_v2_corrected/analysis/registered/`.
+
 ### 6.1 Design
 
 The advisor's redirection rendered in code (13_logic_report.md §2.4): the pre-trained
