@@ -316,11 +316,13 @@ def test_pilot_diagnostics_refuses_family_output(tmp_path):
     assert any(row["row_type"] == "censoring_fraction" for row in rows)
     assert any(row["row_type"] == "artifact_presence" for row in rows)
     assert any(row["row_type"] == "degeneracy_flag" for row in rows)
-    # M2 diffs are all zero in this tree -> flagged degenerate.
-    m2_flags = [row for row in rows
-                if row["row_type"] == "degeneracy_flag"
-                and row["name"].startswith("M2_")]
-    assert m2_flags and m2_flags[0]["value"] == "1"
+    # M5 diffs are exactly -30.0 in every seed -> flagged degenerate; the
+    # perturbed M1 slopes are not.
+    member_flags = {row["name"]: row["value"] for row in rows
+                    if row["row_type"] == "degeneracy_flag"
+                    and row["detail"] == "zero_variance_paired_differences"}
+    assert member_flags["M5_labband_extended_vs_baseline_dev"] == "1"
+    assert member_flags["M1_labrel_stateless_frozen_slope"] == "0"
 
 
 def test_canonical_float_formatting_and_line_endings(tmp_path):

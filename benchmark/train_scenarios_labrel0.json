@@ -1,0 +1,17 @@
+[
+  {
+    "comment": "labrel RELEVANCE LADDER TRAINING scenarios \u2014 SHARED by labrel0/labrel4/labrel8/labrel16 and IDENTICAL to the benchmark set: with only 8 observable states [Z1Level,Z1Light] (physics Z1Level = 25 + (Z1Light ? 400 : 0), degenerate sun rank 0), benchmark and training coverage necessarily coincide \u2014 no held-out states exist. Decoy flags carry no scenario keys; setState resets them all to FALSE (see scenarios_labrel.json header). Optimal routes: id 1 -> single action SetZ1Light=ON; id 2 -> already at goal, DO_NOTHING/hold.",
+    "id": 1,
+    "Z1Level": 25,
+    "Z1Light": false,
+    "Sunshine": 0,
+    "description": "sun rank 0 (degenerate), lamp off (25 lux, rank 0) -> single action SetZ1Light=ON reaches rank 3 (425 lux)"
+  },
+  {
+    "id": 2,
+    "Z1Level": 425,
+    "Z1Light": true,
+    "Sunshine": 0,
+    "description": "sun rank 0 (degenerate), lamp on (425 lux, rank 3) -> already at goal, optimal is DO_NOTHING/hold"
+  }
+]
