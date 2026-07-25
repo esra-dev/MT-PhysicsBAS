@@ -3,3 +3,9 @@
 # must not perform line-ending conversion inside these evidence directories.
 phase1_v2_corrected/** -text -whitespace
 phase1_postinv/historical_raw/** -text -whitespace
+
+# Byte-frozen derived artifacts: the dashboard JSONs are byte-compared against
+# their builder's output (analysis/tests/test_dashboard_phase1_builder.py),
+# and the builder writes LF. Pin eol so every platform/autocrlf setting
+# materialises exactly the builder's bytes.
+dashboard/public/data/*.json text eol=lf
