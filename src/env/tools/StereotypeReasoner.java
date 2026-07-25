@@ -43,6 +43,48 @@ public class StereotypeReasoner {
     // Inner data structures
     // -----------------------------------------------------------------------
 
+    /**
+     * Phase 1b — three-valued goal-relevance classification of an action's
+     * declared behavioural description w.r.t. the controlled physical
+     * quantity (Illuminance). Open-world semantics: EXPLICIT_OTHER_DV
+     * requires POSITIVE evidence of completeness
+     * (ws:behavioralDescriptionComplete true on the stereotype); a missing,
+     * partial, or not-declared-complete description is UNKNOWN — never
+     * penalised, never adjudicated. {@link ActionInfo#kgSilent} remains a
+     * diagnostic only and is NOT evidence of irrelevance.
+     */
+    public enum Relevance {
+        /** Declared behavioural description explicitly contains a DV matching
+         *  the controlled quantity (completeness not required). */
+        EXPLICIT_RELEVANT,
+        /** A DECLARED-COMPLETE behavioural description contains one or more
+         *  DVs, none matching the controlled quantity. */
+        EXPLICIT_OTHER_DV,
+        /** Behavioural description missing, partial, or not declared
+         *  complete. Zero relevance prior, zero fault adjudication. */
+        UNKNOWN
+    }
+
+    /**
+     * Phase 1b — one IV gate of a mechanism: the effect on the DV is only
+     * physically possible when stateVec[slot] &gt;= minValue. Generalises the
+     * legacy single-slot hasIV/ivStateVecIndex/ivMinRank triple (which is
+     * kept untouched for the frozen consumer) to a COLLECTION so mechanisms
+     * like an awning (needs sun AND an open daylight path) are expressible.
+     */
+    public static class IvGate {
+        public final int slot;
+        public final int minValue;
+        public IvGate(int slot, int minValue) { this.slot = slot; this.minValue = minValue; }
+        @Override public boolean equals(Object o) {
+            if (!(o instanceof IvGate)) return false;
+            IvGate g = (IvGate) o;
+            return g.slot == slot && g.minValue == minValue;
+        }
+        @Override public int hashCode() { return slot * 31 + minValue; }
+        @Override public String toString() { return slot + ">=" + minValue; }
+    }
+
     /** Per-action metadata discovered from the ontology. */
     public static class ActionInfo {
         public int actionIndex;
@@ -70,9 +112,26 @@ public class StereotypeReasoner {
                                        //       no fault adjudication, no prediction. Both arms can
                                        //       still ACT on it and learn its effect from reward.
         public String label;           // human-readable label
+        public Relevance relevance = Relevance.UNKNOWN; // Phase 1b: three-valued
+                                       //   goal-relevance classification (see enum).
+                                       //   EXPLICIT_RELEVANT is set by the enrichment
+                                       //   pass; EXPLICIT_OTHER_DV only with the
+                                       //   explicit completeness marker.
+        public int illumDirection = 0; // Phase 1b: qualitative direction of THIS
+                                       //   action's predicted Illuminance response:
+                                       //   +1 positive, -1 negative, 0 unknown.
+                                       //   Derived from elem:directProportion /
+                                       //   elem:inverseProportion (MV->DV); the legacy
+                                       //   elem:increases shortcut maps to positive.
+                                       //   Polarity-resolved: OFF of a direct
+                                       //   mechanism predicts a negative response.
+        public List<IvGate> ivGates;   // Phase 1b: ALL IV gates of the mechanism
+                                       //   (collection; legacy single-slot fields are
+                                       //   preserved unchanged for the frozen consumer).
 
         public ActionInfo() {
             affectedZones = new HashSet<>();
+            ivGates = new ArrayList<>();
         }
     }
 
@@ -156,7 +215,12 @@ public class StereotypeReasoner {
         // on labs 1-4, so ?energyCost is unbound there and parsed as 0.0.
         "  OPTIONAL { ?comp ws:energyCost               ?energyCost . }\n" +
         "}\n" +
-        "ORDER BY ?zoneIdx ?wotActionType ?actionValue";
+        // Phase 1b: ?iv appended as the FINAL tie-breaker only, so multi-IV
+        // mechanisms enumerate deterministically. Every pre-1b mechanism has
+        // at most one IV, so the row order of all existing profiles — and
+        // therefore the "first enrichment row fixes hasIV/ivMinRank"
+        // invariant — is unchanged (verified by RegistryGoldenCheck).
+        "ORDER BY ?zoneIdx ?wotActionType ?actionValue ?iv";
 
     /**
      * WoT-CONTRACT ENUMERATION query (capability layer) — the PRIMARY and ONLY
@@ -237,6 +301,80 @@ public class StereotypeReasoner {
         "  ?gated ws:hasWoTActionSemanticType ?gatedAction .\n" +
         "}";
 
+    /**
+     * Phase 1b — RELEVANCE query. Collects, per WoT-mapped component, its
+     * declared behavioural description surface: the stereotype's optional
+     * ws:behavioralDescriptionComplete marker and every declared DV with its
+     * quantity. Aggregated in Java into the three-valued {@link Relevance}
+     * classification. All parts are OPTIONAL so components with missing or
+     * partial descriptions still return a row (they classify UNKNOWN).
+     */
+    private static final String RELEVANCE_QUERY = PREFIXES +
+        "SELECT ?wotActionType ?stereo ?complete ?dv ?q\n" +
+        "WHERE {\n" +
+        "  ?comp ws:hasWoTActionSemanticType ?wotActionType .\n" +
+        "  OPTIONAL {\n" +
+        "    ?comp elem:hasBehavioralStereotype ?stereo .\n" +
+        "    OPTIONAL { ?stereo ws:behavioralDescriptionComplete ?complete . }\n" +
+        "    OPTIONAL {\n" +
+        "      ?stereo elem:hasPhysicalMechanism ?mech .\n" +
+        "      ?mech   elem:hasDependentVariable ?dv .\n" +
+        "      OPTIONAL { ?dv elem:hasQuantity ?q . }\n" +
+        "    }\n" +
+        "  }\n" +
+        "}";
+
+    /**
+     * Phase 1b — qualitative DIRECTION query (Illuminance DVs only).
+     * Paper-aligned direction comes from elem:directProportion /
+     * elem:inverseProportion between the mechanism's MV and its Illuminance
+     * DV; the legacy elem:increases mechanism shortcut in pre-1b TTLs is
+     * mapped to POSITIVE direction during discovery (see
+     * docs/KNOWLEDGE_PROVENANCE.md rule 3). Conflicting evidence resolves to
+     * UNKNOWN (0) with a warning.
+     */
+    private static final String DIRECTION_QUERY = PREFIXES +
+        "SELECT ?wotActionType ?mech ?dv ?legacy ?dp ?ip\n" +
+        "WHERE {\n" +
+        "  ?comp ws:hasWoTActionSemanticType ?wotActionType .\n" +
+        "  ?comp elem:hasBehavioralStereotype ?stereo .\n" +
+        "  ?stereo elem:hasPhysicalMechanism ?mech .\n" +
+        "  ?mech elem:hasDependentVariable ?dv .\n" +
+        "  FILTER EXISTS { ?dv elem:hasQuantity <http://qudt.org/vocab/quantitykind/Illuminance> }\n" +
+        "  OPTIONAL { ?mech elem:increases ?legacy . }\n" +
+        "  OPTIONAL {\n" +
+        "    ?mech elem:hasManipulatedVariable ?mv .\n" +
+        "    OPTIONAL { ?mv elem:directProportion  ?dp . }\n" +
+        "    OPTIONAL { ?mv elem:inverseProportion ?ip . }\n" +
+        "  }\n" +
+        "}";
+
+    /**
+     * Phase 1b — IV GATE COLLECTION query. One row per (component, IV) of an
+     * Illuminance mechanism. Each IV may carry an explicit state-slot binding
+     * (ws:gateWoTStateSemanticType + ws:gateMinValue, both operational KG
+     * extensions — see config/knowledge_provenance.csv); an unbound IV falls
+     * back to the legacy sunshine-slot binding with the mechanism's
+     * ws:ivMinRank (default 1), so every pre-1b TTL produces exactly its
+     * legacy gate. Gates attach to BOTH action polarities: the new direction
+     * consumer must know that RETRACTING an awning also only matters while
+     * the sun/daylight-path gates are satisfied.
+     */
+    private static final String IV_GATES_QUERY = PREFIXES +
+        "SELECT ?wotActionType ?iv ?gateState ?gateMin ?mechMinRank\n" +
+        "WHERE {\n" +
+        "  ?comp ws:hasWoTActionSemanticType ?wotActionType .\n" +
+        "  ?comp elem:hasBehavioralStereotype ?stereo .\n" +
+        "  ?stereo elem:hasPhysicalMechanism ?mech .\n" +
+        "  ?mech elem:hasDependentVariable ?dv .\n" +
+        "  FILTER EXISTS { ?dv elem:hasQuantity <http://qudt.org/vocab/quantitykind/Illuminance> }\n" +
+        "  ?mech elem:hasIndependentVariable ?iv .\n" +
+        "  OPTIONAL { ?iv ws:gateWoTStateSemanticType ?gateState . }\n" +
+        "  OPTIONAL { ?iv ws:gateMinValue ?gateMin . }\n" +
+        "  OPTIONAL { ?mech ws:ivMinRank ?mechMinRank . }\n" +
+        "}\n" +
+        "ORDER BY ?wotActionType ?iv";
+
     // -----------------------------------------------------------------------
     // Fields
     // -----------------------------------------------------------------------
@@ -266,6 +404,20 @@ public class StereotypeReasoner {
     // Once enough samples are collected, compute the minimum effective rank.
     private int[][] ivTrialCount;     // [numActions][4]
     private int[][] ivSuccessCount;   // [numActions][4]
+
+    // Phase 1b — honest direction-outcome counters (diagnostic layer-5
+    // enrichment; no learner consumes them in Phase 1b). Incremented ONLY
+    // when every IV gate of the action's mechanism was satisfied in the
+    // pre-action state; gated observations are never recorded.
+    private int[] dirGateSatTrials;   // [numActions] gate-satisfied observations
+    private int[] dirMatchCount;      // observed rank-change sign == predicted
+    private int[] dirMismatchCount;   // observed sign OPPOSITE to predicted
+    private int[] dirNullCount;       // gates satisfied but no rank change seen
+
+    // Phase 1b — per-zone target ranks for the band-mirror runtime prior
+    // (set by QLearner.initLearner via setZoneTargets; null until then, which
+    // keeps the band-mirror prior inert).
+    private int[] bandMirrorGoals = null;
     /**
      * Minimum number of trials at a given IV rank before we trust the data.
      * Override with -Dstereo.ivMinSamples=N.
@@ -382,6 +534,52 @@ public class StereotypeReasoner {
     private static final boolean REDUNDANCY_ONLY =
         Boolean.parseBoolean(System.getProperty("stereo.redundancyOnly", "false"));
 
+    /**
+     * Phase 1b (extended arm ONLY) — magnitude of the small negative relevance
+     * prior applied to actions classified {@link Relevance#EXPLICIT_OTHER_DV}:
+     * a DECLARED-COMPLETE behavioural description whose DVs all target
+     * non-controlled quantities. Override with -Dstereo.irrelevantDvPrior=...
+     * (default 0.0 = OFF — the frozen consumer and every pre-1b mode are
+     * unaffected). UNKNOWN and kgSilent alone NEVER trigger this prior
+     * (open-world contract; regression-tested on the monitor
+     * information-only / no-stereotype ontologies).
+     */
+    private static double IRRELEVANT_DV_PRIOR =
+        Double.parseDouble(System.getProperty("stereo.irrelevantDvPrior", "0.0"));
+
+    /** TEST-ONLY override (production never mutates the knob). */
+    static void setIrrelevantDvPriorForTest(double v) { IRRELEVANT_DV_PRIOR = v; }
+
+    /**
+     * Phase 1b (extended arm ONLY) — magnitude (per rank of |target gap|) of
+     * the generic target-direction ("band mirror") Q-INIT term. Override with
+     * -Dstereo.bandMirrorInit=... (default 0.0 = OFF). Semantics: below
+     * target softly prefer actions predicting a positive Illuminance
+     * response, above target prefer negative-response actions, softly
+     * discourage the opposite known direction, add nothing at target, and
+     * give unknown-direction actions no bonus or penalty. Applies only when
+     * EVERY IV gate of the action's mechanism is satisfied in the state.
+     * Scaled by {@link #INIT_PENALTY_SCALE} like the other init terms, and
+     * bounded well below Rule-5 magnitudes by registration-frozen values.
+     */
+    private static double BAND_MIRROR_INIT_MAG =
+        Double.parseDouble(System.getProperty("stereo.bandMirrorInit", "0.0"));
+
+    /** TEST-ONLY override (production never mutates the knob). */
+    static void setBandMirrorInitForTest(double v) { BAND_MIRROR_INIT_MAG = v; }
+
+    /**
+     * Phase 1b (extended arm ONLY) — magnitude of the FADING runtime soft
+     * prior counterpart of the band mirror (participates in the standard
+     * priorWeight/cellMul fade in QLearner, so it stays out-votable).
+     * Override with -Dstereo.bandMirrorPrior=... (default 0.0 = OFF).
+     */
+    private static double BAND_MIRROR_PRIOR_MAG =
+        Double.parseDouble(System.getProperty("stereo.bandMirrorPrior", "0.0"));
+
+    /** TEST-ONLY override (production never mutates the knob). */
+    static void setBandMirrorPriorForTest(double v) { BAND_MIRROR_PRIOR_MAG = v; }
+
 
     // -----------------------------------------------------------------------
     // Ontology loading — injectable for testability (#11 DI refactor)
@@ -494,6 +692,13 @@ public class StereotypeReasoner {
         // Discover actuators and build action registry
         discoverActuators(model);
 
+        // Phase 1b: classify three-valued relevance, resolve qualitative
+        // direction, and collect the multi-IV gate sets. Purely additive
+        // annotations on the freshly-built registry; every consumer of these
+        // fields is gated by a default-off knob, so pre-1b modes are
+        // unaffected (verified by RegistryGoldenCheck old-column identity).
+        discoverRelevanceDirectionAndGates(model);
+
         // Phase 4 (lab4): apply smart-plug power-gate dependencies on top of the
         // freshly-built action registry. Reuses the IV machinery, so it must run
         // AFTER discoverActuators (actions[] must exist) and BEFORE model.close().
@@ -507,6 +712,14 @@ public class StereotypeReasoner {
         // Initialise IV effectiveness tracking arrays
         ivTrialCount   = new int[numActions][4];
         ivSuccessCount = new int[numActions][4];
+
+        // Phase 1b: honest direction-outcome counters (diagnostic; recorded
+        // only when every IV gate was satisfied — a gated null observation is
+        // not evidence of ineffectiveness and is deliberately NOT recorded).
+        dirGateSatTrials = new int[numActions];
+        dirMatchCount    = new int[numActions];
+        dirMismatchCount = new int[numActions];
+        dirNullCount     = new int[numActions];
 
         LOGGER.info("StereotypeReasoner: " + numActions + " actions, "
                    + crossZoneEffects.size() + " cross-zone effects");
@@ -702,6 +915,9 @@ public class StereotypeReasoner {
                     ai.hasIV = actionValue && hasIV; // IV only matters for activation
                     ai.ivStateVecIndex = (actionValue && hasIV) ? sunshineIndex : -1;
                     ai.ivMinRank = (actionValue && hasIV) ? ivMinRank : 1;
+                    // Phase 1b: an enriched action's declared description
+                    // explicitly targets the controlled quantity.
+                    ai.relevance = Relevance.EXPLICIT_RELEVANT;
                 }
                 ai.affectedZones.add(zoneIdx);
                 // Phase 4 (lab5): keep the largest declared cost across the
@@ -794,6 +1010,139 @@ public class StereotypeReasoner {
      * exist) and BEFORE model.close(). No-op when the ontology declares no
      * ws:powerGates arcs (labs 1-3 and 5).
      */
+    /**
+     * Phase 1b — annotate the freshly-built action registry with
+     * (a) the three-valued relevance classification, (b) the qualitative
+     * Illuminance direction, and (c) the multi-IV gate collection.
+     *
+     * Additive only: no legacy field (kgSilent, hasIV, ivStateVecIndex,
+     * ivMinRank, affectedZones, energyCost) is touched, and every consumer of
+     * the new fields is behind a default-off knob, so pre-1b modes and
+     * profiles behave bit-identically.
+     */
+    private void discoverRelevanceDirectionAndGates(OntModel model) {
+        // ── (a) Relevance: aggregate the declared description surface ───────
+        final String ILLUM = "http://qudt.org/vocab/quantitykind/Illuminance";
+        Map<String, boolean[]> relAgg = new HashMap<>();
+        // per wotActionType: [0]=hasStereo [1]=declaredComplete [2]=anyDv [3]=illumDv
+        try (QueryExecution qe = QueryExecutionFactory.create(RELEVANCE_QUERY, model)) {
+            ResultSet rs = qe.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution qs = rs.next();
+                if (!qs.contains("wotActionType")) continue;
+                String wot = qs.getLiteral("wotActionType").getString();
+                boolean[] agg = relAgg.computeIfAbsent(wot, k -> new boolean[4]);
+                if (qs.contains("stereo") && qs.get("stereo") != null) agg[0] = true;
+                if (qs.contains("complete") && qs.get("complete") != null
+                        && qs.getLiteral("complete").getBoolean()) agg[1] = true;
+                if (qs.contains("dv") && qs.get("dv") != null) agg[2] = true;
+                if (qs.contains("q") && qs.get("q") != null
+                        && ILLUM.equals(qs.getResource("q").getURI())) agg[3] = true;
+            }
+        }
+        for (ActionInfo ai : actions) {
+            if (ai.wotActionType == null) continue;          // DO_NOTHING
+            if (ai.relevance == Relevance.EXPLICIT_RELEVANT) continue; // enriched
+            boolean[] agg = relAgg.get(ai.wotActionType);
+            // Open-world contract: EXPLICIT_OTHER_DV requires a stereotype
+            // DECLARED COMPLETE with >=1 DV and NO Illuminance DV. Anything
+            // less — no stereotype, no completeness marker, no DV, or a
+            // stray Illuminance DV that failed zone enrichment — is UNKNOWN.
+            if (agg != null && agg[0] && agg[1] && agg[2] && !agg[3]) {
+                ai.relevance = Relevance.EXPLICIT_OTHER_DV;
+            } else {
+                ai.relevance = Relevance.UNKNOWN;
+            }
+        }
+
+        // ── (b) Direction: paper-aligned proportionality (+ legacy mapping) ─
+        Map<String, int[]> dirAgg = new HashMap<>(); // [0]=posSeen [1]=negSeen
+        try (QueryExecution qe = QueryExecutionFactory.create(DIRECTION_QUERY, model)) {
+            ResultSet rs = qe.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution qs = rs.next();
+                if (!qs.contains("wotActionType")) continue;
+                String wot = qs.getLiteral("wotActionType").getString();
+                int[] agg = dirAgg.computeIfAbsent(wot, k -> new int[2]);
+                String dvUri = qs.contains("dv") && qs.get("dv") != null
+                        ? qs.getResource("dv").getURI() : null;
+                boolean legacy = qs.contains("legacy") && qs.get("legacy") != null;
+                boolean direct = qs.contains("dp") && qs.get("dp") != null && dvUri != null
+                        && dvUri.equals(qs.getResource("dp").getURI());
+                boolean inverse = qs.contains("ip") && qs.get("ip") != null && dvUri != null
+                        && dvUri.equals(qs.getResource("ip").getURI());
+                if (direct || legacy) agg[0] = 1;
+                if (inverse) agg[1] = 1;
+            }
+        }
+        for (ActionInfo ai : actions) {
+            if (ai.wotActionType == null) continue;
+            int[] agg = dirAgg.get(ai.wotActionType);
+            if (agg == null) continue;                       // no Illuminance claim
+            int base = 0;
+            if (agg[0] == 1 && agg[1] == 0) base = +1;
+            else if (agg[1] == 1 && agg[0] == 0) base = -1;
+            else if (agg[0] == 1 && agg[1] == 1) {
+                LOGGER.warning("discoverRelevanceDirectionAndGates: conflicting"
+                             + " direction evidence for " + ai.wotActionType
+                             + " (direct AND inverse) — direction stays UNKNOWN.");
+            }
+            // Polarity resolution: reversing an actuator predicts the
+            // opposite DV response.
+            ai.illumDirection = ai.wotValue ? base : -base;
+        }
+
+        // ── (c) Multi-IV gate collection ────────────────────────────────────
+        try (QueryExecution qe = QueryExecutionFactory.create(IV_GATES_QUERY, model)) {
+            ResultSet rs = qe.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution qs = rs.next();
+                if (!qs.contains("wotActionType")) continue;
+                String wot = qs.getLiteral("wotActionType").getString();
+                Integer slot;
+                int min;
+                if (qs.contains("gateState") && qs.get("gateState") != null) {
+                    slot = wotStateToSvIndex.get(qs.getLiteral("gateState").getString());
+                    if (slot == null) {
+                        LOGGER.warning("IV gate state "
+                                     + qs.getLiteral("gateState").getString()
+                                     + " has no state-vector slot — gate skipped for " + wot);
+                        continue;
+                    }
+                    min = (qs.contains("gateMin") && qs.get("gateMin") != null)
+                            ? qs.getLiteral("gateMin").getInt() : 1;
+                } else {
+                    // Legacy IV (no explicit binding): sunshine slot at the
+                    // mechanism's ws:ivMinRank, exactly the pre-1b gate.
+                    if (sunshineIndex < 0) continue;
+                    slot = sunshineIndex;
+                    min = (qs.contains("mechMinRank") && qs.get("mechMinRank") != null)
+                            ? qs.getLiteral("mechMinRank").getInt() : 1;
+                }
+                IvGate gate = new IvGate(slot, min);
+                for (ActionInfo ai : actions) {
+                    if (ai.wotActionType != null && ai.wotActionType.equals(wot)
+                            && !ai.ivGates.contains(gate)) {
+                        ai.ivGates.add(gate);
+                    }
+                }
+            }
+        }
+        for (ActionInfo ai : actions) {
+            // Deterministic gate order for registry dumps and tests.
+            ai.ivGates.sort((g1, g2) -> g1.slot != g2.slot
+                    ? Integer.compare(g1.slot, g2.slot)
+                    : Integer.compare(g1.minValue, g2.minValue));
+            if (ai.relevance != Relevance.EXPLICIT_RELEVANT || ai.illumDirection != 0
+                    || !ai.ivGates.isEmpty()) {
+                LOGGER.fine("  Phase1b annotate: " + ai.label
+                          + " relevance=" + ai.relevance
+                          + " dir=" + ai.illumDirection
+                          + " gates=" + ai.ivGates);
+            }
+        }
+    }
+
     private void discoverPowerGates(OntModel model) {
         int applied = 0;
         try (QueryExecution qe = QueryExecutionFactory.create(POWER_GATE_QUERY, model)) {
@@ -815,6 +1164,10 @@ public class StereotypeReasoner {
                             && ai.wotActionType.equals(gatedAction)
                             && ai.wotValue) {
                         ai.hasIV = true;
+                        // Phase 1b: mirror the power-gate arc into the gate
+                        // collection (binary gate slot, ON = value >= 1).
+                        IvGate pg = new IvGate(gateSlot, 1);
+                        if (!ai.ivGates.contains(pg)) ai.ivGates.add(pg);
                         ai.ivStateVecIndex = gateSlot;
                         ai.ivMinRank = 1; // binary gate slot: ON (rank>=1) enables the gated DV
                         applied++;
@@ -825,6 +1178,13 @@ public class StereotypeReasoner {
             }
         }
         if (applied > 0) {
+            // Keep the Phase-1b gate collection deterministically ordered
+            // after the power-gate arcs were appended.
+            for (ActionInfo ai : actions) {
+                ai.ivGates.sort((g1, g2) -> g1.slot != g2.slot
+                        ? Integer.compare(g1.slot, g2.slot)
+                        : Integer.compare(g1.minValue, g2.minValue));
+            }
             LOGGER.info("StereotypeReasoner: applied " + applied
                       + " smart-plug power-gate dependenc(ies)");
         }
@@ -1039,6 +1399,41 @@ public class StereotypeReasoner {
      * IV rank and {@link #getLearnedIVMinRank(int)} is therefore measured
      * end-to-end from observation, not pre-decided by the ontology.
      */
+    /**
+     * Phase 1b — are ALL declared IV gates of this action's mechanism
+     * satisfied in the given state? Static (declared-knowledge) evaluation
+     * used by the extended-arm consumers and the honest direction-outcome
+     * recorder; deliberately separate from the LEARNED-statistics
+     * {@link #isIVSatisfied} mask, whose semantics are frozen.
+     * An action with no declared gates is trivially satisfied.
+     */
+    public boolean areIvGatesSatisfied(int[] stateVec, int actionIdx) {
+        ActionInfo ai = actions[actionIdx];
+        for (IvGate g : ai.ivGates) {
+            if (g.slot < 0 || g.slot >= stateVec.length) return false;
+            if (stateVec[g.slot] < g.minValue) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Phase 1b — supply the per-zone target ranks so the band-mirror RUNTIME
+     * prior can mirror above/below-target state. Called once from
+     * QLearner.initLearner. Until called (or with the knobs at their 0.0
+     * defaults) the band-mirror channels are inert.
+     */
+    public void setZoneTargets(int[] goal) {
+        this.bandMirrorGoals = goal == null ? null : goal.clone();
+    }
+
+    /** Phase 1b diagnostics — [gateSatisfiedTrials, match, mismatch, null] for one action. */
+    public int[] getDirectionOutcomeStats(int actionIdx) {
+        return new int[] {
+            dirGateSatTrials[actionIdx], dirMatchCount[actionIdx],
+            dirMismatchCount[actionIdx], dirNullCount[actionIdx]
+        };
+    }
+
     public boolean isIVSatisfied(int[] stateVec, int actionIdx) {
         ActionInfo ai = actions[actionIdx];
         if (!ai.hasIV || ai.ivStateVecIndex < 0) return true;
@@ -1067,6 +1462,32 @@ public class StereotypeReasoner {
      */
     public void recordActionOutcome(int actionIdx, int[] prevState, int[] nextState) {
         ActionInfo ai = actions[actionIdx];
+
+        // Phase 1b — honest direction-outcome comparison (diagnostic only; no
+        // learner consumes these counters in Phase 1b). The observed
+        // rank-change sign is compared with the predicted qualitative
+        // direction ONLY when every declared IV gate was satisfied in the
+        // pre-action state; a GATED observation — null or otherwise — is not
+        // evidence about the mechanism and is deliberately not recorded.
+        // Purely additive: the frozen ivTrial/ivSuccess statistics below are
+        // untouched.
+        if (ai.illumDirection != 0 && !ai.affectedZones.isEmpty()
+                && dirGateSatTrials != null
+                && areIvGatesSatisfied(prevState, actionIdx)) {
+            int delta = 0;
+            for (int z : ai.affectedZones) {
+                if (z < 0 || z >= zoneLevelIndices.length) continue;
+                int levelIdx = zoneLevelIndices[z];
+                if (levelIdx < 0 || levelIdx >= prevState.length
+                        || levelIdx >= nextState.length) continue;
+                delta += Integer.compare(nextState[levelIdx], prevState[levelIdx]);
+            }
+            dirGateSatTrials[actionIdx]++;
+            if (delta == 0)                                        dirNullCount[actionIdx]++;
+            else if (Integer.signum(delta) == ai.illumDirection)   dirMatchCount[actionIdx]++;
+            else                                                   dirMismatchCount[actionIdx]++;
+        }
+
         if (!ai.hasIV || ai.ivStateVecIndex < 0) return;
         if (!ai.wotValue) return; // Only track activation actions (ON/OPEN)
 
@@ -1180,6 +1601,33 @@ public class StereotypeReasoner {
             } else {
                 priors[i] = 0.0;
             }
+
+            // Phase 1b extended channels (both default-off; disabled in
+            // redundancy-only mode). Applied ONLY when the frozen machinery
+            // left the action neutral, so at knob defaults 0.0 this block is
+            // a no-op and frozen-arm behaviour is bit-identical. These priors
+            // flow through the standard priorWeight/cellMul fade in QLearner,
+            // so they remain out-votable.
+            if (priors[i] == 0.0 && !REDUNDANCY_ONLY) {
+                if (IRRELEVANT_DV_PRIOR > 0.0
+                        && ai.relevance == Relevance.EXPLICIT_OTHER_DV) {
+                    priors[i] = -IRRELEVANT_DV_PRIOR;
+                } else if (BAND_MIRROR_PRIOR_MAG > 0.0 && ai.illumDirection != 0
+                        && bandMirrorGoals != null
+                        && areIvGatesSatisfied(stateVec, i)) {
+                    // Band mirror: net alignment of the predicted direction
+                    // with the per-zone target gaps of the zones this action
+                    // claims. At target (all gaps 0) the net is 0 => neutral.
+                    int net = 0;
+                    for (Integer z : ai.affectedZones) {
+                        if (z == null || z < 0 || z >= zoneLevelIndices.length
+                                || z >= bandMirrorGoals.length) continue;
+                        int gap = bandMirrorGoals[z] - stateVec[zoneLevelIndices[z]];
+                        net += Integer.signum(gap) * ai.illumDirection;
+                    }
+                    priors[i] = BAND_MIRROR_PRIOR_MAG * Integer.signum(net);
+                }
+            }
         }
         return priors;
     }
@@ -1217,6 +1665,18 @@ public class StereotypeReasoner {
         // bonus, cross-zone bonus) are all KG-derived and are skipped.
         if (REDUNDANCY_ONLY) {
             return 0.0;
+        }
+
+        // Rule 7 (Phase 1b, extended arm ONLY — gated by
+        // -Dstereo.irrelevantDvPrior, default 0.0 = OFF): small negative
+        // relevance prior for actions whose DECLARED-COMPLETE behavioural
+        // description explicitly targets only non-controlled quantities.
+        // UNKNOWN (missing/partial/undeclared-complete descriptions) and
+        // kgSilent alone NEVER trigger this — open-world contract. Such
+        // actions carry no zone claim, so Rules 2-6 are structurally inert
+        // for them and an early return is exact.
+        if (IRRELEVANT_DV_PRIOR > 0.0 && ai.relevance == Relevance.EXPLICIT_OTHER_DV) {
+            return -IRRELEVANT_DV_PRIOR * INIT_PENALTY_SCALE;
         }
 
         // Rule 2: IV gate (Mediates) — state-dependent hard penalty.
@@ -1274,6 +1734,32 @@ public class StereotypeReasoner {
                     || stateVec[ai.ivStateVecIndex] >= ai.ivMinRank;
             if (gap > 0 && ivOk) {
                 return INIT_BONUS_MAG * gap * INIT_PENALTY_SCALE;
+            }
+        }
+
+        // Rule 8 (Phase 1b, extended arm ONLY — gated by
+        // -Dstereo.bandMirrorInit, default 0.0 = OFF): generic
+        // target-direction ("band mirror") Q-init. Below target softly
+        // prefer actions predicting a POSITIVE Illuminance response; above
+        // target prefer NEGATIVE-response actions; softly discourage the
+        // opposite known direction; add nothing at target; unknown direction
+        // (illumDirection == 0) receives no bonus or penalty. Fires only
+        // when no discouragement well fired, when the action makes an
+        // explicit zone claim, and when EVERY declared IV gate is satisfied
+        // (a gated action has no effect, so it earns neither preference nor
+        // discouragement here — existing Rule 2 handles unsatisfied
+        // activation). Rule 5's early return means aligned below-target
+        // activations keep their frozen Rule-5 endorsement; this rule adds
+        // the cases Rule 5 cannot express: deactivations that raise light,
+        // and darkening actions above the band.
+        if (BAND_MIRROR_INIT_MAG > 0.0 && penalty == 0.0
+                && ai.illumDirection != 0 && ai.affectedZones.contains(zoneIdx)
+                && areIvGatesSatisfied(stateVec, actionIdx)) {
+            int zoneLevelIdx = zoneLevelIndices[zoneIdx];
+            int gap = goal[zoneIdx] - stateVec[zoneLevelIdx];
+            if (gap != 0) {
+                int aligned = Integer.signum(gap) * ai.illumDirection; // +1 helps, -1 opposes
+                return aligned * BAND_MIRROR_INIT_MAG * Math.abs(gap) * INIT_PENALTY_SCALE;
             }
         }
 

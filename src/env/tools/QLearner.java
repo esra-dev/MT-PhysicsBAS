@@ -404,6 +404,12 @@ public class QLearner extends Artifact {
         nActions = reasoner.getNumActions();
         actionInfos = reasoner.getAllActions();
 
+        // Phase 1b: give the reasoner the per-zone targets so the (default-
+        // off) band-mirror runtime prior can mirror above/below-target state.
+        // With the stereo.bandMirror* knobs at their 0.0 defaults this is
+        // inert and pre-1b behaviour is bit-identical.
+        reasoner.setZoneTargets(this.goal);
+
         // Pull the state-vector layout from the reasoner slot registry and
         // build strides for the flat Q-table index.
         domainSizes      = reasoner.getStateDomainSizes();

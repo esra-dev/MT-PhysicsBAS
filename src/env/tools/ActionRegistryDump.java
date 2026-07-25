@@ -57,8 +57,13 @@ public final class ActionRegistryDump {
         ONTOLOGY_SETS.put("labmon2_nostereo",  new String[]{"building_7_dualmonitor_nostereo.ttl"});
     }
 
+    // Phase 1b: the golden contract is intentionally EXTENDED with the
+    // three-valued relevance classification, the qualitative Illuminance
+    // direction, and the multi-IV gate collection. Old columns retain their
+    // old semantic values on every pre-1b profile (regeneration diff must
+    // touch only the new columns for existing rows).
     static final String HEADER =
-        "key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,actionIndex";
+        "key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex";
 
     /** Stable identity of an action independent of discovery order. */
     static String key(StereotypeReasoner.ActionInfo ai) {
@@ -75,11 +80,17 @@ public final class ActionRegistryDump {
             if (i > 0) zones.append('|');
             zones.append(zs.get(i));
         }
+        StringBuilder gates = new StringBuilder();
+        for (int i = 0; i < ai.ivGates.size(); i++) {
+            if (i > 0) gates.append('|');
+            gates.append(ai.ivGates.get(i)); // "slot>=min"
+        }
         return key(ai) + "," + ai.label + ","
              + (ai.wotStateType == null ? "" : ai.wotStateType) + ","
              + ai.stateVecBitIndex + "," + ai.expectedBitValue + ","
              + zones + "," + ai.hasIV + "," + ai.ivStateVecIndex + ","
              + ai.ivMinRank + "," + ai.energyCost + "," + ai.kgSilent + ","
+             + ai.relevance + "," + ai.illumDirection + "," + gates + ","
              + ai.actionIndex;
     }
 

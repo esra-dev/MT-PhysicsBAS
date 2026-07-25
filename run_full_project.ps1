@@ -214,6 +214,12 @@ if ($RunConfig -and $RunConfig.learning) {
     # Only lab5's KG declares ws:energyCost, so this knob has NO effect on
     # labs 1-4 even when set > 0 (their actuators have energyCost 0).
     if ($ln.stereo_energy_prior_weight  -ne $null) { $HttpArgs += "-Pstereo.energyPriorWeight=$($ln.stereo_energy_prior_weight)" }
+    # Phase 1b (extended arm ONLY; defaults 0.0 = OFF): three-valued-relevance
+    # irrelevance prior and generic target-direction ("band mirror") channels.
+    # The frozen KG arm (phase1b_v2_kg_frozen) must NEVER set these.
+    if ($ln.stereo_irrelevant_dv_prior   -ne $null) { $HttpArgs += "-Pstereo.irrelevantDvPrior=$($ln.stereo_irrelevant_dv_prior)" }
+    if ($ln.stereo_band_mirror_init      -ne $null) { $HttpArgs += "-Pstereo.bandMirrorInit=$($ln.stereo_band_mirror_init)" }
+    if ($ln.stereo_band_mirror_prior     -ne $null) { $HttpArgs += "-Pstereo.bandMirrorPrior=$($ln.stereo_band_mirror_prior)" }
     # Research extensions: PBRS reward shaping + adaptive stereotype trust.
     if ($ln.reward_shaping              -ne $null) { $HttpArgs += "-Preward.shaping=$($ln.reward_shaping)" }
     if ($ln.adaptive_trust              -ne $null) { $HttpArgs += "-Pstereo.adaptiveTrust=$($ln.adaptive_trust)" }
