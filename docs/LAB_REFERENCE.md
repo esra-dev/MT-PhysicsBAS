@@ -88,7 +88,7 @@ flowchart TB
 | 4 | `lab5` | 1898 | 2 | efficient vs inefficient lamps | 8192 | `building_5_energy.ttl` |
 | 1b | `labrel0/4/8/16` | 1904–1907 | 1 | K stateless `EXPLICIT_OTHER_DV` decoys | 8 (all rungs) | `building_10_labrel{0,4,8,16}.ttl` |
 | 1b | `labrel8s` | 1908 | 1 | the 8 decoys as observable state bits | 2048 | `building_10_labrel8s.ttl` |
-| 1b | `labband` | 1912 | 1 | exact rank-2 band + inverse-direction awning (multi-IV gates) | 1024 | `building_11_labband.ttl` |
+| 1b | `labband` | 1912 | 1 | exact rank-2 band + inverse-direction awning (multi-IV gates) | 256 | `building_11_labband.ttl` |
 | 1b | `lab4chain3` | 1913 | 1 | depth-3 `ws:powerGates` chain + 2 `UNKNOWN` decoys | 128 | `building_12_chain3.ttl` |
 
 ---
@@ -468,7 +468,7 @@ Same 8 decoys as `labrel8` but each gets a binary state slot: `4 × 2⁹ = 2048`
 `daylight = Z1Blinds ? 0.50·Sun : 0`; deployed awning multiplies daylight by 0.25; `Z1 = 25 + (Strong?400) + (Weak?150) + daylight`; sun ∈ {0,100,400,900}.
 
 ### Agent state, KG mechanism & space
-- State vector (6 slots): `[Z1Level, StrongLamp, WeakLamp, Z1Blinds, Awning, Sunshine]` → 1024 states.
+- State vector (6 slots): `[Z1Level, StrongLamp, WeakLamp, Z1Blinds, Awning, Sunshine]` → 256 states.
 - KG: lamps/blind `elem:directProportion`, awning `elem:inverseProportion`, awning IV gates = {sun ≥ 1 AND daylight path open} via the multi-IV gate collection (`ws:gateWoTStateSemanticType`/`ws:gateMinValue`).
 - The frozen arm sees the awning only as a generic IV-gated activation (Rule 5 endorses deploying it below target — deliberately honest); the extended arm's band mirror (`stereo.bandMirrorInit/Prior`) prefers positive-direction actions below the band and negative-direction actions above it.
 - 16 benchmark scenarios (8 above-band starts), 10 held-in for training.
