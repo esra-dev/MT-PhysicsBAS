@@ -1,0 +1,297 @@
+[
+    {
+        "id": "labrel4_tab",
+        "type": "tab",
+        "label": "Lab_Rel4 (port 1905)",
+        "disabled": false,
+        "info": "Phase 1b, LABREL4 \u2014 relevance ladder (4 decoys). One zone, one incandescent lamp.\n\nPhysics (deterministic, pure function of flow state):\n  Z1Level = 25 (ambient) + (Z1Light ? 400 : 0)\n\nNo sunshine effect: Sunshine is ALWAYS 0 (degenerate rank 0). Reset does NOT\nrandomise the sun \u2014 it sets Sunshine=0 and SunshinePinned=true. The Sunshine\nstatus field exists only for pipeline compatibility.\n\nReproducibility:\n  - update_env contains NO Math.random() \u2014 physics is a pure function of Z1Light.\n  - Math.random appears ONLY in /was/rl/reset (episode-start sampling).\n\nEnergy (per-tick, single source of truth):\n  TotalEnergyCost += (Z1Light?1:0) + 1 per decoy flag that is ON.\n\nDecoys (4): Fan, Humidifier, Heater, Speaker.\nEach decoy has a real WoT action (POST /was/rl/action) that toggles an\ninternal flag; flags NEVER affect lux and cost 1 energy unit/tick while ON.\n/was/rl/setState RESETS ALL DECOY FLAGS TO FALSE before applying the\nprovided fields, so shared benchmark scenarios (which carry no decoy\nkeys) always start with every decoy OFF.\n\nState vector: [Z1Level, Z1Light] = 4*2 = 8 states. Decoy flags are visible in /status for energy accounting but carry NO KG state slot (stateless rung).\nWoT TD: src/resources/interactions-labrel4.ttl (port 1905).\n\nStart with: node-red --port 1905 --userDir .node-red-labrel4"
+    },
+    {
+        "id": "labrel4_inject_start",
+        "type": "inject",
+        "z": "labrel4_tab",
+        "name": "OnStart",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "x": 200,
+        "y": 240,
+        "wires": [
+            [
+                "labrel4_init"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_init",
+        "type": "function",
+        "z": "labrel4_tab",
+        "name": "Initialization",
+        "func": "// Boot-time defaults \u2014 overwritten on first /was/rl/reset call.\nflow.set('Z1Level', 25);\nflow.set('Z1Light',  false);\nflow.set('Fan', false);\nflow.set('Humidifier', false);\nflow.set('Heater', false);\nflow.set('Speaker', false);\nflow.set('Sunshine', 0);\nflow.set('SunshinePinned', false);\nflow.set('TotalEnergyCost', 0);\nflow.set('EnergyCost', 0);\nflow.set('Hour', 0);\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 430,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "labrel4_http_status",
+        "type": "http in",
+        "z": "labrel4_tab",
+        "name": "",
+        "url": "/was/rl/status",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 340,
+        "wires": [
+            [
+                "labrel4_status_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_status_fn",
+        "type": "function",
+        "z": "labrel4_tab",
+        "name": "Status",
+        "func": "msg.payload = {\n    Z1Level:         flow.get('Z1Level'),\n    Z1Light:         flow.get('Z1Light'),\n    Fan:             flow.get('Fan'),\n    Humidifier:      flow.get('Humidifier'),\n    Heater:          flow.get('Heater'),\n    Speaker:         flow.get('Speaker'),\n    Sunshine:        flow.get('Sunshine'),\n    EnergyCost:      flow.get('EnergyCost'),\n    TotalEnergyCost: flow.get('TotalEnergyCost'),\n    Hour:            flow.get('Hour')\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 430,
+        "y": 340,
+        "wires": [
+            [
+                "labrel4_http_status_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_http_status_resp",
+        "type": "http response",
+        "z": "labrel4_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 630,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "labrel4_http_action",
+        "type": "http in",
+        "z": "labrel4_tab",
+        "name": "",
+        "url": "/was/rl/action",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 420,
+        "wires": [
+            [
+                "labrel4_action_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_action_fn",
+        "type": "function",
+        "z": "labrel4_tab",
+        "name": "Update action",
+        "func": "// Action endpoint: mutate actuator FLAGS only. NO physics here.\n// Decoy flags are internal comfort actuators: real WoT actions, but they\n// NEVER affect lux (energy accounting only).\nif (msg.payload) {\n    if (msg.payload.Z1Light !== undefined) flow.set('Z1Light', !!msg.payload.Z1Light);\n    if (msg.payload.Fan            !== undefined) flow.set('Fan',            !!msg.payload.Fan);\n    if (msg.payload.Humidifier     !== undefined) flow.set('Humidifier',     !!msg.payload.Humidifier);\n    if (msg.payload.Heater         !== undefined) flow.set('Heater',         !!msg.payload.Heater);\n    if (msg.payload.Speaker        !== undefined) flow.set('Speaker',        !!msg.payload.Speaker);\n}\nmsg.payload = { status: 'ok' };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 420,
+        "wires": [
+            [
+                "labrel4_http_action_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_http_action_resp",
+        "type": "http response",
+        "z": "labrel4_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 660,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "labrel4_inject_repeat",
+        "type": "inject",
+        "z": "labrel4_tab",
+        "name": "Repeat 50ms",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "0.05",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "x": 220,
+        "y": 520,
+        "wires": [
+            [
+                "labrel4_env_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_env_fn",
+        "type": "function",
+        "z": "labrel4_tab",
+        "name": "Update environment",
+        "func": "// ------------------------------------------------------------------\n// Lab_Rel4 physics \u2014 DETERMINISTIC, pure function of flow state.\n// The lamp is the ONLY lux source: Z1Level = 25 + (Z1Light ? 400 : 0).\n// Decoy flags NEVER enter the lux equation (energy accounting only).\n// NO Math.random calls anywhere in this function.\n// ------------------------------------------------------------------\nvar z1l = flow.get('Z1Light') || false;\n\nvar z1 = 25 + (z1l ? 400 : 0);\nflow.set('Z1Level', z1);\n\n// Per-tick energy accounting (single source of truth).\n// Lamp: 1 unit/tick while lit. Each decoy: 1 unit/tick while ON.\nvar perTick = (z1l ? 1 : 0)\n            + (flow.get('Fan') ? 1 : 0)\n            + (flow.get('Humidifier') ? 1 : 0)\n            + (flow.get('Heater') ? 1 : 0)\n            + (flow.get('Speaker') ? 1 : 0);\nflow.set('TotalEnergyCost', (flow.get('TotalEnergyCost') || 0) + perTick);\nflow.set('EnergyCost',      perTick);\n\n// Informational hour counter.\nvar hr = (flow.get('Hour') || 0) + 0.1;\nif (hr >= 24) hr = 0;\nflow.set('Hour', hr);\n\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 480,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "labrel4_http_reset",
+        "type": "http in",
+        "z": "labrel4_tab",
+        "name": "",
+        "url": "/was/rl/reset",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 620,
+        "wires": [
+            [
+                "labrel4_reset_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_reset_fn",
+        "type": "function",
+        "z": "labrel4_tab",
+        "name": "Reset episode",
+        "func": "// Randomise state for a new training episode.\n// PRNG is INTENTIONAL here: episode-start sampling (not physics).\n// Sunshine is DEGENERATE in this lab: always 0 (rank 0) and pinned \u2014\n// reset does NOT randomise the sun.\nvar z1l = Math.random() < 0.5;\nflow.set('Z1Light', z1l);\nflow.set('Z1Level', z1l ? 425 : 25);\nflow.set('Fan', Math.random() < 0.5);\nflow.set('Humidifier', Math.random() < 0.5);\nflow.set('Heater', Math.random() < 0.5);\nflow.set('Speaker', Math.random() < 0.5);\nflow.set('Sunshine', 0);\nflow.set('SunshinePinned', true);  // degenerate sun, fixed per episode\nflow.set('TotalEnergyCost', 0);\nflow.set('EnergyCost', 0);\nmsg.payload = { reset: true };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 620,
+        "wires": [
+            [
+                "labrel4_http_reset_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_http_reset_resp",
+        "type": "http response",
+        "z": "labrel4_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 660,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "labrel4_http_setstate",
+        "type": "http in",
+        "z": "labrel4_tab",
+        "name": "",
+        "url": "/was/rl/setState",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 700,
+        "wires": [
+            [
+                "labrel4_setstate_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_setstate_fn",
+        "type": "function",
+        "z": "labrel4_tab",
+        "name": "Set state (benchmark)",
+        "func": "// Pin simulator to an exact deterministic state for benchmarking.\n// Accepts JSON body with any subset of: Z1Level, Z1Light, Sunshine\n// plus the decoy booleans: Fan, Humidifier, Heater, Speaker.\n// ALL DECOY FLAGS ARE RESET TO FALSE FIRST, then provided fields are\n// applied \u2014 shared scenario files carry no decoy keys, so every\n// benchmark scenario starts with every decoy OFF.\n// Always raises SunshinePinned (the env tick treats sun as a constant).\n// Resets energy counters so each benchmark scenario starts fresh.\nvar p = msg.payload || {};\nflow.set('Fan', false);\nflow.set('Humidifier', false);\nflow.set('Heater', false);\nflow.set('Speaker', false);\nif (p.Z1Level  !== undefined) flow.set('Z1Level',  p.Z1Level);\nif (p.Z1Light  !== undefined) flow.set('Z1Light',  !!p.Z1Light);\nif (p.Fan     !== undefined) flow.set('Fan',     !!p.Fan);\nif (p.Humidifier !== undefined) flow.set('Humidifier', !!p.Humidifier);\nif (p.Heater  !== undefined) flow.set('Heater',  !!p.Heater);\nif (p.Speaker !== undefined) flow.set('Speaker', !!p.Speaker);\nif (p.Sunshine !== undefined) flow.set('Sunshine', p.Sunshine);\nflow.set('SunshinePinned', true);\nflow.set('TotalEnergyCost', 0);\nflow.set('EnergyCost', 0);\nmsg.payload = { status: 'ok' };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 470,
+        "y": 700,
+        "wires": [
+            [
+                "labrel4_http_setstate_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_http_setstate_resp",
+        "type": "http response",
+        "z": "labrel4_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 670,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "labrel4_http_health",
+        "type": "http in",
+        "z": "labrel4_tab",
+        "name": "",
+        "url": "/health",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 780,
+        "wires": [
+            [
+                "labrel4_health_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_health_fn",
+        "type": "function",
+        "z": "labrel4_tab",
+        "name": "Health",
+        "func": "var started = flow.get('__startedAt');\nif (!started) { started = Date.now(); flow.set('__startedAt', started); }\nmsg.payload = {\n    status: 'ok',\n    tab: 'labrel4_tab',\n    uptime_ms: Date.now() - started,\n    endpoints: { status: true, action: true, reset: true, setState: true }\n};\nmsg.statusCode = 200;\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 440,
+        "y": 780,
+        "wires": [
+            [
+                "labrel4_http_health_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel4_http_health_resp",
+        "type": "http response",
+        "z": "labrel4_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 640,
+        "y": 780,
+        "wires": []
+    }
+]

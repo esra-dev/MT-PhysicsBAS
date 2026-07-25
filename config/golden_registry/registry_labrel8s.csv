@@ -1,0 +1,22 @@
+# action registry golden — ontology set 'labrel8s' = building_10_labrel8s.ttl
+# contract = key-set + metadata columns; actionIndex is informational only
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,18
+http://example.org/was#SetAirPurifier|OFF,SetAirPurifier=OFF,http://example.org/was#AirPurifier,6,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,0
+http://example.org/was#SetAirPurifier|ON,SetAirPurifier=ON,http://example.org/was#AirPurifier,6,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,1
+http://example.org/was#SetCooler|OFF,SetCooler=OFF,http://example.org/was#Cooler,8,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,2
+http://example.org/was#SetCooler|ON,SetCooler=ON,http://example.org/was#Cooler,8,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,3
+http://example.org/was#SetDehumidifier|OFF,SetDehumidifier=OFF,http://example.org/was#Dehumidifier,7,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,4
+http://example.org/was#SetDehumidifier|ON,SetDehumidifier=ON,http://example.org/was#Dehumidifier,7,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,5
+http://example.org/was#SetFan|OFF,SetFan=OFF,http://example.org/was#Fan,2,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,6
+http://example.org/was#SetFan|ON,SetFan=ON,http://example.org/was#Fan,2,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,7
+http://example.org/was#SetHeater|OFF,SetHeater=OFF,http://example.org/was#Heater,4,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,8
+http://example.org/was#SetHeater|ON,SetHeater=ON,http://example.org/was#Heater,4,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,9
+http://example.org/was#SetHumidifier|OFF,SetHumidifier=OFF,http://example.org/was#Humidifier,3,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,10
+http://example.org/was#SetHumidifier|ON,SetHumidifier=ON,http://example.org/was#Humidifier,3,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,11
+http://example.org/was#SetSpeaker|OFF,SetSpeaker=OFF,http://example.org/was#Speaker,5,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,12
+http://example.org/was#SetSpeaker|ON,SetSpeaker=ON,http://example.org/was#Speaker,5,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,13
+http://example.org/was#SetWhiteNoiseUnit|OFF,SetWhiteNoiseUnit=OFF,http://example.org/was#WhiteNoiseUnit,9,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,14
+http://example.org/was#SetWhiteNoiseUnit|ON,SetWhiteNoiseUnit=ON,http://example.org/was#WhiteNoiseUnit,9,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,15
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,1,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,16
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,1,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,17

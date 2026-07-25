@@ -1,0 +1,6 @@
+# action registry golden — ontology set 'labrel0' = building_10_labrel0.ttl
+# contract = key-set + metadata columns; actionIndex is informational only
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,2
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,1,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,0
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,1,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,1

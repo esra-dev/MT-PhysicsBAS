@@ -1,0 +1,297 @@
+[
+    {
+        "id": "labrel16_tab",
+        "type": "tab",
+        "label": "Lab_Rel16 (port 1907)",
+        "disabled": false,
+        "info": "Phase 1b, LABREL16 \u2014 relevance ladder (16 decoys). One zone, one incandescent lamp.\n\nPhysics (deterministic, pure function of flow state):\n  Z1Level = 25 (ambient) + (Z1Light ? 400 : 0)\n\nNo sunshine effect: Sunshine is ALWAYS 0 (degenerate rank 0). Reset does NOT\nrandomise the sun \u2014 it sets Sunshine=0 and SunshinePinned=true. The Sunshine\nstatus field exists only for pipeline compatibility.\n\nReproducibility:\n  - update_env contains NO Math.random() \u2014 physics is a pure function of Z1Light.\n  - Math.random appears ONLY in /was/rl/reset (episode-start sampling).\n\nEnergy (per-tick, single source of truth):\n  TotalEnergyCost += (Z1Light?1:0) + 1 per decoy flag that is ON.\n\nDecoys (16): Fan, Humidifier, Heater, Speaker, AirPurifier, Dehumidifier, Cooler, WhiteNoiseUnit, Ventilator, Ionizer, CO2Scrubber, Radiator, ExhaustFan, AromaDiffuser, Subwoofer, HeatPump.\nEach decoy has a real WoT action (POST /was/rl/action) that toggles an\ninternal flag; flags NEVER affect lux and cost 1 energy unit/tick while ON.\n/was/rl/setState RESETS ALL DECOY FLAGS TO FALSE before applying the\nprovided fields, so shared benchmark scenarios (which carry no decoy\nkeys) always start with every decoy OFF.\n\nState vector: [Z1Level, Z1Light] = 4*2 = 8 states. Decoy flags are visible in /status for energy accounting but carry NO KG state slot (stateless rung).\nWoT TD: src/resources/interactions-labrel16.ttl (port 1907).\n\nStart with: node-red --port 1907 --userDir .node-red-labrel16"
+    },
+    {
+        "id": "labrel16_inject_start",
+        "type": "inject",
+        "z": "labrel16_tab",
+        "name": "OnStart",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "x": 200,
+        "y": 240,
+        "wires": [
+            [
+                "labrel16_init"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_init",
+        "type": "function",
+        "z": "labrel16_tab",
+        "name": "Initialization",
+        "func": "// Boot-time defaults \u2014 overwritten on first /was/rl/reset call.\nflow.set('Z1Level', 25);\nflow.set('Z1Light',  false);\nflow.set('Fan', false);\nflow.set('Humidifier', false);\nflow.set('Heater', false);\nflow.set('Speaker', false);\nflow.set('AirPurifier', false);\nflow.set('Dehumidifier', false);\nflow.set('Cooler', false);\nflow.set('WhiteNoiseUnit', false);\nflow.set('Ventilator', false);\nflow.set('Ionizer', false);\nflow.set('CO2Scrubber', false);\nflow.set('Radiator', false);\nflow.set('ExhaustFan', false);\nflow.set('AromaDiffuser', false);\nflow.set('Subwoofer', false);\nflow.set('HeatPump', false);\nflow.set('Sunshine', 0);\nflow.set('SunshinePinned', false);\nflow.set('TotalEnergyCost', 0);\nflow.set('EnergyCost', 0);\nflow.set('Hour', 0);\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 430,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "labrel16_http_status",
+        "type": "http in",
+        "z": "labrel16_tab",
+        "name": "",
+        "url": "/was/rl/status",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 340,
+        "wires": [
+            [
+                "labrel16_status_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_status_fn",
+        "type": "function",
+        "z": "labrel16_tab",
+        "name": "Status",
+        "func": "msg.payload = {\n    Z1Level:         flow.get('Z1Level'),\n    Z1Light:         flow.get('Z1Light'),\n    Fan:             flow.get('Fan'),\n    Humidifier:      flow.get('Humidifier'),\n    Heater:          flow.get('Heater'),\n    Speaker:         flow.get('Speaker'),\n    AirPurifier:     flow.get('AirPurifier'),\n    Dehumidifier:    flow.get('Dehumidifier'),\n    Cooler:          flow.get('Cooler'),\n    WhiteNoiseUnit:  flow.get('WhiteNoiseUnit'),\n    Ventilator:      flow.get('Ventilator'),\n    Ionizer:         flow.get('Ionizer'),\n    CO2Scrubber:     flow.get('CO2Scrubber'),\n    Radiator:        flow.get('Radiator'),\n    ExhaustFan:      flow.get('ExhaustFan'),\n    AromaDiffuser:   flow.get('AromaDiffuser'),\n    Subwoofer:       flow.get('Subwoofer'),\n    HeatPump:        flow.get('HeatPump'),\n    Sunshine:        flow.get('Sunshine'),\n    EnergyCost:      flow.get('EnergyCost'),\n    TotalEnergyCost: flow.get('TotalEnergyCost'),\n    Hour:            flow.get('Hour')\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 430,
+        "y": 340,
+        "wires": [
+            [
+                "labrel16_http_status_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_http_status_resp",
+        "type": "http response",
+        "z": "labrel16_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 630,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "labrel16_http_action",
+        "type": "http in",
+        "z": "labrel16_tab",
+        "name": "",
+        "url": "/was/rl/action",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 420,
+        "wires": [
+            [
+                "labrel16_action_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_action_fn",
+        "type": "function",
+        "z": "labrel16_tab",
+        "name": "Update action",
+        "func": "// Action endpoint: mutate actuator FLAGS only. NO physics here.\n// Decoy flags are internal comfort actuators: real WoT actions, but they\n// NEVER affect lux (energy accounting only).\nif (msg.payload) {\n    if (msg.payload.Z1Light !== undefined) flow.set('Z1Light', !!msg.payload.Z1Light);\n    if (msg.payload.Fan            !== undefined) flow.set('Fan',            !!msg.payload.Fan);\n    if (msg.payload.Humidifier     !== undefined) flow.set('Humidifier',     !!msg.payload.Humidifier);\n    if (msg.payload.Heater         !== undefined) flow.set('Heater',         !!msg.payload.Heater);\n    if (msg.payload.Speaker        !== undefined) flow.set('Speaker',        !!msg.payload.Speaker);\n    if (msg.payload.AirPurifier    !== undefined) flow.set('AirPurifier',    !!msg.payload.AirPurifier);\n    if (msg.payload.Dehumidifier   !== undefined) flow.set('Dehumidifier',   !!msg.payload.Dehumidifier);\n    if (msg.payload.Cooler         !== undefined) flow.set('Cooler',         !!msg.payload.Cooler);\n    if (msg.payload.WhiteNoiseUnit !== undefined) flow.set('WhiteNoiseUnit', !!msg.payload.WhiteNoiseUnit);\n    if (msg.payload.Ventilator     !== undefined) flow.set('Ventilator',     !!msg.payload.Ventilator);\n    if (msg.payload.Ionizer        !== undefined) flow.set('Ionizer',        !!msg.payload.Ionizer);\n    if (msg.payload.CO2Scrubber    !== undefined) flow.set('CO2Scrubber',    !!msg.payload.CO2Scrubber);\n    if (msg.payload.Radiator       !== undefined) flow.set('Radiator',       !!msg.payload.Radiator);\n    if (msg.payload.ExhaustFan     !== undefined) flow.set('ExhaustFan',     !!msg.payload.ExhaustFan);\n    if (msg.payload.AromaDiffuser  !== undefined) flow.set('AromaDiffuser',  !!msg.payload.AromaDiffuser);\n    if (msg.payload.Subwoofer      !== undefined) flow.set('Subwoofer',      !!msg.payload.Subwoofer);\n    if (msg.payload.HeatPump       !== undefined) flow.set('HeatPump',       !!msg.payload.HeatPump);\n}\nmsg.payload = { status: 'ok' };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 420,
+        "wires": [
+            [
+                "labrel16_http_action_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_http_action_resp",
+        "type": "http response",
+        "z": "labrel16_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 660,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "labrel16_inject_repeat",
+        "type": "inject",
+        "z": "labrel16_tab",
+        "name": "Repeat 50ms",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "0.05",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "x": 220,
+        "y": 520,
+        "wires": [
+            [
+                "labrel16_env_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_env_fn",
+        "type": "function",
+        "z": "labrel16_tab",
+        "name": "Update environment",
+        "func": "// ------------------------------------------------------------------\n// Lab_Rel16 physics \u2014 DETERMINISTIC, pure function of flow state.\n// The lamp is the ONLY lux source: Z1Level = 25 + (Z1Light ? 400 : 0).\n// Decoy flags NEVER enter the lux equation (energy accounting only).\n// NO Math.random calls anywhere in this function.\n// ------------------------------------------------------------------\nvar z1l = flow.get('Z1Light') || false;\n\nvar z1 = 25 + (z1l ? 400 : 0);\nflow.set('Z1Level', z1);\n\n// Per-tick energy accounting (single source of truth).\n// Lamp: 1 unit/tick while lit. Each decoy: 1 unit/tick while ON.\nvar perTick = (z1l ? 1 : 0)\n            + (flow.get('Fan') ? 1 : 0)\n            + (flow.get('Humidifier') ? 1 : 0)\n            + (flow.get('Heater') ? 1 : 0)\n            + (flow.get('Speaker') ? 1 : 0)\n            + (flow.get('AirPurifier') ? 1 : 0)\n            + (flow.get('Dehumidifier') ? 1 : 0)\n            + (flow.get('Cooler') ? 1 : 0)\n            + (flow.get('WhiteNoiseUnit') ? 1 : 0)\n            + (flow.get('Ventilator') ? 1 : 0)\n            + (flow.get('Ionizer') ? 1 : 0)\n            + (flow.get('CO2Scrubber') ? 1 : 0)\n            + (flow.get('Radiator') ? 1 : 0)\n            + (flow.get('ExhaustFan') ? 1 : 0)\n            + (flow.get('AromaDiffuser') ? 1 : 0)\n            + (flow.get('Subwoofer') ? 1 : 0)\n            + (flow.get('HeatPump') ? 1 : 0);\nflow.set('TotalEnergyCost', (flow.get('TotalEnergyCost') || 0) + perTick);\nflow.set('EnergyCost',      perTick);\n\n// Informational hour counter.\nvar hr = (flow.get('Hour') || 0) + 0.1;\nif (hr >= 24) hr = 0;\nflow.set('Hour', hr);\n\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 480,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "labrel16_http_reset",
+        "type": "http in",
+        "z": "labrel16_tab",
+        "name": "",
+        "url": "/was/rl/reset",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 620,
+        "wires": [
+            [
+                "labrel16_reset_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_reset_fn",
+        "type": "function",
+        "z": "labrel16_tab",
+        "name": "Reset episode",
+        "func": "// Randomise state for a new training episode.\n// PRNG is INTENTIONAL here: episode-start sampling (not physics).\n// Sunshine is DEGENERATE in this lab: always 0 (rank 0) and pinned \u2014\n// reset does NOT randomise the sun.\nvar z1l = Math.random() < 0.5;\nflow.set('Z1Light', z1l);\nflow.set('Z1Level', z1l ? 425 : 25);\nflow.set('Fan', Math.random() < 0.5);\nflow.set('Humidifier', Math.random() < 0.5);\nflow.set('Heater', Math.random() < 0.5);\nflow.set('Speaker', Math.random() < 0.5);\nflow.set('AirPurifier', Math.random() < 0.5);\nflow.set('Dehumidifier', Math.random() < 0.5);\nflow.set('Cooler', Math.random() < 0.5);\nflow.set('WhiteNoiseUnit', Math.random() < 0.5);\nflow.set('Ventilator', Math.random() < 0.5);\nflow.set('Ionizer', Math.random() < 0.5);\nflow.set('CO2Scrubber', Math.random() < 0.5);\nflow.set('Radiator', Math.random() < 0.5);\nflow.set('ExhaustFan', Math.random() < 0.5);\nflow.set('AromaDiffuser', Math.random() < 0.5);\nflow.set('Subwoofer', Math.random() < 0.5);\nflow.set('HeatPump', Math.random() < 0.5);\nflow.set('Sunshine', 0);\nflow.set('SunshinePinned', true);  // degenerate sun, fixed per episode\nflow.set('TotalEnergyCost', 0);\nflow.set('EnergyCost', 0);\nmsg.payload = { reset: true };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 620,
+        "wires": [
+            [
+                "labrel16_http_reset_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_http_reset_resp",
+        "type": "http response",
+        "z": "labrel16_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 660,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "labrel16_http_setstate",
+        "type": "http in",
+        "z": "labrel16_tab",
+        "name": "",
+        "url": "/was/rl/setState",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 700,
+        "wires": [
+            [
+                "labrel16_setstate_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_setstate_fn",
+        "type": "function",
+        "z": "labrel16_tab",
+        "name": "Set state (benchmark)",
+        "func": "// Pin simulator to an exact deterministic state for benchmarking.\n// Accepts JSON body with any subset of: Z1Level, Z1Light, Sunshine\n// plus the decoy booleans: Fan, Humidifier, Heater, Speaker, AirPurifier, Dehumidifier, Cooler, WhiteNoiseUnit, Ventilator, Ionizer, CO2Scrubber, Radiator, ExhaustFan, AromaDiffuser, Subwoofer, HeatPump.\n// ALL DECOY FLAGS ARE RESET TO FALSE FIRST, then provided fields are\n// applied \u2014 shared scenario files carry no decoy keys, so every\n// benchmark scenario starts with every decoy OFF.\n// Always raises SunshinePinned (the env tick treats sun as a constant).\n// Resets energy counters so each benchmark scenario starts fresh.\nvar p = msg.payload || {};\nflow.set('Fan', false);\nflow.set('Humidifier', false);\nflow.set('Heater', false);\nflow.set('Speaker', false);\nflow.set('AirPurifier', false);\nflow.set('Dehumidifier', false);\nflow.set('Cooler', false);\nflow.set('WhiteNoiseUnit', false);\nflow.set('Ventilator', false);\nflow.set('Ionizer', false);\nflow.set('CO2Scrubber', false);\nflow.set('Radiator', false);\nflow.set('ExhaustFan', false);\nflow.set('AromaDiffuser', false);\nflow.set('Subwoofer', false);\nflow.set('HeatPump', false);\nif (p.Z1Level  !== undefined) flow.set('Z1Level',  p.Z1Level);\nif (p.Z1Light  !== undefined) flow.set('Z1Light',  !!p.Z1Light);\nif (p.Fan     !== undefined) flow.set('Fan',     !!p.Fan);\nif (p.Humidifier !== undefined) flow.set('Humidifier', !!p.Humidifier);\nif (p.Heater  !== undefined) flow.set('Heater',  !!p.Heater);\nif (p.Speaker !== undefined) flow.set('Speaker', !!p.Speaker);\nif (p.AirPurifier !== undefined) flow.set('AirPurifier', !!p.AirPurifier);\nif (p.Dehumidifier !== undefined) flow.set('Dehumidifier', !!p.Dehumidifier);\nif (p.Cooler  !== undefined) flow.set('Cooler',  !!p.Cooler);\nif (p.WhiteNoiseUnit !== undefined) flow.set('WhiteNoiseUnit', !!p.WhiteNoiseUnit);\nif (p.Ventilator !== undefined) flow.set('Ventilator', !!p.Ventilator);\nif (p.Ionizer !== undefined) flow.set('Ionizer', !!p.Ionizer);\nif (p.CO2Scrubber !== undefined) flow.set('CO2Scrubber', !!p.CO2Scrubber);\nif (p.Radiator !== undefined) flow.set('Radiator', !!p.Radiator);\nif (p.ExhaustFan !== undefined) flow.set('ExhaustFan', !!p.ExhaustFan);\nif (p.AromaDiffuser !== undefined) flow.set('AromaDiffuser', !!p.AromaDiffuser);\nif (p.Subwoofer !== undefined) flow.set('Subwoofer', !!p.Subwoofer);\nif (p.HeatPump !== undefined) flow.set('HeatPump', !!p.HeatPump);\nif (p.Sunshine !== undefined) flow.set('Sunshine', p.Sunshine);\nflow.set('SunshinePinned', true);\nflow.set('TotalEnergyCost', 0);\nflow.set('EnergyCost', 0);\nmsg.payload = { status: 'ok' };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 470,
+        "y": 700,
+        "wires": [
+            [
+                "labrel16_http_setstate_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_http_setstate_resp",
+        "type": "http response",
+        "z": "labrel16_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 670,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "labrel16_http_health",
+        "type": "http in",
+        "z": "labrel16_tab",
+        "name": "",
+        "url": "/health",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 230,
+        "y": 780,
+        "wires": [
+            [
+                "labrel16_health_fn"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_health_fn",
+        "type": "function",
+        "z": "labrel16_tab",
+        "name": "Health",
+        "func": "var started = flow.get('__startedAt');\nif (!started) { started = Date.now(); flow.set('__startedAt', started); }\nmsg.payload = {\n    status: 'ok',\n    tab: 'labrel16_tab',\n    uptime_ms: Date.now() - started,\n    endpoints: { status: true, action: true, reset: true, setState: true }\n};\nmsg.statusCode = 200;\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 440,
+        "y": 780,
+        "wires": [
+            [
+                "labrel16_http_health_resp"
+            ]
+        ]
+    },
+    {
+        "id": "labrel16_http_health_resp",
+        "type": "http response",
+        "z": "labrel16_tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 640,
+        "y": 780,
+        "wires": []
+    }
+]

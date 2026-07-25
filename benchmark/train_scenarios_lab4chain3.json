@@ -1,0 +1,27 @@
+[
+  {
+    "comment": "lab4chain3 DEPTH-3 POWER DEPENDENCY TRAINING scenarios (6 of 8) held-in set for QL training. HELD-OUT (test-only): ids 5 (T,T,F — the signature DEEP trap: lamp+plug ON, breaker OFF, fix is TWO levels above the lamp) and 7 (F,T,T — plug+breaker ON, lamp switch OFF). The held-in set still spans the chain (id 6 is the held-in MID trap: plug is the missing middle link), so the agent can learn lamp_effective = Z1Light AND PlugZ1 AND Breaker, but the two held-out 2-of-3 traps test generalisation to unseen chain-break patterns. Physics: Z1Level = 25 + ((Z1Light AND PlugZ1 AND Breaker) ? 400 : 0); no sunshine effect; decoys AuxA/AuxB physically inert (1 energy/tick each while ON). Target Z1=bright(3).",
+    "id": 1, "Z1Level": 25,  "Z1Light": false, "PlugZ1": false, "Breaker": false, "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(F,F,F) chain fully open -> enable breaker + plug + lamp (all three)"
+  },
+  {
+    "id": 2, "Z1Level": 25,  "Z1Light": true,  "PlugZ1": false, "Breaker": false, "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(T,F,F) lamp switch ON but plug AND breaker OFF (dark) -> enable plug + breaker"
+  },
+  {
+    "id": 3, "Z1Level": 25,  "Z1Light": false, "PlugZ1": true,  "Breaker": false, "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(F,T,F) plug ON but lamp AND breaker OFF (dark) -> enable lamp + breaker"
+  },
+  {
+    "id": 4, "Z1Level": 25,  "Z1Light": false, "PlugZ1": false, "Breaker": true,  "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(F,F,T) breaker ON but lamp AND plug OFF (dark) -> enable lamp + plug"
+  },
+  {
+    "id": 6, "Z1Level": 25,  "Z1Light": true,  "PlugZ1": false, "Breaker": true,  "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(T,F,T) held-in MID trap: lamp switch AND breaker ON but plug OFF (dark) -> flip the PLUG"
+  },
+  {
+    "id": 8, "Z1Level": 425, "Z1Light": true,  "PlugZ1": true,  "Breaker": true,  "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(T,T,T) full chain live, at target (425) -> hold (do nothing)"
+  }
+]

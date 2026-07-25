@@ -1,0 +1,12 @@
+# action registry golden — ontology set 'labband' = building_11_labband.ttl
+# contract = key-set + metadata columns; actionIndex is informational only
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,8
+http://example.org/was#SetAwning|OFF,SetAwning=OFF,http://example.org/was#Awning,4,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,3>=1|5>=1,0
+http://example.org/was#SetAwning|ON,SetAwning=ON,http://example.org/was#Awning,4,1,0,true,5,1,0.0,false,EXPLICIT_RELEVANT,-1,3>=1|5>=1,1
+http://example.org/was#SetStrongLamp|OFF,SetStrongLamp=OFF,http://example.org/was#StrongLamp,1,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,2
+http://example.org/was#SetStrongLamp|ON,SetStrongLamp=ON,http://example.org/was#StrongLamp,1,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,3
+http://example.org/was#SetWeakLamp|OFF,SetWeakLamp=OFF,http://example.org/was#WeakLamp,2,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,4
+http://example.org/was#SetWeakLamp|ON,SetWeakLamp=ON,http://example.org/was#WeakLamp,2,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,5
+http://example.org/was#SetZ1Blinds|OFF,SetZ1Blinds=OFF,http://example.org/was#Z1Blinds,3,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,5>=1,6
+http://example.org/was#SetZ1Blinds|ON,SetZ1Blinds=ON,http://example.org/was#Z1Blinds,3,1,0,true,5,1,0.0,false,EXPLICIT_RELEVANT,1,5>=1,7

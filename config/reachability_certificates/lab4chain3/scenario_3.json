@@ -1,0 +1,82 @@
+{
+  "certificate_sha256": "478c1c12bdc0431a72bec262cd085c009cf8f7302f1e0b5975d33197b37ac39c",
+  "meta": {
+    "horizon": 20,
+    "physics": "phase1b_models.py frozen formulas",
+    "profile": "lab4chain3",
+    "scenario_id": 3
+  },
+  "result": {
+    "ambiguity_reason": null,
+    "ambiguous": false,
+    "canonical_representatives": [
+      [
+        "SetBreaker|ON",
+        "SetZ1Light|ON"
+      ],
+      [
+        "SetZ1Light|ON",
+        "SetBreaker|ON"
+      ]
+    ],
+    "goal_states_reached": [
+      "(3, 1, 1, 1, 0, 0)"
+    ],
+    "intended_mechanism": [
+      "SetZ1Light|ON",
+      "SetBreaker|ON"
+    ],
+    "intended_shortest_length": 2,
+    "mechanism_in_every_shortest_route": true,
+    "reachable_state_count": 32,
+    "reachable_states": [
+      "(0, 0, 0, 0, 0, 0)",
+      "(0, 0, 0, 0, 0, 1)",
+      "(0, 0, 0, 0, 1, 0)",
+      "(0, 0, 0, 0, 1, 1)",
+      "(0, 0, 0, 1, 0, 0)",
+      "(0, 0, 0, 1, 0, 1)",
+      "(0, 0, 0, 1, 1, 0)",
+      "(0, 0, 0, 1, 1, 1)",
+      "(0, 0, 1, 0, 0, 0)",
+      "(0, 0, 1, 0, 0, 1)",
+      "(0, 0, 1, 0, 1, 0)",
+      "(0, 0, 1, 0, 1, 1)",
+      "(0, 0, 1, 1, 0, 0)",
+      "(0, 0, 1, 1, 0, 1)",
+      "(0, 0, 1, 1, 1, 0)",
+      "(0, 0, 1, 1, 1, 1)",
+      "(0, 1, 0, 0, 0, 0)",
+      "(0, 1, 0, 0, 0, 1)",
+      "(0, 1, 0, 0, 1, 0)",
+      "(0, 1, 0, 0, 1, 1)",
+      "(0, 1, 0, 1, 0, 0)",
+      "(0, 1, 0, 1, 0, 1)",
+      "(0, 1, 0, 1, 1, 0)",
+      "(0, 1, 0, 1, 1, 1)",
+      "(0, 1, 1, 0, 0, 0)",
+      "(0, 1, 1, 0, 0, 1)",
+      "(0, 1, 1, 0, 1, 0)",
+      "(0, 1, 1, 0, 1, 1)",
+      "(3, 1, 1, 1, 0, 0)",
+      "(3, 1, 1, 1, 0, 1)",
+      "(3, 1, 1, 1, 1, 0)",
+      "(3, 1, 1, 1, 1, 1)"
+    ],
+    "reachable_terminal_states": [],
+    "shortcuts": [],
+    "shortest_path_length": 2,
+    "shortest_sequence_count": 2,
+    "shortest_sequences": [
+      [
+        "SetBreaker|ON",
+        "SetZ1Light|ON"
+      ],
+      [
+        "SetZ1Light|ON",
+        "SetBreaker|ON"
+      ]
+    ],
+    "solvable": true
+  }
+}

@@ -1,0 +1,14 @@
+# action registry golden — ontology set 'labrel4' = building_10_labrel4.ttl
+# contract = key-set + metadata columns; actionIndex is informational only
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,10
+http://example.org/was#SetFan|OFF,SetFan=OFF,,-1,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,0
+http://example.org/was#SetFan|ON,SetFan=ON,,-1,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,1
+http://example.org/was#SetHeater|OFF,SetHeater=OFF,,-1,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,2
+http://example.org/was#SetHeater|ON,SetHeater=ON,,-1,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,3
+http://example.org/was#SetHumidifier|OFF,SetHumidifier=OFF,,-1,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,4
+http://example.org/was#SetHumidifier|ON,SetHumidifier=ON,,-1,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,5
+http://example.org/was#SetSpeaker|OFF,SetSpeaker=OFF,,-1,0,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,6
+http://example.org/was#SetSpeaker|ON,SetSpeaker=ON,,-1,1,,false,-1,1,0.0,true,EXPLICIT_OTHER_DV,0,,7
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,1,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,8
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,1,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,9

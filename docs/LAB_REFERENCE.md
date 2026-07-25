@@ -86,6 +86,10 @@ flowchart TB
 | 3 | `lab3_slow` | 1896 | 2 | delay on **both** blinds | 2048 (dim 8) | `building_3_slow.ttl` |
 | 4 | `lab4` | 1897 | 2 | hidden smart-plug AND-gate | 4096 | `building_4_smartplug.ttl` |
 | 4 | `lab5` | 1898 | 2 | efficient vs inefficient lamps | 8192 | `building_5_energy.ttl` |
+| 1b | `labrel0/4/8/16` | 1904–1907 | 1 | K stateless `EXPLICIT_OTHER_DV` decoys | 8 (all rungs) | `building_10_labrel{0,4,8,16}.ttl` |
+| 1b | `labrel8s` | 1908 | 1 | the 8 decoys as observable state bits | 2048 | `building_10_labrel8s.ttl` |
+| 1b | `labband` | 1912 | 1 | exact rank-2 band + inverse-direction awning (multi-IV gates) | 1024 | `building_11_labband.ttl` |
+| 1b | `lab4chain3` | 1913 | 1 | depth-3 `ws:powerGates` chain + 2 `UNKNOWN` decoys | 128 | `building_12_chain3.ttl` |
 
 ---
 
@@ -430,6 +434,60 @@ $$\text{compliant} = \text{GoalReached} \;\wedge\; \text{steady-state power} \le
 ### What it tests
 
 The decisive thesis claim: an energy-aware metric (compliance, steady power) that **only** the KG-primed agent can optimise, because the cost lives **only** in the KG. (Certified result: `energy_compliance` 0.784 vs 0.683, Wilcoxon p = 0.00093, Cliff δ 0.69 at n = 20 — see [PHASE4.md](PHASE4.md) §10a.)
+
+---
+
+# Phase 1b — Knowledge-Necessity Package (branch `phase1b-labs-2026-07`)
+
+**Question:** *which qualitative fact does the learning improvement come from — relevance, state-dependent conditionality, qualitative direction, or dependency order?* The corrected protocol-v2 results showed the original clean labs under-test the hypothesis; these labs are built so each knowledge channel is load-bearing. Arms: `phase1b_v2_baseline` / `phase1b_v2_redundancy_only` / `phase1b_v2_kg_frozen` (byte-identical consumer to `phase1_v2_kg_only`) / `phase1b_v2_extended` (adds the registered relevance + band-mirror channels). See `docs/KNOWLEDGE_PROVENANCE.md` for the layer contract and `config/reachability_certificates/` for the per-scenario exhaustive transition certificates.
+
+## labrel0 / labrel4 / labrel8 / labrel16 — relevance ladder (ports 1904–1907)
+
+**Role:** action count varies (K ∈ {0,4,8,16} decoys) while the observed state space, goal, physics, scenario schedule, and exploration decay stay fixed.
+
+### Simulator physics
+`Z1 = 25 + (Z1Light ? 400 : 0)`; no sun (Sunshine pinned 0). Decoys toggle internal flags (visible in `/status` for deterministic `PolicyEnergyCost`) but never affect lux.
+
+### Agent state, KG mechanism & space
+- State vector (2 slots): `[Z1Level, Z1Light]` on **every** rung → 8 states; only the action count changes (3/11/19/35 actions).
+- Decoys are real WoT actions with **complete** non-Illuminance stereotypes (`ws:behavioralDescriptionComplete true`) → relevance `EXPLICIT_OTHER_DV`; the frozen arm can only endorse the lamp (Rule 5); the extended arm additionally applies `stereo.irrelevantDvPrior` to the decoys. `UNKNOWN`/kgSilent alone never trigger that prior.
+- Target `target(1,3)`; `training_params(3000, 0.9970)`; `avg_wasted` is meaningful (decoys produce no observed state change).
+
+### What it tests
+The scaling law of the KG advantage in the action count (within-seed K-slope of frozen−baseline and extended−frozen `auc_goal`; family members M1/M2).
+
+## labrel8s — state-fragmentation comparison (port 1908)
+
+Same 8 decoys as `labrel8` but each gets a binary state slot: `4 × 2⁹ = 2048` states. The fixed-K contrast labrel8s vs labrel8 (difference-in-differences, member M3) isolates the pure table-fragmentation cost; report steps/cycling/deterministic policy energy instead of `avg_wasted` here.
+
+## labband — exact-band control with honest decreasing physics (port 1912)
+
+**Role:** target is rank 2 **exactly** (band 100–300 lux) — overshoot is a failure, so qualitative *direction* knowledge matters.
+
+### Simulator physics
+`daylight = Z1Blinds ? 0.50·Sun : 0`; deployed awning multiplies daylight by 0.25; `Z1 = 25 + (Strong?400) + (Weak?150) + daylight`; sun ∈ {0,100,400,900}.
+
+### Agent state, KG mechanism & space
+- State vector (6 slots): `[Z1Level, StrongLamp, WeakLamp, Z1Blinds, Awning, Sunshine]` → 1024 states.
+- KG: lamps/blind `elem:directProportion`, awning `elem:inverseProportion`, awning IV gates = {sun ≥ 1 AND daylight path open} via the multi-IV gate collection (`ws:gateWoTStateSemanticType`/`ws:gateMinValue`).
+- The frozen arm sees the awning only as a generic IV-gated activation (Rule 5 endorses deploying it below target — deliberately honest); the extended arm's band mirror (`stereo.bandMirrorInit/Prior`) prefers positive-direction actions below the band and negative-direction actions above it.
+- 16 benchmark scenarios (8 above-band starts), 10 held-in for training.
+
+### What it tests
+Whether declared qualitative direction (extended−frozen `auc_goal`, member M4; extended−baseline `CumIlluminanceDeviation`, member M5) is required for exact-band control; overshoot events and cycling are registered supporting outcomes.
+
+## lab4chain3 — depth-3 structural dependency (port 1913)
+
+### Simulator physics
+`lamp_effective = Z1Light ∧ PlugZ1 ∧ Breaker`; `Z1 = 25 + (lamp_effective ? 400 : 0)`; no sun; decoys AuxA/AuxB observable but inert.
+
+### Agent state, KG mechanism & space
+- State vector (6 slots): `[Z1Level, Z1Light, PlugZ1, Breaker, AuxA, AuxB]` → 128 states; 11 actions.
+- KG: chained `ws:powerGates` breaker→plug→lamp (mirrored into the gate collection); AuxA has a deliberately partial stereotype (MV, no DV), AuxB none — both classify `UNKNOWN`, keeping the frozen-vs-baseline contrast about dependency topology, not the new irrelevance consumer.
+- No `ws:energyCost` anywhere. Certificates prove every successful shortest route activates all three chain elements.
+
+### What it tests
+A directional frozen-KG benefit on RMST at the frozen censoring horizon (member M6; switches to goal rate under the frozen >25 % censoring rule). Per the corrected flat Phase-4 ladder trend, no monotonic-depth or solve-versus-fail claim is predicted.
 
 ---
 

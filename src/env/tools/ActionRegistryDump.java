@@ -55,6 +55,15 @@ public final class ActionRegistryDump {
         ONTOLOGY_SETS.put("labmon2",           new String[]{"building_7_dualmonitor.ttl"});
         ONTOLOGY_SETS.put("labmon2_infoonly",  new String[]{"building_7_dualmonitor_infoonly.ttl"});
         ONTOLOGY_SETS.put("labmon2_nostereo",  new String[]{"building_7_dualmonitor_nostereo.ttl"});
+        // Phase 1B (branch phase1b-labs-2026-07): relevance ladder,
+        // statefulness comparison, exact-band control, depth-3 chain.
+        ONTOLOGY_SETS.put("labrel0",    new String[]{"building_10_labrel0.ttl"});
+        ONTOLOGY_SETS.put("labrel4",    new String[]{"building_10_labrel4.ttl"});
+        ONTOLOGY_SETS.put("labrel8",    new String[]{"building_10_labrel8.ttl"});
+        ONTOLOGY_SETS.put("labrel16",   new String[]{"building_10_labrel16.ttl"});
+        ONTOLOGY_SETS.put("labrel8s",   new String[]{"building_10_labrel8s.ttl"});
+        ONTOLOGY_SETS.put("labband",    new String[]{"building_11_labband.ttl"});
+        ONTOLOGY_SETS.put("lab4chain3", new String[]{"building_12_chain3.ttl"});
     }
 
     // Phase 1b: the golden contract is intentionally EXTENDED with the

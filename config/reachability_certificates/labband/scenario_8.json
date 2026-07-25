@@ -1,0 +1,49 @@
+{
+  "certificate_sha256": "d2d8fe198097c3ad6a867115a42ee7d5055fcfb68e7ea572f8d4975063d3aaa6",
+  "meta": {
+    "horizon": 20,
+    "physics": "phase1b_models.py frozen formulas",
+    "profile": "labband",
+    "scenario_id": 8
+  },
+  "result": {
+    "ambiguity_reason": null,
+    "ambiguous": false,
+    "canonical_representatives": [
+      []
+    ],
+    "goal_states_reached": [
+      "(2, 0, 1, 1, 0)"
+    ],
+    "intended_mechanism": [],
+    "intended_shortest_length": null,
+    "mechanism_in_every_shortest_route": null,
+    "reachable_state_count": 16,
+    "reachable_states": [
+      "(0, 0, 0, 0, 0)",
+      "(0, 0, 0, 0, 1)",
+      "(0, 0, 0, 1, 1)",
+      "(1, 0, 0, 1, 0)",
+      "(2, 0, 1, 0, 0)",
+      "(2, 0, 1, 0, 1)",
+      "(2, 0, 1, 1, 0)",
+      "(2, 0, 1, 1, 1)",
+      "(3, 1, 0, 0, 0)",
+      "(3, 1, 0, 0, 1)",
+      "(3, 1, 0, 1, 0)",
+      "(3, 1, 0, 1, 1)",
+      "(3, 1, 1, 0, 0)",
+      "(3, 1, 1, 0, 1)",
+      "(3, 1, 1, 1, 0)",
+      "(3, 1, 1, 1, 1)"
+    ],
+    "reachable_terminal_states": [],
+    "shortcuts": [],
+    "shortest_path_length": 0,
+    "shortest_sequence_count": 1,
+    "shortest_sequences": [
+      []
+    ],
+    "solvable": true
+  }
+}

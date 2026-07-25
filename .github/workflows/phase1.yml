@@ -28,7 +28,7 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"
       run_mode:
-        description: "Corrected modes: phase1_v2_kg_only | phase1_v2_redundancy_only | phase1_v2_baseline | phase1_v2_pbrs_only. Legacy modes remain available only for historical reproduction."
+        description: "Corrected modes: phase1_v2_kg_only | phase1_v2_redundancy_only | phase1_v2_baseline | phase1_v2_pbrs_only. Phase-1b modes (with phase1b profiles): phase1b_v2_baseline | phase1b_v2_redundancy_only | phase1b_v2_kg_frozen | phase1b_v2_extended. Legacy modes remain available only for historical reproduction."
         required: false
         default: "phase1_v2_kg_only"
       publish_results:

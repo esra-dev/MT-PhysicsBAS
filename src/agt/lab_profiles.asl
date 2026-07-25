@@ -412,6 +412,127 @@ lab_profile("lab4chain",
             qtable_suffix("_lab4chain"),
             training_params(3000, 0.9970)).
 
+// ─── PHASE 1B (branch phase1b-labs-2026-07) ─────────────────────────────────
+//   labrel* → RELEVANCE LADDER (ports 1904-1907). One zone, one true lamp
+//   (z1 = 25 + lamp?400), K ∈ {0,4,8,16} stateless decoy actuators with
+//   COMPLETE non-Illuminance stereotypes (EXPLICIT_OTHER_DV). Decoys have no
+//   state slot and no lux effect: the observed space is [Z1Level, Z1Light]
+//   (8 states) on every rung, so action count varies while state count,
+//   goal, physics, schedule and exploration decay stay fixed. No sun.
+lab_profile("labrel0",
+            td("classpath:interactions-labrel0.ttl"),
+            ont(["building_10_labrel0.ttl"]),
+            scenarios("benchmark/scenarios_labrel.json"),
+            train_scenarios("benchmark/train_scenarios_labrel.json"),
+            sim_port(1904),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.0),
+            weakness_flags([]),
+            qtable_suffix("_labrel0"),
+            training_params(3000, 0.9970)).
+
+lab_profile("labrel4",
+            td("classpath:interactions-labrel4.ttl"),
+            ont(["building_10_labrel4.ttl"]),
+            scenarios("benchmark/scenarios_labrel.json"),
+            train_scenarios("benchmark/train_scenarios_labrel.json"),
+            sim_port(1905),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.0),
+            weakness_flags([]),
+            qtable_suffix("_labrel4"),
+            training_params(3000, 0.9970)).
+
+lab_profile("labrel8",
+            td("classpath:interactions-labrel8.ttl"),
+            ont(["building_10_labrel8.ttl"]),
+            scenarios("benchmark/scenarios_labrel.json"),
+            train_scenarios("benchmark/train_scenarios_labrel.json"),
+            sim_port(1906),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.0),
+            weakness_flags([]),
+            qtable_suffix("_labrel8"),
+            training_params(3000, 0.9970)).
+
+lab_profile("labrel16",
+            td("classpath:interactions-labrel16.ttl"),
+            ont(["building_10_labrel16.ttl"]),
+            scenarios("benchmark/scenarios_labrel.json"),
+            train_scenarios("benchmark/train_scenarios_labrel.json"),
+            sim_port(1907),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.0),
+            weakness_flags([]),
+            qtable_suffix("_labrel16"),
+            training_params(3000, 0.9970)).
+
+//   labrel8s → STATE-FRAGMENTATION comparison (port 1908). Same 8 decoys as
+//   labrel8 but each gets an explicit binary state slot: 4 × 2^9 = 2048
+//   states. Fixed-K contrast labrel8s vs labrel8 estimates the pure
+//   table-fragmentation cost; NOT pooled into the action-count slope.
+lab_profile("labrel8s",
+            td("classpath:interactions-labrel8s.ttl"),
+            ont(["building_10_labrel8s.ttl"]),
+            scenarios("benchmark/scenarios_labrel8s.json"),
+            train_scenarios("benchmark/train_scenarios_labrel8s.json"),
+            sim_port(1908),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.0),
+            weakness_flags([]),
+            qtable_suffix("_labrel8s"),
+            training_params(3000, 0.9970)).
+
+//   labband → EXACT-BAND control (port 1912). Target rank 2 EXACTLY
+//   (band 100-300 lux). z1 = 25 + strong?400 + weak?150 + daylight where
+//   daylight = blind ? 0.50·sun : 0, ×0.25 when the awning is deployed.
+//   Overshoot is possible (strong lamp / unshaded high daylight); corrective
+//   routes are the weak lamp, closing increasing actuators, and the awning
+//   (inverseProportion, IV-gated on sun AND the open daylight path).
+lab_profile("labband",
+            td("classpath:interactions-labband.ttl"),
+            ont(["building_11_labband.ttl"]),
+            scenarios("benchmark/scenarios_labband.json"),
+            train_scenarios("benchmark/train_scenarios_labband.json"),
+            sim_port(1912),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 2)]),
+            sunshine_prob(0.75),
+            weakness_flags([]),
+            qtable_suffix("_labband"),
+            training_params(3000, 0.9970)).
+
+//   lab4chain3 → DEPTH-3 structural dependency (port 1913). One zone,
+//   z1 = 25 + 400·(lamp ∧ plug ∧ breaker); chained ws:powerGates
+//   breaker→plug→lamp is the ONLY goal route. Two observable-but-inert
+//   decoys (AuxA partial stereotype, AuxB no stereotype — both relevance
+//   UNKNOWN; the extended channels must stay inert on them). 128 states,
+//   11 actions. No sun.
+lab_profile("lab4chain3",
+            td("classpath:interactions-lab4chain3.ttl"),
+            ont(["building_12_chain3.ttl"]),
+            scenarios("benchmark/scenarios_lab4chain3.json"),
+            train_scenarios("benchmark/train_scenarios_lab4chain3.json"),
+            sim_port(1913),
+            light_bounds([50, 100, 300]),
+            sunshine_bounds([50, 200, 600]),
+            zone_targets([target(1, 3)]),
+            sunshine_prob(0.0),
+            weakness_flags([]),
+            qtable_suffix("_lab4chain3"),
+            training_params(3000, 0.9970)).
+
 //   lab5 → Energy differentiation (port 1898). Two lamps/zone, ws:energyCost 1 vs 4.
 lab_profile("lab5",
             td("classpath:interactions-lab5.ttl"),

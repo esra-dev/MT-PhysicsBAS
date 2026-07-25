@@ -1,0 +1,70 @@
+[
+  {
+    "comment": "labband EXACT-BAND held-out benchmark (16 scenarios, 4 per sun rank). One zone, target rank 2 EXACTLY (band 100-300 lux; rank bounds [50,100,300]) — OVERSHOOT FAILS, so the strong lamp (+400 on its own = 425) and unshaded high daylight (sun 900 open blinds = 475) are signature traps. Physics: daylight = (Z1Blinds ? 0.50*Sun : 0); if (Awning deployed) daylight *= 0.25; Z1 = 25 + (StrongLamp?400:0) + (WeakLamp?150:0) + daylight. Sun in {0,100,400,900} via bounds [50,200,600]. Energy/tick: strong 2, weak 1, blinds 0, awning 0 — daylight routes are free, so at equal step count the blind/awning route beats a lamp route. The Awning is the INVERSE actuator (shades the OPEN daylight path to 25%): a no-op while blinds are closed or sun=0. INTENDED OPTIMAL ROUTES per id: 1 (sun0, all off, 25): weak ON -> 175. 2 (sun0, strong, 425): strong OFF + weak ON -> 175. 3 (sun0, strong+weak, 575): strong OFF -> 175 (one step strips the overshoot). 4 (sun0, weak+blinds, 175): hold (blinds contribute 0 at sun0). 5 (sun1, blinds, 75): weak ON -> 225. 6 (sun1, strong, 425): strong OFF + weak ON -> 175 (blinds would only reach 75). 7 (sun1, strong+blinds, 475): strong OFF (75) + weak ON -> 225. 8 (sun1, weak+blinds, 225): hold. 9 (sun2, all off, 25): open blinds -> 225 at ZERO energy (beats weak ON -> 175 @1/tick). 10 (sun2, strong+blinds, 625): strong OFF -> 225 (one step, zero-energy result). 11 (sun2, weak+blinds, 375 combo-overshoot): weak OFF -> 225 (deploying awning also lands 225 but keeps paying the weak lamp). 12 (sun2, blinds+awning, 75): retract awning -> 225 (awning trap: shading kills the only free source). 13 (sun3, blinds, 475 unshaded-daylight trap): deploy awning -> 137.5 (one step, zero energy; closing blinds instead needs a lamp afterwards). 14 (sun3, strong+blinds, 875 deepest overshoot): strong OFF + deploy awning -> 137.5 (both orders stay rank 3 in between). 15 (sun3, weak+blinds+awning, 287.5): hold (near the 300 ceiling — any addition overshoots). 16 (sun3, blinds+awning, 137.5): hold (awning already correctly deployed).",
+    "id": 1, "Z1Level": 25,   "StrongLamp": false, "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 0,
+    "description": "sun=0, all off (25, rank0) -> weak lamp ON (175); strong lamp would overshoot to 425"
+  },
+  {
+    "id": 2, "Z1Level": 425,  "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 0,
+    "description": "sun=0, STRONG-LAMP TRAP: strong only (425, rank3 overshoot) -> strong OFF + weak ON (175)"
+  },
+  {
+    "id": 3, "Z1Level": 575,  "StrongLamp": true,  "WeakLamp": true,  "Z1Blinds": false, "Awning": false, "Sunshine": 0,
+    "description": "sun=0, both lamps (575, rank3) -> strong OFF (175); ONE step strips the overshoot, weak stays"
+  },
+  {
+    "id": 4, "Z1Level": 175,  "StrongLamp": false, "WeakLamp": true,  "Z1Blinds": true,  "Awning": false, "Sunshine": 0,
+    "description": "sun=0, weak + blinds open (175, rank2) -> hold; open blinds contribute 0 at sun=0"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 1 (sun=100) — blinds alone reach only 75 (rank1) ===",
+    "id": 5, "Z1Level": 75,   "StrongLamp": false, "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 100,
+    "description": "sun=1, blinds only (75, rank1) -> weak ON (225); daylight alone cannot reach the band"
+  },
+  {
+    "id": 6, "Z1Level": 425,  "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 100,
+    "description": "sun=1, STRONG-LAMP TRAP: strong only (425, rank3) -> strong OFF + weak ON (175)"
+  },
+  {
+    "id": 7, "Z1Level": 475,  "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 100,
+    "description": "sun=1, strong + blinds (475, rank3) -> strong OFF (75, rank1) + weak ON (225)"
+  },
+  {
+    "id": 8, "Z1Level": 225,  "StrongLamp": false, "WeakLamp": true,  "Z1Blinds": true,  "Awning": false, "Sunshine": 100,
+    "description": "sun=1, weak + blinds (225, rank2) -> hold"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 2 (sun=400) — open blinds land 225, dead-centre of the band at ZERO energy ===",
+    "id": 9, "Z1Level": 25,   "StrongLamp": false, "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 400,
+    "description": "sun=2, all off (25, rank0) -> open blinds (225, zero energy); beats weak ON (175 at 1/tick)"
+  },
+  {
+    "id": 10, "Z1Level": 625, "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 400,
+    "description": "sun=2, strong + blinds (625, rank3) -> strong OFF (225); one step to a zero-energy optimum"
+  },
+  {
+    "id": 11, "Z1Level": 375, "StrongLamp": false, "WeakLamp": true,  "Z1Blinds": true,  "Awning": false, "Sunshine": 400,
+    "description": "sun=2, COMBO OVERSHOOT: weak + blinds (375, rank3) -> weak OFF (225, zero energy); awning also lands 225 but keeps paying the lamp"
+  },
+  {
+    "id": 12, "Z1Level": 75,  "StrongLamp": false, "WeakLamp": false, "Z1Blinds": true,  "Awning": true,  "Sunshine": 400,
+    "description": "sun=2, AWNING TRAP: blinds open but awning deployed (75, rank1) -> retract awning (225)"
+  },
+  {
+    "comment": "=== SUNSHINE RANK 3 (sun=900) — unshaded daylight overshoots (475); the awning shades it into the band (137.5) at ZERO energy ===",
+    "id": 13, "Z1Level": 475, "StrongLamp": false, "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 900,
+    "description": "sun=3, UNSHADED-DAYLIGHT TRAP: blinds only (475, rank3) -> deploy awning (137.5, zero energy); closing blinds instead drops to 25 and needs a lamp"
+  },
+  {
+    "id": 14, "Z1Level": 875, "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 900,
+    "description": "sun=3, DEEPEST OVERSHOOT: strong + unshaded blinds (875, rank3) -> strong OFF (475) + deploy awning (137.5); both orders stay rank3 in between"
+  },
+  {
+    "id": 15, "Z1Level": 287.5, "StrongLamp": false, "WeakLamp": true, "Z1Blinds": true, "Awning": true,  "Sunshine": 900,
+    "description": "sun=3, weak + blinds + awning (287.5, rank2 near the 300 ceiling) -> hold; ANY addition overshoots"
+  },
+  {
+    "id": 16, "Z1Level": 137.5, "StrongLamp": false, "WeakLamp": false, "Z1Blinds": true, "Awning": true,  "Sunshine": 900,
+    "description": "sun=3, blinds + awning (137.5, rank2) -> hold; awning already correctly deployed (zero-energy optimum)"
+  }
+]

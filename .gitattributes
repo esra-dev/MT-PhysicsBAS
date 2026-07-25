@@ -9,3 +9,8 @@ phase1_postinv/historical_raw/** -text -whitespace
 # and the builder writes LF. Pin eol so every platform/autocrlf setting
 # materialises exactly the builder's bytes.
 dashboard/public/data/*.json text eol=lf
+
+# Golden action registries: written by Java (platform newline) but their
+# committed form is canonical LF; RegistryGoldenCheck reads by line, so
+# normalisation is behaviour-neutral.
+config/golden_registry/*.csv text eol=lf

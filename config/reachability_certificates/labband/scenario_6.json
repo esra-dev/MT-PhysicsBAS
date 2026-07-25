@@ -1,0 +1,63 @@
+{
+  "certificate_sha256": "013866df059d93f7e232b8b209bb59d65391f08521f5741d11bb7fbe619ca9b6",
+  "meta": {
+    "horizon": 20,
+    "physics": "phase1b_models.py frozen formulas",
+    "profile": "labband",
+    "scenario_id": 6
+  },
+  "result": {
+    "ambiguity_reason": null,
+    "ambiguous": false,
+    "canonical_representatives": [
+      [
+        "SetStrongLamp|OFF",
+        "SetWeakLamp|ON"
+      ],
+      [
+        "SetWeakLamp|ON",
+        "SetStrongLamp|OFF"
+      ]
+    ],
+    "goal_states_reached": [
+      "(2, 0, 1, 0, 0)"
+    ],
+    "intended_mechanism": [],
+    "intended_shortest_length": null,
+    "mechanism_in_every_shortest_route": null,
+    "reachable_state_count": 16,
+    "reachable_states": [
+      "(0, 0, 0, 0, 0)",
+      "(0, 0, 0, 0, 1)",
+      "(0, 0, 0, 1, 1)",
+      "(1, 0, 0, 1, 0)",
+      "(2, 0, 1, 0, 0)",
+      "(2, 0, 1, 0, 1)",
+      "(2, 0, 1, 1, 0)",
+      "(2, 0, 1, 1, 1)",
+      "(3, 1, 0, 0, 0)",
+      "(3, 1, 0, 0, 1)",
+      "(3, 1, 0, 1, 0)",
+      "(3, 1, 0, 1, 1)",
+      "(3, 1, 1, 0, 0)",
+      "(3, 1, 1, 0, 1)",
+      "(3, 1, 1, 1, 0)",
+      "(3, 1, 1, 1, 1)"
+    ],
+    "reachable_terminal_states": [],
+    "shortcuts": [],
+    "shortest_path_length": 2,
+    "shortest_sequence_count": 2,
+    "shortest_sequences": [
+      [
+        "SetStrongLamp|OFF",
+        "SetWeakLamp|ON"
+      ],
+      [
+        "SetWeakLamp|ON",
+        "SetStrongLamp|OFF"
+      ]
+    ],
+    "solvable": true
+  }
+}
