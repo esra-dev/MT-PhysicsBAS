@@ -35,6 +35,22 @@ pilot-only block), `phase1b_stage=pilot` (seed-gate enforced in the workflow),
 
 Dispatched 2026-07-25 ≈19:11Z, all four accepted and in progress.
 
+## Amendment 2026-07-25a — post-dispatch non-behavioral commits (disclosed)
+
+After the four dispatches (which run from head `a8d3cb40`), three commits
+landed on the branch: `451e0ab5` (this dispatch record), `938730c3`
+(explicitly non-binding registration DRAFT + pilot download tooling), and
+`b819fb04` (Phase1bStateSpaceTest — regression tests that assert the ALREADY
+FROZEN behavior — plus a documentation-only correction of the labband state
+count from a mistaken 1024 to the true 256 = 4·2⁴·4; the lab's TTL, config
+dimension 6, certificates, and physics were always 256 and are unchanged).
+None of these commits touches implementation, physics, scenarios, metrics,
+learner hyperparameters, or any test of behavior that the pilot exercises;
+the frozen lineage through `a8d3cb40` is intact, golden registries and the
+certificate index hash are unchanged. Recorded here so the freeze boundary
+stays auditable; the pilot's power inputs are considered valid under the
+protocol's change rule because no frozen artifact changed.
+
 ## Reading rules
 
 Pilot artifacts are read ONLY through
