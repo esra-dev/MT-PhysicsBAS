@@ -51,6 +51,16 @@ certificate index hash are unchanged. Recorded here so the freeze boundary
 stays auditable; the pilot's power inputs are considered valid under the
 protocol's change rule because no frozen artifact changed.
 
+Commit-content note: commits `b819fb04` and `6d952070` additionally swept in
+the concurrently-authored Phase-1b ARCHIVE tooling
+(`analysis/validate_phase1b_archive.py`, `analysis/reproduce_phase1b.py`,
+`analysis/tests/test_validate_phase1b_archive.py`) whose commit messages do
+not mention them — a broad `git add -A` while two work streams shared the
+worktree. The files are exactly their authors' final versions (analysis
+pytest suite 92/92 green including their 17 tests) and are likewise
+non-behavioral for the pilot: they validate/reproduce ARCHIVES and are
+exercised by no training or benchmark path.
+
 ## Reading rules
 
 Pilot artifacts are read ONLY through
