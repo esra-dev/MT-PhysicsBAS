@@ -1,0 +1,7 @@
+member,sd,pooled_scale,censor_frac_frozen,censor_frac_baseline
+labrel_stateless_frozen_slope,0.0000103510,0,0,0
+labrel_incremental_slope,0,0,0,0
+labrel8s_fragmentation_did,0.0009222891,0,0,0
+labband_extended_vs_frozen_auc,0,0,0,0
+labband_extended_vs_baseline_dev,0.3018721,0.615938,0,0
+chain3_frozen_vs_baseline_rmst,0.4067335,0,0,0

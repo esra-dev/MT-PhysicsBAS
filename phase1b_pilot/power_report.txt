@@ -1,0 +1,14 @@
+Phase-1b frozen power analysis (protocol docs/PHASE1B_POWER_PROTOCOL.md)
+replicates=10000 alpha=0.05 seed=0x1b5eed anchor_A=0.0111
+N=20: labrel:labrel_stateless_frozen_slope=1.000  labrel:labrel_incremental_slope=1.000  labrel8s:labrel8s_fragmentation_did=1.000  labband:labband_extended_vs_frozen_auc=1.000  labband:labband_extended_vs_baseline_dev=0.133  chain3:chain3_frozen_vs_baseline_rmst=1.000
+N=30: labrel:labrel_stateless_frozen_slope=1.000  labrel:labrel_incremental_slope=1.000  labrel8s:labrel8s_fragmentation_did=1.000  labband:labband_extended_vs_frozen_auc=1.000  labband:labband_extended_vs_baseline_dev=0.194  chain3:chain3_frozen_vs_baseline_rmst=1.000
+N=40: labrel:labrel_stateless_frozen_slope=1.000  labrel:labrel_incremental_slope=1.000  labrel8s:labrel8s_fragmentation_did=1.000  labband:labband_extended_vs_frozen_auc=1.000  labband:labband_extended_vs_baseline_dev=0.239  chain3:chain3_frozen_vs_baseline_rmst=1.000
+M6 endpoint: rmst
+NO candidate N <= 40 powers every member at 0.80.
+Per protocol: under-powered members must be omitted or prospectively relabelled exploratory BEFORE registration:
+  labrel_stateless_frozen_slope: power(N=40)=1.000 OK
+  labrel_incremental_slope: power(N=40)=1.000 OK
+  labrel8s_fragmentation_did: power(N=40)=1.000 OK
+  labband_extended_vs_frozen_auc: power(N=40)=1.000 OK
+  labband_extended_vs_baseline_dev: power(N=40)=0.239 UNDER-POWERED
+  chain3_frozen_vs_baseline_rmst: power(N=40)=1.000 OK
