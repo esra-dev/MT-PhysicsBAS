@@ -266,10 +266,22 @@ def test_missing_mode_dir_fails_reproduce_discovery(tmp_path):
         rp._discover(campaign)
 
 
-def test_duplicate_mode_dir_fails_reproduce_discovery(tmp_path):
+def test_two_seed_half_runs_per_mode_are_accepted(tmp_path):
+    # Amendment A1 (2026-07-26): each mode may ship as TWO seed-half runs.
     campaign = tmp_path / "phase1b_corrected"
     for run_id, mode in enumerate(sorted(rp.REQUIRED_MODES), start=300):
         _provenance_only_run(campaign, run_id, mode)
+    _provenance_only_run(campaign, 399, "phase1b_v2_baseline")
+    found = rp._discover(campaign)
+    assert len(found["phase1b_v2_baseline"]) == 2
+    assert all(len(halves) in (1, 2) for halves in found.values())
+
+
+def test_three_runs_for_one_mode_fails_reproduce_discovery(tmp_path):
+    campaign = tmp_path / "phase1b_corrected"
+    for run_id, mode in enumerate(sorted(rp.REQUIRED_MODES), start=300):
+        _provenance_only_run(campaign, run_id, mode)
+    _provenance_only_run(campaign, 398, "phase1b_v2_baseline")
     _provenance_only_run(campaign, 399, "phase1b_v2_baseline")
     with pytest.raises(ValueError, match="duplicate archive"):
         rp._discover(campaign)
@@ -281,4 +293,5 @@ def test_complete_campaign_discovery_maps_modes_to_run_dirs(tmp_path):
         _provenance_only_run(campaign, run_id, mode)
     found = rp._discover(campaign)
     assert set(found) == rp.REQUIRED_MODES
-    assert all(path.name.startswith("run_") for path in found.values())
+    assert all(len(halves) == 1 and halves[0].name.startswith("run_")
+               for halves in found.values())
