@@ -69,6 +69,28 @@ Note: same-mode halves share the workflow concurrency group
 (`phase1-<run_mode>`, cancel-in-progress false), so each mode's second half
 queues until its first half finishes.
 
+## Amendment A2 (2026-07-26) — two post-data job failures, failed-jobs re-run
+
+Round-2 halves 30199243656 (baseline 1–10) and 30199251189 (redundancy 1–10)
+completed green. Two halves ended with failed JOBS (training cells all
+green in both; no training data affected):
+
+- 30199257204 (kg_frozen 1–10): only the final "Publish to 'results'
+  branch" step failed — a non-fast-forward push race against the
+  near-simultaneous baseline publish (the known shared-results-branch
+  footgun; the consolidated artifact was already uploaded).
+- 30199263213 (extended 1–10): one benchmark cell failed —
+  `bench labrel4 mode=rule_based seed=2`. rule_based is a contextual
+  benchmark mode outside every registered member and ran green across the
+  entire pilot; treated as a flaky cell.
+
+Remedy: `gh run rerun --failed` on both runs (same commit, failed jobs
+only — the succeeded training/benchmark cells and their artifacts are
+reused verbatim). Outcomes recorded below when terminal. Results-branch
+copies will be verified on the remote for all eight halves at archive time;
+any still-missing snapshot after the re-runs will be appended to the
+results branch from the consolidated artifact and noted here.
+
 ## Post-run gates (registration §6)
 
 Archive under `phase1b_corrected/run_<id>/`; validate with
