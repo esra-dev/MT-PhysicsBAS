@@ -48,16 +48,26 @@ per mode, overlapping halves, or colliding staged trees remain fatal
 
 ### Round-2 dispatches (seed halves)
 
+Dispatch head: `c8e14a4b` (registration `e0316f01` + gitignore guard +
+this amendment — documentation/archive-tooling only relative to the
+registration commit). Dispatched 2026-07-26 ≈10:58–10:59Z in creation order
+(mode/seed identity is additionally embedded in each archive's
+`workflow_inputs.json`, which is authoritative at validation time):
+
 | Arm (run_mode) | Seeds | Actions run ID |
 |---|---|---|
-| `phase1b_v2_baseline` | 1–10 | (recorded below) |
-| `phase1b_v2_baseline` | 11–20 | (recorded below) |
-| `phase1b_v2_redundancy_only` | 1–10 | (recorded below) |
-| `phase1b_v2_redundancy_only` | 11–20 | (recorded below) |
-| `phase1b_v2_kg_frozen` | 1–10 | (recorded below) |
-| `phase1b_v2_kg_frozen` | 11–20 | (recorded below) |
-| `phase1b_v2_extended` | 1–10 | (recorded below) |
-| `phase1b_v2_extended` | 11–20 | (recorded below) |
+| `phase1b_v2_baseline` | 1–10 | 30199243656 |
+| `phase1b_v2_baseline` | 11–20 | 30199247467 |
+| `phase1b_v2_redundancy_only` | 1–10 | 30199251189 |
+| `phase1b_v2_redundancy_only` | 11–20 | 30199254246 |
+| `phase1b_v2_kg_frozen` | 1–10 | 30199257204 |
+| `phase1b_v2_kg_frozen` | 11–20 | 30199260042 |
+| `phase1b_v2_extended` | 1–10 | 30199263213 |
+| `phase1b_v2_extended` | 11–20 | 30199266427 |
+
+Note: same-mode halves share the workflow concurrency group
+(`phase1-<run_mode>`, cancel-in-progress false), so each mode's second half
+queues until its first half finishes.
 
 ## Post-run gates (registration §6)
 
