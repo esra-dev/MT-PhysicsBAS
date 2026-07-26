@@ -1,0 +1,26 @@
+{
+  "tag": "results-20260726-203439-phase1b_v2_baseline-c8e14a4b",
+  "utc": "20260726-203439",
+  "runMode": "phase1b_v2_baseline",
+  "profiles": [
+    "labrel0",
+    "labrel4",
+    "labrel8",
+    "labrel16",
+    "labrel8s",
+    "labband",
+    "lab4chain3"
+  ],
+  "bench_modes": [
+    "rule_based",
+    "ql_false",
+    "ql_true"
+  ],
+  "git_sha": "c8e14a4bca3ac0befbdb134579dec420fd3c60e2",
+  "git_short_sha": "c8e14a4b",
+  "git_branch": "phase1b-labs-2026-07",
+  "artifact_count": 0,
+  "artifacts": [],
+  "host": null,
+  "user": null
+}
