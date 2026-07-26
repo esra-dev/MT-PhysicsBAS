@@ -1,0 +1,2 @@
+StateIndex,SetFan=OFF,SetFan=ON,SetHeater=OFF,SetHeater=ON,SetHumidifier=OFF,SetHumidifier=ON,SetSpeaker=OFF,SetSpeaker=ON,SetZ1Light=OFF,SetZ1Light=ON,DO_NOTHING
+0,10,5,9,8,6,10,4,7,6,1500,8

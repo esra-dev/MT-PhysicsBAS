@@ -1,0 +1,24 @@
+# IV Stats v2 (label-keyed) — ivTrialCount [4 IV ranks]
+SetAuxA=OFF,0,0,0,0
+SetAuxA=ON,0,0,0,0
+SetAuxB=OFF,0,0,0,0
+SetAuxB=ON,0,0,0,0
+SetBreaker=OFF,0,0,0,0
+SetBreaker=ON,0,0,0,0
+SetPlugZ1=OFF,0,0,0,0
+SetPlugZ1=ON,28,1999,0,0
+SetZ1Light=OFF,0,0,0,0
+SetZ1Light=ON,528,990,0,0
+DO_NOTHING,0,0,0,0
+# ivSuccessCount [4 IV ranks]
+SetAuxA=OFF,0,0,0,0
+SetAuxA=ON,0,0,0,0
+SetAuxB=OFF,0,0,0,0
+SetAuxB=ON,0,0,0,0
+SetBreaker=OFF,0,0,0,0
+SetBreaker=ON,0,0,0,0
+SetPlugZ1=OFF,0,0,0,0
+SetPlugZ1=ON,0,1501,0,0
+SetZ1Light=OFF,0,0,0,0
+SetZ1Light=ON,0,983,0,0
+DO_NOTHING,0,0,0,0
