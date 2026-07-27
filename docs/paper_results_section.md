@@ -53,89 +53,236 @@ Source: `docs/phase1_results_v2.md` and
 
 ---
 
-## Phase 3: Learning Process Dynamics and Time-Bounded Control
+## Phase 1b: Which kinds of prior knowledge change learning?
 
-The previous phases established that the knowledge graph primes the agent's
-exploration in a useful direction. Phase 3 asks a separate question: can the
-same KG infrastructure support **online learning of physical process dynamics**,
-and can that knowledge be used for **time-bounded control** — executing goals with
-explicit response-time constraints?
+Phase 1b tested three proposed knowledge-layer mechanisms under a prospectively
+frozen protocol: relevance filtering as irrelevant actions are added, resistance
+to state fragmentation, and dependency-order knowledge. Four arms separated a
+tabula-rasa baseline, an ontology-free redundancy heuristic, the frozen KG
+consumer, and an extended KG consumer. The confirmatory campaign used 20 paired
+seeds. Five members formed the registered BH family; M5 was prospectively
+exploratory under the frozen power rule and was not included in that family.
 
-The setting adds two slow-lab variants of the existing two-zone rooms
-(`lab2_slow`, `lab3_slow`) where a motorised blind takes **12 simulation ticks =
-60 simulated seconds** to settle, while a lamp activates in ≤ 2 ticks ≈ 10 s.
-The agent runs in two phases: (A) eight probe episodes per actuator, recording
-empirical settle times via `DynamicsLearner` and writing the result into the KG
-as `learned:learned_delay_sec`; then (B) exploitation episodes with time-bounded
-goals — "make the room bright within 45 s" (tight) or "within 120 s" (loose).
-Two arms are compared: `ql_true` reads `learned_delay_sec` from the KG and
-chooses the lamp for tight deadlines; `ql_false` ignores the KG and defaults to
-the blind. Ten replicas were run per lab; the planner is deterministic given the
-learned table, so replicas resample tick-quantisation jitter rather than a random
-policy.
+| Member | Registered contrast | Mean paired statistic | 95% bootstrap CI | Exact sign-flip / BH result | Registered reading |
+|---|---|---:|---:|---:|---|
+| M1 | frozen-KG relevance slope (`auc_goal` per decoy) | +9.88×10⁻⁶ | [+5.36×10⁻⁶, +1.46×10⁻⁵] | `p=0.0039`, `q=0.0065` | Detectable, about **70× below** the SESOI |
+| M2 | incremental relevance slope, extended − frozen | 0 | [0, 0] | `p=1`, `q=1` | New irrelevance channel changed nothing |
+| M3 | fragmentation difference-in-differences | +0.0013 | [+0.0010, +0.0016] | `p=1.91×10⁻⁶`, `q=9.54×10⁻⁶` | Detectable, about **8× below** the SESOI |
+| M4 | band-mirror channel, extended − frozen `auc_goal` | 0 | [0, 0] | `p=1`, `q=1` | New direction channel changed nothing on the registered endpoint |
+| M5 | full extended stack − baseline deviation | −0.1625 | [−0.334, −0.001] | exploratory `p=0.078`; no BH q-value | Underpowered and does not isolate the direction channel |
+| M6 | depth-3 chain frozen − baseline first-success RMST | −0.5 presentations | [−0.64, −0.36] | `p=7.63×10⁻⁶`, `q=1.91×10⁻⁵` | Detectable, **50× below** the corrected −25-presentation SESOI |
 
-**Delay learning is fast and accurate.** After only 8 probe episodes, the agent
-estimates the blind delay to within **≤ 1.77 % relative error** across both labs
-(learned: 12.11–12.21 ticks vs ground truth 12). Instantaneous actuators are
-correctly estimated at ~1.14 ticks. Classification accuracy is 100 %: every
-actuator is correctly labelled instant vs delayed across all replicas and both
-arms. The small residual error (< 0.25 ticks) stems from tick-quantisation —
-the precise moment the blind passes threshold depends on the exact tick phase
-at episode start — and is stable across replicas.
+The Phase-1b conclusion is therefore bounded by the registration's own
+scientific thresholds. The frozen KG produced statistically clean relevance,
+fragmentation, and dependency-order accelerations, but all three confirmed
+effects were 8–70 times smaller than the effects declared thesis-relevant in
+advance. M1 had nine positive paired differences and eleven exact ties; it
+must not be described as positive in all 20 seeds.
 
-**Time-bounded compliance is binary and complete.** `ql_true` meets 100 % of all
-goals, including all tight-deadline goals, in both labs. `ql_false` meets 100 %
-of loose goals (the 120 s window is wide enough for a blind) but 0 % of tight
-goals (a 60 s blind cannot satisfy a 45 s deadline). The headline compliance table:
+The ontology-free control separates the mechanisms further. Its relevance
+slope analogue is null (`−2.4×10⁻⁶`, descriptive `p≈0.46`), so the already tiny
+M1 signal is genuinely knowledge-layer rather than redundancy mimicry. By
+contrast, redundancy reproduces approximately 60% of M3
+(`+0.000783` of `+0.0013`) and 45% of M6 (`−0.225` of `−0.5`). The extended
+consumer machinery engaged, but M2 and M4 were identically zero in every
+seed. M5 cannot rescue a direction-channel claim: frozen and extended had the
+same mean band deviation, and the full-stack exploratory contrast was
+underpowered. The registered within-episode overshoot event count was not
+present in the run-of-record output and remains explicitly unmeasured.
 
-| Lab | Mode | Overall | Tight | Loose | Σ energy (mean) | Mean actual delay |
-|---|---|---|---|---|---|---|
-| lab2_slow | ql_false | 0.50 | **0.00** | 1.00 | 0.0 | 60.6 s |
-| lab2_slow | ql_true | **1.00** | **1.00** | 1.00 | 3.2 | 33.3 s |
-| lab3_slow | ql_false | 0.50 | **0.00** | 1.00 | 0.0 | 60.6 s |
-| lab3_slow | ql_true | **1.00** | **1.00** | 1.00 | 3.3 | 33.1 s |
+This result supports a narrow thesis statement: qualitative stereotype
+knowledge can create reproducible accelerations in these simulators, but the
+observed gains are scientifically small under the registered SESOIs; some
+structural gains are partly available from a much cheaper redundancy rule,
+and the two newly implemented qualitative channels add no measurable benefit
+on their registered members.
 
-The statistical test (within-replica paired bootstrap, Wilcoxon, Cliff's δ,
-BH-FDR; family m = 4) confirms the result with no ambiguity:
+Sources: `docs/phase1b_results_2026-07-27.md`,
+`docs/phase1b_decision_memo_2026-07-27.md`, and
+`phase1b_corrected/analysis/registered/phase1b_registered_family.csv`.
 
-| Metric | Mean diff | 95 % CI | p_boot | p_wilcoxon | Cliff's δ | q_BH |
-|---|---|---|---|---|---|---|
-| overall_compliance (both labs) | +0.50 | [0.50, 0.50] | 0.000 | **0.00195** | **1.00** | 0.000 |
-| tight_compliance (both labs) | +1.00 | [1.00, 1.00] | 0.000 | **0.00195** | **1.00** | 0.000 |
-| loose_compliance | 0.00 | [0.00, 0.00] | 1.000 | 1.000 | 0.00 | 1.000 |
-| total_energy (↑ in ql_true) | +3.2 / +3.3 | [3.0, 3.5] / [3.0, 3.6] | 0.000 | 0.00195 | 1.00 | 0.000 |
+---
 
-*n = 10 replicas per lab, CI run `27621106006`. p_wilcoxon = 2/2¹⁰ = 0.001953 (exact floor for n = 10 all-positive paired differences).*
+## Phase 2: Fault detection, blacklisting, and re-learning
 
-Degenerate compliance CIs are expected, not cherry-picked: the planner is
-deterministic given the learned KG, so every replica reaches the same decision.
-The genuine stochasticity (tick-jitter) appears only in the delay accuracy CIs,
-where it produces a small but non-zero variance.
+Phase 2 was rerun under protocol v2 after the legacy scheduler, unsettled
+start-state record, and detector were found to invalidate the earlier
+campaign. The corrected experiment used strict by-position scheduling,
+settled start states, protocol-v2 clean parents, a fixed 4,000-episode
+adaptation horizon, explicit censoring at horizon plus one, and detector v2.
+Four registered dispatches covered 20 paired seeds. The two pre-data failure
+rounds are retained in the dispatch record but contributed no result cells.
 
-The energy cost (+3.2–3.3 units) is the correct and legible trade-off: the agent
-switches from a free-but-slow blind to a costly-but-fast lamp to honour the tight
-deadline, and the framework surfaces this decision explicitly. In `lab3_slow` the
-agent also demonstrated emergent cross-zone exploitation — satisfying a zone-2 goal
-via `Z1Blinds` because the probe phase had measured a valid cross-zone effect
-from data, independently rediscovering the cross-zone coupling that earlier phases
-had required a hand-asserted KG prior to encode. This validates that the learned
-KG generalises beyond delay timing alone.
+The registered Tier-1 `RecoveryEpisodes` family contains eight cells
+(exact paired sign-flip tests, BH `m=8`). A value of `4001` is the censoring
+bound: the fault was not detected during the horizon, so post-detection
+adaptation never began.
 
-**Summary.** Eight probe episodes suffice to learn a 60 s delay to < 2 % error.
-The KG-integrated learned dynamics converts a 50 % failing agent into a
-100 %-compliant one, with a transparent energy trade-off and no change to the core
-QL policy. The result holds across two labs, two compliance tiers, and 10 replicas,
-with Cliff's δ = 1.0 and q_BH < 0.001 throughout.
+| Cell | KG mean | Tabula-rasa mean | Mean Δ (KG − TR) | 95% bootstrap CI | BH q | Censored KG / TR | Verdict |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `lab2_f1bdead` | 58.8 | 151.45 | −92.65 | [−141.80, −50.25] | 1.017×10⁻⁵ | 0 / 0 | Supported |
+| `labmon2_f2dead_lowsun` | 184.8 | 353.55 | −168.75 | [−246.30, −92.95] | 0.001148 | 0 / 0 | Supported |
+| `lab3_f1dead` | 4001.0 | 1934.6 | +2066.40 | [+1300.75, +2836.45] | 0.001563 | 20 / 9 | **Adverse** |
+| `lab3_f1dead_z2` | 4001.0 | 489.0 | +3512.00 | [+3062.70, +3807.80] | 1.017×10⁻⁵ | 20 / 1 | **Adverse** |
+| `lab3_f2dead_lowsun` | 4001.0 | 346.85 | +3654.15 | [+3252.00, +3869.65] | 1.017×10⁻⁵ | 20 / 1 | **Adverse** |
+| `lab3_f1bdead` | 116.05 | 136.0 | −19.95 | [−76.60, +30.00] | 0.595 | 0 / 0 | Null |
+| `lab3_f1binv` | 175.25 | 191.7 | −16.45 | [−82.75, +58.90] | 0.673 | 0 / 0 | Null |
+| `labmon_f1dead` | 557.85 | 776.45 | −218.60 | [−653.65, +288.05] | 0.302 | 7 / 10 | Null |
 
-Full analysis: [`docs/PHASE2_TO_PHASE3_CHANGES.md`](PHASE2_TO_PHASE3_CHANGES.md) §§16–19.
-Pre-registration: [`docs/pre_registration.md`](pre_registration.md) §8.
+The corrected family therefore contains **two supported, three adverse, and
+three null** cells. The three adverse outcomes are detection-censoring
+outcomes, not evidence that post-detection re-learning was slower. Detector
+v2 abstains from a dead verdict while another actuator could mask the
+suspect's contribution. In the cross-coupled lab3 dead-lamp cells, the
+knowledge-shaped policy keeps such co-feeders active and never reaches an
+unmasked state: KG-arm detection is `0/20` in each cell, versus `11/20`,
+`19/20`, and `19/20` detections in the tabula-rasa arm.
+
+Detector v2 removes the opposite failure mode in the withdrawn record:
+the complete blacklist-event record contains **zero false-positive
+blacklists across 38 cells × 20 replicas × both arms**. That specificity has
+a disclosed recall cost. Blind faults are probe-detected identically in both
+arms at about episodes 5–6, inverted faults detect at about episode 0 because
+opposite-sign evidence is never masked, and all lab1/lab2 faults detect in
+both arms. Dead-lamp recall in cross-coupled labs is policy-dependent.
+
+The registered result supports a two-sided conclusion. Knowledge is associated
+with faster recovery in the two cells where detection succeeds
+(`lab2_f1bdead`, about 2.6× by the arm means, and
+`labmon2_f2dead_lowsun`, about 1.9×), but the same policy-shaping knowledge
+can suppress the observations
+needed to detect dead faults. Detection opportunity and post-detection
+re-learning must therefore remain separate stages. The campaign does not
+support a universal recovery advantage, and it does not by itself establish
+the proposed Q-gap mechanism; any later Q-gap analysis is retrospective and
+hypothesis-generating.
+
+Sources: `docs/thesis_chapter_phase2.md` §§4–6,
+`docs/phase2_correction_registration_2026-07-22.md`,
+`phase2_v2_corrected/analysis/registered/phase2_v2_registered_family.csv`,
+and `phase2_v2_detection_family.csv`.
+
+---
+
+## Phase 3: Learning process dynamics and time-bounded control
+
+Phase 3 asks whether the KG infrastructure can acquire actuator response
+delays online and use those learned values for time-bounded control. The
+protocol-v2 campaign uses two slow-lab variants (`lab2_slow`, `lab3_slow`).
+A motorised blind takes 12 simulation ticks, or 60 simulated seconds, to
+settle while lamps and the spotlight are instantaneous. The agent probes each
+actuator eight times, estimates its delay, writes the measurement back as
+`ws:responseDelay`, and then selects actions for six tight or loose
+deadline-constrained goals. The corrected run of record is `29926328852`
+with ten replicas per profile and arm.
+
+The corrected delay estimates reproduce the intended measurement result:
+
+| Profile | Arm | Slowest learned delay (ticks) | Ground truth | Relative error |
+|---|---|---:|---:|---:|
+| `lab2_slow` | zero-delay baseline | 12.1875 | 12 | 1.56% |
+| `lab2_slow` | KG learned-delay arm | 12.1250 | 12 | 1.04% |
+| `lab3_slow` | zero-delay baseline | 12.1375 | 12 | 1.15% |
+| `lab3_slow` | KG learned-delay arm | 12.1750 | 12 | 1.46% |
+
+All lamps and spotlights were classified as instantaneous. The corrected
+deadline-compliance and tick-integrated energy descriptives are:
+
+| Profile | Arm | Overall compliance | Tight | Loose | Met goal-attempts | Mean tick-energy | Mean actual delay |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `lab2_slow` | zero-delay baseline | 0.5000 | 0.0000 | 1.0000 | 30/60 | 0.0 | 60.92 s |
+| `lab2_slow` | KG learned-delay arm | 0.9833 | 0.9667 | 1.0000 | 59/60 | 3.7 | 33.83 s |
+| `lab3_slow` | zero-delay baseline | 0.5000 | 0.0000 | 1.0000 | 30/60 | 0.0 | 60.50 s |
+| `lab3_slow` | KG learned-delay arm | 1.0000 | 1.0000 | 1.0000 | 60/60 | 3.1 | 33.42 s |
+
+The corrected run thus reproduces the practical deadline result with one
+deviation from the withdrawn record: one KG-arm replica missed one tight goal
+in `lab2_slow`, so that cell is `59/60`, not universally `6/6` in every
+replica. The zero-delay baseline missed every tight goal in both profiles.
+
+The inferential boundary is important. The deadline planner is deterministic
+given the learned delay table, so compliance is reported as a worked
+demonstration with descriptive intervals, not as a hypothesis test. The
+tick-integrated energy meter (`tick-v1`) shows the cost of choosing the
+instantaneous lamp for tight goals, but energy is registered as descriptive
+only: no Phase-3 energy quantity receives a p- or q-value. Legacy cumulative
+wall-clock energy is diagnostic and is not evidence.
+
+Sources: `docs/phase3_correction_registration_2026-07-22.md`,
+`phase3_v2_corrected/CAMPAIGN_MANIFEST.md`, and the three corrected tables
+under `phase3_v2_corrected/run_29926328852/analysis/out/`.
+
+---
+
+## Phase 4: Hidden dependencies and energy-aware goals
+
+Phase 4 is an extension beyond the advisor-defined three phases. Its corrected
+protocol-v2 campaign compares the KG-primed and tabula-rasa learners on three
+hidden-dependency labs (`lab4`, `lab4dual`, `lab4chain`) and the `lab5`
+energy-budget lab. Two registered seed-half dispatches provide 20 paired
+seeds. The frozen family contains three `avg_redundant` contrasts and one
+`energy_compliance` contrast (exact paired sign-flip tests, BH `m=4`).
+
+| Registered member | Mean Δ (KG − TR) | 95% bootstrap CI | Exact sign-flip p | BH q | Paired rank-biserial | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| `lab4` `avg_redundant` | −0.69500 | [−0.98562, −0.43750] | 3.815×10⁻⁶ | 5.086×10⁻⁶ | −0.990 | Supported |
+| `lab4dual` `avg_redundant` | −0.74500 | [−0.97375, −0.53187] | 3.815×10⁻⁶ | 5.086×10⁻⁶ | −0.990 | Supported |
+| `lab4chain` `avg_redundant` | −0.73438 | [−0.88500, −0.58500] | 1.907×10⁻⁶ | 5.086×10⁻⁶ | −1.000 | Supported |
+| `lab5` `energy_compliance` | +0.04313 | [+0.01438, +0.07063] | 0.009399 | 0.009399 | +0.683 | Supported |
+
+All four registered members are supported in the favourable direction, but
+the corrected campaign rejects the earlier depth-gradient narrative. The
+registered ordered secondary,
+`d(lab4chain) − d(lab4) = −0.03938`, is null
+(`95% CI [−0.35813,+0.28812]`, exact sign-flip `p=0.823`). The descriptive
+depth contrasts are also null. The redundancy advantage is approximately
+constant at `−0.7` actions across the three dependency designs; the withdrawn
+`−0.33/−0.93/−1.46` monotone pattern was a protocol artifact. The corrected
+lab5 benefit (`+0.043`) is smaller than the withdrawn `+0.096` but remains
+supported.
+
+The Phase-4 conclusion is consequently structural but not gradient-based:
+knowing a hidden gate reduces redundant actuation in every tested dependency
+lab, while the evidence does not show that the gain grows with dependency
+depth. Knowing device energy costs produces a small increase in within-budget
+goal attainment. These are simulator-conditional results and do not establish
+real-building energy savings.
+
+Sources: `docs/phase4_correction_registration_2026-07-22.md`,
+`docs/PHASE4_DEPENDENCY_LADDER.md` §11,
+`phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv`,
+and `phase4_v2_ladder_trend.csv`.
+
+---
+
+## Integrated reading
+
+Across the corrected record, the empirical claim is narrower than a generic
+"knowledge improves learning" statement. Phase 1 finds a small clean-lab
+advantage whose majority component is reproduced by an ontology-free
+redundancy rule. Phase 1b finds genuine relevance, fragmentation, and
+dependency-order signals, but all confirmed magnitudes are below the
+registered scientific thresholds, and the two new qualitative consumers are
+exact nulls. Phase 2 shows both benefit and operational risk: knowledge can
+speed recovery after detectable faults while a knowledge-shaped policy can
+also prevent the observations required for detection. Phase 3 demonstrates
+accurate symbolic delay acquisition and its use in deterministic deadline
+planning, with energy kept descriptive. Phase 4 supports a stable reduction
+in redundant actuation at hidden gates and a small energy-compliance benefit,
+but not a growing effect with dependency depth.
+
+All conclusions are limited to the registered discrete simulators and their
+frozen instruments. Confirmatory results are identified above by their
+registered families; supporting controls, mechanism readings, and Phase-3
+energy remain descriptive, and the proposed Phase-2 Q-gap analysis remains a
+future retrospective rather than confirmatory evidence.
 
 ---
 
 ## Source Index
 
-Phase 1 numbers above are read from the following committed protocol-v2 files. All paths
-are relative to the workspace root.
+All current numbers above are read from the following committed campaign
+archives and registered outputs. All paths are relative to the workspace root.
 
 ### Phase 1 workflow runs
 
@@ -169,3 +316,87 @@ are relative to the workspace root.
 All protocol-v1 Phase 1 reports and xzone analyses are historical protocol-affected
 development records only. Their binding status is recorded in
 `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`.
+
+### Phase 1b workflow runs
+
+| Mode | GitHub runs | Dispatch head | Seeds |
+|---|---|---|---:|
+| Baseline | `30199243656`, `30199247467` | `c8e14a4b` | 1–10, 11–20 |
+| Redundancy only | `30199251189`, `30199254246` | `c8e14a4b` | 1–10, 11–20 |
+| Frozen KG | `30199257204`, `30199260042` | `c8e14a4b` | 1–10, 11–20 |
+| Extended KG | `30199263213`, `30199266427` | `c8e14a4b` | 1–10, 11–20 |
+
+### Phase 1b sources
+
+| File | Role |
+|---|---|
+| `docs/phase1b_registration_2026-07-26.md` | Binding pre-data registration; confirmatory BH family `m=5`, with M5 prospectively exploratory. |
+| `phase1b_corrected/CAMPAIGN_MANIFEST.md` | Run map, implementation/dispatch provenance, archive gates, and registered-output contract. |
+| `phase1b_corrected/analysis/registered/phase1b_registered_family.csv` | M1–M6 paired statistics, intervals, exact tests, BH results, censoring, and RMST horizon. |
+| `phase1b_corrected/analysis/registered/phase1b_supporting.csv` | Redundancy analogues and other registered supporting outcomes. |
+| `docs/phase1b_results_2026-07-27.md` | Corrected confirmatory interpretation and required disclosures. |
+| `docs/phase1b_decision_memo_2026-07-27.md` | Post-campaign thesis reading and proceed/defer/descope decisions. |
+| `analysis/reproduce_phase1b.py` | Archive validation and byte-equivalent registered-table reproduction. |
+
+### Phase 2 workflow runs
+
+| Dispatch | GitHub run | Head | Seeds |
+|---|---:|---|---:|
+| A1 | `30001857104` | `19f4f3ff` | 1–10 |
+| A2 | `30001867521` | `19f4f3ff` | 11–20 |
+| B1 | `30001878310` | `19f4f3ff` | 1–10 |
+| B2 | `30001888910` | `19f4f3ff` | 11–20 |
+
+### Phase 2 sources
+
+| File | Role |
+|---|---|
+| `docs/phase2_correction_registration_2026-07-22.md` | Binding protocol-v2 correction registration. |
+| `docs/phase2_v2_dispatch_record_2026-07-22.md` | Two pre-data failure rounds and the four runs of record. |
+| `phase2_v2_corrected/CAMPAIGN_MANIFEST.md` | Corrected campaign summary and archive/reproduction contract. |
+| `phase2_v2_corrected/analysis/registered/phase2_v2_registered_family.csv` | Frozen Tier-1 recovery family, censoring counts, exact tests, and BH results. |
+| `phase2_v2_corrected/analysis/registered/phase2_v2_detection_family.csv` | Detector-v2 family and policy-dependent detection outcomes. |
+| `docs/thesis_chapter_phase2.md` §§4–6 | Full corrected result narrative and false-positive/false-negative trade-off. |
+| `analysis/reproduce_phase2_v2.py` | Gate validation and canonical registered-table reproduction. |
+
+All Phase-2 protocol-v1 values and KG-silent/multi-blind descriptives from the
+withdrawn scheduler are historical only. They do not support current
+mechanism or recovery claims.
+
+### Phase 3 workflow run and sources
+
+| GitHub run | Head | Replicas | Profiles × arms |
+|---:|---|---:|---|
+| `29926328852` | `90e53f8b` | 1–10 | `lab2_slow,lab3_slow × ql_true,ql_false` |
+
+| File | Role |
+|---|---|
+| `docs/phase3_correction_registration_2026-07-22.md` | Binding protocol-v2 correction registration and descriptive-only energy rule. |
+| `phase3_v2_corrected/CAMPAIGN_MANIFEST.md` | Run-of-record and corrected outcome summary. |
+| `phase3_v2_corrected/run_29926328852/analysis/out/phase3_delay_accuracy.csv` | Corrected learned-delay values and instantaneous/delayed classifications. |
+| `phase3_v2_corrected/run_29926328852/analysis/out/phase3_compliance_ci.csv` | Corrected descriptive compliance, tick-energy, and delay summaries. |
+| `phase3_v2_corrected/run_29926328852/analysis/out/phase3_compliance_paired.csv` | Reproduced paired rows; the registration still requires compliance to be presented as a worked demonstration and energy without hypothesis tests. |
+| `analysis/reproduce_phase3_v2.py` | Gate validation and canonical output reproduction. |
+
+Runs `27621106006` and `29166356524`, their universal `6/6` compliance
+wording, and their cumulative wall-clock energy values are withdrawn.
+
+### Phase 4 workflow runs and sources
+
+| GitHub run | Head | Seeds |
+|---:|---|---:|
+| `29926341581` | `90e53f8b` | 1–10 |
+| `29926354783` | `90e53f8b` | 11–20 |
+
+| File | Role |
+|---|---|
+| `docs/phase4_correction_registration_2026-07-22.md` | Binding protocol-v2 registration, frozen four-member family, and ordered ladder secondary. |
+| `phase4_v2_corrected/CAMPAIGN_MANIFEST.md` | Seed-half run map and corrected result summary. |
+| `phase4_v2_corrected/analysis/registered/phase4_v2_registered_family.csv` | Four registered paired effects, intervals, exact tests, effect sizes, and BH q-values. |
+| `phase4_v2_corrected/analysis/registered/phase4_v2_ladder_trend.csv` | Registered depth contrast and descriptive adjacent contrasts. |
+| `docs/PHASE4_DEPENDENCY_LADDER.md` §11 | Corrected interpretation; preceding sections are the withdrawn historical record. |
+| `analysis/reproduce_phase4_v2.py` | Gate validation and byte-equivalent registered-table reproduction. |
+
+The post-inversion run `29193486193` and its monotone
+`−0.33/−0.93/−1.46` ladder are protocol-affected historical evidence, not
+current Phase-4 results.

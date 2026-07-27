@@ -1,13 +1,12 @@
 # Thesis State Report — Stereotype-Guided Q-Learning in Simulated Labs
 
-> **PHASE 1 PROTOCOL V2 IS CURRENT (2026-07-22).** The current result is summarized in
-> the executive table and §5 and reported fully in `docs/phase1_results_v2.md`. Every
-> protocol-v1 Phase 1 result retained later in this chronological report—including the
-> pooled-20 headline, `+53.30 mean_first_goal`, legacy energy, redundancy, baseline, and
-> PBRS claims—is historical protocol-affected evidence and is not thesis-final. See
-> `docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`. Later phases are unaffected.
+> **PROTOCOL-V2 RECORDS ARE CURRENT (updated 2026-07-27).** The executive
+> table below governs. Protocol-v1 results retained later in this
+> chronological report are historical protocol-affected evidence and are not
+> thesis-final. Binding withdrawal notices and the corrected Phase-1,
+> Phase-2, Phase-3, and Phase-4 archives identify the current record.
 
-**Assembled:** 2026-07-08; Phase 1 corrected through 2026-07-22. Original audit notes:
+**Assembled:** 2026-07-08; current evidence refreshed through 2026-07-27. Original audit notes:
 `docs/_audit/00_inventory.md`, `01_kg.md`,
 `02_qlearning.md`, `03_agents_flow.md`, `04_labs_physics.md`, `05_results_index.md`,
 `20_results_extracted.md`, and the caveats in `13_logic_report.md`.
@@ -51,9 +50,10 @@ delays back into the KG, and use them to satisfy temporally specified goals.
 |---|---|---|---|
 | 1 — clean labs | Corrected protocol v2 complete: four modes × lab1/lab2/lab3 × seeds 1–20, fixed 3,000 episodes | **Registered family:** arm-C lab2 `auc_goal` +0.003700 [0.002700, 0.004917], q=9.54×10⁻⁶; redundancy-only +0.002583 [0.001500, 0.003833], q=1.72×10⁻⁴; arm C minus redundancy +0.001117 [0.000767, 0.001467], q=7.63×10⁻⁵. Redundancy reproduces 69.8%—“most” under the frozen rule—while a smaller residual arm-C effect remains. Lab1 is an exact saturated null. Sources: runs 29848584965/29848587274 and `phase1_v2_registered_family.csv` | Current thesis evidence; all protocol-v1 Phase 1 numbers below are historical only |
 | 1 — lab3 (cross-zone) | Same corrected campaign | Registered first-goal presentations +0.110 [−0.060, +0.305], q=0.304, and cycling +0.07375 [−0.02313, +0.17375], q=0.215: both null. Registered descriptives: full-horizon `auc_goal` −0.002300 [−0.003467, −0.001067]; deterministic policy energy +1.0744 [+0.5981, +1.5394]. Final goal rate and redundant actions are null. Source: run 29848584965 | Old `+53.30` first-goal and `+0.7375` cycling headlines are invalidated; a small training-success/energy trade-off remains descriptively |
-| 2 — fault detect → blacklist → re-learn | Complete: instant (counter-free) blacklist, physics recheck, user alert, warm restart, monitor fallback, best-effort degradation | ~~All 8 Tier-1 recovery cells significant~~ **SUPERSEDED by the post-inversion re-run (`pre_registration.md` §9.10, 2026-07-12): 3 of 8 Tier-1 cells significant** (`lab2_f1bdead` −306.5 q≈0, `lab3_f2dead_lowsun` −71.4 q≈0, `labmon2_f2dead_lowsun` −147.6 q=0.0021), 1 marginal (`lab3_f1dead_z2` q=0.066), 2 null, 2 sign-flipped ns; detection family entirely null | Confirmatory under §9 + §9.10; the pre-inversion 8/8 result is reported as a pre-inversion-instrument measurement |
-| 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | **Pre-inversion (27621106006):** blind delay 12.11–12.21 ticks vs ground truth 12 (≤1.77% rel. err); KG arm meets 6/6 deadline goals vs 3/6. **Post-inversion (29166356524): fully replicates** — 12.11–12.18 ticks (≤1.46% rel. err), 6/6 vs 3/6, lamps/spotlight classified instantaneous in all cells | Unchanged by the inversion. Delay accuracy statistically sound; compliance reported as a worked demonstration (deterministic outcome) |
-| 4 — energy + dependency ladder | Complete but **an extension beyond the advisor's three phases**; scope now KG-primed vs tabula-rasa QL only (LLM baseline removed 2026-07-12) | **Post-inversion confirmatory run `29193486193` (n=20):** dependency-ladder primary `avg_redundant` Δ = −0.326 / −0.934 / −1.458 for lab4 / lab4dual / lab4chain (all q≈0, monotone growth); lab5 `energy_compliance` Δ=+0.096 (q≈0), steady power −0.431. Pre-inversion directions replicated; goal-rate parity on lab4/lab5, KG-favorable lift on lab4dual/lab4chain (disclosed) | Clearly labeled extension chapter; supersedes PHASE4.md §10a (Addendum 2026-07-12e; `PHASE4_DEPENDENCY_LADDER.md` §10) |
+| 1b — mechanism-isolation labs | Corrected confirmatory campaign complete: paired seeds 1–20, frozen/extended KG, baseline, and redundancy control | M1 relevance slope +9.88×10⁻⁶ (q=0.0065), M3 fragmentation DiD +0.0013 (q=9.5×10⁻⁶), and M6 chain RMST −0.5 presentations (q=1.9×10⁻⁵) are detected but about 70×, 8×, and 50× below their registered SESOIs. M2/M4 are exact zeroes. Redundancy analogue: relevance null; fragmentation/dependency about 60%/45% mimicked. Source: `phase1b_corrected/` and `docs/phase1b_results_2026-07-27.md` | Current bounded thesis evidence: statistically clean, scientifically small at these scales |
+| 2 — fault detect → blacklist → re-learn | Corrected protocol v2 complete: settled starts, exact parent hashes, detector v2, warm restart, monitor fallback, best-effort degradation | **Registered Tier-1 family:** 2 supported (`lab2_f1bdead` −92.65; `labmon2_f2dead_lowsun` −168.75), 3 detector-censoring adverse, 3 null. Zero false positives, but recall is policy-dependent: KG detects 0/20 in each adverse lab3 dead-lamp cell because healthy co-feeders keep the fault masked | Current corrected record: runs 30001857104/30001867521/30001878310/30001888910; no recovery claim is made for censored detection failures |
+| 3 — dynamics learning | Complete: probe-based delay learner + KG write-back + temporal goals | **Corrected run `29926328852`:** slowest-actuator estimate 12.125–12.1875 ticks for truth 12 (1.04–1.56% error); KG deadline compliance 59/60 and 60/60 versus zero-delay baseline 30/60 in both profiles. Tick-integrated energy is descriptive only | Current protocol-v2 record under `phase3_v2_corrected/`; earlier runs are historical |
+| 4 — energy + dependency ladder | Complete but **an extension beyond the advisor's three phases**; KG-primed vs tabula-rasa QL | **Corrected runs `29926341581` + `29926354783`:** `avg_redundant` −0.695 / −0.745 / −0.734 for lab4/lab4dual/lab4chain; lab5 `energy_compliance` +0.04313. The registered ladder-growth contrast is null (−0.03938, p=0.823): the advantage is approximately constant, not monotone | Current protocol-v2 record under `phase4_v2_corrected/`; supersedes the withdrawn monotone ladder |
 
 The main Phase 1 conclusion is now bounded and thesis-ready. In lab2, a bundled KG prior
 has a small advantage, but an ontology-free redundancy rule reproduces about 70% of the
@@ -1561,23 +1561,18 @@ them only when discussing arm D, never as headline-arm facts; Addendum 2026-07-1
 *(The lab3 first-goal regression appeared in this dissolved list from 2026-07-13 to
 2026-07-18; it is moved back to the live list above by the arm-C re-measurement.)*
 
-**Bottom line** (superseding 13_logic_report.md §6): nothing needs to be rebuilt, but the
-*claims* are now narrower than the pre-inversion record suggested. Phase 3 is the
-strongest deliverable and is unchanged by the inversion; Phase 4 (extension) is
-confirmatory with a monotone dependency ladder; Phase 2 is confirmatory but at 3/8 Tier-1
-cells, and its story is "structural knowledge pays where it is the binding constraint,"
-not "the KG always recovers faster"; Phase 1 rests on the lab2 anchor — now
-triple-replicated (pre-inversion arm C, post-inversion arm D, post-inversion arm C) and
-robust to the prior-decay horizon, **but re-attributed by the registered redundancy
-control (Outcome A, Addendum 2026-07-19g): the anchor measures the value of
-WoT-derivable redundancy suppression, and the Phase-1 chapter must say so** — plus an
-honest lab3 framing (timing + cycling tax,
-broadened at pooled n = 20 by descriptive redundant/energy/dev penalties, Addendum
-2026-07-19d, under the headline arm). The arm-C re-measurement duty registered here on 2026-07-13 was
-**discharged 2026-07-18** (run 29639767776; Addendum 2026-07-18b); no Phase-1
-experimental duty remains open. The remaining work is presentation: keeping every claim
-exactly one notch *below* the evidence, which is what the advisor's original correction
-demanded.
+**Bottom line** (superseding `13_logic_report.md` §6): protocol-v2 evidence
+supports narrower claims than the historical record. Phase 1's lab2 anchor is
+small and mostly reproduced by an ontology-free redundancy control. Phase 1b
+finds clean relevance, fragmentation, and dependency-order accelerations, but
+all are 8–70× below their registered SESOIs; the two new qualitative channels
+change nothing. Phase 2 supports two recovery advantages, three
+detector-censoring adverse outcomes, and three nulls: detectability and
+post-detection recovery are separate stages. Phase 3 reproduces accurate delay
+learning and deadline compliance under its corrected record. Phase 4 finds an
+approximately constant ~0.7-action dependency benefit and a small energy-
+compliance gain, not a monotone depth ladder. The remaining work is to keep
+each thesis claim bounded by these corrected records.
 
 ---
 
