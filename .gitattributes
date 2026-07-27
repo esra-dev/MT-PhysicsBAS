@@ -14,3 +14,6 @@ dashboard/public/data/*.json text eol=lf
 # committed form is canonical LF; RegistryGoldenCheck reads by line, so
 # normalisation is behaviour-neutral.
 config/golden_registry/*.csv text eol=lf
+
+# Phase-1b permanent archives: byte-preserved like phase1_v2_corrected.
+phase1b_corrected/** -text -whitespace

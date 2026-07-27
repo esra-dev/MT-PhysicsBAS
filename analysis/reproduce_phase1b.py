@@ -132,12 +132,17 @@ def reproduce(campaign: Path, work: Path,
                 raise ValueError(
                     f"{mode}: seed halves overlap on {sorted(overlap)}")
             union.extend(half_seeds)
-            for inventory in (archive / "analysis/out/SHA256SUMS.csv",
-                              archive / "SHA256SUMS.csv"):
-                if inventory.is_file():
-                    errors = verify_inventory(archive, inventory)
-                    if errors:
-                        raise ValueError(f"{mode} inventory failed:\n" + "\n".join(errors))
+            # Verify ONLY the curation-time root inventory. The archive may
+            # also carry the workflow's own analysis/out/SHA256SUMS.csv,
+            # whose paths are relative to the CI runner's tree, not the
+            # archive root — that file is itself hash-covered by the root
+            # inventory, which preserves its evidentiary value without
+            # re-interpreting its paths.
+            inventory = archive / "SHA256SUMS.csv"
+            if inventory.is_file():
+                errors = verify_inventory(archive, inventory)
+                if errors:
+                    raise ValueError(f"{mode} inventory failed:\n" + "\n".join(errors))
         seeds_by_mode[mode] = tuple(sorted(union))
     if len(set(seeds_by_mode.values())) != 1:
         raise ValueError(f"seed blocks differ across modes: {seeds_by_mode}")

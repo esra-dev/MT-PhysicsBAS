@@ -91,6 +91,23 @@ copies will be verified on the remote for all eight halves at archive time;
 any still-missing snapshot after the re-runs will be appended to the
 results branch from the consolidated artifact and noted here.
 
+**A2 outcomes (2026-07-27):**
+- 30199257204 (kg_frozen 1–10): rerun attempt 2 failed on a PLATFORM
+  cross-attempt artifact-download error ("GetSignedArtifactURL … 404");
+  its attempt-1 consolidated artifact is intact and is the archive of
+  record (`phase1b_corrected/run_30199257204`, validation green). Its
+  missing results-branch snapshot was appended manually as commit
+  `ede943b2` on `results` (marker carries an explanatory `note` field and
+  is authored by the local user, not the CI bot).
+- 30199263213 (extended 1–10): the original cell failure was an
+  `npm ECONNRESET` installing Node-RED (environment setup; the benchmark
+  never ran); rerun attempt 2 hit the same platform artifact-download
+  error; rerun attempt 3 completed green end-to-end and self-published
+  (`c062d174` on `results`). Archive of record
+  `phase1b_corrected/run_30199263213`, validation green.
+- All eight halves therefore have remote-verified `results` snapshots and
+  validated archives; no data-bearing cell was ever replaced.
+
 ## Post-run gates (registration §6)
 
 Archive under `phase1b_corrected/run_<id>/`; validate with

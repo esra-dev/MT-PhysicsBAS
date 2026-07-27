@@ -186,6 +186,7 @@ def check(root: Path = ROOT) -> list[str]:
 
     errors.extend(check_phase34(root))
     errors.extend(check_phase2(root))
+    errors.extend(check_phase1b(root))
     return errors
 
 
@@ -362,6 +363,83 @@ def main() -> int:
         return 1
     print("provenance check OK (4 corrected runs, registered family, dashboard, docs, physics)")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Phase 1b (registration docs/phase1b_registration_2026-07-26.md; additive
+# block per convention — no existing pin above is touched)
+# ---------------------------------------------------------------------------
+
+PHASE1B_REGISTRATION_COMMIT = "e0316f01e905d055ee37a9675098132f8ec3521a"
+PHASE1B_DISPATCH_HEAD = "c8e14a4bca3ac0befbdb134579dec420fd3c60e2"
+# Eight seed-half runs (dispatch-record amendment A1): run_id -> (mode, seeds)
+PHASE1B_RUNS = {
+    "30199243656": ("phase1b_v2_baseline", list(range(1, 11))),
+    "30199247467": ("phase1b_v2_baseline", list(range(11, 21))),
+    "30199251189": ("phase1b_v2_redundancy_only", list(range(1, 11))),
+    "30199254246": ("phase1b_v2_redundancy_only", list(range(11, 21))),
+    "30199257204": ("phase1b_v2_kg_frozen", list(range(1, 11))),
+    "30199260042": ("phase1b_v2_kg_frozen", list(range(11, 21))),
+    "30199263213": ("phase1b_v2_extended", list(range(1, 11))),
+    "30199266427": ("phase1b_v2_extended", list(range(11, 21))),
+}
+# Frozen registered-family means (n=20 paired seeds; abs_tol 1e-15).
+# M5 is prospectively EXPLORATORY (registration §4); BH family m = 5.
+PHASE1B_EXPECTED = {
+    "M1": 9.88095238095e-06,
+    "M2": 0.0,
+    "M3": 0.0013,
+    "M4": 0.0,
+    "M5": -0.1625,
+    "M6": -0.5,
+}
+PHASE1B_RETAINED = {"M1", "M2", "M3", "M4", "M6"}
+
+
+def check_phase1b(root: Path) -> list[str]:
+    errors: list[str] = []
+    campaign = root / "phase1b_corrected"
+    for run_id, (mode, seeds) in PHASE1B_RUNS.items():
+        provenance = campaign / f"run_{run_id}" / "analysis/out/workflow_inputs.json"
+        if not provenance.is_file():
+            errors.append(f"phase1b: missing provenance {provenance}")
+            continue
+        payload = _json(provenance)
+        if str(payload.get("run_id")) != run_id:
+            errors.append(f"phase1b run {run_id}: run_id mismatch {payload.get('run_id')}")
+        if payload.get("run_mode") != mode:
+            errors.append(f"phase1b run {run_id}: mode {payload.get('run_mode')} != {mode}")
+        if sorted(int(s) for s in payload.get("seeds", [])) != seeds:
+            errors.append(f"phase1b run {run_id}: seed block mismatch")
+        if payload.get("head_sha") != PHASE1B_DISPATCH_HEAD:
+            errors.append(f"phase1b run {run_id}: head {payload.get('head_sha')}"
+                          f" != {PHASE1B_DISPATCH_HEAD}")
+    family = campaign / "analysis/registered/phase1b_registered_family.csv"
+    if not family.is_file():
+        errors.append(f"phase1b: missing registered family {family}")
+        return errors
+    with family.open(encoding="utf-8", newline="") as handle:
+        rows = {row["member"]: row for row in csv.DictReader(handle)}
+    if set(rows) != set(PHASE1B_EXPECTED):
+        errors.append(f"phase1b: family cell set changed: {sorted(rows)}")
+        return errors
+    for member, expected in PHASE1B_EXPECTED.items():
+        row = rows[member]
+        if row["n_paired"] != "20":
+            errors.append(f"phase1b {member}: n_paired {row['n_paired']} != 20")
+        if abs(float(row["mean_paired_statistic"]) - expected) > 1e-15:
+            errors.append(f"phase1b {member}: frozen mean changed "
+                          f"({row['mean_paired_statistic']} != {expected})")
+        if float(row["p_signflip_two_sided"]) <= 0.0:
+            errors.append(f"phase1b {member}: p reported as zero")
+        if member in PHASE1B_RETAINED:
+            if row["bh_family_m"] != "5":
+                errors.append(f"phase1b {member}: BH family m != 5")
+            if float(row["q_signflip_bh"]) <= 0.0:
+                errors.append(f"phase1b {member}: q reported as zero")
+        elif row["bh_family_m"] != "exploratory":
+            errors.append(f"phase1b {member}: exploratory marker lost")
+    return errors
 
 
 if __name__ == "__main__":

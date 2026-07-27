@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Registered Phase-1b confirmatory analysis (frozen m=6 family) + supporting outcomes.
+"""Registered Phase-1b confirmatory analysis (frozen family) + supporting outcomes.
+
+Registration 2026-07-26 §4: the confirmatory BH family is the five RETAINED
+members M1-M4, M6 (m=5); M5 was prospectively relabelled EXPLORATORY by the
+frozen power rule BEFORE any confirmatory dispatch. M5 is still computed and
+reported identically (mean, CI, exact p-values) but carries
+bh_family_m="exploratory" and no confirmatory q.
 
 Archive layout (identical file conventions to the Phase-1 v2 runs, with the
 Phase-1b mode as the top-level directory):
@@ -15,7 +21,7 @@ results_seed<N>/ nesting is also accepted. The stereo-true arm of each mode is
 the arm of record; the stereo-false arm is retained as a within-mode control
 (descriptive only).
 
-Frozen m=6 family (FAMILY below; m never changes with data):
+Frozen member enumeration (FAMILY below; membership never changes with data):
   M1 labrel_stateless_frozen_slope    per-seed OLS slope over K in {0,4,8,16}
                                       of auc_goal[labrelK, kg_frozen] -
                                       auc_goal[labrelK, baseline]
@@ -41,7 +47,7 @@ Frozen m=6 family (FAMILY below; m never changes with data):
 Statistics: exact two-sided paired sign-flip test on the per-seed member
 statistic (null: zero mean), exact sign test, matched-pairs rank-biserial,
 fixed-seed 10,000-draw bootstrap 95% CI, Benjamini-Hochberg over exactly the
-six sign-flip p-values. No p or q may ever be reported as 0 (the exact
+five RETAINED sign-flip p-values. No p or q may ever be reported as 0 (the exact
 enumeration floors at 2/2^n; a hard guard refuses to emit a zero anyway).
 
 Pilot-blinding contract: --pilot-diagnostics emits ONLY the allow-listed
@@ -102,22 +108,30 @@ SUPPORTING_BOOTSTRAP_OFFSET = 200
 FIRST_GOAL_PROTOCOLS = ("phase1-v2", "phase1b-v2")
 
 # Frozen enumeration: (member_id, registered_test, metric, predicted_direction).
-# m = len(FAMILY) = 6 and never changes with data.
+# Membership never changes with data; the confirmatory BH family is
+# FAMILY minus EXPLORATORY_MEMBERS (registration 2026-07-26 §4).
 FAMILY = (
     ("M1", "labrel_stateless_frozen_slope", "auc_goal_slope_per_K", ""),
     ("M2", "labrel_incremental_slope", "auc_goal_slope_per_K", ""),
     ("M3", "labrel8s_fragmentation_did", "auc_goal_did", ""),
     ("M4", "labband_extended_vs_frozen_auc", "auc_goal", ""),
     ("M5", "labband_extended_vs_baseline_dev", "avg_dev", "negative"),
+    # (M5 is computed identically but reported as EXPLORATORY — see
+    #  EXPLORATORY_MEMBERS below and registration 2026-07-26 §4.)
     ("M6", "chain3_frozen_vs_baseline_rmst", "rmst_first_success", "negative"),
 )
+
+# Registration 2026-07-26 §4: prospectively exploratory members (frozen power
+# rule). They stay in FAMILY (computed + reported identically) but are outside
+# the confirmatory BH family.
+EXPLORATORY_MEMBERS = {"M5"}
 
 FAMILY_FIELDS = [
     "member", "registered_test", "metric", "endpoint", "n_paired",
     "seeds_paired", "mean_paired_statistic", "median_paired_statistic",
     "ci_lo_bootstrap", "ci_hi_bootstrap", "p_signflip_two_sided",
     "p_sign_exact_two_sided", "paired_rank_biserial",
-    "q_signflip_bh_m6", "bh_family_m", "predicted_direction",
+    "q_signflip_bh", "bh_family_m", "predicted_direction",
     "censoring_fraction_kg_frozen", "censoring_fraction_baseline",
     "rmst_horizon",
 ]
@@ -547,8 +561,20 @@ def build_family_rows(index: ArchiveIndex, seeds: list[int],
         }
         rows.append(row)
         p_values.append(p)
-    for row, q in zip(rows, eps.bh_qvalues(p_values)):
-        row["q_signflip_bh_m6"] = _guard_nonzero(
+    # Registration 2026-07-26 §4: M5 is prospectively EXPLORATORY (frozen
+    # power rule: under-powered at every candidate N). The confirmatory BH
+    # family is the five RETAINED members; M5's p-values are reported but it
+    # receives no confirmatory q and does not influence the retained q's.
+    retained = [(row, p) for row, p in zip(rows, p_values)
+                if row["member"] not in EXPLORATORY_MEMBERS]
+    for row in rows:
+        if row["member"] in EXPLORATORY_MEMBERS:
+            row["bh_family_m"] = "exploratory"
+            row["q_signflip_bh"] = ""
+    for (row, _p), q in zip(retained,
+                            eps.bh_qvalues([p for _row, p in retained])):
+        row["bh_family_m"] = len(retained)
+        row["q_signflip_bh"] = _guard_nonzero(
             f"{row['member']} q_bh", q)
     return rows
 
@@ -906,7 +932,9 @@ def run(roots: list[Path], out_dir: Path, rmst_horizon: int | None = None,
                family_rows)
     _write_csv(out_dir / "phase1b_supporting.csv", SUPPORTING_FIELDS,
                supporting_rows)
-    print(f"Wrote {len(family_rows)} family rows (m={len(FAMILY)}) and "
+    print(f"Wrote {len(family_rows)} family rows "
+          f"(BH m={len(FAMILY) - len(EXPLORATORY_MEMBERS)}, "
+          f"{len(EXPLORATORY_MEMBERS)} exploratory) and "
           f"{len(supporting_rows)} supporting rows to {out_dir}")
 
 

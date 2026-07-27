@@ -166,10 +166,16 @@ def test_family_csv_frozen_enumeration_and_hand_computed_values(tmp_path):
     _run(root, out)
     by_member, rows = _family_by_member(out)
 
-    # BH family size is exactly m=6, never data-dependent.
+    # Six enumerated members; the confirmatory BH family is the five RETAINED
+    # members (registration 2026-07-26 §4: M5 prospectively exploratory).
     assert len(rows) == 6
     assert [row["member"] for row in rows] == ["M1", "M2", "M3", "M4", "M5", "M6"]
-    assert all(row["bh_family_m"] == "6" for row in rows)
+    for row in rows:
+        if row["member"] == "M5":
+            assert row["bh_family_m"] == "exploratory"
+            assert row["q_signflip_bh"] == ""
+        else:
+            assert row["bh_family_m"] == "5"
     assert all(row["n_paired"] == "3" for row in rows)
 
     # Hand-computed member statistics (constant across the 3 seeds).
@@ -188,8 +194,10 @@ def test_family_csv_frozen_enumeration_and_hand_computed_values(tmp_path):
 
     # No emitted p or q is ever 0 (M2 has all-zero diffs -> p = 1).
     for row in rows:
-        for column in ("p_signflip_two_sided", "p_sign_exact_two_sided",
-                       "q_signflip_bh_m6"):
+        columns = ["p_signflip_two_sided", "p_sign_exact_two_sided"]
+        if row["member"] != "M5":
+            columns.append("q_signflip_bh")
+        for column in columns:
             assert float(row[column]) > 0.0, (row["member"], column)
     assert float(by_member["M2"]["p_signflip_two_sided"]) == 1.0
     # n=3 identical-sign diffs -> exact enumeration p = 2/2^3.
