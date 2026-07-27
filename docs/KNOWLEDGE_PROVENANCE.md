@@ -46,6 +46,12 @@ may not be used in a registered campaign.
    whose terms the consuming channel actually read. Results produced by the
    extended arm (`phase1b_v2_extended`) must not be attributed to the frozen
    Phase-1 agent (`phase1b_v2_kg_frozen` / `phase1_v2_kg_only`).
+6. Phase-1b direction and IV gates are action-level annotations, not a
+   per-zone/per-DV map. All registered Phase-1b actions have a single relevant
+   illuminance response with consistent direction/gates. Mixed multi-DV
+   actions (for example, direct in one zone and inverse in another) are
+   outside the implemented claim and require a new representation,
+   certificates, registration, and campaign.
 
 ## Change control
 
@@ -58,3 +64,5 @@ may not be used in a registered campaign.
 ## Changelog
 
 - 2026-07-25: contract created for Phase 1b (branch `phase1b-labs-2026-07`).
+- 2026-07-27: action-level direction/gate scope boundary made explicit after
+  post-implementation audit; no code, archive, or result changed.

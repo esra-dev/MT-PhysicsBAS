@@ -1,5 +1,15 @@
 # Phase-1b confirmatory registration (2026-07-26)
 
+> **Post-results arithmetic/measurement notice (2026-07-27):** The frozen
+> implementation derives M6's horizon from six training first-success
+> scenarios, so H=3000/6=500 and the −5% SESOI is −25 presentations. The
+> original text used the eight benchmark scenarios (H=375, SESOI=−18.75).
+> Zero censoring makes the observed RMST statistic and tests invariant to this
+> correction, and power/member selection remain unchanged. The same audit
+> established that the registered within-episode labband overshoot-event
+> outcome was not captured by the run artifacts. Full correction ledger:
+> `docs/phase1b_post_audit_corrections_2026-07-27.md`.
+
 **Status: BINDING pre-data registration for the Phase-1b confirmatory
 campaign.** Committed on branch `phase1b-labs-2026-07` after the Stage-1
 implementation freeze (`a8d3cb40`), after the pilot (runs
@@ -62,7 +72,7 @@ Members M1–M6 exactly as implemented in `analysis/phase1b_report.py::FAMILY`
 3. M3 labrel8s vs labrel8 fragmentation DiD — predicted positive.
 4. M4 labband extended−frozen `auc_goal` — predicted positive.
 5. M5 labband extended−baseline `CumIlluminanceDeviation` — predicted negative.
-6. M6 lab4chain3 frozen−baseline RMST at horizon H = 3000/8 = 375
+6. M6 lab4chain3 frozen−baseline RMST at corrected horizon H = 3000/6 = 500
    presentations — predicted negative; switches to benchmark goal rate
    (predicted positive) under the frozen >25% pooled-censoring rule.
 
@@ -79,7 +89,7 @@ effect direction was seen.
 
 SESOIs per docs/PHASE1B_POWER_PROTOCOL.md §2. Supporting outcomes
 (redundancy-only analogues, per-rung descriptives, first-success curves,
-deterministic `PolicyEnergyCost`, overshoot proxy, cycling) are registered
+deterministic `PolicyEnergyCost`, within-episode overshoot events, cycling) are registered
 supporting outcomes and never enlarge the BH family. Member order is not
 evidential.
 
@@ -95,7 +105,11 @@ committed at `phase1b_pilot/power_report.txt` with inputs
 | M3 | 9.223e-4 | +0.0111 | 1.000 | 1.000 | 1.000 |
 | M4 | 0 (degenerate, flagged) | +0.0111 | 1.000 | 1.000 | 1.000 |
 | M5 | 0.3019 | −0.0616 | 0.133 | 0.194 | 0.239 |
-| M6 | 0.4067 (RMST, H=375) | −18.75 | 1.000 | 1.000 | 1.000 |
+| M6 | 0.4067 (RMST; zero censoring) | −25 (corrected H=500) | 1.000† | 1.000† | 1.000† |
+
+† The pre-data power run used the mistaken −18.75 SESOI and already returned
+1.000 at every candidate N. Correcting its magnitude to −25 can only increase
+power and does not change the registered selection decision.
 
 Pilot protocol-health facts disclosed with this registration: censoring is 0
 in every (scenario × seed × arm) cell of every profile, so M6's endpoint is

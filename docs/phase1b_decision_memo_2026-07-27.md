@@ -12,20 +12,23 @@ and registration.
 
 1. **Relevance knowledge is real but negligible at these scales.** The
    frozen KG's advantage grows with decoy count (M1: +9.9e-6 auc/decoy,
-   q=0.0065, every seed positive) and — decisively — its redundancy-only
-   analogue is null (−2.4e-6, p≈0.46), so this is genuine knowledge-layer
-   signal, not registry mimicry. But it is ~70× below the registered SESOI:
-   at K=16 the total advantage is ~1.6e-4 auc against an anchor of 0.0111.
+   q=0.0065; 9 seeds positive and 11 exact ties, with every non-zero
+   difference positive) and — decisively — its redundancy-only analogue is
+   null (−2.4e-6, p≈0.46), so this is genuine knowledge-layer signal, not
+   registry mimicry. But it is ~70× below the registered SESOI: at K=16 the
+   total advantage is ~1.6e-4 auc against an anchor of 0.0111.
 2. **State fragmentation is where knowledge pays most.** M3 (+0.0013,
    q=9.5e-6) is the largest confirmed effect, and redundancy reproduces only
    ~60% of it. Still ~8× below the SESOI.
 3. **Dependency-order knowledge yields a reliable but tiny speed-up.** M6:
    −0.5 presentations RMST (q=1.9e-5), zero censoring, ~45% reproduced by
-   redundancy alone. No basis for a depth cliff.
+   redundancy alone, and 50× below the corrected −5%-of-H SESOI
+   (H=500, SESOI=−25). No basis for a depth cliff.
 4. **The newly implemented extended consumers changed nothing.** M2 and M4
-   are identically zero in all 20 seeds; the only positive hint for the
-   direction channel is exploratory M5 (−0.16 deviation, predicted
-   direction, n.s.).
+   are identically zero in all 20 seeds. Exploratory M5 compares the full
+   extended stack with baseline and therefore cannot be attributed to the
+   direction channel; frozen and extended have identical mean band
+   deviation, so the incremental direction-channel contrast is zero.
 
 Thesis-level reading: qualitative stereotype knowledge produces
 statistically clean but scientifically small accelerations; its structural

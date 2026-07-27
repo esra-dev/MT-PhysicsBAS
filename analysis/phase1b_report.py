@@ -111,10 +111,10 @@ FIRST_GOAL_PROTOCOLS = ("phase1-v2", "phase1b-v2")
 # Membership never changes with data; the confirmatory BH family is
 # FAMILY minus EXPLORATORY_MEMBERS (registration 2026-07-26 §4).
 FAMILY = (
-    ("M1", "labrel_stateless_frozen_slope", "auc_goal_slope_per_K", ""),
-    ("M2", "labrel_incremental_slope", "auc_goal_slope_per_K", ""),
-    ("M3", "labrel8s_fragmentation_did", "auc_goal_did", ""),
-    ("M4", "labband_extended_vs_frozen_auc", "auc_goal", ""),
+    ("M1", "labrel_stateless_frozen_slope", "auc_goal_slope_per_K", "positive"),
+    ("M2", "labrel_incremental_slope", "auc_goal_slope_per_K", "positive"),
+    ("M3", "labrel8s_fragmentation_did", "auc_goal_did", "positive"),
+    ("M4", "labband_extended_vs_frozen_auc", "auc_goal", "positive"),
     ("M5", "labband_extended_vs_baseline_dev", "avg_dev", "negative"),
     # (M5 is computed identically but reported as EXPLORATORY — see
     #  EXPLORATORY_MEMBERS below and registration 2026-07-26 §4.)
@@ -629,7 +629,8 @@ def _mean_over_seeds(values: list[float]) -> float:
 
 
 def _descriptive_rows(index: ArchiveIndex, seeds: list[int],
-                      rmst_horizon: int | None) -> list[dict]:
+                      rmst_horizon: int | None,
+                      legacy_archive_format: bool = False) -> list[dict]:
     rows: list[dict] = []
     rung_profiles = LABREL_PROFILES + (FRAG_PROFILE,)
     for mode in MODES:
@@ -683,17 +684,38 @@ def _descriptive_rows(index: ArchiveIndex, seeds: list[int],
                     row_type="cycling", profile=profile, mode=mode,
                     arm=ARM_OF_RECORD, metric="avg_cycling_mean",
                     value=_mean_over_seeds(cyclings), n=len(cyclings)))
-        # labband overshoot proxy: fraction of benchmark scenarios whose final
-        # rank exceeded the target rank, when the columns exist.
-        rows.append(_overshoot_row(index, mode, mode_seed_list))
+        if legacy_archive_format:
+            # Historical 2026-07-27 archive serialization. This compatibility
+            # path exists only so reproduce_phase1b.py can byte-check the
+            # immutable archived CSV; new reports must state that the
+            # registered within-episode overshoot event outcome was unmeasured.
+            rows.append(_legacy_overshoot_proxy_row(index, mode,
+                                                    mode_seed_list))
+        else:
+            rows.append(_unmeasured_overshoot_row(mode))
         # Per-cell primitives for the arm of record.
         rows.extend(_cell_primitive_rows(index, mode, mode_seed_list,
                                          rmst_horizon))
     return [row for row in rows if row]
 
 
-def _overshoot_row(index: ArchiveIndex, mode: str,
-                   seeds: list[int]) -> dict | None:
+def _unmeasured_overshoot_row(mode: str) -> dict:
+    return _supporting_row(
+        row_type="unmeasured_outcome",
+        name="labband_overshoot_events",
+        profile=BAND_PROFILE,
+        mode=mode,
+        arm=ARM_OF_RECORD,
+        metric="within_episode_overshoot_event_count",
+        value="NA",
+        note="REGISTERED BUT UNMEASURED: benchmark outputs contain no "
+             "within-episode rank trajectory, so overshoot event counts "
+             "cannot be derived from the run-of-record artifacts")
+
+
+def _legacy_overshoot_proxy_row(index: ArchiveIndex, mode: str,
+                                seeds: list[int]) -> dict | None:
+    """Recreate the immutable archive's superseded final-rank proxy row."""
     pooled_rows: list[dict] = []
     for seed in seeds:
         pooled_rows.extend(index.benchmark_rows(mode, seed, BAND_PROFILE))
@@ -907,7 +929,8 @@ def _family_seed_set(index: ArchiveIndex, strict: bool = True) -> list[int]:
 
 def run(roots: list[Path], out_dir: Path, rmst_horizon: int | None = None,
         bootstrap_iters: int = BOOTSTRAP_ITERS,
-        pilot_diagnostics: bool = False) -> None:
+        pilot_diagnostics: bool = False,
+        legacy_archive_format: bool = False) -> None:
     index = ArchiveIndex(roots)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -925,9 +948,18 @@ def run(roots: list[Path], out_dir: Path, rmst_horizon: int | None = None,
 
     seeds = _family_seed_set(index, strict=True)
     family_rows = build_family_rows(index, seeds, rmst_horizon, bootstrap_iters)
+    if legacy_archive_format:
+        # The run-of-record family CSV was committed with M1-M4's registered
+        # directions accidentally blank. Preserve that historical byte stream
+        # only for archive verification; normal output is corrected above.
+        for row in family_rows:
+            if row["member"] in {"M1", "M2", "M3", "M4"}:
+                row["predicted_direction"] = ""
     supporting_rows = _redundancy_contrast_rows(index, seeds, rmst_horizon,
                                                 bootstrap_iters)
-    supporting_rows.extend(_descriptive_rows(index, seeds, rmst_horizon))
+    supporting_rows.extend(_descriptive_rows(
+        index, seeds, rmst_horizon,
+        legacy_archive_format=legacy_archive_format))
     _write_csv(out_dir / "phase1b_registered_family.csv", FAMILY_FIELDS,
                family_rows)
     _write_csv(out_dir / "phase1b_supporting.csv", SUPPORTING_FIELDS,
@@ -949,10 +981,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pilot-diagnostics", action="store_true",
                         help="emit only the allow-listed pilot diagnostics; "
                              "refuse the family CSV and any effect/p output")
+    parser.add_argument(
+        "--legacy-archive-format", action="store_true",
+        help="recreate the immutable 2026-07-27 CSV serialization, including "
+             "its blank M1-M4 direction fields and superseded overshoot proxy; "
+             "used only by reproduce_phase1b.py")
     args = parser.parse_args(argv)
     run(args.roots, args.out, rmst_horizon=args.rmst_horizon,
         bootstrap_iters=args.bootstrap_iters,
-        pilot_diagnostics=args.pilot_diagnostics)
+        pilot_diagnostics=args.pilot_diagnostics,
+        legacy_archive_format=args.legacy_archive_format)
     return 0
 
 

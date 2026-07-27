@@ -37,7 +37,7 @@ on:
         required: false
         default: true
       phase1b_stage:
-        description: "Phase-1b only: 'pilot' (seeds must be within 1001..1010, artifacts are PILOT_ONLY) or 'confirmatory' (seeds must be within 1..40 and disjoint from the pilot block). Ignored for non-phase1b run modes."
+        description: "Phase-1b only: 'pilot' requires exactly 1001..1010; 'confirmatory' requires exactly amendment-A1 half 1..10 or 11..20. Ignored for non-phase1b modes."
         required: false
         default: ""
 
@@ -65,31 +65,18 @@ jobs:
       seeds_json:    ${{ steps.seeds.outputs.json }}
     steps:
       - uses: actions/checkout@v4
-      - name: Phase-1b pilot/confirmatory seed-disjointness gate
+      - name: Phase-1b exact registered-dispatch gate
         shell: bash
         run: |
           MODE="${{ env.RUN_MODE }}"
           case "$MODE" in
             phase1b_v2_*)
               STAGE="${{ github.event.inputs.phase1b_stage }}"
-              if [ "$STAGE" != "pilot" ] && [ "$STAGE" != "confirmatory" ]; then
-                echo "::error::phase1b run modes require phase1b_stage=pilot|confirmatory"; exit 1
-              fi
-              for s in $(echo "${{ env.SEEDS }}" | tr ',' ' '); do
-                if [ "$STAGE" = "pilot" ]; then
-                  if [ "$s" -lt 1001 ] || [ "$s" -gt 1010 ]; then
-                    echo "::error::pilot dispatch contains non-pilot seed $s (allowed: 1001..1010)"; exit 1
-                  fi
-                else
-                  if [ "$s" -ge 1001 ] && [ "$s" -le 1010 ]; then
-                    echo "::error::confirmatory dispatch contains PILOT seed $s (pilot block is permanently disjoint)"; exit 1
-                  fi
-                  if [ "$s" -lt 1 ] || [ "$s" -gt 40 ]; then
-                    echo "::error::confirmatory seed $s outside the registered 1..40 range"; exit 1
-                  fi
-                fi
-              done
-              echo "phase1b $STAGE dispatch: seeds OK"
+              python analysis/validate_phase1b_dispatch.py \
+                --mode "$MODE" \
+                --stage "$STAGE" \
+                --profiles "${{ env.PROFILES }}" \
+                --seeds "${{ env.SEEDS }}"
               ;;
             *) echo "non-phase1b mode: gate skipped" ;;
           esac

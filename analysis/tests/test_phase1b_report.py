@@ -1,4 +1,4 @@
-"""Tests for analysis/phase1b_report.py (Phase-1b registered m=6 family).
+"""Tests for analysis/phase1b_report.py (five confirmatory + one exploratory).
 
 Synthetic archive trees are fabricated under tmp_path with the minimal CSV
 files the readers need (header-by-name, tolerant readers). Uses stdlib +
@@ -177,6 +177,15 @@ def test_family_csv_frozen_enumeration_and_hand_computed_values(tmp_path):
         else:
             assert row["bh_family_m"] == "5"
     assert all(row["n_paired"] == "3" for row in rows)
+    assert {member: by_member[member]["predicted_direction"]
+            for member in ("M1", "M2", "M3", "M4", "M5", "M6")} == {
+        "M1": "positive",
+        "M2": "positive",
+        "M3": "positive",
+        "M4": "positive",
+        "M5": "negative",
+        "M6": "negative",
+    }
 
     # Hand-computed member statistics (constant across the 3 seeds).
     assert float(by_member["M1"]["mean_paired_statistic"]) == pytest.approx(0.025)
@@ -204,7 +213,7 @@ def test_family_csv_frozen_enumeration_and_hand_computed_values(tmp_path):
     assert float(by_member["M1"]["p_signflip_two_sided"]) == pytest.approx(0.25)
 
 
-def test_supporting_csv_redundancy_contrasts_and_overshoot_note(tmp_path):
+def test_supporting_csv_redundancy_contrasts_and_unmeasured_overshoot(tmp_path):
     root = tmp_path / "archive"
     out = tmp_path / "out"
     build_tree(root)
@@ -223,11 +232,16 @@ def test_supporting_csv_redundancy_contrasts_and_overshoot_note(tmp_path):
     for row in contrasts:
         assert float(row["p_signflip_two_sided_uncorrected"]) > 0.0
 
-    # Overshoot proxy: no FinalRank/TargetRank columns in the fabricated
-    # benchmark CSVs -> NA with an explanatory note.
-    overshoot = [row for row in rows if row["row_type"] == "overshoot_proxy"]
+    # The registered within-episode overshoot event count cannot be recovered
+    # from benchmark summaries and must not be replaced by a final-rank proxy.
+    overshoot = [row for row in rows
+                 if row["row_type"] == "unmeasured_outcome"
+                 and row["name"] == "labband_overshoot_events"]
     assert overshoot and all(row["value"] == "NA" for row in overshoot)
-    assert "not derivable" in overshoot[0]["note"]
+    assert "REGISTERED BUT UNMEASURED" in overshoot[0]["note"]
+    assert all(row["metric"] == "within_episode_overshoot_event_count"
+               for row in overshoot)
+    assert not any(row["row_type"] == "overshoot_proxy" for row in rows)
 
     # Per-rung descriptives and cell primitives exist for the arm of record.
     rungs = [row for row in rows if row["row_type"] == "rung_descriptive"]
@@ -345,3 +359,18 @@ def test_canonical_float_formatting_and_line_endings(tmp_path):
     # canonical helper behaviour
     assert pr._canonical(-0.0) == "0"
     assert pr._canonical(0.1 + 0.2) == format(0.1 + 0.2, ".12g")
+
+
+def test_legacy_archive_format_preserves_historical_metadata_and_proxy(tmp_path):
+    root = tmp_path / "archive"
+    out = tmp_path / "out"
+    build_tree(root)
+    pr.run([root], out, rmst_horizon=10, bootstrap_iters=50,
+           legacy_archive_format=True)
+
+    by_member, _ = _family_by_member(out)
+    assert all(by_member[member]["predicted_direction"] == ""
+               for member in ("M1", "M2", "M3", "M4"))
+    rows = _read_rows(out / "phase1b_supporting.csv")
+    proxy = [row for row in rows if row["row_type"] == "overshoot_proxy"]
+    assert proxy and all(row["value"] == "NA" for row in proxy)

@@ -188,6 +188,19 @@ jobs:
           python-version: '3.11'
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+      - name: Live Phase-1b seven-flow endpoint and physics smoke
+        shell: pwsh
+        run: |
+          ./scripts/Run-Phase1bFlowSmoke.ps1 `
+            -OutputPath analysis/out/phase1b_live_flow_smoke_ci.json
+      - name: Upload Phase-1b flow smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1b-live-flow-smoke
+          path: analysis/out/phase1b_live_flow_smoke_ci.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Run smoke training cell
         shell: pwsh
         run: |

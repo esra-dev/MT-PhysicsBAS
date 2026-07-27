@@ -439,7 +439,16 @@ The decisive thesis claim: an energy-aware metric (compliance, steady power) tha
 
 # Phase 1b — Knowledge-Necessity Package (branch `phase1b-labs-2026-07`)
 
-**Question:** *which qualitative fact does the learning improvement come from — relevance, state-dependent conditionality, qualitative direction, or dependency order?* The corrected protocol-v2 results showed the original clean labs under-test the hypothesis; these labs are built so each knowledge channel is load-bearing. Arms: `phase1b_v2_baseline` / `phase1b_v2_redundancy_only` / `phase1b_v2_kg_frozen` (byte-identical consumer to `phase1_v2_kg_only`) / `phase1b_v2_extended` (adds the registered relevance + band-mirror channels). See `docs/KNOWLEDGE_PROVENANCE.md` for the layer contract and `config/reachability_certificates/` for the per-scenario exhaustive transition certificates.
+**Question:** *which qualitative fact does the learning improvement come from — relevance, state-dependent conditionality, qualitative direction, or dependency order?* The corrected protocol-v2 results showed the original clean labs under-test the hypothesis; these labs were designed to expose each channel, although Phase-1b subsequently found zero or below-SESOI incremental effects. Arms: `phase1b_v2_baseline` / `phase1b_v2_redundancy_only` / `phase1b_v2_kg_frozen` (byte-identical consumer to `phase1_v2_kg_only`) / `phase1b_v2_extended` (adds the registered relevance + band-mirror channels). See `docs/KNOWLEDGE_PROVENANCE.md` for the layer contract and `config/reachability_certificates/` for the per-scenario exhaustive transition certificates.
+
+**Direction/gate scope boundary:** the current `ActionInfo` representation
+stores one qualitative illuminance direction and one merged IV-gate collection
+per WoT action. That is sufficient for every Phase-1b lab because each tested
+action has one relevant illuminance response whose mechanisms agree in
+direction. It is **not** a per-zone/per-DV representation: a future shared
+action with mixed direct/inverse responses or different gate sets across DVs
+would be collapsed to unknown direction plus a merged gate set. Such mixed
+multi-DV actions are outside the implemented and tested Phase-1b claim.
 
 ## labrel0 / labrel4 / labrel8 / labrel16 — relevance ladder (ports 1904–1907)
 
@@ -474,7 +483,12 @@ Same 8 decoys as `labrel8` but each gets a binary state slot: `4 × 2⁹ = 2048`
 - 16 benchmark scenarios (8 above-band starts), 10 held-in for training.
 
 ### What it tests
-Whether declared qualitative direction (extended−frozen `auc_goal`, member M4; extended−baseline `CumIlluminanceDeviation`, member M5) is required for exact-band control; overshoot events and cycling are registered supporting outcomes.
+Whether declared qualitative direction (extended−frozen `auc_goal`, member
+M4) is required for exact-band control. M5 is the full extended−baseline stack
+contrast and does not isolate direction. Within-episode overshoot events and
+cycling were registered supporting outcomes, but the run artifacts captured
+cycling and not the overshoot-event trajectory; overshoot is therefore
+explicitly unmeasured.
 
 ## lab4chain3 — depth-3 structural dependency (port 1913)
 

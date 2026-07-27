@@ -125,9 +125,15 @@ public class StereotypeReasoner {
                                        //   elem:increases shortcut maps to positive.
                                        //   Polarity-resolved: OFF of a direct
                                        //   mechanism predicts a negative response.
+                                       //   SCOPE: one value per WoT action, not a
+                                       //   per-zone/per-DV map. Mixed direct/inverse
+                                       //   evidence therefore resolves to UNKNOWN.
         public List<IvGate> ivGates;   // Phase 1b: ALL IV gates of the mechanism
                                        //   (collection; legacy single-slot fields are
                                        //   preserved unchanged for the frozen consumer).
+                                       //   Gates from every matched mechanism are
+                                       //   merged at action level; per-DV gate sets
+                                       //   are outside the Phase-1b implementation.
 
         public ActionInfo() {
             affectedZones = new HashSet<>();

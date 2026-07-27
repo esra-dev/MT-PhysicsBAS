@@ -5,9 +5,15 @@ Mirrors ``analysis/reproduce_phase1_v2.py``: discover the run archives under
 a campaign directory, validate each with the confirmatory-stage Phase-1b
 gates, verify the SHA-256 inventory when one is present, re-run
 ``analysis/phase1b_report.py`` over the four mode roots into a scratch
-directory, and canonically byte-compare the rebuilt
+directory using its explicit historical-serialization switch, and
+canonically byte-compare the rebuilt
 ``phase1b_registered_family.csv`` and ``phase1b_supporting.csv`` against the
 committed tables in ``<campaign>/analysis/registered/``.
+
+The switch preserves the archive's original blank M1-M4 direction metadata
+and its superseded final-rank overshoot proxy solely for byte verification.
+Normal report output contains the registered directions and marks the actual
+within-episode overshoot event outcome as unmeasured. No statistic changes.
 
 Seed-half amendment (2026-07-26, dispatch record amendment A1): the
 registered 280-cell train matrix (7 profiles x 2 arms x 20 seeds) exceeds
@@ -157,6 +163,7 @@ def reproduce(campaign: Path, work: Path,
         sys.executable, str(REPORT_SCRIPT),
         "--roots", str(roots),
         "--out", str(rebuilt),
+        "--legacy-archive-format",
     ]
     if rmst_horizon is not None:
         command += ["--rmst-horizon", str(rmst_horizon)]
