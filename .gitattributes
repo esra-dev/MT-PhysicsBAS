@@ -11,6 +11,7 @@
 *.yml text eol=lf
 config/*.json text eol=lf
 simulator/*.json text eol=lf
+docs/audit/*.json text eol=lf
 
 # Preserve archived experiment artifacts byte-for-byte on every platform.
 # Their committed SHA-256 inventories describe the downloaded bytes, so Git

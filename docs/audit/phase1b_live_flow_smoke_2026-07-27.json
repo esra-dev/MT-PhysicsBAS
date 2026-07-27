@@ -1,0 +1,332 @@
+{
+  "endpoint_contract": [
+    "/health",
+    "/was/rl/reset",
+    "/was/rl/setState",
+    "/was/rl/action",
+    "/was/rl/status"
+  ],
+  "git_head": "df46e1cb738c411a3e06e1d81b60d088e413e211",
+  "node_red_version": "Node-RED v4.1.8",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "profiles_expected": 7,
+  "profiles_passed": 7,
+  "python_version": "3.12.8",
+  "records": [
+    {
+      "checkpoints": [
+        {
+          "action": {
+            "Z1Light": true
+          },
+          "expected_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          },
+          "observed_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          }
+        }
+      ],
+      "endpoints": {
+        "action": true,
+        "reset": true,
+        "setState": true,
+        "status": true
+      },
+      "flow": "simulator/simulator_flow_labrel0.json",
+      "flow_sha256": "e8f7cc93546a343f7f0b5da426ac625510accfc04dffe6edc5acdcdf7afbc7ce",
+      "health_http_status": 200,
+      "health_tab": "labrel0_tab",
+      "initial_observed_status": {
+        "Z1Level": 25,
+        "Z1Light": false
+      },
+      "port": 1904,
+      "profile": "labrel0",
+      "reset_response": {
+        "reset": true
+      },
+      "set_state_response": {
+        "status": "ok"
+      },
+      "status": "passed"
+    },
+    {
+      "checkpoints": [
+        {
+          "action": {
+            "Z1Light": true
+          },
+          "expected_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          },
+          "observed_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          }
+        }
+      ],
+      "endpoints": {
+        "action": true,
+        "reset": true,
+        "setState": true,
+        "status": true
+      },
+      "flow": "simulator/simulator_flow_labrel4.json",
+      "flow_sha256": "ec98c47d88f27919e1807ecfa18a38ef31eeaebd3526400b105f744d1fcab6f8",
+      "health_http_status": 200,
+      "health_tab": "labrel4_tab",
+      "initial_observed_status": {
+        "Z1Level": 25,
+        "Z1Light": false
+      },
+      "port": 1905,
+      "profile": "labrel4",
+      "reset_response": {
+        "reset": true
+      },
+      "set_state_response": {
+        "status": "ok"
+      },
+      "status": "passed"
+    },
+    {
+      "checkpoints": [
+        {
+          "action": {
+            "Z1Light": true
+          },
+          "expected_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          },
+          "observed_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          }
+        }
+      ],
+      "endpoints": {
+        "action": true,
+        "reset": true,
+        "setState": true,
+        "status": true
+      },
+      "flow": "simulator/simulator_flow_labrel8.json",
+      "flow_sha256": "3daba1b5095d30701b28f088c6398b622f1b65904058413005ed3243a353dc26",
+      "health_http_status": 200,
+      "health_tab": "labrel8_tab",
+      "initial_observed_status": {
+        "Z1Level": 25,
+        "Z1Light": false
+      },
+      "port": 1906,
+      "profile": "labrel8",
+      "reset_response": {
+        "reset": true
+      },
+      "set_state_response": {
+        "status": "ok"
+      },
+      "status": "passed"
+    },
+    {
+      "checkpoints": [
+        {
+          "action": {
+            "Z1Light": true
+          },
+          "expected_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          },
+          "observed_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          }
+        }
+      ],
+      "endpoints": {
+        "action": true,
+        "reset": true,
+        "setState": true,
+        "status": true
+      },
+      "flow": "simulator/simulator_flow_labrel16.json",
+      "flow_sha256": "d620d64c945223db4a91d5c27cb68754f76d06f44ad4f8531b62fc11f1d2b034",
+      "health_http_status": 200,
+      "health_tab": "labrel16_tab",
+      "initial_observed_status": {
+        "Z1Level": 25,
+        "Z1Light": false
+      },
+      "port": 1907,
+      "profile": "labrel16",
+      "reset_response": {
+        "reset": true
+      },
+      "set_state_response": {
+        "status": "ok"
+      },
+      "status": "passed"
+    },
+    {
+      "checkpoints": [
+        {
+          "action": {
+            "Z1Light": true
+          },
+          "expected_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          },
+          "observed_status": {
+            "Z1Level": 425,
+            "Z1Light": true
+          }
+        }
+      ],
+      "endpoints": {
+        "action": true,
+        "reset": true,
+        "setState": true,
+        "status": true
+      },
+      "flow": "simulator/simulator_flow_labrel8s.json",
+      "flow_sha256": "c769d0db391cbaf42e8a35f3885b933f02ee98d8cf49793391de7d6cca554140",
+      "health_http_status": 200,
+      "health_tab": "labrel8s_tab",
+      "initial_observed_status": {
+        "Z1Level": 25,
+        "Z1Light": false
+      },
+      "port": 1908,
+      "profile": "labrel8s",
+      "reset_response": {
+        "reset": true
+      },
+      "set_state_response": {
+        "status": "ok"
+      },
+      "status": "passed"
+    },
+    {
+      "checkpoints": [
+        {
+          "action": {
+            "WeakLamp": true
+          },
+          "expected_status": {
+            "WeakLamp": true,
+            "Z1Level": 175
+          },
+          "observed_status": {
+            "WeakLamp": true,
+            "Z1Level": 175
+          }
+        }
+      ],
+      "endpoints": {
+        "action": true,
+        "reset": true,
+        "setState": true,
+        "status": true
+      },
+      "flow": "simulator/simulator_flow_labband.json",
+      "flow_sha256": "fa741359c0e30ca94a40cc4f36209fa98f579997714154a97d164a1e35cbea92",
+      "health_http_status": 200,
+      "health_tab": "labband_tab",
+      "initial_observed_status": {
+        "Awning": false,
+        "StrongLamp": false,
+        "WeakLamp": false,
+        "Z1Blinds": false,
+        "Z1Level": 25
+      },
+      "port": 1912,
+      "profile": "labband",
+      "reset_response": {
+        "reset": true
+      },
+      "set_state_response": {
+        "status": "ok"
+      },
+      "status": "passed"
+    },
+    {
+      "checkpoints": [
+        {
+          "action": {
+            "Z1Light": true
+          },
+          "expected_status": {
+            "Z1Level": 25,
+            "Z1Light": true
+          },
+          "observed_status": {
+            "Z1Level": 25,
+            "Z1Light": true
+          }
+        },
+        {
+          "action": {
+            "PlugZ1": true
+          },
+          "expected_status": {
+            "PlugZ1": true,
+            "Z1Level": 25
+          },
+          "observed_status": {
+            "PlugZ1": true,
+            "Z1Level": 25
+          }
+        },
+        {
+          "action": {
+            "Breaker": true
+          },
+          "expected_status": {
+            "Breaker": true,
+            "Z1Level": 425
+          },
+          "observed_status": {
+            "Breaker": true,
+            "Z1Level": 425
+          }
+        }
+      ],
+      "endpoints": {
+        "action": true,
+        "reset": true,
+        "setState": true,
+        "status": true
+      },
+      "flow": "simulator/simulator_flow_lab4chain3.json",
+      "flow_sha256": "f68a4a97cbc458daa2ce28fa226f2b44e835f3b229cebdd4397edc70b8649736",
+      "health_http_status": 200,
+      "health_tab": "lab4chain3_tab",
+      "initial_observed_status": {
+        "Breaker": false,
+        "PlugZ1": false,
+        "Z1Level": 25,
+        "Z1Light": false
+      },
+      "port": 1913,
+      "profile": "lab4chain3",
+      "reset_response": {
+        "reset": true
+      },
+      "set_state_response": {
+        "status": "ok"
+      },
+      "status": "passed"
+    }
+  ],
+  "run_utc": "2026-07-27T15:53:14.700072+00:00",
+  "schema": "phase1b-live-flow-smoke-v1",
+  "status": "passed",
+  "tracked_worktree_clean": true
+}
