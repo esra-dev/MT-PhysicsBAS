@@ -1,0 +1,8 @@
+profile,condition,n_seeds,mean_first_goal,ci_lo,ci_hi
+lab4chain3,pbrs_on,10,1.4833333333333332,1.3166666666666667,1.65
+labband,pbrs_on,10,1.16,1.1,1.2399999999999998
+labrel0,pbrs_on,10,1.0,1.0,1.0
+labrel16,pbrs_on,10,1.15,1.0,1.3
+labrel4,pbrs_on,10,1.0,1.0,1.0
+labrel8,pbrs_on,10,1.0,1.0,1.0
+labrel8s,pbrs_on,10,1.2,1.05,1.35

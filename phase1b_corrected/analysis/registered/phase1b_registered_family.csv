@@ -1,0 +1,7 @@
+member,registered_test,metric,endpoint,n_paired,seeds_paired,mean_paired_statistic,median_paired_statistic,ci_lo_bootstrap,ci_hi_bootstrap,p_signflip_two_sided,p_sign_exact_two_sided,paired_rank_biserial,q_signflip_bh,bh_family_m,predicted_direction,censoring_fraction_kg_frozen,censoring_fraction_baseline,rmst_horizon
+M1,labrel_stateless_frozen_slope,auc_goal_slope_per_K,auc_goal_slope_per_K,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,9.88095238095e-06,0,5.35714285714e-06,1.46428571429e-05,0.00390625,0.00390625,1,0.00651041666667,5,,,,
+M2,labrel_incremental_slope,auc_goal_slope_per_K,auc_goal_slope_per_K,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,0,0,0,0,1,1,0,1,5,,,,
+M3,labrel8s_fragmentation_did,auc_goal_did,auc_goal_did,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,0.0013,0.00133333333333,0.001,0.0016,1.90734863281e-06,1.90734863281e-06,1,9.53674316406e-06,5,,,,
+M4,labband_extended_vs_frozen_auc,auc_goal,auc_goal,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,0,0,0,0,1,1,0,1,5,,,,
+M5,labband_extended_vs_baseline_dev,avg_dev,avg_dev,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,-0.1625,-0.11875,-0.33375,-0.00125,0.0777645111084,0.263175964355,-0.447619047619,,exploratory,negative,,,
+M6,chain3_frozen_vs_baseline_rmst,rmst_first_success,rmst,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,-0.5,-0.5,-0.641666666667,-0.358333333333,7.62939453125e-06,7.62939453125e-06,-1,1.90734863281e-05,5,negative,0,0,500

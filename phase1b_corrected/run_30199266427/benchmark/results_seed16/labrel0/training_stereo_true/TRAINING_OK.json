@@ -1,0 +1,29 @@
+{
+  "status": "ok",
+  "profile": "labrel0",
+  "stereotype": "true",
+  "run_seed": 16,
+  "run_mode": "phase1b_v2_extended",
+  "protocol_version": "phase1-v2",
+  "ordered_scenario_ids": [
+    1,
+    2
+  ],
+  "scenario_schedule_sha256": "17f8af97ad4a7f7639a4c9171d5185cbafb85462877a4746c21bdb0a4f940ca0",
+  "scenario_file": "benchmark/train_scenarios_labrel0.json",
+  "fixed_horizon_episodes": 3000,
+  "paired_rng_version": "common-seed-v1",
+  "metric_schema": "phase1-benchmark-v2",
+  "policy_energy_weights": "stronglamp:2,weaklamp:1,awning:0,blind:0,plug:0,breaker:0,masterswitch:0,aux:1,fan:1,humidifier:1,heater:1,heatpump:1,speaker:1,subwoofer:1,whitenoiseunit:1,airpurifier:1,cooler:1,ventilator:1,ionizer:1,co2scrubber:1,radiator:1,aromadiffuser:1,light:1",
+  "scenario_fallback_count": 0,
+  "timestamp": "2026-07-26T15:58:45.6072589+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_true_labrel0.csv",
+    "qtable_initial_stereotypes_true_labrel0.csv",
+    "metrics_stereotypes_true_labrel0.csv",
+    "iv_stats_stereotypes_true_labrel0.json",
+    "coverage_stereotypes_true_labrel0.csv",
+    "first_goal_stereotypes_true_labrel0.csv",
+    "learned_stereotypes_true_labrel0.ttl"
+  ]
+}
