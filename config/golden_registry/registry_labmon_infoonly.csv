@@ -1,8 +1,8 @@
 # action registry golden — ontology set 'labmon_infoonly' = building_6_monitor_infoonly.ttl
 # contract = key-set + metadata columns; actionIndex is informational only
-key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,actionIndex
-DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,4
-http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,1,0,0,false,-1,1,0.0,false,0
-http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,1,1,0,false,-1,1,0.0,false,1
-http://example.org/was#SetZ1Monitor|OFF,SetZ1Monitor=OFF,http://example.org/was#Z1Monitor,2,0,,false,-1,1,0.0,true,2
-http://example.org/was#SetZ1Monitor|ON,SetZ1Monitor=ON,http://example.org/was#Z1Monitor,2,1,,false,-1,1,0.0,true,3
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,4
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,1,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,0
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,1,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,1
+http://example.org/was#SetZ1Monitor|OFF,SetZ1Monitor=OFF,http://example.org/was#Z1Monitor,2,0,,false,-1,1,0.0,true,UNKNOWN,0,,2
+http://example.org/was#SetZ1Monitor|ON,SetZ1Monitor=ON,http://example.org/was#Z1Monitor,2,1,,false,-1,1,0.0,true,UNKNOWN,0,,3

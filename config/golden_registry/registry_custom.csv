@@ -1,18 +1,18 @@
 # action registry golden — ontology set 'custom' = lab-ontology.ttl + wot-mappings.ttl
 # contract = key-set + metadata columns; actionIndex is informational only
-key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,actionIndex
-DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,14
-http://example.org/was#SetSpotlight|OFF,SetSpotlight=OFF,http://example.org/was#Spotlight,6,0,0|1,false,-1,1,0.0,false,0
-http://example.org/was#SetSpotlight|ON,SetSpotlight=ON,http://example.org/was#Spotlight,6,1,0|1,false,-1,1,0.0,false,1
-http://example.org/was#SetZ1Blinds|OFF,SetZ1Blinds=OFF,http://example.org/was#Z1Blinds,4,0,0,false,-1,1,0.0,false,2
-http://example.org/was#SetZ1Blinds|ON,SetZ1Blinds=ON,http://example.org/was#Z1Blinds,4,1,0,true,7,1,0.0,false,3
-http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,2,0,0,false,-1,1,0.0,false,4
-http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,2,1,0,false,-1,1,0.0,false,5
-http://example.org/was#SetZ1Radiator|OFF,SetZ1Radiator=OFF,http://example.org/was#Z1Radiator,-1,0,,false,-1,1,0.0,true,6
-http://example.org/was#SetZ1Radiator|ON,SetZ1Radiator=ON,http://example.org/was#Z1Radiator,-1,1,,false,-1,1,0.0,true,7
-http://example.org/was#SetZ2Blinds|OFF,SetZ2Blinds=OFF,http://example.org/was#Z2Blinds,5,0,1,false,-1,1,0.0,false,8
-http://example.org/was#SetZ2Blinds|ON,SetZ2Blinds=ON,http://example.org/was#Z2Blinds,5,1,1,true,7,1,0.0,false,9
-http://example.org/was#SetZ2Light|OFF,SetZ2Light=OFF,http://example.org/was#Z2Light,3,0,1,false,-1,1,0.0,false,10
-http://example.org/was#SetZ2Light|ON,SetZ2Light=ON,http://example.org/was#Z2Light,3,1,1,false,-1,1,0.0,false,11
-http://example.org/was#SetZ2Radiator|OFF,SetZ2Radiator=OFF,http://example.org/was#Z2Radiator,-1,0,,false,-1,1,0.0,true,12
-http://example.org/was#SetZ2Radiator|ON,SetZ2Radiator=ON,http://example.org/was#Z2Radiator,-1,1,,false,-1,1,0.0,true,13
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,14
+http://example.org/was#SetSpotlight|OFF,SetSpotlight=OFF,http://example.org/was#Spotlight,6,0,0|1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,0
+http://example.org/was#SetSpotlight|ON,SetSpotlight=ON,http://example.org/was#Spotlight,6,1,0|1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,1
+http://example.org/was#SetZ1Blinds|OFF,SetZ1Blinds=OFF,http://example.org/was#Z1Blinds,4,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,7>=1,2
+http://example.org/was#SetZ1Blinds|ON,SetZ1Blinds=ON,http://example.org/was#Z1Blinds,4,1,0,true,7,1,0.0,false,EXPLICIT_RELEVANT,0,7>=1,3
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,2,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,4
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,2,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,5
+http://example.org/was#SetZ1Radiator|OFF,SetZ1Radiator=OFF,http://example.org/was#Z1Radiator,-1,0,,false,-1,1,0.0,true,UNKNOWN,0,,6
+http://example.org/was#SetZ1Radiator|ON,SetZ1Radiator=ON,http://example.org/was#Z1Radiator,-1,1,,false,-1,1,0.0,true,UNKNOWN,0,,7
+http://example.org/was#SetZ2Blinds|OFF,SetZ2Blinds=OFF,http://example.org/was#Z2Blinds,5,0,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,7>=1,8
+http://example.org/was#SetZ2Blinds|ON,SetZ2Blinds=ON,http://example.org/was#Z2Blinds,5,1,1,true,7,1,0.0,false,EXPLICIT_RELEVANT,0,7>=1,9
+http://example.org/was#SetZ2Light|OFF,SetZ2Light=OFF,http://example.org/was#Z2Light,3,0,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,10
+http://example.org/was#SetZ2Light|ON,SetZ2Light=ON,http://example.org/was#Z2Light,3,1,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,11
+http://example.org/was#SetZ2Radiator|OFF,SetZ2Radiator=OFF,http://example.org/was#Z2Radiator,-1,0,,false,-1,1,0.0,true,UNKNOWN,0,,12
+http://example.org/was#SetZ2Radiator|ON,SetZ2Radiator=ON,http://example.org/was#Z2Radiator,-1,1,,false,-1,1,0.0,true,UNKNOWN,0,,13

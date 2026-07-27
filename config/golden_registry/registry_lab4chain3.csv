@@ -1,0 +1,14 @@
+# action registry golden — ontology set 'lab4chain3' = building_12_chain3.ttl
+# contract = key-set + metadata columns; actionIndex is informational only
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,10
+http://example.org/was#SetAuxA|OFF,SetAuxA=OFF,http://example.org/was#AuxA,4,0,,false,-1,1,0.0,true,UNKNOWN,0,,0
+http://example.org/was#SetAuxA|ON,SetAuxA=ON,http://example.org/was#AuxA,4,1,,false,-1,1,0.0,true,UNKNOWN,0,,1
+http://example.org/was#SetAuxB|OFF,SetAuxB=OFF,http://example.org/was#AuxB,5,0,,false,-1,1,0.0,true,UNKNOWN,0,,2
+http://example.org/was#SetAuxB|ON,SetAuxB=ON,http://example.org/was#AuxB,5,1,,false,-1,1,0.0,true,UNKNOWN,0,,3
+http://example.org/was#SetBreaker|OFF,SetBreaker=OFF,http://example.org/was#Breaker,3,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,4
+http://example.org/was#SetBreaker|ON,SetBreaker=ON,http://example.org/was#Breaker,3,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,1,,5
+http://example.org/was#SetPlugZ1|OFF,SetPlugZ1=OFF,http://example.org/was#PlugZ1,2,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,6
+http://example.org/was#SetPlugZ1|ON,SetPlugZ1=ON,http://example.org/was#PlugZ1,2,1,0,true,3,1,0.0,false,EXPLICIT_RELEVANT,1,3>=1,7
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,1,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,-1,,8
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,1,1,0,true,2,1,0.0,false,EXPLICIT_RELEVANT,1,2>=1,9

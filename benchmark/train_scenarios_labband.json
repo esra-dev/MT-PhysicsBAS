@@ -1,0 +1,43 @@
+[
+  {
+    "comment": "labband EXACT-BAND TRAINING scenarios (10 of 16) held-in set for QL training. Held-OUT (test-only): 3 (sun0 both-lamps overshoot — one-step strong-OFF fix), 4 (sun0 hold with irrelevant open blinds), 7 (sun1 strong+blinds overshoot), 11 (sun2 weak+daylight combo overshoot — subtlest, no single actuator is 'too big' on its own), 14 (sun3 deepest overshoot 875 — strong OFF + deploy awning), 16 (sun3 hold with awning already deployed). Held-out ids span all four sun ranks and include FOUR above-band starts (3, 7, 11, 14). Held-in coverage: every sun rank; the strong-lamp trap (2, 6, 10), the awning retract trap (12), the awning deploy move (13), and an in-band hold with the awning active (15), so both awning polarities and both lamp swaps are trainable. Target rank 2 EXACTLY (100-300 lux). Physics: daylight = (Z1Blinds ? 0.50*Sun : 0); if (Awning) daylight *= 0.25; Z1 = 25 + (StrongLamp?400:0) + (WeakLamp?150:0) + daylight.",
+    "id": 1, "Z1Level": 25,   "StrongLamp": false, "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 0,
+    "description": "sun=0, all off (25, rank0) -> weak lamp ON (175)"
+  },
+  {
+    "id": 2, "Z1Level": 425,  "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 0,
+    "description": "sun=0, strong only (425, rank3) -> strong OFF + weak ON (175)"
+  },
+  {
+    "id": 5, "Z1Level": 75,   "StrongLamp": false, "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 100,
+    "description": "sun=1, blinds only (75, rank1) -> weak ON (225)"
+  },
+  {
+    "id": 6, "Z1Level": 425,  "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 100,
+    "description": "sun=1, strong only (425, rank3) -> strong OFF + weak ON (175)"
+  },
+  {
+    "id": 8, "Z1Level": 225,  "StrongLamp": false, "WeakLamp": true,  "Z1Blinds": true,  "Awning": false, "Sunshine": 100,
+    "description": "sun=1, weak + blinds (225, rank2) -> hold"
+  },
+  {
+    "id": 9, "Z1Level": 25,   "StrongLamp": false, "WeakLamp": false, "Z1Blinds": false, "Awning": false, "Sunshine": 400,
+    "description": "sun=2, all off (25, rank0) -> open blinds (225, zero energy)"
+  },
+  {
+    "id": 10, "Z1Level": 625, "StrongLamp": true,  "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 400,
+    "description": "sun=2, strong + blinds (625, rank3) -> strong OFF (225)"
+  },
+  {
+    "id": 12, "Z1Level": 75,  "StrongLamp": false, "WeakLamp": false, "Z1Blinds": true,  "Awning": true,  "Sunshine": 400,
+    "description": "sun=2, blinds open but awning deployed (75, rank1) -> retract awning (225)"
+  },
+  {
+    "id": 13, "Z1Level": 475, "StrongLamp": false, "WeakLamp": false, "Z1Blinds": true,  "Awning": false, "Sunshine": 900,
+    "description": "sun=3, blinds only (475, rank3) -> deploy awning (137.5, zero energy)"
+  },
+  {
+    "id": 15, "Z1Level": 287.5, "StrongLamp": false, "WeakLamp": true, "Z1Blinds": true, "Awning": true,  "Sunshine": 900,
+    "description": "sun=3, weak + blinds + awning (287.5, rank2 near ceiling) -> hold"
+  }
+]

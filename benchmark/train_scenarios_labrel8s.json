@@ -1,0 +1,33 @@
+[
+  {
+    "comment": "labrel8s RELEVANCE LADDER (STATEFUL decoys) TRAINING scenarios \u2014 identical coverage to the labrel8s benchmark on the lamp axis (the only lux-moving dimension). Decoys are observable-but-inert state bits (slots 2..9), pinned FALSE at scenario start. Optimal routes: id 1 -> SetZ1Light=ON; id 2 -> DO_NOTHING/hold.",
+    "id": 1,
+    "Z1Level": 25,
+    "Z1Light": false,
+    "Fan": false,
+    "Humidifier": false,
+    "Heater": false,
+    "Speaker": false,
+    "AirPurifier": false,
+    "Dehumidifier": false,
+    "Cooler": false,
+    "WhiteNoiseUnit": false,
+    "Sunshine": 0,
+    "description": "sun rank 0 (degenerate), lamp off (25 lux, rank 0) -> single action SetZ1Light=ON reaches rank 3 (425 lux)"
+  },
+  {
+    "id": 2,
+    "Z1Level": 425,
+    "Z1Light": true,
+    "Fan": false,
+    "Humidifier": false,
+    "Heater": false,
+    "Speaker": false,
+    "AirPurifier": false,
+    "Dehumidifier": false,
+    "Cooler": false,
+    "WhiteNoiseUnit": false,
+    "Sunshine": 0,
+    "description": "sun rank 0 (degenerate), lamp on (425 lux, rank 3) -> already at goal, optimal is DO_NOTHING/hold"
+  }
+]

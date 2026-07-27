@@ -1,0 +1,41 @@
+{
+  "certificate_sha256": "92313246fa1836a61ce89af782de99178674de2e0131c5061f279f2cf4948c89",
+  "meta": {
+    "horizon": 20,
+    "physics": "phase1b_models.py frozen formulas",
+    "profile": "labrel16",
+    "scenario_id": 1
+  },
+  "result": {
+    "ambiguity_reason": null,
+    "ambiguous": false,
+    "canonical_representatives": [
+      [
+        "SetZ1Light|ON"
+      ]
+    ],
+    "goal_states_reached": [
+      "(3, 1)"
+    ],
+    "intended_mechanism": [
+      "SetZ1Light|ON"
+    ],
+    "intended_shortest_length": 1,
+    "mechanism_in_every_shortest_route": true,
+    "reachable_state_count": 2,
+    "reachable_states": [
+      "(0, 0)",
+      "(3, 1)"
+    ],
+    "reachable_terminal_states": [],
+    "shortcuts": [],
+    "shortest_path_length": 1,
+    "shortest_sequence_count": 1,
+    "shortest_sequences": [
+      [
+        "SetZ1Light|ON"
+      ]
+    ],
+    "solvable": true
+  }
+}

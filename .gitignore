@@ -125,3 +125,8 @@ paper_notes/_private/
 # attic/local_outputs: untracked local working outputs swept from the repo
 # root (2026-07-19 audit D8); never commit
 attic/local_outputs/
+
+# Phase-1b pilot raw artifact trees stay local (PILOT_ONLY markers, the
+# diagnostics CSV and the power inputs/report are committed explicitly).
+phase1b_pilot/run_*/*/
+phase1b_pilot/staged/

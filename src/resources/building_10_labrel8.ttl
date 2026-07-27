@@ -1,0 +1,727 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+@prefix brick:  <https://brickschema.org/schema/Brick#> .
+@prefix elem:   <http://w3id.org/elementary#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix qudtqk: <http://qudt.org/vocab/quantitykind/> .
+@prefix sosa:   <http://www.w3.org/ns/sosa/> .
+
+@prefix lab:    <http://example.org/was/lab#> .
+@prefix ws:     <http://example.org/was/lab/stereotypes#> .
+
+# ===========================================================================
+#  LABREL8 — RELEVANCE LADDER (8 decoys)  (Phase 1b relevance-ladder cell)
+# ---------------------------------------------------------------------------
+#  SELF-CONTAINED domain ontology. Loaded via ont(["building_10_labrel8.ttl"]).
+#  One-zone lab: a single incandescent ceiling lamp is the ONLY component that
+#  affects illuminance. The ladder varies how many IRRELEVANT-but-fully-
+#  described actuators (decoys) share the zone:
+#     labrel0   0 decoys   (lamp only)
+#     labrel4   4 decoys   (stateless)
+#     labrel8   8 decoys   (stateless)
+#     labrel16  16 decoys  (stateless)
+#     labrel8s  8 decoys   WITH state slots (state-fragmentation comparison)
+#  THIS FILE: labrel8 — decoys: Fan, Humidifier, Heater, Speaker, AirPurifier, Dehumidifier, Cooler, WhiteNoiseUnit.
+#
+#  Every decoy has a COMPLETE behavioral stereotype whose mechanism drives a
+#  NON-Illuminance dependent variable (airflow / humidity / temperature /
+#  sound / mass concentration), so the relevance classifier derives
+#  EXPLICIT_OTHER_DV for it. All stereotypes in this lab carry
+#  ws:behavioralDescriptionComplete true (deliberately complete descriptions;
+#  open-world absence of the marker would yield UNKNOWN instead).
+#
+#  Direction is stated via qualitative proportionality on the mechanism's
+#  ManipulatedVariable (elem:directProportion MV -> DV) — the Phase-1b
+#  vocabulary. No elem:increases shortcut in this file.
+#
+#  stateless decoys: decoys expose real WoT ACTIONS (and their flags are
+#  visible in /status for energy accounting) but have NO WoT state semantic
+#  type and NO state-vector slot, so the observed state stays [Z1Level,Z1Light].
+#
+#  Physics (simulator_flow_labrel8.json, port 1906):
+#     Z1Level = 25 + (Z1Light ? 400 : 0)
+#  No sunshine effect: Sunshine is ALWAYS 0 (degenerate rank 0) and has NO
+#  state-vector slot; the /status field exists only for pipeline
+#  compatibility. Rank bounds [50,100,300]: lamp off => 25 lux (rank 0),
+#  lamp on => 425 lux (rank 3). Target is rank 3.
+#  State vector = [Z1Level,Z1Light] = 4*2 = 8 states (decoys are STATELESS).
+# ===========================================================================
+
+
+# ===========================================================================
+# Property declarations (self-contained)
+# ===========================================================================
+
+brick:feeds   owl:equivalentProperty elem:feeds .
+sosa:observes owl:equivalentProperty elem:observes .
+
+elem:directProportion a owl:ObjectProperty ;
+    rdfs:label "direct qualitative proportionality (MV rises -> DV rises)" .
+
+ws:behavioralDescriptionComplete a owl:DatatypeProperty ;
+    rdfs:label "behavioral description is deliberately complete" ;
+    rdfs:range xsd:boolean .
+
+ws:zoneIndex a owl:DatatypeProperty ;
+    rdfs:label "Zone index" ; rdfs:range xsd:integer .
+
+ws:actionValue a owl:DatatypeProperty ;
+    rdfs:label "Action boolean value" ; rdfs:range xsd:boolean .
+
+ws:rankBound_1 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_2 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+ws:rankBound_3 a owl:DatatypeProperty ; rdfs:range xsd:decimal .
+
+ws:hasWoTActionSemanticType a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:hasWoTStateSemanticType  a owl:DatatypeProperty ; rdfs:range xsd:anyURI .
+ws:stateVecIndex   a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateDomainSize a owl:DatatypeProperty ; rdfs:range xsd:integer .
+ws:stateSlotRole   a owl:DatatypeProperty ; rdfs:range xsd:string .
+
+# Connection (coupling) endpoints — reify the lamp -> sensor arc (§4b/§7b).
+ws:connSource a owl:ObjectProperty ; rdfs:label "connection source component" .
+ws:connTarget a owl:ObjectProperty ; rdfs:label "connection target component" .
+
+
+# ===========================================================================
+# 1.  PHYSICAL MECHANISMS
+# ===========================================================================
+
+ws:pm_incandescent_light_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_incandescent_light_emission" ;
+    elem:hasManipulatedVariable elem:electrical_power_input ;
+    elem:hasDependentVariable   elem:luminiscence .
+
+ws:illuminanceSensing a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "Illuminance sensing" ;
+    elem:hasIndependentVariable elem:luminiscence ;
+    elem:hasDependentVariable   ws:sensedIlluminance .
+
+# Decoy mechanism — drives a NON-Illuminance DV (VolumeFlowRate).
+ws:pm_fan_airflow_generation a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_fan_airflow_generation" ;
+    elem:hasManipulatedVariable ws:fanPowerInput ;
+    elem:hasDependentVariable   ws:fanAirflow .
+
+# Decoy mechanism — drives a NON-Illuminance DV (RelativeHumidity).
+ws:pm_humidifier_water_vapor_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_humidifier_water_vapor_emission" ;
+    elem:hasManipulatedVariable ws:humidifierPowerInput ;
+    elem:hasDependentVariable   ws:humidifierHumidity .
+
+# Decoy mechanism — drives a NON-Illuminance DV (Temperature).
+ws:pm_heater_heat_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_heater_heat_emission" ;
+    elem:hasManipulatedVariable ws:heaterPowerInput ;
+    elem:hasDependentVariable   ws:heaterTemperature .
+
+# Decoy mechanism — drives a NON-Illuminance DV (SoundPressureLevel).
+ws:pm_speaker_sound_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_speaker_sound_emission" ;
+    elem:hasManipulatedVariable ws:speakerPowerInput ;
+    elem:hasDependentVariable   ws:speakerSound .
+
+# Decoy mechanism — drives a NON-Illuminance DV (VolumeFlowRate).
+ws:pm_airpurifier_airflow_generation a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_airpurifier_airflow_generation" ;
+    elem:hasManipulatedVariable ws:airPurifierPowerInput ;
+    elem:hasDependentVariable   ws:airPurifierAirflow .
+
+# Decoy mechanism — drives a NON-Illuminance DV (RelativeHumidity).
+ws:pm_dehumidifier_water_vapor_removal a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_dehumidifier_water_vapor_removal" ;
+    elem:hasManipulatedVariable ws:dehumidifierPowerInput ;
+    elem:hasDependentVariable   ws:dehumidifierHumidity .
+
+# Decoy mechanism — drives a NON-Illuminance DV (Temperature).
+ws:pm_cooler_heat_removal a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_cooler_heat_removal" ;
+    elem:hasManipulatedVariable ws:coolerPowerInput ;
+    elem:hasDependentVariable   ws:coolerTemperature .
+
+# Decoy mechanism — drives a NON-Illuminance DV (SoundPressureLevel).
+ws:pm_whitenoise_sound_emission a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_whitenoise_sound_emission" ;
+    elem:hasManipulatedVariable ws:whiteNoiseUnitPowerInput ;
+    elem:hasDependentVariable   ws:whiteNoiseUnitSound .
+
+
+# ===========================================================================
+# 2.  PROCESS VARIABLES
+# ===========================================================================
+
+elem:electrical_power_input a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Electrical power input to light" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion elem:luminiscence .
+
+elem:luminiscence a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Indoor illuminance level" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance .
+
+ws:sensedIlluminance a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Sensed indoor illuminance signal" ;
+    elem:dealsWithStuff  elem:photons ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Illuminance ;
+    ws:rankBound_1       "50"^^xsd:decimal ;
+    ws:rankBound_2       "100"^^xsd:decimal ;
+    ws:rankBound_3       "300"^^xsd:decimal .
+
+ws:fanPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Fan power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:fanAirflow .
+
+ws:fanAirflow a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Fan airflow output" ;
+    elem:dealsWithStuff  ws:air ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:VolumeFlowRate .
+
+ws:humidifierPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Humidifier power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:humidifierHumidity .
+
+ws:humidifierHumidity a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Humidifier humidity output" ;
+    elem:dealsWithStuff  ws:waterVapor ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:RelativeHumidity .
+
+ws:heaterPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Heater power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:heaterTemperature .
+
+ws:heaterTemperature a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Heater temperature output" ;
+    elem:dealsWithStuff  ws:heat ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Temperature .
+
+ws:speakerPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Speaker power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:speakerSound .
+
+ws:speakerSound a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Speaker sound output" ;
+    elem:dealsWithStuff  ws:sound ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:SoundPressureLevel .
+
+ws:airPurifierPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Air purifier power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:airPurifierAirflow .
+
+ws:airPurifierAirflow a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Air purifier airflow output" ;
+    elem:dealsWithStuff  ws:air ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:VolumeFlowRate .
+
+ws:dehumidifierPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Dehumidifier power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:dehumidifierHumidity .
+
+ws:dehumidifierHumidity a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Dehumidifier humidity output" ;
+    elem:dealsWithStuff  ws:waterVapor ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:RelativeHumidity .
+
+ws:coolerPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Cooler power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:coolerTemperature .
+
+ws:coolerTemperature a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "Cooler temperature output" ;
+    elem:dealsWithStuff  ws:heat ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:Temperature .
+
+ws:whiteNoiseUnitPowerInput a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "White-noise unit power switch (on/off)" ;
+    elem:dealsWithStuff  elem:electrical_power ;
+    elem:hasProcessPosition elem:inlet ;
+    elem:hasQuantity     qudtqk:ActivePower ;
+    elem:directProportion ws:whiteNoiseUnitSound .
+
+ws:whiteNoiseUnitSound a owl:NamedIndividual, elem:ProcessVariable ;
+    rdfs:label "White-noise unit sound output" ;
+    elem:dealsWithStuff  ws:sound ;
+    elem:hasProcessPosition elem:outlet ;
+    elem:hasQuantity     qudtqk:SoundPressureLevel .
+
+
+# ===========================================================================
+# 3.  PHYSICAL STUFF + STREAM KINDS
+# ===========================================================================
+
+elem:photons a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Visible light (photons)" .
+
+ws:IndoorLightingStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Indoor lighting stream" .
+
+ws:air a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Bulk air (flow)" .
+
+ws:waterVapor a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Water vapor" .
+
+ws:heat a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Heat (thermal energy)" .
+
+ws:sound a owl:NamedIndividual, elem:PhysicalStuff ;
+    rdfs:label "Sound (acoustic energy)" .
+
+# Non-optical comfort stream shared by the decoy actuators (their DVs never
+# touch the illuminance chain).
+ws:ZoneComfortStream a owl:NamedIndividual, elem:StreamKind ;
+    rdfs:label "Zone comfort (non-optical) stream" .
+
+
+# ===========================================================================
+# 4.  COMPONENT STEREOTYPES
+# ===========================================================================
+
+ws:LampIncandescentStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Incandescent lamp stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_incandescent_light_emission ;
+    elem:hasConnectionPoint  ws:cp_light_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_light_photon_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_light_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of incandescent lamp" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    elem:electrical_power_input .
+
+ws:cp_light_photon_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Photon (light) outlet of incandescent lamp" ;
+    elem:dealsWithStuff        elem:photons ;
+    elem:isRelatedToVariable   elem:luminiscence ;
+    elem:suitableFor           ws:IndoorLightingStream .
+
+ws:LightSensorStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Indoor light sensor stereotype" ;
+    elem:hasPhysicalMechanism ws:illuminanceSensing ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_photon_inlet ;
+    elem:hasConnectionPoint  ws:cp_lightsensor_signal_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_lightsensor_photon_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Photon inlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable elem:luminiscence ;
+    elem:suitableFor         ws:IndoorLightingStream .
+
+ws:cp_lightsensor_signal_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Measurement signal outlet of indoor light sensor" ;
+    elem:dealsWithStuff      elem:photons ;
+    elem:isRelatedToVariable ws:sensedIlluminance .
+
+# --- Decoy stereotype: Fan (COMPLETE, non-Illuminance DV) -----
+ws:FanStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Fan stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_fan_airflow_generation ;
+    elem:hasConnectionPoint  ws:cp_fan_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_fan_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_fan_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of fan" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:fanPowerInput .
+
+ws:cp_fan_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Fan airflow output outlet" ;
+    elem:dealsWithStuff        ws:air ;
+    elem:isRelatedToVariable   ws:fanAirflow ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+# --- Decoy stereotype: Humidifier (COMPLETE, non-Illuminance DV) -----
+ws:HumidifierStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Humidifier stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_humidifier_water_vapor_emission ;
+    elem:hasConnectionPoint  ws:cp_humidifier_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_humidifier_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_humidifier_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of humidifier" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:humidifierPowerInput .
+
+ws:cp_humidifier_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Humidifier humidity output outlet" ;
+    elem:dealsWithStuff        ws:waterVapor ;
+    elem:isRelatedToVariable   ws:humidifierHumidity ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+# --- Decoy stereotype: Heater (COMPLETE, non-Illuminance DV) -----
+ws:HeaterStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Heater stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_heater_heat_emission ;
+    elem:hasConnectionPoint  ws:cp_heater_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_heater_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_heater_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of heater" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:heaterPowerInput .
+
+ws:cp_heater_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Heater temperature output outlet" ;
+    elem:dealsWithStuff        ws:heat ;
+    elem:isRelatedToVariable   ws:heaterTemperature ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+# --- Decoy stereotype: Speaker (COMPLETE, non-Illuminance DV) -----
+ws:SpeakerStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Speaker stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_speaker_sound_emission ;
+    elem:hasConnectionPoint  ws:cp_speaker_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_speaker_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_speaker_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of speaker" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:speakerPowerInput .
+
+ws:cp_speaker_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Speaker sound output outlet" ;
+    elem:dealsWithStuff        ws:sound ;
+    elem:isRelatedToVariable   ws:speakerSound ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+# --- Decoy stereotype: Air purifier (COMPLETE, non-Illuminance DV) -----
+ws:AirPurifierStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Air purifier stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_airpurifier_airflow_generation ;
+    elem:hasConnectionPoint  ws:cp_airpurifier_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_airpurifier_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_airpurifier_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of air purifier" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:airPurifierPowerInput .
+
+ws:cp_airpurifier_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Air purifier airflow output outlet" ;
+    elem:dealsWithStuff        ws:air ;
+    elem:isRelatedToVariable   ws:airPurifierAirflow ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+# --- Decoy stereotype: Dehumidifier (COMPLETE, non-Illuminance DV) -----
+ws:DehumidifierStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Dehumidifier stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_dehumidifier_water_vapor_removal ;
+    elem:hasConnectionPoint  ws:cp_dehumidifier_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_dehumidifier_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_dehumidifier_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of dehumidifier" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:dehumidifierPowerInput .
+
+ws:cp_dehumidifier_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Dehumidifier humidity output outlet" ;
+    elem:dealsWithStuff        ws:waterVapor ;
+    elem:isRelatedToVariable   ws:dehumidifierHumidity ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+# --- Decoy stereotype: Cooler (COMPLETE, non-Illuminance DV) -----
+ws:CoolerStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Cooler stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_cooler_heat_removal ;
+    elem:hasConnectionPoint  ws:cp_cooler_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_cooler_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_cooler_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of cooler" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:coolerPowerInput .
+
+ws:cp_cooler_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "Cooler temperature output outlet" ;
+    elem:dealsWithStuff        ws:heat ;
+    elem:isRelatedToVariable   ws:coolerTemperature ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+# --- Decoy stereotype: White-noise unit (COMPLETE, non-Illuminance DV) -----
+ws:WhiteNoiseUnitStereotype a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "White-noise unit stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_whitenoise_sound_emission ;
+    elem:hasConnectionPoint  ws:cp_whitenoise_electrical_inlet ;
+    elem:hasConnectionPoint  ws:cp_whitenoise_output_outlet ;
+    ws:behavioralDescriptionComplete true .
+
+ws:cp_whitenoise_electrical_inlet a owl:NamedIndividual, elem:InletConnectionPoint ;
+    rdfs:label "Electrical inlet of white-noise unit" ;
+    elem:dealsWithStuff elem:electrical_power ;
+    elem:manipulates    ws:whiteNoiseUnitPowerInput .
+
+ws:cp_whitenoise_output_outlet a owl:NamedIndividual, elem:OutletConnectionPoint ;
+    rdfs:label "White-noise unit sound output outlet" ;
+    elem:dealsWithStuff        ws:sound ;
+    elem:isRelatedToVariable   ws:whiteNoiseUnitSound ;
+    elem:suitableFor           ws:ZoneComfortStream .
+
+
+# ===========================================================================
+# 4b. CONNECTION (COUPLING) STEREOTYPES
+# ===========================================================================
+
+ws:pm_primary_illumination_transfer a owl:NamedIndividual, elem:PhysicalMechanism ;
+    rdfs:label "pm_primary_illumination_transfer (dominant same-zone, rank-moving)" ;
+    elem:hasDependentVariable elem:luminiscence .
+
+ws:PrimaryOpticalCoupling a owl:NamedIndividual, elem:Stereotype ;
+    rdfs:label "Primary optical coupling (dominant, rank-moving) connection stereotype" ;
+    elem:hasPhysicalMechanism ws:pm_primary_illumination_transfer ;
+    elem:hasStreamKind        ws:IndoorLightingStream ;
+    ws:behavioralDescriptionComplete true .
+
+
+# ===========================================================================
+# 5.  BUILDING TOPOLOGY (one zone)
+# ===========================================================================
+
+lab:Workstation a owl:Class ;
+    rdfs:label "Workstation" ;
+    rdfs:subClassOf brick:Space .
+
+lab:RelevanceLadderBuilding a brick:Building ;
+    rdfs:label "Relevance Ladder Building (labrel8)" ;
+    brick:hasPart lab:Lab .
+
+lab:Lab a brick:Room ;
+    rdfs:label "Relevance ladder lab room (labrel8)" ;
+    brick:hasPart lab:Zone1 .
+
+lab:Zone1 a lab:Workstation ;
+    rdfs:label "Workstation 1" ;
+    brick:isLocatedIn lab:Lab ;
+    ws:zoneIndex 1 .
+
+
+# ===========================================================================
+# 6.  COMPONENT INSTANCES
+# ===========================================================================
+
+lab:Indoor_Illuminance_Sensor_Equipment a owl:Class ;
+    rdfs:label "Indoor illuminance sensor equipment" ;
+    rdfs:subClassOf brick:Sensor_Equipment .
+
+lab:CeilingLight_Z1 a brick:Luminaire, elem:Actuator ;
+    rdfs:label "Incandescent lamp – Workstation 1 (the ONLY light-affecting actuator)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:LampIncandescentStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:LightSensor_Z1 a lab:Indoor_Illuminance_Sensor_Equipment, elem:Sensor ;
+    rdfs:label "Indoor illuminance sensor – Workstation 1" ;
+    brick:isLocatedIn lab:Zone1 ;
+    sosa:observes     lab:IndoorIlluminance_Z1 ;
+    elem:hasBehavioralStereotype ws:LightSensorStereotype ;
+    elem:isPartOf      lab:IndoorLightingStream .
+
+lab:Fan_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Fan – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:FanStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:Humidifier_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Humidifier – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:HumidifierStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:Heater_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Heater – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:HeaterStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:Speaker_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Speaker – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:SpeakerStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:AirPurifier_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Air purifier – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:AirPurifierStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:Dehumidifier_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Dehumidifier – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:DehumidifierStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:Cooler_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "Cooler – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:CoolerStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:WhiteNoiseUnit_Z1 a brick:Equipment, elem:Actuator ;
+    rdfs:label "White-noise unit – Workstation 1 (decoy: complete stereotype, non-Illuminance DV)" ;
+    brick:isLocatedIn lab:Zone1 ;
+    elem:hasBehavioralStereotype ws:WhiteNoiseUnitStereotype ;
+    elem:isPartOf      lab:ZoneComfortStream .
+
+lab:IndoorLightingStream a elem:Stream ;
+    rdfs:label "Indoor lighting process stream" ;
+    elem:hasStreamKind ws:IndoorLightingStream .
+
+lab:ZoneComfortStream a elem:Stream ;
+    rdfs:label "Zone comfort (non-optical) process stream" ;
+    elem:hasStreamKind ws:ZoneComfortStream .
+
+lab:IndoorIlluminance_Z1 a sosa:ObservableProperty ;
+    rdfs:label "Indoor illuminance – Workstation 1" ;
+    qudt:hasQuantityKind qudtqk:Illuminance .
+
+
+# ===========================================================================
+# 7.  TOPOLOGICAL CONNECTIONS
+# ===========================================================================
+
+# The lamp is the ONLY component feeding the illuminance sensor. Decoys feed
+# nothing on the optical chain (their DVs are non-optical by construction).
+lab:CeilingLight_Z1  brick:feeds  lab:LightSensor_Z1 .
+
+
+# ---------------------------------------------------------------------------
+# 7b. REIFIED CONNECTIONS (coupling class per arc)
+# ---------------------------------------------------------------------------
+ws:conn_CLz1_to_LSz1 a owl:NamedIndividual, elem:InternalConnection ;
+    rdfs:label "Same-zone primary: CeilingLight_Z1 -> LightSensor_Z1 (+400 lux)" ;
+    ws:connSource lab:CeilingLight_Z1 ; ws:connTarget lab:LightSensor_Z1 ;
+    elem:hasStructuralStereotype ws:PrimaryOpticalCoupling .
+
+
+# ===========================================================================
+# 8.  COMPONENT ACTIONS
+# ===========================================================================
+
+ws:SetZ1Light_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetZ1Light_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:CeilingLight_Z1 elem:hasComponentAction ws:SetZ1Light_ON, ws:SetZ1Light_OFF .
+
+ws:SetFan_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetFan_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Fan_Z1 elem:hasComponentAction ws:SetFan_ON, ws:SetFan_OFF .
+
+ws:SetHumidifier_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetHumidifier_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Humidifier_Z1 elem:hasComponentAction ws:SetHumidifier_ON, ws:SetHumidifier_OFF .
+
+ws:SetHeater_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetHeater_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Heater_Z1 elem:hasComponentAction ws:SetHeater_ON, ws:SetHeater_OFF .
+
+ws:SetSpeaker_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetSpeaker_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Speaker_Z1 elem:hasComponentAction ws:SetSpeaker_ON, ws:SetSpeaker_OFF .
+
+ws:SetAirPurifier_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetAirPurifier_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:AirPurifier_Z1 elem:hasComponentAction ws:SetAirPurifier_ON, ws:SetAirPurifier_OFF .
+
+ws:SetDehumidifier_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetDehumidifier_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Dehumidifier_Z1 elem:hasComponentAction ws:SetDehumidifier_ON, ws:SetDehumidifier_OFF .
+
+ws:SetCooler_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetCooler_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:Cooler_Z1 elem:hasComponentAction ws:SetCooler_ON, ws:SetCooler_OFF .
+
+ws:SetWhiteNoiseUnit_ON  a elem:ComponentAction ; ws:actionValue "true"^^xsd:boolean .
+ws:SetWhiteNoiseUnit_OFF a elem:ComponentAction ; ws:actionValue "false"^^xsd:boolean .
+lab:WhiteNoiseUnit_Z1 elem:hasComponentAction ws:SetWhiteNoiseUnit_ON, ws:SetWhiteNoiseUnit_OFF .
+
+
+# ===========================================================================
+# 9.  STATE VECTOR SLOT REGISTRY  (length 2)
+#  [Z1Level,Z1Light] = 4*2 = 8 states. Decoys have NO slots (stateless).
+#  NO sunshine slot: sun is degenerate (always rank 0) in this lab.
+# ===========================================================================
+
+lab:Slot_ZoneLevel_Z1
+    ws:stateVecIndex   0 ; ws:stateDomainSize 4 ; ws:stateSlotRole "zone_level" ; ws:zoneIndex 1 .
+
+
+# ===========================================================================
+# 10.  WoT ACTION / STATE MAPPINGS  (the discovery gate)
+# ===========================================================================
+
+lab:CeilingLight_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetZ1Light" ;
+    ws:hasWoTStateSemanticType  "http://example.org/was#Z1Light" ;
+    ws:stateVecIndex            1 ; ws:stateDomainSize 2 ; ws:stateSlotRole "boolean_actuator" .
+
+# Decoys expose ACTIONS ONLY (no ws:hasWoTStateSemanticType, no
+# ws:stateVecIndex): their flags are visible in /status for energy accounting
+# but are NOT part of the discovered state vector.
+
+lab:Fan_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetFan" .
+
+lab:Humidifier_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetHumidifier" .
+
+lab:Heater_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetHeater" .
+
+lab:Speaker_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetSpeaker" .
+
+lab:AirPurifier_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetAirPurifier" .
+
+lab:Dehumidifier_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetDehumidifier" .
+
+lab:Cooler_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetCooler" .
+
+lab:WhiteNoiseUnit_Z1
+    ws:hasWoTActionSemanticType "http://example.org/was#SetWhiteNoiseUnit" .

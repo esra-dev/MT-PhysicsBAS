@@ -1097,3 +1097,16 @@ zero false-positive blacklist events anywhere; KG-arm dead-lamp detection
 structural-maskability abstain).** Full report:
 `docs/thesis_chapter_phase2.md` §10 and
 `phase2_v2_corrected/CAMPAIGN_MANIFEST.md`.
+
+## §10 Phase-1b addendum (2026-07-26) — knowledge-necessity package
+
+The Phase-1b confirmatory campaign (labrel relevance ladder, labrel8s
+statefulness comparison, labband exact-band control, lab4chain3 depth-3
+dependency; arms phase1b_v2_baseline / redundancy_only / kg_frozen /
+extended) is registered in `docs/phase1b_registration_2026-07-26.md`
+(BINDING, pre-data): frozen implementation `a8d3cb40`, reachability
+certificate index `8444d7d7…`, BH family m=5 (M1–M4, M6; M5 prospectively
+exploratory by the frozen power rule), N=20 (seeds 1..20), pilot block
+1001–1010 permanently disjoint (`docs/PHASE1B_POWER_PROTOCOL.md`,
+`docs/phase1b_pilot_dispatch_record_2026-07-25.md`). Archives:
+`phase1b_corrected/`.

@@ -1,0 +1,29 @@
+{
+  "head_sha": "c8e14a4bca3ac0befbdb134579dec420fd3c60e2",
+  "profiles": [
+    "labrel0",
+    "labrel4",
+    "labrel8",
+    "labrel16",
+    "labrel8s",
+    "labband",
+    "lab4chain3"
+  ],
+  "publish_results": true,
+  "ref": "refs/heads/phase1b-labs-2026-07",
+  "run_id": 30199260042,
+  "run_mode": "phase1b_v2_kg_frozen",
+  "seeds": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "workflow": ".github/workflows/phase1.yml"
+}

@@ -38,7 +38,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase4","phase4_v2")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase1b_v2_baseline","phase1b_v2_redundancy_only","phase1b_v2_kg_frozen","phase1b_v2_extended","phase4","phase4_v2")]
     [string]$RunMode = "dev",
 
     # Optional comma-separated subset of profiles to train and benchmark.
@@ -214,6 +214,12 @@ if ($RunConfig -and $RunConfig.learning) {
     # Only lab5's KG declares ws:energyCost, so this knob has NO effect on
     # labs 1-4 even when set > 0 (their actuators have energyCost 0).
     if ($ln.stereo_energy_prior_weight  -ne $null) { $HttpArgs += "-Pstereo.energyPriorWeight=$($ln.stereo_energy_prior_weight)" }
+    # Phase 1b (extended arm ONLY; defaults 0.0 = OFF): three-valued-relevance
+    # irrelevance prior and generic target-direction ("band mirror") channels.
+    # The frozen KG arm (phase1b_v2_kg_frozen) must NEVER set these.
+    if ($ln.stereo_irrelevant_dv_prior   -ne $null) { $HttpArgs += "-Pstereo.irrelevantDvPrior=$($ln.stereo_irrelevant_dv_prior)" }
+    if ($ln.stereo_band_mirror_init      -ne $null) { $HttpArgs += "-Pstereo.bandMirrorInit=$($ln.stereo_band_mirror_init)" }
+    if ($ln.stereo_band_mirror_prior     -ne $null) { $HttpArgs += "-Pstereo.bandMirrorPrior=$($ln.stereo_band_mirror_prior)" }
     # Research extensions: PBRS reward shaping + adaptive stereotype trust.
     if ($ln.reward_shaping              -ne $null) { $HttpArgs += "-Preward.shaping=$($ln.reward_shaping)" }
     if ($ln.adaptive_trust              -ne $null) { $HttpArgs += "-Pstereo.adaptiveTrust=$($ln.adaptive_trust)" }
@@ -237,7 +243,9 @@ $TrainProfiles = @(
 $KnownProfiles = @(
     "lab1", "lab2", "lab2noise", "lab3", "lab4", "lab4dual", "lab4chain", "lab5",
     "labmon", "labmon2",
-    "labmon_infoonly", "labmon_nostereo", "labmon2_infoonly", "labmon2_nostereo"
+    "labmon_infoonly", "labmon_nostereo", "labmon2_infoonly", "labmon2_nostereo",
+    "labrel0", "labrel4", "labrel8", "labrel16", "labrel8s",
+    "labband", "lab4chain3"
 )
 
 # Apply -OnlyProfiles filter (parallel orchestrator passes one profile per clone).
@@ -309,6 +317,13 @@ $ProfileQtableSuffix = @{
     labmon_nostereo = "_labmon_nostereo"
     labmon2_infoonly = "_labmon2_infoonly"
     labmon2_nostereo = "_labmon2_nostereo"
+    labrel0    = "_labrel0"
+    labrel4    = "_labrel4"
+    labrel8    = "_labrel8"
+    labrel16   = "_labrel16"
+    labrel8s   = "_labrel8s"
+    labband    = "_labband"
+    lab4chain3 = "_lab4chain3"
 }
 
 # Simulator map: each entry is a profile → (port, flow file) binding
@@ -331,6 +346,15 @@ $Simulators = @(
     [pscustomobject]@{ Profile="labmon_nostereo"; Port=1899; Flow="simulator_flow_labmon.json" }
     [pscustomobject]@{ Profile="labmon2_infoonly"; Port=1900; Flow="simulator_flow_labmon2.json" }
     [pscustomobject]@{ Profile="labmon2_nostereo"; Port=1900; Flow="simulator_flow_labmon2.json" }
+    # Phase 1B (branch phase1b-labs-2026-07): relevance ladder, statefulness
+    # comparison, exact-band control, depth-3 chain.
+    [pscustomobject]@{ Profile="labrel0"; Port=1904; Flow="simulator_flow_labrel0.json" }
+    [pscustomobject]@{ Profile="labrel4"; Port=1905; Flow="simulator_flow_labrel4.json" }
+    [pscustomobject]@{ Profile="labrel8"; Port=1906; Flow="simulator_flow_labrel8.json" }
+    [pscustomobject]@{ Profile="labrel16"; Port=1907; Flow="simulator_flow_labrel16.json" }
+    [pscustomobject]@{ Profile="labrel8s"; Port=1908; Flow="simulator_flow_labrel8s.json" }
+    [pscustomobject]@{ Profile="labband"; Port=1912; Flow="simulator_flow_labband.json" }
+    [pscustomobject]@{ Profile="lab4chain3"; Port=1913; Flow="simulator_flow_lab4chain3.json" }
 )
 
 # ASL file paths (relative; resolved via Set-Location above)

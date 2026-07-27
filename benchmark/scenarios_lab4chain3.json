@@ -1,0 +1,35 @@
+[
+  {
+    "comment": "lab4chain3 DEPTH-3 POWER DEPENDENCY full benchmark (8 scenarios = ALL combinations of Z1Light x PlugZ1 x Breaker). ONE workstation, target Z1=bright(3) (level>=300). EXACT physics: lamp_effective = (Z1Light AND PlugZ1 AND Breaker); Z1Level = 25 + (lamp_effective ? 400 : 0). There is NO sunshine effect (Sunshine pinned 0) and NO other luminaire — the depth-3 chain is the ONLY route to rank 3. The chain is documented as two ws:powerGates arcs (building_12_chain3.ttl §5b): Breaker_Z1 -> SmartPlug_Z1 -> CeilingLight_Z1. DECOYS: AuxA (partial stereotype, no DV, no completeness marker) and AuxB (no stereotype at all) are observable and actionable but PHYSICALLY INERT — zero lux effect, 1 energy unit/tick each while ON, so the optimal policy never touches them (both start false in every scenario). INTENDED OPTIMAL ROUTE per scenario: turn on EXACTLY the missing chain elements, nothing else — scenario 1 (F,F,F): all three; 2 (T,F,F): plug+breaker; 3 (F,T,F): lamp+breaker; 4 (F,F,T): lamp+plug; 5 (T,T,F): breaker only; 6 (T,F,T): plug only; 7 (F,T,T): lamp only; 8 (T,T,T): already at goal -> HOLD (do nothing). DEEP TRAPS: scenarios 5, 6, 7 have 2 of 3 chain elements ON yet the lamp is DARK (level 25) — the subtlest are 5 (lamp+plug ON, breaker OFF: the single fix is TWO levels above the lamp) and 6 (lamp+breaker ON, plug OFF: the missing link is the MIDDLE of the chain).",
+    "id": 1, "Z1Level": 25,  "Z1Light": false, "PlugZ1": false, "Breaker": false, "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(F,F,F) chain fully open -> enable breaker + plug + lamp (all three)"
+  },
+  {
+    "id": 2, "Z1Level": 25,  "Z1Light": true,  "PlugZ1": false, "Breaker": false, "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(T,F,F) lamp switch ON but plug AND breaker OFF (dark) -> enable plug + breaker"
+  },
+  {
+    "id": 3, "Z1Level": 25,  "Z1Light": false, "PlugZ1": true,  "Breaker": false, "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(F,T,F) plug ON but lamp AND breaker OFF (dark) -> enable lamp + breaker"
+  },
+  {
+    "id": 4, "Z1Level": 25,  "Z1Light": false, "PlugZ1": false, "Breaker": true,  "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(F,F,T) breaker ON but lamp AND plug OFF (dark) -> enable lamp + plug"
+  },
+  {
+    "id": 5, "Z1Level": 25,  "Z1Light": true,  "PlugZ1": true,  "Breaker": false, "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(T,T,F) DEEP TRAP: lamp switch AND plug ON but breaker OFF (dark) -> flip the BREAKER (two levels above the lamp)"
+  },
+  {
+    "id": 6, "Z1Level": 25,  "Z1Light": true,  "PlugZ1": false, "Breaker": true,  "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(T,F,T) MID TRAP: lamp switch AND breaker ON but plug OFF (dark) -> flip the PLUG (the middle chain link)"
+  },
+  {
+    "id": 7, "Z1Level": 25,  "Z1Light": false, "PlugZ1": true,  "Breaker": true,  "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(F,T,T) SHALLOW TRAP: plug AND breaker ON but lamp switch OFF (dark) -> flip the LAMP switch"
+  },
+  {
+    "id": 8, "Z1Level": 425, "Z1Light": true,  "PlugZ1": true,  "Breaker": true,  "AuxA": false, "AuxB": false, "Sunshine": 0,
+    "description": "(T,T,T) full chain live, at target (425) -> hold (do nothing)"
+  }
+]

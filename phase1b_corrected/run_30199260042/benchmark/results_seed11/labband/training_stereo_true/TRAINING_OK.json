@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "profile": "labband",
+  "stereotype": "true",
+  "run_seed": 11,
+  "run_mode": "phase1b_v2_kg_frozen",
+  "protocol_version": "phase1-v2",
+  "ordered_scenario_ids": [
+    1,
+    2,
+    5,
+    6,
+    8,
+    9,
+    10,
+    12,
+    13,
+    15
+  ],
+  "scenario_schedule_sha256": "4c4715a91acde9b3224f5210bc2d1233d8f5b5f8005156a44bfbc1478623dca3",
+  "scenario_file": "benchmark/train_scenarios_labband.json",
+  "fixed_horizon_episodes": 3000,
+  "paired_rng_version": "common-seed-v1",
+  "metric_schema": "phase1-benchmark-v2",
+  "policy_energy_weights": "stronglamp:2,weaklamp:1,awning:0,blind:0,plug:0,breaker:0,masterswitch:0,aux:1,fan:1,humidifier:1,heater:1,heatpump:1,speaker:1,subwoofer:1,whitenoiseunit:1,airpurifier:1,cooler:1,ventilator:1,ionizer:1,co2scrubber:1,radiator:1,aromadiffuser:1,light:1",
+  "scenario_fallback_count": 0,
+  "timestamp": "2026-07-26T18:48:47.2523633+00:00",
+  "artifacts": [
+    "qtable_final_stereotypes_true_labband.csv",
+    "qtable_initial_stereotypes_true_labband.csv",
+    "metrics_stereotypes_true_labband.csv",
+    "iv_stats_stereotypes_true_labband.json",
+    "coverage_stereotypes_true_labband.csv",
+    "first_goal_stereotypes_true_labband.csv",
+    "learned_stereotypes_true_labband.ttl"
+  ]
+}

@@ -1,0 +1,23 @@
+term,layer,layer_name,claim_wording,status,notes
+elem:hasPhysicalMechanism,1,paper_aligned_stereotype,qualitative stereotype knowledge,existing,stereotype -> mechanism link
+elem:hasManipulatedVariable,1,paper_aligned_stereotype,qualitative stereotype knowledge,existing,MV of a mechanism
+elem:hasDependentVariable,1,paper_aligned_stereotype,qualitative stereotype knowledge,existing,DV of a mechanism
+elem:hasIndependentVariable,1,paper_aligned_stereotype,qualitative stereotype knowledge,existing,IV of a mechanism; multi-valued from Phase 1b (IV gate collection)
+elem:hasStereotype,1,paper_aligned_stereotype,qualitative stereotype knowledge,existing,component instance -> stereotype
+elem:directProportion,1,paper_aligned_stereotype,qualitative stereotype knowledge,phase1b_new,paper-aligned positive qualitative direction MV->DV
+elem:inverseProportion,1,paper_aligned_stereotype,qualitative stereotype knowledge,phase1b_new,paper-aligned negative qualitative direction MV->DV
+elem:increases,4,operational_extension,operational KG extension,legacy,legacy shortcut; mapped to positive direction during discovery; not used in new TTLs
+brick:isLocatedIn,2,system_topology,topology-derived knowledge,existing,zone membership
+ws:powerGates,2,system_topology,topology-derived knowledge,existing,power-gate arcs (chain labs)
+ws:energyCost,4,operational_extension,operational KG extension,existing,instantaneous energy metadata consumed only by explicitly separate non-fading prior; absent from all Phase-1b TTLs
+ws:ivMinRank,4,operational_extension,operational KG extension,reserved_candidate,minimum discretised IV rank producing an observable simulator effect; NOT goal-sufficiency; labiv* candidate only
+ws:behavioralDescriptionComplete,4,operational_extension,operational KG extension,phase1b_new,default-absent completeness marker; required for EXPLICIT_OTHER_DV classification
+ws:gateWoTStateSemanticType,4,operational_extension,operational KG extension,phase1b_new,binds an IV individual to the deployment state slot that gates its mechanism (multi-IV gate collection)
+ws:gateMinValue,4,operational_extension,operational KG extension,phase1b_new,minimum slot value at which the bound IV gate is satisfied (default 1)
+ws:effectMagnitudeClass,4,operational_extension,operational KG extension,reserved_candidate,magnitude-oracle boundary term; labmag candidate only; not in Phase 1b
+relevance:EXPLICIT_RELEVANT,derived,derived_classification,qualitative stereotype knowledge,phase1b_new,derived: declared DV matches controlled quantity; completeness not required
+relevance:EXPLICIT_OTHER_DV,derived,derived_classification,qualitative stereotype knowledge,phase1b_new,derived: complete declared description with only non-target DVs; requires ws:behavioralDescriptionComplete true
+relevance:UNKNOWN,derived,derived_classification,no knowledge claim,phase1b_new,derived: missing/partial/undeclared-complete description; zero prior; zero fault adjudication
+ActionInfo.kgSilent,derived,diagnostic,no knowledge claim,existing,diagnostic only: enrichment query made no behavioral claim; never evidence of irrelevance
+learned:empirical_effectiveness,5,learned_enrichment,learned knowledge,existing,recordActionOutcome statistics
+learned:adaptive_trust,5,learned_enrichment,learned knowledge,reserved_candidate,labwrong* candidate only

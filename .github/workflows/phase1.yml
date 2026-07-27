@@ -28,7 +28,7 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"
       run_mode:
-        description: "Corrected modes: phase1_v2_kg_only | phase1_v2_redundancy_only | phase1_v2_baseline | phase1_v2_pbrs_only. Legacy modes remain available only for historical reproduction."
+        description: "Corrected modes: phase1_v2_kg_only | phase1_v2_redundancy_only | phase1_v2_baseline | phase1_v2_pbrs_only. Phase-1b modes (with phase1b profiles): phase1b_v2_baseline | phase1b_v2_redundancy_only | phase1b_v2_kg_frozen | phase1b_v2_extended. Legacy modes remain available only for historical reproduction."
         required: false
         default: "phase1_v2_kg_only"
       publish_results:
@@ -36,6 +36,10 @@ on:
         type: boolean
         required: false
         default: true
+      phase1b_stage:
+        description: "Phase-1b only: 'pilot' requires exactly 1001..1010; 'confirmatory' requires exactly amendment-A1 half 1..10 or 11..20. Ignored for non-phase1b modes."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -61,6 +65,21 @@ jobs:
       seeds_json:    ${{ steps.seeds.outputs.json }}
     steps:
       - uses: actions/checkout@v4
+      - name: Phase-1b exact registered-dispatch gate
+        shell: bash
+        run: |
+          MODE="${{ env.RUN_MODE }}"
+          case "$MODE" in
+            phase1b_v2_*)
+              STAGE="${{ github.event.inputs.phase1b_stage }}"
+              python analysis/validate_phase1b_dispatch.py \
+                --mode "$MODE" \
+                --stage "$STAGE" \
+                --profiles "${{ env.PROFILES }}" \
+                --seeds "${{ env.SEEDS }}"
+              ;;
+            *) echo "non-phase1b mode: gate skipped" ;;
+          esac
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:

@@ -1,5 +1,38 @@
+# Canonical source/document line endings. Archive exceptions below take
+# precedence and remain byte-preserved.
+.gitattributes text eol=lf
+.gitignore text eol=lf
+*.asl text eol=lf
+*.java text eol=lf
+*.md text eol=lf
+*.ps1 text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+config/*.json text eol=lf
+simulator/*.json text eol=lf
+docs/audit/*.csv text eol=lf
+docs/audit/*.json text eol=lf
+
 # Preserve archived experiment artifacts byte-for-byte on every platform.
 # Their committed SHA-256 inventories describe the downloaded bytes, so Git
 # must not perform line-ending conversion inside these evidence directories.
-phase1_v2_corrected/** -text -whitespace
-phase1_postinv/historical_raw/** -text -whitespace
+phase1_v2_corrected/** -text -whitespace !eol
+phase1_postinv/historical_raw/** -text -whitespace !eol
+
+# Byte-frozen derived artifacts: the dashboard JSONs are byte-compared against
+# their builder's output (analysis/tests/test_dashboard_phase1_builder.py),
+# and the builder writes LF. Pin eol so every platform/autocrlf setting
+# materialises exactly the builder's bytes.
+dashboard/public/data/*.json text eol=lf
+
+# Golden action registries: written by Java (platform newline) but their
+# committed form is canonical LF; RegistryGoldenCheck reads by line, so
+# normalisation is behaviour-neutral.
+config/golden_registry/*.csv text eol=lf
+
+# Phase-1b permanent archives: byte-preserved like phase1_v2_corrected.
+phase1b_corrected/** -text -whitespace !eol
+
+# Phase-1b pilot inputs/markers are also frozen evidence, not source files.
+phase1b_pilot/** -text -whitespace !eol

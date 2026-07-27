@@ -1,0 +1,71 @@
+{
+  "certificate_sha256": "122467ff805348e3e57b47887c0137fa4f52b87d11a3731047ccdba563a831bc",
+  "meta": {
+    "horizon": 20,
+    "physics": "phase1b_models.py frozen formulas",
+    "profile": "lab4chain3",
+    "scenario_id": 7
+  },
+  "result": {
+    "ambiguity_reason": null,
+    "ambiguous": false,
+    "canonical_representatives": [
+      [
+        "SetZ1Light|ON"
+      ]
+    ],
+    "goal_states_reached": [
+      "(3, 1, 1, 1, 0, 0)"
+    ],
+    "intended_mechanism": [
+      "SetZ1Light|ON"
+    ],
+    "intended_shortest_length": 1,
+    "mechanism_in_every_shortest_route": true,
+    "reachable_state_count": 32,
+    "reachable_states": [
+      "(0, 0, 0, 0, 0, 0)",
+      "(0, 0, 0, 0, 0, 1)",
+      "(0, 0, 0, 0, 1, 0)",
+      "(0, 0, 0, 0, 1, 1)",
+      "(0, 0, 0, 1, 0, 0)",
+      "(0, 0, 0, 1, 0, 1)",
+      "(0, 0, 0, 1, 1, 0)",
+      "(0, 0, 0, 1, 1, 1)",
+      "(0, 0, 1, 0, 0, 0)",
+      "(0, 0, 1, 0, 0, 1)",
+      "(0, 0, 1, 0, 1, 0)",
+      "(0, 0, 1, 0, 1, 1)",
+      "(0, 0, 1, 1, 0, 0)",
+      "(0, 0, 1, 1, 0, 1)",
+      "(0, 0, 1, 1, 1, 0)",
+      "(0, 0, 1, 1, 1, 1)",
+      "(0, 1, 0, 0, 0, 0)",
+      "(0, 1, 0, 0, 0, 1)",
+      "(0, 1, 0, 0, 1, 0)",
+      "(0, 1, 0, 0, 1, 1)",
+      "(0, 1, 0, 1, 0, 0)",
+      "(0, 1, 0, 1, 0, 1)",
+      "(0, 1, 0, 1, 1, 0)",
+      "(0, 1, 0, 1, 1, 1)",
+      "(0, 1, 1, 0, 0, 0)",
+      "(0, 1, 1, 0, 0, 1)",
+      "(0, 1, 1, 0, 1, 0)",
+      "(0, 1, 1, 0, 1, 1)",
+      "(3, 1, 1, 1, 0, 0)",
+      "(3, 1, 1, 1, 0, 1)",
+      "(3, 1, 1, 1, 1, 0)",
+      "(3, 1, 1, 1, 1, 1)"
+    ],
+    "reachable_terminal_states": [],
+    "shortcuts": [],
+    "shortest_path_length": 1,
+    "shortest_sequence_count": 1,
+    "shortest_sequences": [
+      [
+        "SetZ1Light|ON"
+      ]
+    ],
+    "solvable": true
+  }
+}

@@ -173,6 +173,70 @@
       "exec_delay_ms_bench": 100,
       "learning_overrides": {"stereo_prior_scale": 0.0, "stereo_init_bonus": 0.0, "reward_shaping": "pbrs", "adaptive_trust": false}
     },
+    "phase1b_v2_baseline": {
+      "note": "PHASE 1B arm 1 (registered 2026-07): tabula-rasa negative control, learning flags copied from phase1_v2_baseline. Protocol v2, fixed 3000-episode horizon, ordered scenario IDs, paired RNG common-seed-v1.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "policy_energy_weights": "stronglamp:2,weaklamp:1,awning:0,blind:0,plug:0,breaker:0,masterswitch:0,aux:1,fan:1,humidifier:1,heater:1,heatpump:1,speaker:1,subwoofer:1,whitenoiseunit:1,airpurifier:1,cooler:1,ventilator:1,ionizer:1,co2scrubber:1,radiator:1,aromadiffuser:1,light:1",
+      "learning_overrides": {"stereo_prior_scale": 0.0, "stereo_init_bonus": 0.0, "reward_shaping": "none", "adaptive_trust": false}
+    },
+    "phase1b_v2_redundancy_only": {
+      "note": "PHASE 1B arm 2: ontology-free registry-only redundancy control, learning flags copied from phase1_v2_redundancy_only.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "policy_energy_weights": "stronglamp:2,weaklamp:1,awning:0,blind:0,plug:0,breaker:0,masterswitch:0,aux:1,fan:1,humidifier:1,heater:1,heatpump:1,speaker:1,subwoofer:1,whitenoiseunit:1,airpurifier:1,cooler:1,ventilator:1,ionizer:1,co2scrubber:1,radiator:1,aromadiffuser:1,light:1",
+      "learning_overrides": {"reward_shaping": "none", "adaptive_trust": false, "stereo_redundancy_only": true}
+    },
+    "phase1b_v2_kg_frozen": {
+      "note": "PHASE 1B arm 3: FROZEN stereotype consumer — Q-initialisation and prior consumer byte-identical to phase1_v2_kg_only (same learning_overrides; the Phase-1b relevance/direction knobs stay at their 0.0 defaults and MUST NEVER be set here).",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "policy_energy_weights": "stronglamp:2,weaklamp:1,awning:0,blind:0,plug:0,breaker:0,masterswitch:0,aux:1,fan:1,humidifier:1,heater:1,heatpump:1,speaker:1,subwoofer:1,whitenoiseunit:1,airpurifier:1,cooler:1,ventilator:1,ionizer:1,co2scrubber:1,radiator:1,aromadiffuser:1,light:1",
+      "learning_overrides": {"reward_shaping": "none", "adaptive_trust": false}
+    },
+    "phase1b_v2_extended": {
+      "note": "PHASE 1B arm 4: EXTENDED consumer — identical to phase1b_v2_kg_frozen plus the explicitly registered relevance (stereo_irrelevant_dv_prior) and target-direction band-mirror (stereo_band_mirror_init/prior) channels. Values frozen pre-pilot; results from this arm must never be attributed to the frozen Phase-1 agent.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "policy_energy_weights": "stronglamp:2,weaklamp:1,awning:0,blind:0,plug:0,breaker:0,masterswitch:0,aux:1,fan:1,humidifier:1,heater:1,heatpump:1,speaker:1,subwoofer:1,whitenoiseunit:1,airpurifier:1,cooler:1,ventilator:1,ionizer:1,co2scrubber:1,radiator:1,aromadiffuser:1,light:1",
+      "learning_overrides": {"reward_shaping": "none", "adaptive_trust": false, "stereo_irrelevant_dv_prior": 2.0, "stereo_band_mirror_init": 5.0, "stereo_band_mirror_prior": 2.0}
+    },
     "phase1_kg_only_ib5": {
       "note": "Factorial arm C variant — identical to phase1_kg_only (KG prior ON, PBRS OFF, adaptive-trust OFF) but with the optimistic Q-init bonus lowered 15 -> 5. Tests the diagnosed lab3 hypothesis: that the +15 init bonus over-explores the ~2048-state lab3 space and delays first-goal. Compare its lab3 ql_true-vs-ql_false delta against phase1_kg_only (bonus=15); the lab2 win should be preserved. Same timing as phase1.",
       "tick": "0.05",
@@ -345,7 +409,14 @@
     "labmon_infoonly": 1899,
     "labmon_nostereo": 1899,
     "labmon2_infoonly": 1900,
-    "labmon2_nostereo": 1900
+    "labmon2_nostereo": 1900,
+    "labrel0": 1904,
+    "labrel4": 1905,
+    "labrel8": 1906,
+    "labrel16": 1907,
+    "labrel8s": 1908,
+    "labband": 1912,
+    "lab4chain3": 1913
   },
   "simulator_flow_map": {
     "custom2": "simulator_flow_custom2.json",
@@ -372,7 +443,14 @@
     "labmon_infoonly": "simulator_flow_labmon.json",
     "labmon_nostereo": "simulator_flow_labmon.json",
     "labmon2_infoonly": "simulator_flow_labmon2.json",
-    "labmon2_nostereo": "simulator_flow_labmon2.json"
+    "labmon2_nostereo": "simulator_flow_labmon2.json",
+    "labrel0": "simulator_flow_labrel0.json",
+    "labrel4": "simulator_flow_labrel4.json",
+    "labrel8": "simulator_flow_labrel8.json",
+    "labrel16": "simulator_flow_labrel16.json",
+    "labrel8s": "simulator_flow_labrel8s.json",
+    "labband": "simulator_flow_labband.json",
+    "lab4chain3": "simulator_flow_lab4chain3.json"
   },
   "qtable_suffix_map": {
     "custom2": "_custom2",
@@ -399,7 +477,14 @@
     "labmon_infoonly": "_labmon_infoonly",
     "labmon_nostereo": "_labmon_nostereo",
     "labmon2_infoonly": "_labmon2_infoonly",
-    "labmon2_nostereo": "_labmon2_nostereo"
+    "labmon2_nostereo": "_labmon2_nostereo",
+    "labrel0": "_labrel0",
+    "labrel4": "_labrel4",
+    "labrel8": "_labrel8",
+    "labrel16": "_labrel16",
+    "labrel8s": "_labrel8s",
+    "labband": "_labband",
+    "lab4chain3": "_lab4chain3"
   },
   "expected_state_vec_dim": {
     "custom2": 13,
@@ -426,7 +511,14 @@
     "labmon_infoonly": 3,
     "labmon_nostereo": 3,
     "labmon2_infoonly": 9,
-    "labmon2_nostereo": 9
+    "labmon2_nostereo": 9,
+    "labrel0": 2,
+    "labrel4": 2,
+    "labrel8": 2,
+    "labrel16": 2,
+    "labrel8s": 10,
+    "labband": 6,
+    "lab4chain3": 6
   },
   "http_client": {
     "connect_timeout_ms": 2000,
@@ -674,6 +766,12 @@
       { "id": "g5", "zone": 2, "target_rank": 3, "deadline_sec": 15.0 },
       { "id": "g6", "zone": 2, "target_rank": 3, "deadline_sec": 300.0 }
     ]
+  },
+  "phase1b": {
+    "note": "PHASE 1B knowledge-necessity package (branch phase1b-labs-2026-07). Profiles: the labrel stateless relevance ladder (labrel0/4/8/16) + the fixed-K statefulness comparison (labrel8s), labband exact-band control with honest decreasing physics, and the lab4chain3 depth-3 dependency lab. Arms: the four phase1b_v2_* run modes (baseline / redundancy_only / kg_frozen / extended). Dispatch via .github/workflows/phase1.yml with explicit profiles/run_mode inputs; benchmark modes as listed.",
+    "phase1b_profiles": ["labrel0", "labrel4", "labrel8", "labrel16", "labrel8s", "labband", "lab4chain3"],
+    "phase1b_modes": ["phase1b_v2_baseline", "phase1b_v2_redundancy_only", "phase1b_v2_kg_frozen", "phase1b_v2_extended"],
+    "bench_modes": ["rule_based", "ql_false", "ql_true"]
   },
   "phase4": {
     "description": "Phase 4 hidden-dependency + energy labs (run via .github/workflows/phase4.yml, reusing run_full_project.ps1 with -OnlyProfiles <lab> and -RunMode phase4). Four STRICTLY-CLEAN labs extend the Phase-1 clean ladder with KG-encoded knowledge a tabula-rasa learner cannot see. DEPENDENCY LADDER (cells vary how many components carry a dependency and how deep the chain is): lab4 (ONE smart-plug AND-gate: the Z1 ceiling lamp emits light only when both its switch AND SmartPlug_Z1 are ON; the KG declares ws:powerGates and the reasoner gates the lamp's ON action on the plug state by reusing the IV-gate machinery), lab4dual (TWO parallel plug dependencies: each zone's lamp behind its own plug — two ws:powerGates arcs), lab4chain (DEPTH-2 serial chain: circuit breaker gates the plug, the plug gates the Z1 lamp — two chained ws:powerGates arcs, so the lamp needs breaker AND plug AND switch all ON). ENERGY: lab5 (two directly-actionable lamps per zone with identical +400 lux output but different ws:energyCost 1 vs 4; energy is NOT in the Q-reward, so only the KG-primed agent — via the non-fading energy prior stereo_energy_prior_weight — prefers the efficient lamp / zero-energy blinds). The headline is the within-lab ql_true (KG-primed) vs ql_false (tabula-rasa) delta on first-goal episode, learning AUC, redundant-action count, goal rate, energy, and (lab5) energy-budget compliance. Statistical treatment mirrors phase1/phase3: paired across seeds, Wilcoxon signed-rank + bootstrap 95% CIs + BH-FDR + Cliff's delta. lab5 compliance is scored at benchmark time from the deterministic steady-state power of the final actuator configuration recorded in bench_step_log_<mode>.csv (power = Z1Eff*1 + Z1Ineff*4 + Z2Eff*1 + Z2Ineff*4 + Spotlight*2); compliant = GoalReached AND power <= energyBudget (per-scenario, default 2). The dependency labs carry no energyBudget, so phase4_energy.py collapses their compliance to goal_rate and the learning-speed/redundancy story comes from sweep_report.py. BenchmarkLogger CSV schema is UNCHANGED so Phases 1-3 outputs are untouched.",
