@@ -1,0 +1,554 @@
+{
+  "schema_version": "phase2-qgap-retrospective-v1",
+  "frozen_on": "2026-07-27",
+  "status": "DESCRIPTIVE/SIGHTED — NOT A PREREGISTRATION",
+  "analysis_name": "Phase 2b-A start-state Q-gap proxy audit",
+  "source_commit": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+  "source_blob_oids": {
+    "config/run_config.json": "85dc303b796b97bde89d074aa5d3e708d5a81690",
+    "config/golden_registry/registry_lab2.csv": "f0b60d28eef6aaa50cc5c4fdd5bd23b40fc96cc4",
+    "config/golden_registry/registry_lab3.csv": "5cb6113c363ef41796dc6aba5af21c27c3dd2d06",
+    "config/golden_registry/registry_labmon.csv": "97f7e7b8f6bef7c14ce24f9d9fa36d798289b0a6",
+    "config/golden_registry/registry_labmon2.csv": "19bfd604639555bd269a10a4d7e0ee3e543bde9a",
+    "benchmark/train_scenarios_lab2.json": "4f5629bc151c2d25d607f5f29ca4d647373f4cd2",
+    "benchmark/train_scenarios_lab3.json": "9fd853142b9357f6789b7540c68b21c77d5bfc48",
+    "benchmark/train_scenarios_labmon.json": "a03ae8e681f74d913ffac416b21931879c373321",
+    "benchmark/train_scenarios_labmon2.json": "3d79fed04ca851072609c06447cb36100241c4d8",
+    "simulator/simulator_flow_lab2_f1bdead.json": "1fdc7b10639cf91524dfece3c44132a6050f079e",
+    "simulator/simulator_flow_lab2_f1binv.json": "f6c38cd9523071d8b0ee56095bbe92c9394b8340",
+    "simulator/simulator_flow_lab3_f1dead.json": "c8d98db77b4a01e2588153c8bf63c33db8511494",
+    "simulator/simulator_flow_lab3_f1dead_z2.json": "8ad6bfa89c9fd79b4919a3ff153813c10ad12089",
+    "simulator/simulator_flow_lab3_f1bdead.json": "a3cd90e8cfb7e8a94dc60c96941e8c514d9ff354",
+    "simulator/simulator_flow_lab3_f1binv.json": "eec531b01249ba2f5ff676629f0444d8dd022be1",
+    "simulator/simulator_flow_lab3_f2dead_lowsun.json": "3efa9e8712c959d75c03a6d3e6a59bc1c713cb9a",
+    "simulator/simulator_flow_labmon_f1dead.json": "65880593001f757c2efdcd26131ed50443ff9b12",
+    "simulator/simulator_flow_labmon2_f2dead_lowsun.json": "1fa2292ace27e6fd477ed69cca4509da1d1d4c43",
+    "src/env/tools/QLearner.java": "45362c30485973287cdd0c5bec1f9cea19729f3c",
+    "src/env/tools/StereotypeReasoner.java": "2579c7f7076414c1303ed131f68281afca2d9dee",
+    "src/env/tools/LabEnvironment.java": "d2d85ea2506b5fa33c4349287d3973442ec950ef",
+    "run_phase2_adapt.ps1": "f4aba24b9851ba2c222c3bcdd1f00e0d10007e98"
+  },
+  "analysis_commit_rule": "Real-data output is forbidden until this specification, the protocol document, synthetic implementation, and tests are committed.",
+  "known_outcome_disclosure": {
+    "registered_tier1": {
+      "supported": 2,
+      "adverse": 3,
+      "null": 3
+    },
+    "adverse_interpretation": "All three adverse cells are driven by detector censoring; they are not observations of slow post-detection recovery."
+  },
+  "source_artifacts": [
+    {
+      "dispatch": "A1",
+      "run_id": 30001857104,
+      "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "artifact_id": 8572943960,
+      "artifact_name": "phase2-consolidated",
+      "size_bytes": 31252157,
+      "sha256": "0391dcdc7f35a1e2f7589797a789ec0011bedd5e970327ddcbff7122658b4639",
+      "created_at_utc": "2026-07-23T17:37:16Z",
+      "expires_at_utc": "2026-10-21T11:06:14Z"
+    },
+    {
+      "dispatch": "A2",
+      "run_id": 30001867521,
+      "seeds": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+      "artifact_id": 8573028167,
+      "artifact_name": "phase2-consolidated",
+      "size_bytes": 31392219,
+      "sha256": "26ff1cc4e6ff52368871d58d3ef54b69602539ad724c5910a8a8ffdd731804f8",
+      "created_at_utc": "2026-07-23T17:40:13Z",
+      "expires_at_utc": "2026-10-21T11:06:23Z"
+    },
+    {
+      "dispatch": "B1",
+      "run_id": 30001878310,
+      "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "artifact_id": 8581672322,
+      "artifact_name": "phase2-consolidated",
+      "size_bytes": 13817610,
+      "sha256": "f53e13f0bbb16a7afea38360b004444068bba92e8a29885eb53203b98df1df31",
+      "created_at_utc": "2026-07-23T23:20:45Z",
+      "expires_at_utc": "2026-10-21T11:06:33Z"
+    },
+    {
+      "dispatch": "B2",
+      "run_id": 30001888910,
+      "seeds": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+      "artifact_id": 8580725637,
+      "artifact_name": "phase2-consolidated",
+      "size_bytes": 13793697,
+      "sha256": "22ef5fbaf2aa9ed8a473641c6237eeaeb22db87918b20953519d3f9cfe291235",
+      "created_at_utc": "2026-07-23T22:33:12Z",
+      "expires_at_utc": "2026-10-21T11:06:43Z"
+    }
+  ],
+  "artifact_rescue": {
+    "internal_deadline": "2026-10-20",
+    "deadline_is_not_github_expiry": true,
+    "local_zip_name_template": "phase2-consolidated_run_{run_id}_artifact_{artifact_id}.zip",
+    "extraction_template": "phase2b_qgap/source/run_{run_id}/phase2-consolidated",
+    "zip_sha256_must_match_before_extraction": true
+  },
+  "forbidden_input_markers": [
+    "phase2_postinv",
+    "postinv",
+    "pre_inversion",
+    "withdrawn"
+  ],
+  "join_key": [
+    "run_id",
+    "seed",
+    "arm",
+    "faulty_profile",
+    "parent_profile",
+    "parent_qtable_sha256",
+    "scenario_schedule_sha256"
+  ],
+  "arms": {
+    "KG": {
+      "manifest_mode": "ql_true",
+      "filename_boolean": "true"
+    },
+    "TR": {
+      "manifest_mode": "ql_false",
+      "filename_boolean": "false"
+    }
+  },
+  "dispatch_groups": {
+    "A": {
+      "runs": [30001857104, 30001867521],
+      "profiles": ["lab2_f1bdead", "lab2_f1binv", "labmon_f1dead", "labmon2_f2dead_lowsun"]
+    },
+    "B": {
+      "runs": [30001878310, 30001888910],
+      "profiles": ["lab3_f1dead", "lab3_f1dead_z2", "lab3_f1bdead", "lab3_f1binv", "lab3_f2dead_lowsun"]
+    }
+  },
+  "panels": {
+    "A_registered_context": [
+      "lab3_f1dead",
+      "lab3_f1dead_z2",
+      "lab3_f1bdead",
+      "lab3_f1binv",
+      "lab2_f1bdead",
+      "labmon_f1dead",
+      "lab3_f2dead_lowsun",
+      "labmon2_f2dead_lowsun"
+    ],
+    "B_reranking": [
+      "lab3_f1bdead",
+      "lab3_f1binv",
+      "lab2_f1bdead",
+      "labmon2_f2dead_lowsun"
+    ],
+    "C_sighted_reference": [
+      "lab2_f1bdead",
+      "lab2_f1binv",
+      "lab3_f1binv",
+      "labmon2_f2dead_lowsun"
+    ],
+    "nonregistered_recovery_descriptive": [
+      "lab2_f1binv"
+    ]
+  },
+  "state_contract": {
+    "rank_bounds_lux": [50, 100, 300],
+    "sun_bounds_lux": [50, 200, 600],
+    "rank_rule": "value < b1 => 0; value < b2 => 1; value < b3 => 2; otherwise 3",
+    "settling_rule": "Ignore scenario Z*Level fields. Recompute settled levels from scenario actuator booleans and Sunshine using the explicit faulty physics before encoding.",
+    "index_rule": "Right-to-left mixed-radix Java stride: index = sum(state_vector[i] * strides[i]).",
+    "parents": {
+      "lab2": {
+        "scenario_file": "benchmark/train_scenarios_lab2.json",
+        "ordered_scenario_ids": [1, 2, 4, 5, 6, 7, 9, 10, 12, 13, 16],
+        "scenario_schedule_sha256": "cc93966bd8e94da606755e972bff3461381c731c7b07ef9e3f6506b7b3f90461",
+        "golden_registry": "config/golden_registry/registry_lab2.csv",
+        "ontology": "src/resources/building_2_intermediate.ttl",
+        "state_labels": ["Z1Level", "Z2Level", "Z1Light", "Z2Light", "Z1Blinds", "Z2Blinds", "Sunshine"],
+        "domains": [4, 4, 2, 2, 2, 2, 4],
+        "strides": [256, 64, 32, 16, 8, 4, 1],
+        "n_states": 1024,
+        "action_labels": [
+          "SetZ1Blinds=OFF",
+          "SetZ1Blinds=ON",
+          "SetZ1Light=OFF",
+          "SetZ1Light=ON",
+          "SetZ2Blinds=OFF",
+          "SetZ2Blinds=ON",
+          "SetZ2Light=OFF",
+          "SetZ2Light=ON",
+          "DO_NOTHING"
+        ]
+      },
+      "lab3": {
+        "scenario_file": "benchmark/train_scenarios_lab3.json",
+        "ordered_scenario_ids": [1, 2, 5, 6, 7, 9, 10, 11, 13, 16],
+        "scenario_schedule_sha256": "fd9853f1f45941e5a3fcea9f866b30ce9592eb8fb2e99875c07dc1e4cbf195e3",
+        "golden_registry": "config/golden_registry/registry_lab3.csv",
+        "ontology": "src/resources/building_3_complex.ttl",
+        "state_labels": ["Z1Level", "Z2Level", "Z1Light", "Z2Light", "Z1Blinds", "Z2Blinds", "Spotlight", "Sunshine"],
+        "domains": [4, 4, 2, 2, 2, 2, 2, 4],
+        "strides": [512, 128, 64, 32, 16, 8, 4, 1],
+        "n_states": 2048,
+        "action_labels": [
+          "SetSpotlight=OFF",
+          "SetSpotlight=ON",
+          "SetZ1Blinds=OFF",
+          "SetZ1Blinds=ON",
+          "SetZ1Light=OFF",
+          "SetZ1Light=ON",
+          "SetZ2Blinds=OFF",
+          "SetZ2Blinds=ON",
+          "SetZ2Light=OFF",
+          "SetZ2Light=ON",
+          "DO_NOTHING"
+        ]
+      },
+      "labmon": {
+        "scenario_file": "benchmark/train_scenarios_labmon.json",
+        "ordered_scenario_ids": [1, 2, 3, 4, 6, 7],
+        "scenario_schedule_sha256": "ea28b3f588e33b500b94852c51d67369d94d3f2333ca7a6767ca737b901e119a",
+        "golden_registry": "config/golden_registry/registry_labmon.csv",
+        "ontology": "src/resources/building_6_monitor.ttl",
+        "state_labels": ["Z1Level", "Z1Light", "Z1Monitor"],
+        "domains": [4, 2, 2],
+        "strides": [4, 2, 1],
+        "n_states": 16,
+        "action_labels": [
+          "SetZ1Light=OFF",
+          "SetZ1Light=ON",
+          "SetZ1Monitor=OFF",
+          "SetZ1Monitor=ON",
+          "DO_NOTHING"
+        ]
+      },
+      "labmon2": {
+        "scenario_file": "benchmark/train_scenarios_labmon2.json",
+        "ordered_scenario_ids": [1, 2, 5, 6, 7, 9, 10, 12, 13, 16],
+        "scenario_schedule_sha256": "c0400237fef152b0e05c43fe9c20fceb7afe93757776c2952152cf92d822a721",
+        "golden_registry": "config/golden_registry/registry_labmon2.csv",
+        "ontology": "src/resources/building_7_dualmonitor.ttl",
+        "state_labels": ["Z1Level", "Z2Level", "Z1Light", "Z2Light", "Z1Monitor", "Z2Monitor", "Z1Blinds", "Z2Blinds", "Sunshine"],
+        "domains": [4, 4, 2, 2, 2, 2, 2, 2, 4],
+        "strides": [1024, 256, 128, 64, 32, 16, 8, 4, 1],
+        "n_states": 4096,
+        "action_labels": [
+          "SetZ1Blinds=OFF",
+          "SetZ1Blinds=ON",
+          "SetZ1Light=OFF",
+          "SetZ1Light=ON",
+          "SetZ1Monitor=OFF",
+          "SetZ1Monitor=ON",
+          "SetZ2Blinds=OFF",
+          "SetZ2Blinds=ON",
+          "SetZ2Light=OFF",
+          "SetZ2Light=ON",
+          "SetZ2Monitor=OFF",
+          "SetZ2Monitor=ON",
+          "DO_NOTHING"
+        ]
+      }
+    }
+  },
+  "action_metadata": {
+    "lab2": {
+      "Z1Blinds": {"affected_zones": [0], "cross_zones": [], "iv_gated": true, "state_label": "Z1Blinds"},
+      "Z1Light": {"affected_zones": [0], "cross_zones": [], "iv_gated": false, "state_label": "Z1Light"},
+      "Z2Blinds": {"affected_zones": [1], "cross_zones": [], "iv_gated": true, "state_label": "Z2Blinds"},
+      "Z2Light": {"affected_zones": [1], "cross_zones": [], "iv_gated": false, "state_label": "Z2Light"}
+    },
+    "lab3": {
+      "Spotlight": {"affected_zones": [0, 1], "cross_zones": [], "iv_gated": false, "state_label": "Spotlight"},
+      "Z1Blinds": {"affected_zones": [0], "cross_zones": [1], "iv_gated": true, "state_label": "Z1Blinds"},
+      "Z1Light": {"affected_zones": [0], "cross_zones": [1], "iv_gated": false, "state_label": "Z1Light"},
+      "Z2Blinds": {"affected_zones": [1], "cross_zones": [0], "iv_gated": true, "state_label": "Z2Blinds"},
+      "Z2Light": {"affected_zones": [1], "cross_zones": [0], "iv_gated": false, "state_label": "Z2Light"}
+    },
+    "labmon": {
+      "Z1Light": {"affected_zones": [0], "cross_zones": [], "iv_gated": false, "state_label": "Z1Light"},
+      "Z1Monitor": {"affected_zones": [0], "cross_zones": [], "iv_gated": false, "state_label": "Z1Monitor"}
+    },
+    "labmon2": {
+      "Z1Blinds": {"affected_zones": [0], "cross_zones": [], "iv_gated": true, "state_label": "Z1Blinds"},
+      "Z1Light": {"affected_zones": [0], "cross_zones": [], "iv_gated": false, "state_label": "Z1Light"},
+      "Z1Monitor": {"affected_zones": [0], "cross_zones": [], "iv_gated": false, "state_label": "Z1Monitor"},
+      "Z2Blinds": {"affected_zones": [1], "cross_zones": [], "iv_gated": true, "state_label": "Z2Blinds"},
+      "Z2Light": {"affected_zones": [1], "cross_zones": [], "iv_gated": false, "state_label": "Z2Light"},
+      "Z2Monitor": {"affected_zones": [1], "cross_zones": [], "iv_gated": false, "state_label": "Z2Monitor"}
+    }
+  },
+  "cells": {
+    "lab3_f1dead": {
+      "dispatch_group": "B",
+      "parent_profile": "lab3",
+      "simulator_flow": "simulator/simulator_flow_lab3_f1dead.json",
+      "fault_kind": "dead",
+      "fault_components": ["Z1Light"],
+      "unavailable_actions": ["SetZ1Light=OFF", "SetZ1Light=ON"],
+      "analysis_goal_ranks": [3, 3],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [0, 0], "Z2Light": [100, 400], "Spotlight": [150, 150]},
+        "sun_effects": {"Z1Blinds": [0.5, 0.3], "Z2Blinds": [0.3, 0.5]}
+      }
+    },
+    "lab3_f1dead_z2": {
+      "dispatch_group": "B",
+      "parent_profile": "lab3",
+      "simulator_flow": "simulator/simulator_flow_lab3_f1dead_z2.json",
+      "fault_kind": "dead",
+      "fault_components": ["Z2Light"],
+      "unavailable_actions": ["SetZ2Light=OFF", "SetZ2Light=ON"],
+      "analysis_goal_ranks": [3, 3],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [400, 100], "Z2Light": [0, 0], "Spotlight": [150, 150]},
+        "sun_effects": {"Z1Blinds": [0.5, 0.3], "Z2Blinds": [0.3, 0.5]}
+      }
+    },
+    "lab3_f1bdead": {
+      "dispatch_group": "B",
+      "parent_profile": "lab3",
+      "simulator_flow": "simulator/simulator_flow_lab3_f1bdead.json",
+      "fault_kind": "dead",
+      "fault_components": ["Z1Blinds"],
+      "unavailable_actions": ["SetZ1Blinds=OFF", "SetZ1Blinds=ON"],
+      "analysis_goal_ranks": [3, 3],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [400, 100], "Z2Light": [100, 400], "Spotlight": [150, 150]},
+        "sun_effects": {"Z1Blinds": [0, 0], "Z2Blinds": [0.3, 0.5]}
+      }
+    },
+    "lab3_f1binv": {
+      "dispatch_group": "B",
+      "parent_profile": "lab3",
+      "simulator_flow": "simulator/simulator_flow_lab3_f1binv.json",
+      "fault_kind": "inverted",
+      "fault_components": ["Z1Blinds"],
+      "unavailable_actions": ["SetZ1Blinds=OFF", "SetZ1Blinds=ON"],
+      "analysis_goal_ranks": [3, 3],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [400, 100], "Z2Light": [100, 400], "Spotlight": [150, 150]},
+        "sun_effects": {"Z1Blinds": [-0.5, -0.3], "Z2Blinds": [0.3, 0.5]}
+      }
+    },
+    "lab2_f1bdead": {
+      "dispatch_group": "A",
+      "parent_profile": "lab2",
+      "simulator_flow": "simulator/simulator_flow_lab2_f1bdead.json",
+      "fault_kind": "dead",
+      "fault_components": ["Z1Blinds"],
+      "unavailable_actions": ["SetZ1Blinds=OFF", "SetZ1Blinds=ON"],
+      "analysis_goal_ranks": [3, 3],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [400, 0], "Z2Light": [0, 400]},
+        "sun_effects": {"Z1Blinds": [0, 0], "Z2Blinds": [0, 0.5]}
+      }
+    },
+    "lab2_f1binv": {
+      "dispatch_group": "A",
+      "parent_profile": "lab2",
+      "simulator_flow": "simulator/simulator_flow_lab2_f1binv.json",
+      "fault_kind": "inverted",
+      "fault_components": ["Z1Blinds"],
+      "unavailable_actions": ["SetZ1Blinds=OFF", "SetZ1Blinds=ON"],
+      "analysis_goal_ranks": [3, 3],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [400, 0], "Z2Light": [0, 400]},
+        "sun_effects": {"Z1Blinds": [-0.5, 0], "Z2Blinds": [0, 0.5]}
+      }
+    },
+    "labmon_f1dead": {
+      "dispatch_group": "A",
+      "parent_profile": "labmon",
+      "simulator_flow": "simulator/simulator_flow_labmon_f1dead.json",
+      "fault_kind": "dead",
+      "fault_components": ["Z1Light"],
+      "unavailable_actions": ["SetZ1Light=OFF", "SetZ1Light=ON"],
+      "analysis_goal_ranks": [2],
+      "physics": {
+        "ambient": [25],
+        "constant_effects": {"Z1Light": [0], "Z1Monitor": [260]},
+        "sun_effects": {}
+      }
+    },
+    "lab3_f2dead_lowsun": {
+      "dispatch_group": "B",
+      "parent_profile": "lab3",
+      "simulator_flow": "simulator/simulator_flow_lab3_f2dead_lowsun.json",
+      "fault_kind": "dead",
+      "fault_components": ["Z1Light", "Z2Light"],
+      "unavailable_actions": ["SetZ1Light=OFF", "SetZ1Light=ON", "SetZ2Light=OFF", "SetZ2Light=ON"],
+      "analysis_goal_ranks": [2, 2],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [0, 0], "Z2Light": [0, 0], "Spotlight": [150, 150]},
+        "sun_effects": {"Z1Blinds": [0.5, 0.3], "Z2Blinds": [0.3, 0.5]}
+      }
+    },
+    "labmon2_f2dead_lowsun": {
+      "dispatch_group": "A",
+      "parent_profile": "labmon2",
+      "simulator_flow": "simulator/simulator_flow_labmon2_f2dead_lowsun.json",
+      "fault_kind": "dead",
+      "fault_components": ["Z1Light", "Z2Light"],
+      "unavailable_actions": ["SetZ1Light=OFF", "SetZ1Light=ON", "SetZ2Light=OFF", "SetZ2Light=ON"],
+      "analysis_goal_ranks": [2, 2],
+      "physics": {
+        "ambient": [25, 25],
+        "constant_effects": {"Z1Light": [0, 0], "Z2Light": [0, 0], "Z1Monitor": [200, 0], "Z2Monitor": [0, 200]},
+        "sun_effects": {"Z1Blinds": [0.5, 0], "Z2Blinds": [0, 0.5]}
+      }
+    }
+  },
+  "qtable_contract": {
+    "combined_filename_template": "qtable_final_stereotypes_{filename_boolean}_{parent_profile}.csv",
+    "combined_is_primary_proxy_input": true,
+    "runtime_reload_difference_disclosure": "Runtime reloads per-zone rounded tables; the frozen proxy reads the combined rounded table because runtime joint action selection maximises the per-zone sum. The combined serialization can differ by 0.01 from a sum reconstructed from separately rounded zones.",
+    "serialization": {
+      "decimal_places": 2,
+      "parser": "Decimal",
+      "missing_state_row": "all actions exactly Decimal('0.00')",
+      "ties": "preserve and report exactly",
+      "reject": ["duplicate state", "out-of-range state", "duplicate label", "missing label", "unknown label", "NaN", "Infinity", "wrong field count"]
+    },
+    "parent_files": "Resolve every basename in ADAPT_OK.parent_qtable_files uniquely among direct clean-job children for the same seed and arm, preserve manifest array order, and recompute the runner file-set digest. Do not infer a five-file set and do not recurse into benchmark/results."
+  },
+  "qgap_definition": {
+    "name": "start-state Q-gap proxy",
+    "excluded_names": ["exact post-detection burden", "recovery mechanism measurement"],
+    "unavailable_actions": "F_c is the explicit unavailable_actions list for the cell.",
+    "survivor_first_actions": "R_c(s) is the exact union of first actions on every shortest successful path under faulty physics with all F_c actions removed.",
+    "signed_gap": "max(Q(s,x) for x in F_c) - max(Q(s,x) for x in R_c(s))",
+    "burden": "max(0, signed_gap)",
+    "scenario_classes": {
+      "goal_at_settled_start": "NO_RERANKING_NEEDED; report and exclude from gap aggregates",
+      "no_surviving_goal_path": "UNREACHABLE; report and exclude from gap aggregates",
+      "reachable_nonterminal": "ANALYZED; include once with equal weight by ordered scenario ID"
+    },
+    "seed_arm_aggregates": {
+      "G": "arithmetic mean of burden across ANALYZED scenarios",
+      "signed_gap_median": "median signed_gap across ANALYZED scenarios",
+      "signed_gap_mean": "arithmetic mean signed_gap across ANALYZED scenarios",
+      "tie_rate": "fraction of ANALYZED scenarios where either relevant maximum is tied, plus a separate exact-zero signed-gap fraction",
+      "reachable_fraction": "reachable scenarios divided by all ordered scenarios after reporting terminal starts separately",
+      "mean_shortest_route_length": "mean shortest successful route length over ANALYZED scenarios"
+    },
+    "paired_effects": {
+      "deltaG": "G(KG) - G(TR) within cell and seed",
+      "delta_signed_gap_median": "signed_gap_median(KG) - signed_gap_median(TR) within cell and seed",
+      "deltaRecovery": "registered censored RecoveryEpisodes(KG) - registered censored RecoveryEpisodes(TR) within cell and seed"
+    },
+    "prediction": "Positive: more additional KG start-state forced-re-ranking burden orders with slower KG recovery."
+  },
+  "detector_opportunity": {
+    "name": "DetectorOpportunity",
+    "rollout_horizon_actions": 20,
+    "terminal_rule": "Before each action, stop the scenario rollout if the settled state already satisfies the effective analysis goal, matching the registered episode boundary. Otherwise continue after a first opportunity until the next goal boundary or the 20-action horizon.",
+    "policy": "No learning, no exploration, combined serialized Q only, all pre-blacklist actions available, exact runtime header order, lowest numeric action index for exact ties.",
+    "active_diagnostic_probes": false,
+    "virtual_blacklisting": false,
+    "history_boundary": "Evaluate the detector-v2 pre-first-blacklist static chargeability predicate with blacklist, contaminated-zone, and fault-suspect history empty on every descriptor transition. Detector v2 blacklists on the first chargeable anomaly, so suspect anomaly counters cannot precede that first opportunity. Continuing the no-blacklist descriptor after an opportunity does not create synthetic suspect history.",
+    "predicate": "Exact detector-v2 pre-first-blacklist static chargeability and maskability rule: skip redundant actions and invalid boundaries; IV components require ON and sunshine rank >= 2; opposite-sign evidence is chargeable even when masked; zero-response dead evidence is chargeable only without an active primary or cross-zone co-feeder.",
+    "component_rows": true,
+    "primary_multi_fault_aggregate": "any_fault_component_opportunity",
+    "primary_alignment": "Compare any-fault opportunity with first DetectEpisode/detection occurrence.",
+    "all_fault_components_opportunity": "Report descriptively only; do not interpret it as a secondary-detection reenactment.",
+    "interpretation": "Model-based descriptor only; not a replay of stochastic adaptation and not part of the start-state Q-gap proxy."
+  },
+  "outcome_contract": {
+    "recovery_csv": "recovery_stereotypes_{filename_boolean}_{faulty_profile}.csv",
+    "row_rule": "Exactly one non-comment data row is required. Zero or more than one data row is fatal; never select a first or last row from a multi-row file.",
+    "detector_version": "fault-detector-v2",
+    "protocol_version": "phase2-v2",
+    "censoring_horizon_source": "ADAPT_OK.adapt_episodes_effective for the exact joined cell",
+    "censor_rule": "Mirror the registered corrected analysis: a negative DetectEpisode or RecoveryEpisodes maps to ADAPT_OK.adapt_episodes_effective + 1 for that exact cell and retains an explicit censor flag. detection_occurrence is 0 exactly when DetectEpisode < 0; otherwise it is 1. Never drop a censored seed pair."
+  },
+  "descriptive_analysis": {
+    "bootstrap": {
+      "resamples": 10000,
+      "rng_seed": 20260727,
+      "rng_implementation": "Python standard-library random.Random initialized once with 20260727; each replicate draws exactly 20 indices by 20 successive rng.randrange(20) calls and maps index j to seed ID j+1.",
+      "paired_rule": "For each replicate sample 20 seed IDs with replacement once and apply the same sampled IDs to both arms, both outcomes, and every cell.",
+      "disclosure": "Seed resampling does not create independent lab designs."
+    },
+    "spearman": {
+      "unit": "cell-level mean deltaG and mean deltaRecovery",
+      "ties": "average ranks",
+      "p_values": false,
+      "primary_panel": "B_reranking",
+      "confounded_sensitivity_panel": "A_registered_context"
+    },
+    "pairwise_concordance": {
+      "panels": ["B_reranking", "C_sighted_reference"],
+      "rule": "A pair is concordant only when the nonzero ordering of cell mean deltaG has the same nonzero ordering as cell mean deltaRecovery. Any tie is not concordant."
+    },
+    "sensitivity": [
+      "delta_signed_gap_median beside primary deltaG",
+      "signed_gap_mean",
+      "leave one Panel-B cell out",
+      "leave one Panel-B parent profile out",
+      "full Panel-A association visibly labelled confounded"
+    ],
+    "figures": {
+      "qgap_vs_recovery.png": {
+        "layout": "Two panels with fixed axes chosen from the realized finite range plus deterministic padding.",
+        "left": "Panel B cell means: x=mean deltaG, y=mean deltaRecovery, canonical cell labels.",
+        "right": "Panel A cell means with title 'Confounded sensitivity — includes detector censoring'.",
+        "annotation": "Spearman rho as a descriptive effect label only; no p-value or fit line."
+      },
+      "detectability_audit.png": {
+        "layout": "One Panel-A scatter with one point per cell and arm.",
+        "x": "mean scenario DetectorOpportunity fraction",
+        "y": "observed detection fraction across 20 seeds",
+        "encoding": "canonical cell colour, KG/TR marker shape, diagonal reference line",
+        "annotation": "Model descriptor versus observed detection; not an adaptation replay."
+      }
+    },
+    "prohibited_reporting": [
+      "confirmatory p-values",
+      "BH correction",
+      "significant",
+      "validated",
+      "causal claims",
+      "treating seeds as independent mechanisms"
+    ]
+  },
+  "decision_gates": {
+    "reference_panel": "C_sighted_reference",
+    "gate_1": "Every reference cell has verified artifacts; every seed-arm has at least one ANALYZED scenario; and the finite proxy values are not all identical zero.",
+    "gate_2": "Reference cell mean deltaG has at least three exact distinct levels and every adjacent non-tied ordered level differs by at least Decimal('0.02').",
+    "gate_3": "Panel-B cell-level Spearman(deltaG, deltaRecovery) >= 0.70.",
+    "gate_4": "At least five of six reference-cell pairwise orderings are concordant.",
+    "gate_5": "The association is never negative for delta_signed_gap_median or any leave-one-Panel-B-cell-out analysis; undefined or degenerate sensitivity fails the gate.",
+    "gate_6": "After removing lab3_f1dead, lab3_f1dead_z2, and lab3_f2dead_lowsun from Panel A, the remaining registered cells have a defined positive cell-level Spearman direction between deltaG and deltaRecovery.",
+    "pass_action": "Drafting a separate prospective C2 plan is allowed; registration and dispatch remain forbidden.",
+    "fail_action": "Defer or descope C2 and stop after thesis integration; do not relax a threshold."
+  },
+  "required_outputs": [
+    "source_manifest.json",
+    "qgap_scenario_rows.csv",
+    "qgap_seed_rows.csv",
+    "qgap_cell_summary.csv",
+    "detector_opportunity_rows.csv",
+    "ordering_assessment.csv",
+    "qgap_vs_recovery.png",
+    "detectability_audit.png",
+    "PHASE2_QGAP_RETROSPECTIVE_RESULTS.md",
+    "SHA256SUMS.csv"
+  ],
+  "output_root": "phase2b_qgap/analysis",
+  "runtime_immutability": [
+    "src/env/tools/QLearner.java",
+    "src/env/tools/StereotypeReasoner.java",
+    "simulator",
+    "benchmark scenario files",
+    "ontologies",
+    "rewards"
+  ]
+}

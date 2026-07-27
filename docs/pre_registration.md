@@ -1110,3 +1110,16 @@ exploratory by the frozen power rule), N=20 (seeds 1..20), pilot block
 1001–1010 permanently disjoint (`docs/PHASE1B_POWER_PROTOCOL.md`,
 `docs/phase1b_pilot_dispatch_record_2026-07-25.md`). Archives:
 `phase1b_corrected/`.
+
+## §11 Phase-2b-A retrospective protocol pointer (2026-07-27)
+
+**DESCRIPTIVE/SIGHTED — NOT A PREREGISTRATION**
+
+The frozen protocol at `docs/PHASE2_QGAP_RETROSPECTIVE.md` governs the
+Phase-2b-A start-state Q-gap proxy and detector-opportunity retrospective. It
+was written after the corrected Phase-2 recovery and detection outcomes were
+known but before the proxy was computed on real corrected artifacts. It is a
+hypothesis-generating audit, not a prospective test; its fixed panels,
+definitions, exclusions, sensitivities, and C2 screening gates cannot confer
+prospective status on the sighted data. Any later C2 requires a separate plan
+written before new adaptation data are dispatched.

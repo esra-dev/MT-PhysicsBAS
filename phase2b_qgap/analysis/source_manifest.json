@@ -1,0 +1,114 @@
+{
+  "schema_version": "phase2-qgap-source-manifest-v1",
+  "repository": "esra-dev/MT-PhysicsBAS",
+  "source_commit": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+  "archive_store": {
+    "kind": "external_local_immutable_zip_store",
+    "directory_name": "MT-Esra-phase2b-source-zips",
+    "tracked_by_git": false
+  },
+  "inventory_digest_definition": "SHA-256 of UTF-8 lines '<zip path with forward slashes>,<uncompressed bytes>,<compressed bytes>', sorted by zip path and joined with LF without a trailing LF.",
+  "artifacts": [
+    {
+      "dispatch": "A1",
+      "run_id": 30001857104,
+      "artifact_id": 8572943960,
+      "artifact_name": "phase2-consolidated",
+      "head_sha": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+      "created_at_utc": "2026-07-23T17:37:16Z",
+      "expires_at_utc": "2026-10-21T11:06:14Z",
+      "retrieved_at_utc": "2026-07-27T18:17:27.6555915Z",
+      "zip_basename": "phase2-consolidated_run_30001857104_artifact_8572943960.zip",
+      "github_digest_sha256": "0391dcdc7f35a1e2f7589797a789ec0011bedd5e970327ddcbff7122658b4639",
+      "local_zip_sha256": "0391dcdc7f35a1e2f7589797a789ec0011bedd5e970327ddcbff7122658b4639",
+      "zip_size_bytes": 31252157,
+      "extraction_root": "phase2b_qgap/source/run_30001857104/phase2-consolidated",
+      "extraction_inventory": {
+        "file_count": 2603,
+        "uncompressed_bytes": 744573527,
+        "zip_entry_inventory_sha256": "5e4ef515b156e135e2491608f4fb8676fb34f632440a0c494185e47421019ab7",
+        "extracted_file_count": 2603,
+        "extracted_bytes": 744573527
+      }
+    },
+    {
+      "dispatch": "A2",
+      "run_id": 30001867521,
+      "artifact_id": 8573028167,
+      "artifact_name": "phase2-consolidated",
+      "head_sha": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+      "created_at_utc": "2026-07-23T17:40:13Z",
+      "expires_at_utc": "2026-10-21T11:06:23Z",
+      "retrieved_at_utc": "2026-07-27T18:17:32.3364720Z",
+      "zip_basename": "phase2-consolidated_run_30001867521_artifact_8573028167.zip",
+      "github_digest_sha256": "26ff1cc4e6ff52368871d58d3ef54b69602539ad724c5910a8a8ffdd731804f8",
+      "local_zip_sha256": "26ff1cc4e6ff52368871d58d3ef54b69602539ad724c5910a8a8ffdd731804f8",
+      "zip_size_bytes": 31392219,
+      "extraction_root": "phase2b_qgap/source/run_30001867521/phase2-consolidated",
+      "extraction_inventory": {
+        "file_count": 2603,
+        "uncompressed_bytes": 746488811,
+        "zip_entry_inventory_sha256": "294454c04bd857cb46ea1f4189c4119cf835f289b6b133c752c4a46eca689269",
+        "extracted_file_count": 2603,
+        "extracted_bytes": 746488811
+      }
+    },
+    {
+      "dispatch": "B1",
+      "run_id": 30001878310,
+      "artifact_id": 8581672322,
+      "artifact_name": "phase2-consolidated",
+      "head_sha": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+      "created_at_utc": "2026-07-23T23:20:45Z",
+      "expires_at_utc": "2026-10-21T11:06:33Z",
+      "retrieved_at_utc": "2026-07-27T18:17:35.0173663Z",
+      "zip_basename": "phase2-consolidated_run_30001878310_artifact_8581672322.zip",
+      "github_digest_sha256": "f53e13f0bbb16a7afea38360b004444068bba92e8a29885eb53203b98df1df31",
+      "local_zip_sha256": "f53e13f0bbb16a7afea38360b004444068bba92e8a29885eb53203b98df1df31",
+      "zip_size_bytes": 13817610,
+      "extraction_root": "phase2b_qgap/source/run_30001878310/phase2-consolidated",
+      "extraction_inventory": {
+        "file_count": 1223,
+        "uncompressed_bytes": 326002747,
+        "zip_entry_inventory_sha256": "a56a851f2070449c8af1459b39af8c697c257dd631b7d53ba5b5b0dfce81331f",
+        "extracted_file_count": 1223,
+        "extracted_bytes": 326002747
+      }
+    },
+    {
+      "dispatch": "B2",
+      "run_id": 30001888910,
+      "artifact_id": 8580725637,
+      "artifact_name": "phase2-consolidated",
+      "head_sha": "19f4f3ff55f2b7ecebc015f85c6df0e55e44d7c9",
+      "created_at_utc": "2026-07-23T22:33:12Z",
+      "expires_at_utc": "2026-10-21T11:06:43Z",
+      "retrieved_at_utc": "2026-07-27T18:17:38.1427989Z",
+      "zip_basename": "phase2-consolidated_run_30001888910_artifact_8580725637.zip",
+      "github_digest_sha256": "22ef5fbaf2aa9ed8a473641c6237eeaeb22db87918b20953519d3f9cfe291235",
+      "local_zip_sha256": "22ef5fbaf2aa9ed8a473641c6237eeaeb22db87918b20953519d3f9cfe291235",
+      "zip_size_bytes": 13793697,
+      "extraction_root": "phase2b_qgap/source/run_30001888910/phase2-consolidated",
+      "extraction_inventory": {
+        "file_count": 1223,
+        "uncompressed_bytes": 326131563,
+        "zip_entry_inventory_sha256": "dedf75dab46738f0c6e8569039ad95d00e8f52817770a0e764cce5e180397cb4",
+        "extracted_file_count": 1223,
+        "extracted_bytes": 326131563
+      }
+    }
+  ],
+  "validation": {
+    "existing_protocol_v2_validator_runs_passed": 4,
+    "adapt_manifests_checked": 920,
+    "unique_parent_file_sets_checked": 360,
+    "parent_file_set_hash_mismatches": 0,
+    "missing_or_ambiguous_manifest_files": 0,
+    "missing_recovery_csvs": 0,
+    "notes": [
+      "ADAPT_OK.parent_qtable_files order is authoritative and is not re-sorted.",
+      "Manifest basenames are resolved only among direct clean-job children for the same arm and seed.",
+      "Monitor-prefix file sets include the original runner's broad-glob extras and are validated exactly as listed."
+    ]
+  }
+}

@@ -52,6 +52,24 @@ def test_multiple_equal_shortest_paths_all_enumerated():
     assert r.shortest_path_length == 2
     assert r.shortest_sequence_count == 2
     assert sorted(r.shortest_sequences) == [["ab", "bd"], ["ac", "cd"]]
+    assert r.shortest_first_actions == ["ab", "ac"]
+
+
+def test_shortest_first_action_union_is_exact_above_enumeration_cap():
+    # A compact 11-layer diamond chain has 2^11=2048 shortest routes but only
+    # two possible first actions.  Full route materialisation is intentionally
+    # capped; the first-action union must remain exact.
+    edges = {}
+    for depth in range(11):
+        left = "first_a" if depth == 0 else f"left_{depth}"
+        right = "first_b" if depth == 0 else f"right_{depth}"
+        edges[f"s{depth}"] = [(left, f"s{depth + 1}"),
+                              (right, f"s{depth + 1}")]
+    m = GraphModel("s0", edges, goals={"s11"})
+    r = check_scenario(m, horizon=11)
+    assert r.shortest_sequence_count == 2048
+    assert r.shortest_sequences is None
+    assert r.shortest_first_actions == ["first_a", "first_b"]
 
 
 def test_unreachable_goal_fails_certificate():
@@ -119,6 +137,7 @@ def test_goal_at_start_is_length_zero():
     r = check_scenario(m, horizon=5)
     assert r.solvable and r.shortest_path_length == 0
     assert r.shortest_sequence_count == 1 and r.shortest_sequences == [[]]
+    assert r.shortest_first_actions == []
 
 
 def test_certificate_hash_is_deterministic():
