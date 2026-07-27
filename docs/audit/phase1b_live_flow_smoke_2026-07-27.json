@@ -6,7 +6,7 @@
     "/was/rl/action",
     "/was/rl/status"
   ],
-  "git_head": "df46e1cb738c411a3e06e1d81b60d088e413e211",
+  "git_head": "420dc55336c4891b2de360d618cbf5e02e19226d",
   "node_red_version": "Node-RED v4.1.8",
   "platform": "Windows-11-10.0.26200-SP0",
   "profiles_expected": 7,
@@ -325,7 +325,7 @@
       "status": "passed"
     }
   ],
-  "run_utc": "2026-07-27T15:53:14.700072+00:00",
+  "run_utc": "2026-07-27T15:59:49.417410+00:00",
   "schema": "phase1b-live-flow-smoke-v1",
   "status": "passed",
   "tracked_worktree_clean": true
