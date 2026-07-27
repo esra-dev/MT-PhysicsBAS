@@ -1,0 +1,15 @@
+{
+  "tag": "results-20260727-manual1-phase1b_v2_kg_frozen-c8e14a4b",
+  "utc": "20260727-manual1",
+  "runMode": "phase1b_v2_kg_frozen",
+  "profiles": ["labrel0","labrel4","labrel8","labrel16","labrel8s","labband","lab4chain3"],
+  "bench_modes": ["rule_based","ql_false","ql_true"],
+  "git_sha": "c8e14a4bca3ac0befbdb134579dec420fd3c60e2",
+  "git_short_sha": "c8e14a4b",
+  "git_branch": "phase1b-labs-2026-07",
+  "artifact_count": 0,
+  "artifacts": [],
+  "host": null,
+  "user": null,
+  "note": "Manually appended snapshot for Actions run 30199257204 (phase1b_v2_kg_frozen seeds 1-10, seed-half h1). The run's own publish step lost a non-fast-forward race on 2026-07-26 (~15:46Z) against the concurrent baseline publish and its re-run attempts hit a cross-attempt artifact-download platform error; the consolidated artifact is intact and curated as phase1b_corrected/run_30199257204. Documented in docs/phase1b_confirmatory_dispatch_record_2026-07-26.md amendment A2."
+}
