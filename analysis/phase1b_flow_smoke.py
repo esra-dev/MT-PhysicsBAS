@@ -146,7 +146,8 @@ def _matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
 
 
 def _wait_json(url: str, expected: dict[str, Any] | None = None,
-               timeout: float = 60.0) -> tuple[int, dict[str, Any]]:
+               timeout: float = 60.0,
+               required_keys: tuple[str, ...] = ()) -> tuple[int, dict[str, Any]]:
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
     last_payload: dict[str, Any] | None = None
@@ -154,7 +155,12 @@ def _wait_json(url: str, expected: dict[str, Any] | None = None,
         try:
             status, payload = _request_json(url)
             last_payload = payload
-            if status == 200 and (expected is None or _matches(payload, expected)):
+            keys_ready = all(
+                key in payload and payload[key] is not None
+                for key in required_keys
+            )
+            if (status == 200 and keys_ready
+                    and (expected is None or _matches(payload, expected))):
                 return status, payload
         except (OSError, RuntimeError, json.JSONDecodeError) as exc:
             last_error = exc
@@ -204,6 +210,15 @@ def smoke(root: Path, node_red_version: str = "") -> dict[str, Any]:
             raise RuntimeError(
                 f"{spec.profile}: incomplete endpoint advertisement {advertised}")
 
+        # Node-RED's HTTP listener can become ready just before the flow's
+        # delayed OnStart inject fires.  Wait for that initialization to
+        # populate the status fields so it cannot overwrite the reset/action
+        # sequence below on fast CI hosts.
+        _wait_json(
+            f"{base}/was/rl/status",
+            required_keys=tuple(spec.initial_status),
+            timeout=5.0,
+        )
         reset = _post_ok(base, "/was/rl/reset")
         if reset.get("reset") is not True:
             raise RuntimeError(f"{spec.profile}: invalid reset response {reset}")
