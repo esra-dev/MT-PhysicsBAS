@@ -167,13 +167,31 @@ structural priors can help after detection when the fault removes a
 previously relied-on route and promotes a survivor that the clean policy
 under-ranked. It does not support a universal recovery advantage.
 
-The current archives do not retain a complete post-detection state trace.
+The archives do not retain a complete post-detection state trace.
 Consequently, they cannot directly measure the Q-value burden at the exact
-blacklisting state. The authorised Phase-2b-A retrospective evaluates a
-pre-fault **start-state Q-gap proxy** and a separate deterministic detector
-opportunity descriptor. It is explicitly hypothesis-generating and cannot
-change either this registered Phase-2 result or the registered Phase-1b
-bounded-effect conclusion.
+blacklisting state. Phase 2b-A therefore evaluated a pre-fault **start-state
+Q-gap proxy** and a separate deterministic detector-opportunity descriptor.
+The retrospective is explicitly hypothesis-generating and cannot change
+either this registered Phase-2 result or the registered Phase-1b bounded-effect
+conclusion.
+
+In the four-cell clean-detection panel, the primary mean-burden proxy ordered
+opposite to the proposed recovery prediction (cell-level Spearman
+`ρ = −0.738`; paired-seed stability interval `[-0.949, −0.211]`). The frozen
+signed-gap-median sensitivity instead ordered positively (`ρ = +0.600`), so
+the mechanism-proxy direction is not stable across the predeclared summaries.
+All four leave-one-cell-out primary associations remained negative. The
+detector-opportunity audit separately reproduced the qualitative observability
+boundary: the KG policy had zero deterministic opportunity and zero observed
+detections in each of the three detector-censored adverse dead-lamp cells,
+whereas the TR policy had nonzero opportunity and detected some or all seeds.
+This is model-based detectability context, not an adaptation replay.
+
+Only the artifact/non-degeneracy and predictor-spread screening conditions
+passed. The association, pairwise-concordance, sensitivity, and
+non-censored-panel conditions failed. A prospective recovery-ordering campaign
+is therefore deferred; these descriptive results do not establish a general
+Q-gap mechanism.
 
 ## 5. Interpretation
 
@@ -186,7 +204,8 @@ different causal stages:
 - **Adaptation after detection:** in `lab2_f1bdead` and
   `labmon2_f2dead_lowsun`, the KG arm reaches a stable recovered policy faster.
 - **No general mechanism law:** the remaining cleanly detected cells are
-  null, and the number of distinct topologies is small.
+  null, the start-state Q-gap proxy did not robustly order recovery in the
+  predicted direction, and the number of distinct topologies is small.
 
 The resulting claim is narrower and more useful than “knowledge always
 accelerates recovery.” Qualitative structural knowledge is operationally

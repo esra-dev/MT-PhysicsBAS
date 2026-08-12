@@ -153,14 +153,27 @@ with faster recovery in the two cells where detection succeeds
 can suppress the observations
 needed to detect dead faults. Detection opportunity and post-detection
 re-learning must therefore remain separate stages. The campaign does not
-support a universal recovery advantage, and it does not by itself establish
-the proposed Q-gap mechanism; any later Q-gap analysis is retrospective and
-hypothesis-generating.
+support a universal recovery advantage. The completed Phase-2b-A retrospective
+also does not establish the proposed Q-gap mechanism: in the four-cell
+clean-detection panel, the primary mean start-state Q-gap proxy had a negative
+cell-level ordering with recovery (`ρ = −0.738`, paired-seed stability interval
+`[-0.949, −0.211]`), whereas the frozen signed-gap-median sensitivity was
+positive (`ρ = +0.600`). This direction instability, four rather than five of
+six sighted-reference pairwise concordances, and negative leave-one-cell-out
+primary associations caused four of the six prospective-screening gates to
+fail. C2 is therefore deferred.
+
+The separate detector-opportunity descriptor is consistent with the corrected
+observability boundary: the KG arm had zero deterministic opportunity and
+zero detections in all three detector-censored adverse dead-lamp cells, while
+TR had nonzero opportunity and detected at least some seeds. That descriptor
+is model-based context, not a replay of stochastic adaptation.
 
 Sources: `docs/thesis_chapter_phase2.md` §§4–6,
 `docs/phase2_correction_registration_2026-07-22.md`,
 `phase2_v2_corrected/analysis/registered/phase2_v2_registered_family.csv`,
-and `phase2_v2_detection_family.csv`.
+`phase2_v2_detection_family.csv`, and
+`phase2b_qgap/analysis/PHASE2_QGAP_RETROSPECTIVE_RESULTS.md`.
 
 ---
 

@@ -124,6 +124,12 @@ defers the conditional-route, magnitude-oracle, and energy-in-reward
 experiments; descopes the depth-4 chain and the current wrong-KG ladder; and
 leaves any prospective recovery campaign gated on the retrospective.
 
+The completed retrospective did not pass that gate: its primary start-state
+Q-gap proxy ordered recovery in the opposite direction, its frozen sensitivity
+changed direction, and four of six screening conditions failed. The
+prospective recovery-ordering campaign is therefore deferred, with no change
+to the Phase-1b bounded-effect conclusion.
+
 This ordering follows the evidence. Adding more qualitative channels is not
 the immediate bottleneck: both newly implemented consumers produced exact
 nulls. The next useful question is mechanistic and bounded—whether the
