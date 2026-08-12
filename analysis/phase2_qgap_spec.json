@@ -1,5 +1,6 @@
 {
   "schema_version": "phase2-qgap-retrospective-v1",
+  "protocol_revision": "2026-07-27d",
   "frozen_on": "2026-07-27",
   "status": "DESCRIPTIVE/SIGHTED — NOT A PREREGISTRATION",
   "analysis_name": "Phase 2b-A start-state Q-gap proxy audit",
@@ -429,7 +430,7 @@
     "scenario_classes": {
       "goal_at_settled_start": "NO_RERANKING_NEEDED; report and exclude from gap aggregates",
       "no_surviving_goal_path": "UNREACHABLE; report and exclude from gap aggregates",
-      "reachable_nonterminal": "ANALYZED; include once with equal weight by ordered scenario ID"
+      "reachable_nonterminal": "REACHABLE_NONTERMINAL in scenario output; count internally as analyzed and include once with equal weight by ordered scenario ID"
     },
     "seed_arm_aggregates": {
       "G": "arithmetic mean of burden across ANALYZED scenarios",
@@ -474,6 +475,7 @@
       "resamples": 10000,
       "rng_seed": 20260727,
       "rng_implementation": "Python standard-library random.Random initialized once with 20260727; each replicate draws exactly 20 indices by 20 successive rng.randrange(20) calls and maps index j to seed ID j+1.",
+      "percentiles": "For p in {0.025, 0.975}, sort the 10000 finite replicate values, set h=(n-1)*p and i=floor(h), and return x[i] + (h-i)*(x[i+1]-x[i]); this is the fixed linear interpolation method. Undefined replicate descriptors remain counted/reported and are excluded only from the finite percentile vector.",
       "paired_rule": "For each replicate sample 20 seed IDs with replacement once and apply the same sampled IDs to both arms, both outcomes, and every cell.",
       "disclosure": "Seed resampling does not create independent lab designs."
     },
@@ -495,19 +497,34 @@
       "leave one Panel-B parent profile out",
       "full Panel-A association visibly labelled confounded"
     ],
+    "cell_arm_summary": {
+      "q_values": "Pooled ANALYZED-scenario burden and signed-gap mean, median, and exact range, beside seed-level G summaries.",
+      "ties": "Combined either-maximum tie rate plus separate faulty-action (F) and shortest-survivor-first-action (R) maximum tie rates.",
+      "classes": "Reachable, NO_RERANKING_NEEDED, UNREACHABLE, and ANALYZED fractions remain explicit.",
+      "routes": "Shortest survivor-route pooled mean, median, range, and exact route-count distribution.",
+      "detector": "ANY, ALL-components, and deterministic per-component DetectorOpportunity fractions in component-name order.",
+      "outcomes": "Detection occurrence, cell-specific censored DetectEpisode and RecoveryEpisodes summaries, and censor counts."
+    },
+    "zone_sum_diagnostic": {
+      "scope": "Every settled scenario state.",
+      "fields": "Combined versus summed-zone action values, relevant F/R maximizer sets and tie flags, global greedy tie sets and lowest-index greedy actions, plus exact discrepancy flags.",
+      "role": "Diagnostic only; never substitutes for the combined-table start-state Q-gap proxy."
+    },
     "figures": {
       "qgap_vs_recovery.png": {
-        "layout": "Two panels with fixed axes chosen from the realized finite range plus deterministic padding.",
-        "left": "Panel B cell means: x=mean deltaG, y=mean deltaRecovery, canonical cell labels.",
-        "right": "Panel A cell means with title 'Confounded sensitivity — includes detector censoring'.",
-        "annotation": "Spearman rho as a descriptive effect label only; no p-value or fit line."
+        "layout": "Three panels with fixed axes chosen from the realized finite range plus deterministic padding.",
+        "left": "Panel B primary cell means: x=mean deltaG, y=mean deltaRecovery, with paired-seed 95% stability intervals.",
+        "middle": "Panel B frozen signed-gap-median sensitivity: x=mean delta_signed_gap_median, y=mean deltaRecovery, with paired-seed 95% stability intervals.",
+        "right": "Panel A primary cell means with title 'Confounded sensitivity — includes detector censoring'.",
+        "context": "Every cell annotation exposes KG/TR reachable fractions and shortest survivor-route means; Spearman rho and its finite-replicate stability interval are descriptive labels only.",
+        "forbidden_overlay": "No fit line or hypothesis-test annotation."
       },
       "detectability_audit.png": {
-        "layout": "One Panel-A scatter with one point per cell and arm.",
+        "layout": "Two Panel-A scatters: observed detection occurrence/censoring and censored DetectEpisode timing.",
         "x": "mean scenario DetectorOpportunity fraction",
-        "y": "observed detection fraction across 20 seeds",
-        "encoding": "canonical cell colour, KG/TR marker shape, diagonal reference line",
-        "annotation": "Model descriptor versus observed detection; not an adaptation replay."
+        "y": "left=observed detection fraction across 20 seeds; right=mean cell-specific censored DetectEpisode",
+        "encoding": "canonical cell colour, KG/TR marker shape, filled ANY aggregate, open ALL-components aggregate, and x-mark per-component descriptors for every multi-fault cell; left panel includes a diagonal reference line",
+        "annotation": "Censor counts are visible beside timing points. Model descriptor versus observed detection; not an adaptation replay."
       }
     },
     "prohibited_reporting": [
@@ -521,7 +538,7 @@
   },
   "decision_gates": {
     "reference_panel": "C_sighted_reference",
-    "gate_1": "Every reference cell has verified artifacts; every seed-arm has at least one ANALYZED scenario; and the finite proxy values are not all identical zero.",
+    "gate_1": "For each of the four reference cells: all artifacts are verified, every one of its 40 seed-arm records has at least one ANALYZED scenario, and at least one of its 40 primary G values is nonzero. Evaluate non-degeneracy per cell, not only after pooling the reference set.",
     "gate_2": "Reference cell mean deltaG has at least three exact distinct levels and every adjacent non-tied ordered level differs by at least Decimal('0.02').",
     "gate_3": "Panel-B cell-level Spearman(deltaG, deltaRecovery) >= 0.70.",
     "gate_4": "At least five of six reference-cell pairwise orderings are concordant.",

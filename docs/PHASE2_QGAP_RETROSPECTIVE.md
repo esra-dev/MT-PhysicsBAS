@@ -1,9 +1,15 @@
 # Phase 2b-A start-state Q-gap proxy retrospective
 
-Protocol revision: `2026-07-27c`
+Protocol revision: `2026-07-27d`
 Freeze date: `2026-07-27`
 
 **DESCRIPTIVE/SIGHTED — NOT A PREREGISTRATION**
+
+Revision `d` is a pre-execution implementation clarification committed before
+any real proxy output: it makes Gate 1's non-degeneracy test explicitly
+per-cell and pins the bootstrap percentile interpolation rule. It does not
+change panel membership, the proxy, the detector descriptor, outcomes, or any
+threshold.
 
 This document freezes a retrospective, hypothesis-generating mechanism-proxy
 audit before the start-state Q-gap proxy is computed on the real corrected
@@ -471,6 +477,13 @@ drawn seed as a pair. Recompute cell means, Spearman descriptors, and pairwise
 concordance counts. Report bootstrap medians and 2.5/97.5 percentiles as
 descriptive stability intervals, not test results.
 
+For each finite bootstrap descriptor and percentile `p` in `{0.025, 0.975}`,
+sort the 10,000 replicate values, set `h = (n - 1) * p` and
+`i = floor(h)`, and return
+`x[i] + (h - i) * (x[i + 1] - x[i])`. Undefined replicate descriptors remain
+counted and reported; only the finite values enter this fixed linear
+interpolation.
+
 The report must state prominently that resampling seeds does not create eight
 independent lab designs. Seeds sharing a physical cell or parent topology are
 not independent mechanism replications.
@@ -525,8 +538,11 @@ proxy is the actual post-detection gap.
 These are screening gates, not statistical evidence. A later C2 plan may be
 drafted only if **all six** pass:
 
-1. All four Panel-C sighted reference cells have verified source artifacts and
-   non-degenerate, reachable start-state Q-gap proxy measurements.
+1. For each of the four Panel-C sighted reference cells, all source artifacts
+   are verified, every one of its 40 seed-arm records has at least one
+   `REACHABLE_NONTERMINAL` scenario, and at least one of its 40 primary `G`
+   values is nonzero. Non-degeneracy is evaluated per cell, not only after
+   pooling the reference set.
 2. Panel-C `cellDeltaG` has at least three distinct ordered levels, and every
    adjacent non-tied level is separated by at least exact `0.02` serialized-Q
    units.

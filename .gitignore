@@ -99,6 +99,7 @@ __pycache__/
 
 # Analysis generated outputs
 analysis/out/
+analysis/.tmp_validate_qgap_tests/
 
 # Step-0 sanity / replicability probe outputs (local-machine ephemera)
 tmp_step0_*/
