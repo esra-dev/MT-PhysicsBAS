@@ -2389,7 +2389,7 @@ def _save_qgap_figure(
         aggregate_groups.setdefault((aggregate.cell, aggregate.arm), []).append(
             aggregate
         )
-    figure, axes = plt.subplots(1, 3, figsize=(15.0, 4.6))
+    figure, axes = plt.subplots(1, 3, figsize=(15.0, 6.4))
     requests = (
         (
             axes[0],
@@ -2414,6 +2414,8 @@ def _save_qgap_figure(
         ),
     )
     for axis, panel_name, predictor, title, association in requests:
+        legend_handles = []
+        legend_labels = []
         cells = tuple(panels.get(panel_name, ()))
         points = [
             (
@@ -2451,7 +2453,7 @@ def _save_qgap_figure(
                 ], [
                     max(0.0, float(y_bootstrap.high) - y_value),
                 ]]
-            axis.errorbar(
+            point_artist = axis.errorbar(
                 [x_value],
                 [y_value],
                 xerr=x_error,
@@ -2487,13 +2489,8 @@ def _save_qgap_figure(
                     f"\nreach K/T={float(kg_reach):.2f}/{float(tr_reach):.2f}"
                     f"; route K/T={route_text}"
                 )
-            axis.annotate(
-                cell + reach_context,
-                (x_value, y_value),
-                xytext=(4, 4),
-                textcoords="offset points",
-                fontsize=5.7,
-            )
+            legend_handles.append(point_artist)
+            legend_labels.append(cell + reach_context.replace("\n", "; "))
         axis.set_title(title)
         axis.set_xlabel(
             "Mean Δ start-state Q-gap proxy"
@@ -2532,11 +2529,22 @@ def _save_qgap_figure(
             fontsize=6.5,
             bbox={"facecolor": "white", "alpha": 0.75, "edgecolor": "none"},
         )
+        axis.legend(
+            legend_handles,
+            legend_labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.20),
+            frameon=False,
+            fontsize=5.5,
+            handlelength=1.3,
+            handletextpad=0.5,
+            borderaxespad=0.0,
+        )
     figure.suptitle(
         "Descriptive cell ordering; error bars are paired-seed 95% stability intervals",
         fontsize=10,
     )
-    figure.tight_layout()
+    figure.tight_layout(rect=(0.0, 0.27, 1.0, 0.95))
     figure.savefig(
         path,
         format="png",
@@ -2669,6 +2677,8 @@ def _save_detectability_figure(
     panels: Mapping[str, Sequence[str]],
 ) -> None:
     plt = _configure_matplotlib()
+    from matplotlib.lines import Line2D
+
     all_cells = sorted({row.cell for row in aggregates})
     palette = plt.get_cmap("tab10")
     colors = {
@@ -2676,7 +2686,7 @@ def _save_detectability_figure(
         for index, cell in enumerate(all_cells)
     }
     series = _detector_plot_series(aggregates, detector_rows, panels)
-    figure, axes = plt.subplots(1, 2, figsize=(12.4, 5.8))
+    figure, axes = plt.subplots(1, 2, figsize=(14.0, 7.0))
     for axis, outcome_key, outcome_label in (
         (axes[0], "detection_fraction", "Observed detection fraction across seeds"),
         (
@@ -2704,43 +2714,26 @@ def _save_detectability_figure(
                 facecolor = colors[item["cell"]]
                 edgecolor = "black"
                 size = 45
-            axis.scatter(
-                [opportunity],
-                [outcome],
-                facecolors=facecolor,
-                edgecolors=edgecolor,
-                color=colors[item["cell"]],
-                marker=marker,
-                s=size,
-                linewidths=0.7,
-                zorder=3,
-            )
-            descriptor_label = descriptor
             if descriptor == "component":
-                descriptor_label = str(item["component"])
-            if descriptor != "any":
-                axis.annotate(
-                    f"{item['cell']} {arm} {descriptor_label}",
-                    (opportunity, outcome),
-                    xytext=(3, 3),
-                    textcoords="offset points",
-                    fontsize=5.3,
+                axis.scatter(
+                    [opportunity],
+                    [outcome],
+                    color=colors[item["cell"]],
+                    marker=marker,
+                    s=size,
+                    linewidths=0.9,
+                    zorder=3,
                 )
-            elif outcome_key == "detection_fraction":
-                axis.annotate(
-                    f"{item['cell']} {arm}",
-                    (opportunity, outcome),
-                    xytext=(3, 3),
-                    textcoords="offset points",
-                    fontsize=5.5,
-                )
-            elif outcome_key == "detect_episode_mean":
-                axis.annotate(
-                    f"{item['cell']} {arm}; c={item['detect_censor_count']}",
-                    (opportunity, outcome),
-                    xytext=(3, 3),
-                    textcoords="offset points",
-                    fontsize=5.5,
+            else:
+                axis.scatter(
+                    [opportunity],
+                    [outcome],
+                    facecolors=facecolor,
+                    edgecolors=edgecolor,
+                    marker=marker,
+                    s=size,
+                    linewidths=0.7,
+                    zorder=3,
                 )
         axis.set_xlim(-0.05, 1.05)
         axis.set_xlabel("Mean scenario DetectorOpportunity fraction")
@@ -2762,31 +2755,83 @@ def _save_detectability_figure(
     axes[0].set_ylim(-0.05, 1.05)
     detect_values = [float(item["detect_episode_mean"]) for item in series]
     axes[1].set_ylim(_plot_limits(detect_values))
-    axes[0].text(
-        0.02,
-        0.98,
-        "Filled=ANY; open=ALL; ×=component (multi-fault)",
-        transform=axes[0].transAxes,
-        va="top",
-        ha="left",
-        fontsize=6.5,
-        bbox={"facecolor": "white", "alpha": 0.75, "edgecolor": "none"},
+    censored_items = [
+        item
+        for item in series
+        if item["descriptor"] == "any" and item["detect_censor_count"] > 0
+    ]
+    censor_text = "Nonzero censor counts:\n" + "\n".join(
+        f"{item['cell']} {item['arm']}: c={item['detect_censor_count']}"
+        for item in censored_items
     )
     axes[1].text(
-        0.02,
         0.98,
-        "c = count at joined-cell administrative bound",
+        0.98,
+        censor_text,
         transform=axes[1].transAxes,
         va="top",
-        ha="left",
-        fontsize=6.5,
+        ha="right",
+        fontsize=6.0,
         bbox={"facecolor": "white", "alpha": 0.75, "edgecolor": "none"},
+    )
+    cell_handles = [
+        Line2D(
+            [],
+            [],
+            color=colors[cell],
+            marker="o",
+            linestyle="None",
+            markersize=5,
+            label=cell,
+        )
+        for cell in panels.get("A_registered_context", ())
+        if cell in colors
+    ]
+    encoding_handles = [
+        Line2D([], [], color="black", marker="o", linestyle="None", label="KG"),
+        Line2D([], [], color="black", marker="s", linestyle="None", label="TR"),
+        Line2D(
+            [],
+            [],
+            color="black",
+            marker="o",
+            markerfacecolor="black",
+            linestyle="None",
+            label="filled = ANY",
+        ),
+        Line2D(
+            [],
+            [],
+            color="black",
+            marker="o",
+            markerfacecolor="none",
+            linestyle="None",
+            label="open = ALL",
+        ),
+        Line2D(
+            [],
+            [],
+            color="black",
+            marker="x",
+            linestyle="None",
+            label="x = component",
+        ),
+    ]
+    figure.legend(
+        handles=cell_handles + encoding_handles,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.015),
+        ncol=5,
+        frameon=False,
+        fontsize=6.4,
+        handletextpad=0.4,
+        columnspacing=1.2,
     )
     figure.suptitle(
         "Panel A DetectorOpportunity: ANY, ALL, and multi-fault components",
         fontsize=10,
     )
-    figure.tight_layout()
+    figure.tight_layout(rect=(0.0, 0.14, 1.0, 0.95))
     figure.savefig(
         path,
         format="png",
