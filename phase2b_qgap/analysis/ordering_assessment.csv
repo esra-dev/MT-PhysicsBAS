@@ -1,0 +1,44 @@
+row_type,panel,metric,omitted,cell_1,cell_2,n_cells,defined,value_exact,value,predictor_difference_exact,outcome_difference_exact,ordering,concordant,bootstrap_defined_replicates,bootstrap_median_exact,bootstrap_median,bootstrap_ci_low_exact,bootstrap_ci_low,bootstrap_ci_high_exact,bootstrap_ci_high,passed,reason
+SPEARMAN,B_reranking,deltaG,,,,4,1,cov=-7/2;var_x=9/2;var_y=5/1,-0.737865,,,negative,,,,,,,,,,
+SPEARMAN,B_reranking,delta_signed_gap_median,,,,4,1,cov=3/1;var_x=5/1;var_y=5/1,0.600000,,,positive,,,,,,,,,,
+SPEARMAN,A_registered_context_confounded,deltaG,,,,8,1,cov=-69/2;var_x=83/2;var_y=42/1,-0.826362,,,negative,,,,,,,,,,
+SPEARMAN,A_registered_context_confounded,delta_signed_gap_median,,,,8,1,cov=-11/1;var_x=42/1;var_y=42/1,-0.261905,,,negative,,,,,,,,,,
+SPEARMAN,C_sighted_reference,deltaG,,,,4,1,cov=2/1;var_x=5/1;var_y=5/1,0.400000,,,positive,,,,,,,,,,
+SPEARMAN,B_reranking_leave_one_cell_out,deltaG,lab3_f1bdead,,,3,1,cov=-1/1;var_x=2/1;var_y=2/1,-0.500000,,,negative,,,,,,,,,,
+SPEARMAN,B_reranking_leave_one_cell_out,deltaG,lab3_f1binv,,,3,1,cov=-1/1;var_x=2/1;var_y=2/1,-0.500000,,,negative,,,,,,,,,,
+SPEARMAN,B_reranking_leave_one_cell_out,deltaG,lab2_f1bdead,,,3,1,cov=-3/2;var_x=3/2;var_y=2/1,-0.866025,,,negative,,,,,,,,,,
+SPEARMAN,B_reranking_leave_one_cell_out,deltaG,labmon2_f2dead_lowsun,,,3,1,cov=-3/2;var_x=3/2;var_y=2/1,-0.866025,,,negative,,,,,,,,,,
+SPEARMAN,B_reranking_leave_one_parent_out,deltaG,lab3,,,2,0,,,,,,,,,,,,,,,fewer_than_three_cells
+SPEARMAN,B_reranking_leave_one_parent_out,deltaG,lab2,,,3,1,cov=-3/2;var_x=3/2;var_y=2/1,-0.866025,,,negative,,,,,,,,,,
+SPEARMAN,B_reranking_leave_one_parent_out,deltaG,labmon2,,,3,1,cov=-3/2;var_x=3/2;var_y=2/1,-0.866025,,,negative,,,,,,,,,,
+SPEARMAN,A_without_detector_censored_cells,deltaG,lab3_f1dead|lab3_f1dead_z2|lab3_f2dead_lowsun,,,5,1,cov=-11/2;var_x=19/2;var_y=10/1,-0.564288,,,negative,,,,,,,,,,
+PAIR,B_reranking,deltaG_vs_deltaRecovery,,lab3_f1bdead,lab3_f1binv,,1,,,0/1,-7/2,tie_predictor,0,,,,,,,,,
+PAIR,B_reranking,deltaG_vs_deltaRecovery,,lab3_f1bdead,lab2_f1bdead,,1,,,-583739/28000,727/10,discordant,0,,,,,,,,,
+PAIR,B_reranking,deltaG_vs_deltaRecovery,,lab3_f1bdead,labmon2_f2dead_lowsun,,1,,,-502203/28000,744/5,discordant,0,,,,,,,,,
+PAIR,B_reranking,deltaG_vs_deltaRecovery,,lab3_f1binv,lab2_f1bdead,,1,,,-583739/28000,381/5,discordant,0,,,,,,,,,
+PAIR,B_reranking,deltaG_vs_deltaRecovery,,lab3_f1binv,labmon2_f2dead_lowsun,,1,,,-502203/28000,1523/10,discordant,0,,,,,,,,,
+PAIR,B_reranking,deltaG_vs_deltaRecovery,,lab2_f1bdead,labmon2_f2dead_lowsun,,1,,,364/125,761/10,concordant,1,,,,,,,,,
+PAIR,C_sighted_reference,deltaG_vs_deltaRecovery,,lab2_f1bdead,lab2_f1binv,,1,,,-11833/28000,-877/5,concordant,1,,,,,,,,,
+PAIR,C_sighted_reference,deltaG_vs_deltaRecovery,,lab2_f1bdead,lab3_f1binv,,1,,,583739/28000,-381/5,discordant,0,,,,,,,,,
+PAIR,C_sighted_reference,deltaG_vs_deltaRecovery,,lab2_f1bdead,labmon2_f2dead_lowsun,,1,,,364/125,761/10,concordant,1,,,,,,,,,
+PAIR,C_sighted_reference,deltaG_vs_deltaRecovery,,lab2_f1binv,lab3_f1binv,,1,,,148893/7000,496/5,concordant,1,,,,,,,,,
+PAIR,C_sighted_reference,deltaG_vs_deltaRecovery,,lab2_f1binv,labmon2_f2dead_lowsun,,1,,,93369/28000,503/2,concordant,1,,,,,,,,,
+PAIR,C_sighted_reference,deltaG_vs_deltaRecovery,,lab3_f1binv,labmon2_f2dead_lowsun,,1,,,-502203/28000,1523/10,discordant,0,,,,,,,,,
+BOOTSTRAP,A_registered_context,spearman_deltaG,,,,,1,,,,,,,10000,,-0.862291,,-0.994030,,-0.610789,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,A_registered_context,spearman_delta_signed_gap_median,,,,,1,,,,,,,10000,,-0.190476,,-0.476190,,0.166667,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,B_reranking,spearman_deltaG,,,,,1,,,,,,,10000,,-0.737865,,-0.948683,,-0.210819,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,B_reranking,spearman_delta_signed_gap_median,,,,,1,,,,,,,10000,,0.600000,,0.200000,,1.000000,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,C_sighted_reference,spearman_deltaG,,,,,1,,,,,,,10000,,0.400000,,-0.800000,,0.400000,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,C_sighted_reference,spearman_delta_signed_gap_median,,,,,1,,,,,,,10000,,-0.400000,,-0.600000,,0.600000,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,nonregistered_recovery_descriptive,spearman_deltaG,,,,,0,,,,,,,0,,,,,,,,"undefined_replicates=10000;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,nonregistered_recovery_descriptive,spearman_delta_signed_gap_median,,,,,0,,,,,,,0,,,,,,,,"undefined_replicates=10000;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,B_reranking,pairwise_concordance_count,,,,,1,,,,,,,10000,1/1,1.000000,0/1,0.000000,2/1,2.000000,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP,C_sighted_reference,pairwise_concordance_count,,,,,1,,,,,,,10000,4/1,4.000000,1/1,1.000000,4/1,4.000000,,"undefined_replicates=0;percentile_method=linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+BOOTSTRAP_CONTRACT,,shared_paired_seed_resampling,,,,,,resamples=10000;seed=20260727;draws_per_replicate=20,,,,,,,,,,,,,,"linear interpolation: h=(n-1)*p, i=floor(h), x_i+(h-i)*(x_(i+1)-x_i)"
+GATE,,gate_1,,,,,1,,,,,,,,,,,,,,1,"lab2_f1bdead:records=40,all_analyzed=1,nonzero=1;lab2_f1binv:records=40,all_analyzed=1,nonzero=1;lab3_f1binv:records=40,all_analyzed=1,nonzero=1;labmon2_f2dead_lowsun:records=40,all_analyzed=1,nonzero=1"
+GATE,,gate_2,,,,,1,,,,,,,,,,,,,,1,distinct_levels=4;minimum_adjacent_gap=11833/28000
+GATE,,gate_3,,,,,1,,,,,,,,,,,,,,0,rho=-0.737865;threshold=0.70
+GATE,,gate_4,,,,,1,,,,,,,,,,,,,,0,concordant_pairs=4/6
+GATE,,gate_5,,,,,1,,,,,,,,,,,,,,0,signed_defined=1;signed_nonnegative=1;leave_one_nonnegative=0/4
+GATE,,gate_6,,,,,1,,,,,,,,,,,,,,0,rho=-0.564288;direction=positive_required
+DECISION,,all_six_gates,,,,,1,,,,,,,,,,,,,,0,defer_or_descope
