@@ -8,6 +8,14 @@
 > (+0.744, q = 0.0154; `avg_redundant` ns), and the lab1 +0.0225 blemish vanishes
 > (q = 0.369). Every §5 number below is an arm-D number and must be cited as such.
 > Current adjudication: `THESIS_STATE_REPORT.md` §5.2, §10.3, Addendum 2026-07-18b.
+>
+> **Second supersession (2026-07-21) — historical, protocol-affected.** All
+> Phase-1 protocol-v1 values in this document — the status table's Phase-1 rows,
+> the §5 tables, and this banner's arm-C re-adjudication (+67.56, +0.744, run
+> 29639767776) — are protocol-affected and withdrawn
+> (`docs/PHASE1_PROTOCOL_AFFECTED_NOTICE_2026-07-21.md`): the protocol-v1
+> scenario scheduler, first-goal definition, and wall-clock energy metric were
+> invalid. Current Phase-1 evidence: `docs/phase1_results_v2.md` (protocol v2).
 
 | Phase | Status | Headline result |
 |---|---|---|
