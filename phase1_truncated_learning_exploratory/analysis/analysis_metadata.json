@@ -1,0 +1,41 @@
+{
+  "analysis_version": "phase1-prefix-auc-exploratory-v1",
+  "budgets": [
+    150,
+    300,
+    750,
+    1500,
+    3000
+  ],
+  "classification": "retrospective_exploratory_outcome_sighted",
+  "endpoints": [
+    {
+      "name": "prefix_auc_goal"
+    },
+    {
+      "name": "trailing_training_goal_rate",
+      "window": 100
+    }
+  ],
+  "estimand": "For each original 3000-episode trajectory and budget B, prefix_auc_goal(B) is the mean GoalReached over episodes 0 through B-1 and trailing_training_goal_rate(B) is the mean over episodes B-100 through B-1. Each paired contrast is computed within seed before aggregation.",
+  "historical_auc_reference": {
+    "source": "Phase-1b scale anchor A",
+    "status": "descriptive_reference_only_not_registered_for_prefixes",
+    "value": 0.0111
+  },
+  "input_file_count": 200,
+  "limitations": [
+    "The budgets were selected after the source campaigns and this analysis is not confirmatory.",
+    "These are prefixes of the original 3000-episode learner, whose epsilon and stereotype-prior schedules were configured for 3000 episodes; they are not reruns configured with shorter total budgets.",
+    "Only the training-trajectory GoalReached column is available at each prefix. The trailing 100-episode training goal rate is descriptive and is not a greedy-policy benchmark; no intermediate Q-table checkpoints exist, so prefix greedy-policy benchmark goal rate cannot be estimated.",
+    "Paired arms are required to have identical deterministic scenario sequences. Because the 11-scenario Lab 2 cycle does not divide the selected budgets or the 3000-episode horizon exactly, each accepted prefix is near-balanced: every scenario is present and per-scenario counts differ by at most one.",
+    "The historical 0.0111 auc_goal anchor is shown only as context and is not a decision threshold registered for this analysis.",
+    "No p-values, q-values, confirmatory verdicts, or changes to the Phase-1/Phase-1b registered conclusions are produced."
+  ],
+  "new_training_runs": 0,
+  "registered_outputs_modified": false,
+  "seed_row_count": 1800,
+  "spec_sha256": "d105f5870a67df12a694342197812c2068ea3b5a125f450dbd9c3cd58e6936eb",
+  "summary_row_count": 90,
+  "training_horizon": 3000
+}

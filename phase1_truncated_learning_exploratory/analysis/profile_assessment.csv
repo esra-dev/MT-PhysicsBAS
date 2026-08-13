@@ -1,0 +1,10 @@
+profile,contrast,assessment_endpoint,shortest_budget,shortest_budget_mean_difference,max_short_budget,max_short_budget_mean_difference,full_horizon_mean_difference,mean_curve_monotone_nonincreasing,short_budgets_with_descriptive_ci_above_zero,short_budgets_crossing_historical_reference,screening_label
+lab2,kg_minus_redundancy,prefix_auc_goal,150,0.018,150,0.018,0.00111666666667,true,150;300;750;1500,,plausible_positive_short_budget_signal_below_reference
+lab2,kg_vs_baseline,prefix_auc_goal,150,0.049,150,0.049,0.0037,true,150;300;750;1500,150;300;750,plausible_short_budget_signal_above_historical_anchor
+lab2,redundancy_vs_baseline,prefix_auc_goal,150,0.031,150,0.031,0.00258333333333,true,150;300;750;1500,,plausible_positive_short_budget_signal_below_reference
+lab4chain3,kg_minus_redundancy,prefix_auc_goal,150,0.0363333333333,150,0.0363333333333,0.00181666666667,true,150;300;750;1500,,plausible_positive_short_budget_signal_below_reference
+lab4chain3,kg_vs_baseline,prefix_auc_goal,150,0.0533333333333,150,0.0533333333333,0.00268333333333,true,150;300;750;1500,150;300,plausible_short_budget_signal_above_historical_anchor
+lab4chain3,redundancy_vs_baseline,prefix_auc_goal,150,0.017,150,0.017,0.000866666666667,true,150;300;750;1500,,plausible_positive_short_budget_signal_below_reference
+labrel8,kg_minus_redundancy,prefix_auc_goal,150,0.00133333333333,150,0.00133333333333,6.66666666667e-05,true,150;300;750;1500,,plausible_positive_short_budget_signal_below_reference
+labrel8,kg_vs_baseline,prefix_auc_goal,150,0.000666666666667,150,0.000666666666667,3.33333333333e-05,true,,,no_clear_positive_short_budget_signal
+labrel8,redundancy_vs_baseline,prefix_auc_goal,150,-0.000666666666667,1500,-6.66666666667e-05,-3.33333333333e-05,false,,,no_clear_positive_short_budget_signal

@@ -132,6 +132,12 @@ attic/local_outputs/
 phase1b_pilot/run_*/*/
 phase1b_pilot/staged/
 
+# Raw immutable inputs for the retrospective Phase-1b truncated-curve analysis.
+# Recreated by scripts/download_phase1b_truncation_inputs.ps1; only the small
+# verified analysis outputs are committed.
+/.phase1b_truncation_inputs/
+/.tmp_phase1b_trunc/
+
 # Phase-2b-A rescued source artifacts are immutable local evidence. Their
 # verified ZIPs live outside Git; the extracted ~2.1 GB trees are rebuilt
 # from those ZIPs and bound by phase2b_qgap/analysis/source_manifest.json.

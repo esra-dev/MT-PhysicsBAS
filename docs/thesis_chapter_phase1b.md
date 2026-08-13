@@ -137,3 +137,30 @@ pre-fault learned policy helps explain variation in fault detection and
 post-detection adaptation—without changing the Phase-1b conclusion that the
 confirmed clean-lab effects are far below the registered thesis-relevant
 thresholds.
+
+## 7. Post-hoc short-budget sensitivity
+
+After all registered results and the proposal menu were known, an explicitly
+exploratory analysis truncated the archived 3,000-episode training
+trajectories at 150, 300, 750, and 1,500 episodes. It launched no new learner
+campaign. The complete method and hash-bound outputs are reported in
+`docs/phase1_truncated_learning_exploratory_2026-08-12.md` and
+`phase1_truncated_learning_exploratory/analysis/`.
+
+The exercise found a plausible early head start in two of the three inspected
+profiles. At 150 episodes, mean paired KG-minus-baseline `prefix_auc_goal` was
++0.0490 in `lab2` and +0.0533 in `lab4chain3`, compared with +0.00067 in
+`labrel8`. The redundancy-only control reproduced +0.0310 of the `lab2`
+contrast and +0.0170 of the chain contrast. In the two positive profiles the
+KG arm reached the goal in every recorded episode; the normalised difference
+therefore shrinks mainly because a finite cluster of baseline failures is
+diluted by a longer horizon. By 3,000 episodes the cumulative mean advantage
+was 11.10 avoided failures in `lab2` and 8.05 in `lab4chain3`.
+
+This sensitivity analysis motivates, but does not execute or confirm, the
+post-thesis budget-crossover proposal. Prefixes of a learner configured for
+3,000 episodes are not equivalent to fresh learners configured for shorter
+total budgets, because exploration and prior schedules depend on that
+configuration. Intermediate Q-tables were not archived, so prefix greedy
+policies cannot be evaluated. Consequently these observations neither define
+a crossover budget nor revise the registered Phase-1b SESOI interpretation.
