@@ -5,6 +5,7 @@ from pathlib import Path
 MODES = (
     "phase1_v2_kg_only",
     "phase1_v2_redundancy_only",
+    "phase1_v2_brick_only",
     "phase1_v2_baseline",
     "phase1_v2_pbrs_only",
 )
@@ -30,6 +31,15 @@ def test_corrected_factorial_controls_are_explicit():
         "reward_shaping": "none", "adaptive_trust": False,
         "stereo_redundancy_only": True,
     }
+    assert profiles["phase1_v2_brick_only"]["learning_overrides"] == {
+        "reward_shaping": "none", "adaptive_trust": False,
+        "stereo_knowledge_layer": "brick",
+    }
+    # The brick arm must be byte-identical to arm C in every non-override field.
+    for key, value in profiles["phase1_v2_kg_only"].items():
+        if key in ("note", "learning_overrides"):
+            continue
+        assert profiles["phase1_v2_brick_only"][key] == value, key
     assert profiles["phase1_v2_baseline"]["learning_overrides"] == {
         "stereo_prior_scale": 0.0, "stereo_init_bonus": 0.0,
         "reward_shaping": "none", "adaptive_trust": False,

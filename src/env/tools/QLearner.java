@@ -443,7 +443,8 @@ public class QLearner extends Artifact {
 
         if (useStereotypes && STEREO_PRIOR_SCALE > 0.0) {
             initWithStereotypes();
-            LOGGER.info("QLearner initialised — STEREOTYPE MODE: ON (ontology-driven)");
+            LOGGER.info("QLearner initialised — STEREOTYPE MODE: ON (ontology-driven,"
+                      + " knowledgeLayer=" + reasoner.getKnowledgeLayer() + ")");
             LOGGER.info("  Decomposed Q-tables with per-zone penalties from SPARQL.");
         } else if (useStereotypes) {
             // S0-3 (audit Finding 6/7): with priorScale==0 the greedy soft
@@ -2296,6 +2297,7 @@ public class QLearner extends Artifact {
     @OPERATION
     public void getStatus(OpFeedbackParam<String> summary) {
         summary.set("mode=" + (useStereotypes ? "STEREOTYPE" : "STANDARD")
+                  + " knowledgeLayer=" + (reasoner == null ? "n/a" : reasoner.getKnowledgeLayer())
                   + " maskStrict=" + maskStrict
                   + " ε=" + String.format("%.4f", epsilon)
                   + " goal=" + Arrays.toString(goal)

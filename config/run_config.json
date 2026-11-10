@@ -143,6 +143,21 @@
       "exec_delay_ms_bench": 100,
       "learning_overrides": {"reward_shaping": "none", "adaptive_trust": false, "stereo_redundancy_only": true}
     },
+    "phase1_v2_brick_only": {
+      "note": "CORRECTED PROTOCOL V2 knowledge-ladder control (registered in THESIS_STATE_REPORT.md Addendum 2026-11-10): Brick-structure-only KG prior versus paired tabula rasa. Byte-identical to phase1_v2_kg_only except stereo_knowledge_layer=brick — the ql_true arm's StereotypeReasoner reads only pre-existing vocabularies (WoT contract + brick:isLocatedIn / brick:feeds + SOSA/QUDT observation typing); no Elementary (elem:) mechanism triple is consulted, so no action is IV-gated (Rule 2 / IV-unsat prior never fire), cross-zone arcs are untyped PRIMARY, energyCost=0, no power gates. Structural claims (affectedZones, redundancy) are identical to the full arm (BrickOnlyKnowledgeLayerTest). Delta(kg_only - brick_only) isolates what the Elementary layer adds beyond Brick structure.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {"reward_shaping": "none", "adaptive_trust": false, "stereo_knowledge_layer": "brick"}
+    },
     "phase1_v2_baseline": {
       "note": "CORRECTED PROTOCOL V2 arm A negative control: both arms have no KG prior, PBRS or adaptive trust.",
       "protocol_version": "phase1-v2",

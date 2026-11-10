@@ -113,7 +113,33 @@ public class StereotypeReasoner {
         "PREFIX elem:  <http://w3id.org/elementary#>\n" +
         "PREFIX ws:    <http://example.org/was/lab/stereotypes#>\n" +
         "PREFIX lab:   <http://example.org/was/lab#>\n" +
-        "PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>\n";
+        "PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>\n" +
+        "PREFIX sosa:  <http://www.w3.org/ns/sosa/>\n" +
+        "PREFIX qudt:  <http://qudt.org/schema/qudt/>\n";
+
+    /**
+     * Which layer of the Knowledge Graph the reasoner is allowed to consume
+     * when it derives priors (knowledge-ladder decomposition, registered in
+     * THESIS_STATE_REPORT.md Addendum 2026-11-10 — Brick-only control arm).
+     *
+     * <ul>
+     *   <li>{@link #FULL} — production behaviour: WoT contract + Brick
+     *       structure + Elementary mechanisms ({@code elem:} stereotype chain,
+     *       Mediates IV binding + {@code ws:ivMinRank}, coupling-class
+     *       stereotypes, {@code ws:energyCost}, {@code ws:powerGates}).</li>
+     *   <li>{@link #BRICK} — pre-existing vocabularies only: WoT contract +
+     *       {@code brick:isLocatedIn} / {@code brick:feeds} + SOSA/QUDT
+     *       observation typing. No {@code elem:} mechanism triple is read:
+     *       every action is un-gated ({@code hasIV=false}), every cross-zone
+     *       arc is an untyped PRIMARY coupling, no energy cost, no power
+     *       gates. The arm isolates what the Elementary layer adds on top of
+     *       a structural Brick model.</li>
+     *   <li>{@link #REDUNDANCY} — ontology-free control (legacy
+     *       {@code -Dstereo.redundancyOnly=true}): only the registry-derived
+     *       redundancy discouragement is emitted.</li>
+     * </ul>
+     */
+    public enum KnowledgeLayer { FULL, BRICK, REDUNDANCY }
 
     /**
      * STEREOTYPE ENRICHMENT query (knowledge layer). Since the action-space
@@ -155,6 +181,41 @@ public class StereotypeReasoner {
         // Phase 4 (lab5): per-actuator electrical power draw per tick. Absent
         // on labs 1-4, so ?energyCost is unbound there and parsed as 0.0.
         "  OPTIONAL { ?comp ws:energyCost               ?energyCost . }\n" +
+        "}\n" +
+        "ORDER BY ?zoneIdx ?wotActionType ?actionValue";
+
+    /**
+     * BRICK-ONLY ENRICHMENT query ({@link KnowledgeLayer#BRICK}). Replaces
+     * {@link #ACTUATOR_DISCOVERY_QUERY} in pass 2 when the Elementary layer is
+     * withheld. It uses only pre-existing vocabularies: an action is claimed to
+     * affect the zone its component is {@code brick:isLocatedIn} whenever that
+     * zone contains a sensor that {@code sosa:observes} a property whose
+     * {@code qudt:hasQuantityKind} is Illuminance. This is the structural
+     * ("what is where, what is measured where") reading a Brick model licenses;
+     * it says nothing about mechanisms, preconditions (no {@code ?iv}),
+     * direction, coupling strength, or energy cost, so those columns are
+     * deliberately absent from the projection. {@code elem:hasComponentAction}
+     * / {@code ws:actionValue} appear only as the WoT capability binding that
+     * BOTH arms already share through {@link #WOT_CONTRACT_ACTUATOR_QUERY}.
+     *
+     * The ORDER BY matches the full query so the first-row semantics of pass 2
+     * are preserved.
+     */
+    private static final String BRICK_ENRICHMENT_QUERY = PREFIXES +
+        "SELECT ?comp ?zone ?zoneIdx ?wotActionType ?wotStateType ?actionValue\n" +
+        "WHERE {\n" +
+        "  ?comp  brick:isLocatedIn             ?zone .\n" +
+        "  ?zone  a                             lab:Workstation .\n" +
+        "  ?zone  ws:zoneIndex                  ?zoneIdx .\n" +
+        "  ?comp  ws:hasWoTActionSemanticType   ?wotActionType .\n" +
+        "  ?comp  elem:hasComponentAction       ?action .\n" +
+        "  ?action ws:actionValue               ?actionValue .\n" +
+        "  OPTIONAL { ?comp ws:hasWoTStateSemanticType ?wotStateType . }\n" +
+        "  FILTER EXISTS {\n" +
+        "    ?sensor brick:isLocatedIn ?zone ;\n" +
+        "            sosa:observes     ?prop .\n" +
+        "    ?prop   qudt:hasQuantityKind <http://qudt.org/vocab/quantitykind/Illuminance> .\n" +
+        "  }\n" +
         "}\n" +
         "ORDER BY ?zoneIdx ?wotActionType ?actionValue";
 
@@ -219,6 +280,25 @@ public class StereotypeReasoner {
         "}";
 
     /**
+     * Brick-only cross-zone feed arcs ({@link KnowledgeLayer#BRICK}): the same
+     * {@code brick:feeds} topology as {@link #CROSS_ZONE_FEEDS_QUERY} but with
+     * neither the Elementary stereotype/mechanism join nor the reified
+     * coupling-class stereotype. The source must be an actuatable component
+     * (WoT contract); every arc is consumed as an untyped PRIMARY coupling.
+     */
+    private static final String BRICK_CROSS_ZONE_FEEDS_QUERY = PREFIXES +
+        "SELECT ?sourceComp ?sourceZoneIdx ?targetZoneIdx ?wotActionType\n" +
+        "WHERE {\n" +
+        "  ?sourceComp brick:feeds ?targetSensor .\n" +
+        "  ?sourceComp brick:isLocatedIn ?sourceZone .\n" +
+        "  ?sourceZone ws:zoneIndex ?sourceZoneIdx .\n" +
+        "  ?targetSensor brick:isLocatedIn ?targetZone .\n" +
+        "  ?targetZone ws:zoneIndex ?targetZoneIdx .\n" +
+        "  ?sourceComp ws:hasWoTActionSemanticType ?wotActionType .\n" +
+        "  FILTER (?sourceZoneIdx != ?targetZoneIdx)\n" +
+        "}";
+
+    /**
      * Phase 4 (lab4): discover smart-plug power-gate dependencies. Each row is
      * one (gate -> gated) arc declared via ws:powerGates, where the gate's WoT
      * STATE slot must be ON for the gated component's activation action to have
@@ -244,6 +324,8 @@ public class StereotypeReasoner {
     private List<CrossZoneEffect> crossZoneEffects;
     private double sunshineSatisfactionProb;
     private int numActions;
+    /** Which KG layer this instance consumes; see {@link KnowledgeLayer}. */
+    private final KnowledgeLayer knowledgeLayer;
 
     /**
      * True if the state-slot registry could not be loaded from the ontology
@@ -382,6 +464,35 @@ public class StereotypeReasoner {
     private static final boolean REDUNDANCY_ONLY =
         Boolean.parseBoolean(System.getProperty("stereo.redundancyOnly", "false"));
 
+    /**
+     * Resolve the default {@link KnowledgeLayer} from JVM properties.
+     * {@code -Dstereo.knowledgeLayer={full|brick|redundancy}} is authoritative;
+     * when absent, the legacy {@code -Dstereo.redundancyOnly=true} alias maps
+     * to {@link KnowledgeLayer#REDUNDANCY}, otherwise {@link KnowledgeLayer#FULL}.
+     * A conflicting combination (e.g. {@code knowledgeLayer=brick} together
+     * with {@code redundancyOnly=true}) is a configuration error and fails
+     * loud rather than silently picking one arm.
+     */
+    public static KnowledgeLayer defaultKnowledgeLayer() {
+        String raw = System.getProperty("stereo.knowledgeLayer");
+        if (raw == null || raw.trim().isEmpty()) {
+            return REDUNDANCY_ONLY ? KnowledgeLayer.REDUNDANCY : KnowledgeLayer.FULL;
+        }
+        KnowledgeLayer kl;
+        try {
+            kl = KnowledgeLayer.valueOf(raw.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(
+                "stereo.knowledgeLayer must be one of full|brick|redundancy, got '" + raw + "'");
+        }
+        if (REDUNDANCY_ONLY && kl != KnowledgeLayer.REDUNDANCY) {
+            throw new IllegalArgumentException(
+                "Conflicting arm configuration: -Dstereo.redundancyOnly=true but"
+              + " -Dstereo.knowledgeLayer=" + raw + ". Set exactly one.");
+        }
+        return kl;
+    }
+
 
     // -----------------------------------------------------------------------
     // Ontology loading — injectable for testability (#11 DI refactor)
@@ -444,19 +555,37 @@ public class StereotypeReasoner {
         this(new ClasspathOntologyLoader(ontologyResourcePaths), sunshineSatisfactionProb);
     }
 
+    /** Classpath loader with an explicit {@link KnowledgeLayer}. */
+    public StereotypeReasoner(String[] ontologyResourcePaths, double sunshineSatisfactionProb,
+                              KnowledgeLayer knowledgeLayer) {
+        this(new ClasspathOntologyLoader(ontologyResourcePaths), sunshineSatisfactionProb, knowledgeLayer);
+    }
+
     /**
      * DI constructor: supply any {@link OntologyLoader}. Used by unit tests
-     * with synthetic fixtures via {@link InMemoryOntologyLoader}.
+     * with synthetic fixtures via {@link InMemoryOntologyLoader}. The knowledge
+     * layer is taken from the JVM properties ({@link #defaultKnowledgeLayer()}).
      *
      * @param loader                   strategy that returns the merged OntModel
      * @param sunshineSatisfactionProb P(sunshine >= rank 1) from simulator distribution
      */
     public StereotypeReasoner(OntologyLoader loader, double sunshineSatisfactionProb) {
+        this(loader, sunshineSatisfactionProb, defaultKnowledgeLayer());
+    }
+
+    /**
+     * DI constructor with an explicit {@link KnowledgeLayer}, so tests can
+     * build the FULL and BRICK arms side by side in one JVM.
+     */
+    public StereotypeReasoner(OntologyLoader loader, double sunshineSatisfactionProb,
+                              KnowledgeLayer knowledgeLayer) {
         this.sunshineSatisfactionProb = sunshineSatisfactionProb;
+        this.knowledgeLayer = java.util.Objects.requireNonNull(knowledgeLayer, "knowledgeLayer");
         this.crossZoneEffects = new ArrayList<>();
         this.wotActionToZones = new HashMap<>();
         this.wotStateToSvIndex = new HashMap<>();
 
+        LOGGER.info("StereotypeReasoner: knowledge layer = " + knowledgeLayer);
         OntModel model = loader.load();
 
         // Build WoT state URI → state vector index map dynamically from ws:stateVecIndex triples
@@ -497,7 +626,11 @@ public class StereotypeReasoner {
         // Phase 4 (lab4): apply smart-plug power-gate dependencies on top of the
         // freshly-built action registry. Reuses the IV machinery, so it must run
         // AFTER discoverActuators (actions[] must exist) and BEFORE model.close().
-        discoverPowerGates(model);
+        // ws:powerGates is a mechanism-level (Mediates-like) claim, so it is
+        // consumed only by the FULL knowledge layer.
+        if (knowledgeLayer == KnowledgeLayer.FULL) {
+            discoverPowerGates(model);
+        }
 
         // Discover cross-zone feeds
         discoverCrossZoneFeeds(model);
@@ -664,7 +797,15 @@ public class StereotypeReasoner {
         }
 
         // ── Pass 2: stereotype enrichment (knowledge layer) ──────────────────
-        try (QueryExecution qe = QueryExecutionFactory.create(ACTUATOR_DISCOVERY_QUERY, model)) {
+        // FULL reads the Elementary stereotype chain; BRICK reads only the
+        // structural Brick/SOSA/QUDT evidence (no ?iv / ?ivMinRank /
+        // ?energyCost columns are projected, so those stay at their
+        // KG-silent defaults); REDUNDANCY still enriches with the full query
+        // so its registry metadata is identical to FULL (its rules ignore it).
+        String enrichmentQuery = (knowledgeLayer == KnowledgeLayer.BRICK)
+                ? BRICK_ENRICHMENT_QUERY
+                : ACTUATOR_DISCOVERY_QUERY;
+        try (QueryExecution qe = QueryExecutionFactory.create(enrichmentQuery, model)) {
             ResultSet rs = qe.execSelect();
             while (rs.hasNext()) {
                 QuerySolution qs = rs.next();
@@ -835,7 +976,10 @@ public class StereotypeReasoner {
      * Maps each cross-zone feed to the corresponding ON action index.
      */
     private void discoverCrossZoneFeeds(OntModel model) {
-        try (QueryExecution qe = QueryExecutionFactory.create(CROSS_ZONE_FEEDS_QUERY, model)) {
+        String feedsQuery = (knowledgeLayer == KnowledgeLayer.BRICK)
+                ? BRICK_CROSS_ZONE_FEEDS_QUERY
+                : CROSS_ZONE_FEEDS_QUERY;
+        try (QueryExecution qe = QueryExecutionFactory.create(feedsQuery, model)) {
             ResultSet rs = qe.execSelect();
             while (rs.hasNext()) {
                 QuerySolution qs = rs.next();
@@ -895,6 +1039,11 @@ public class StereotypeReasoner {
     /** Expose the WoT state URI → state vector index mapping. */
     public Map<String, Integer> getWotStateToSvIndexMap() {
         return wotStateToSvIndex;
+    }
+
+    /** The KG layer this instance consumes (knowledge-ladder arm). */
+    public KnowledgeLayer getKnowledgeLayer() {
+        return knowledgeLayer;
     }
 
     /**
@@ -1174,8 +1323,11 @@ public class StereotypeReasoner {
             // intentional (redundancy wins over IV gating).
             if (isRedundant(stateVec, i)) {
                 priors[i] = -PRIOR_REDUNDANT_MAG; // soft-discouraged: redundant
-            } else if (!REDUNDANCY_ONLY && ai.wotValue && !isIVSatisfied(stateVec, i)) {
-                // Knowledge-layer signal — disabled in redundancy-only mode.
+            } else if (knowledgeLayer == KnowledgeLayer.FULL
+                       && ai.wotValue && !isIVSatisfied(stateVec, i)) {
+                // Elementary (Mediates) knowledge-layer signal — only the FULL
+                // arm may emit it. BRICK has no IV bindings at all and
+                // REDUNDANCY must not consult the knowledge layer.
                 priors[i] = -PRIOR_IV_UNSAT_MAG;  // soft-discouraged: IV not satisfied
             } else {
                 priors[i] = 0.0;
@@ -1215,7 +1367,7 @@ public class StereotypeReasoner {
         // disabled — only Rule 1 (registry-derived redundancy, above) may
         // fire; Rules 2-6 (IV gate, cross-zone, shared-actuator, constructive
         // bonus, cross-zone bonus) are all KG-derived and are skipped.
-        if (REDUNDANCY_ONLY) {
+        if (knowledgeLayer == KnowledgeLayer.REDUNDANCY) {
             return 0.0;
         }
 
@@ -1225,7 +1377,11 @@ public class StereotypeReasoner {
         // When the IV is sufficient, the penalty is zero — the action is then
         // physically capable of changing the DV, exactly as Ramanathan & Mayer
         // §3.2 prescribes for a Mediates mechanism.
-        if (ai.hasIV && ai.wotValue && ai.ivStateVecIndex >= 0) {
+        // Elementary-only rule: the BRICK arm never binds an IV, and the gate
+        // is additionally hard-disabled there so the arm cannot acquire one
+        // through any future enrichment path.
+        if (knowledgeLayer == KnowledgeLayer.FULL
+                && ai.hasIV && ai.wotValue && ai.ivStateVecIndex >= 0) {
             int ivRank = stateVec[ai.ivStateVecIndex];
             if (ivRank < ai.ivMinRank) {
                 penalty += -100.0;
