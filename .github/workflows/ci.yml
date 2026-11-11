@@ -62,6 +62,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The Phase-2b Q-gap retrospective reads its frozen inputs as pinned
+          # Git blobs (git cat-file). A shallow checkout only resolves blobs
+          # that are still in HEAD's tree, so the retrospective tests break
+          # the first time a pinned file (e.g. config/run_config.json) changes.
+          fetch-depth: 0
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
