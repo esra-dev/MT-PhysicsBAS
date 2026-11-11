@@ -1067,12 +1067,17 @@ lab_profile("labmon_f1dead",
 //   ESSENTIAL best-effort lever; the KG's structural prior should let it re-value
 //   the spotlight and reconverge faster than the tabula-rasa agent. Reuses the
 //   lab3 ont/td/port so the warm-loaded Q-table shape matches.
-// NOTE: scenarios/train_scenarios reused from lab3 (clean parent); lowsun pins training resets only, not benchmark setState overrides.
+// NOTE: benchmark scenarios reused from lab3 (clean parent). The pinned sun is
+//   delivered at SCENARIO level (train_scenarios_lab3_lowsun.json: same ids,
+//   order and start states as the parent schedule, Sunshine=100 everywhere).
+//   Audit R2-001: the flow reset-sampler pin alone was bypassed by the
+//   protocol-v2 explicit scenario starts, so the 2026-07 runs of record ran
+//   the parent's mixed-sun schedule.
 lab_profile("lab3_f2dead_lowsun",
             td("classpath:interactions-lab3.ttl"),
             ont(["building_3_complex.ttl"]),
             scenarios("benchmark/scenarios_lab3.json"),
-            train_scenarios("benchmark/train_scenarios_lab3.json"),
+            train_scenarios("benchmark/train_scenarios_lab3_lowsun.json"),
             sim_port(1894),
             light_bounds([50, 100, 300]),
             sunshine_bounds([50, 200, 600]),
@@ -1092,12 +1097,16 @@ lab_profile("lab3_f2dead_lowsun",
 //   ESSENTIAL best-effort lever in each zone; the KG's structural prior (Monitor
 //   Causes light) should let it re-value and reconverge faster than tabula-rasa.
 //   Reuses the labmon2 ont/td/port so the warm-loaded Q-table shape matches.
-// NOTE: scenarios/train_scenarios reused from labmon2 (clean parent); lowsun pins training resets only, not benchmark setState overrides.
+// NOTE: benchmark scenarios reused from labmon2 (clean parent). The pinned sun
+//   is delivered at SCENARIO level (train_scenarios_labmon2_lowsun.json: same
+//   ids, order and start states as the parent schedule, Sunshine=100
+//   everywhere). Audit R2-002: the flow reset-sampler pin alone was bypassed
+//   by the protocol-v2 explicit scenario starts.
 lab_profile("labmon2_f2dead_lowsun",
             td("classpath:interactions-labmon2.ttl"),
             ont(["building_7_dualmonitor.ttl"]),
             scenarios("benchmark/scenarios_labmon2.json"),
-            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2_lowsun.json"),
             sim_port(1900),
             light_bounds([50, 100, 300]),
             sunshine_bounds([50, 200, 600]),
@@ -1152,7 +1161,7 @@ lab_profile("labmon2_infoonly_f2dead_lowsun",
             td("classpath:interactions-labmon2.ttl"),
             ont(["building_7_dualmonitor_infoonly.ttl"]),
             scenarios("benchmark/scenarios_labmon2.json"),
-            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2_lowsun.json"),
             sim_port(1900),
             light_bounds([50, 100, 300]),
             sunshine_bounds([50, 200, 600]),
@@ -1168,7 +1177,7 @@ lab_profile("labmon2_nostereo_f2dead_lowsun",
             td("classpath:interactions-labmon2.ttl"),
             ont(["building_7_dualmonitor_nostereo.ttl"]),
             scenarios("benchmark/scenarios_labmon2.json"),
-            train_scenarios("benchmark/train_scenarios_labmon2.json"),
+            train_scenarios("benchmark/train_scenarios_labmon2_lowsun.json"),
             sim_port(1900),
             light_bounds([50, 100, 300]),
             sunshine_bounds([50, 200, 600]),

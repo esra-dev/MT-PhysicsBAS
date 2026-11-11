@@ -1,0 +1,43 @@
+[
+  {
+    "comment": "lab3 LOW-SUN training schedule, derived from benchmark/train_scenarios_lab3.json by analysis/build_lowsun_scenarios.py: identical ids, order and actuator start states; Sunshine pinned to 100 lux in every scenario (declared levels recomputed with the clean physics). Delivers the registered Phase-2 low-sun manipulation at scenario level (audit R2-001/R2-002); the flow reset-sampler pin alone was bypassed by protocol-v2 explicit scenario starts.",
+    "id": 1, "Z1Level": 25, "Z2Level": 25, "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start all off; parent id 1"
+  },
+  {
+    "id": 2, "Z1Level": 525, "Z2Level": 525, "Z1Light": true, "Z2Light": true, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start on: Z1Light, Z2Light; parent id 2"
+  },
+  {
+    "id": 5, "Z1Level": 25, "Z2Level": 25, "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start all off; parent id 5"
+  },
+  {
+    "id": 6, "Z1Level": 525, "Z2Level": 525, "Z1Light": true, "Z2Light": true, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start on: Z1Light, Z2Light; parent id 6"
+  },
+  {
+    "id": 7, "Z1Level": 425, "Z2Level": 125, "Z1Light": true, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start on: Z1Light; parent id 7"
+  },
+  {
+    "id": 9, "Z1Level": 25, "Z2Level": 25, "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start all off; parent id 9"
+  },
+  {
+    "id": 10, "Z1Level": 525, "Z2Level": 525, "Z1Light": true, "Z2Light": true, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start on: Z1Light, Z2Light; parent id 10"
+  },
+  {
+    "id": 11, "Z1Level": 125, "Z2Level": 425, "Z1Light": false, "Z2Light": true, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start on: Z2Light; parent id 11"
+  },
+  {
+    "id": 13, "Z1Level": 25, "Z2Level": 25, "Z1Light": false, "Z2Light": false, "Z1Blinds": false, "Z2Blinds": false, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start all off; parent id 13"
+  },
+  {
+    "id": 16, "Z1Level": 105, "Z2Level": 105, "Z1Light": false, "Z2Light": false, "Z1Blinds": true, "Z2Blinds": true, "Spotlight": false, "Sunshine": 100,
+    "description": "pinned sun=100 (rank 1); start on: Z1Blinds, Z2Blinds; parent id 16"
+  }
+]

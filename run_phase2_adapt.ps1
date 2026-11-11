@@ -224,6 +224,50 @@ function Get-ScenarioSchedule { param([string]$ScenarioPath)
     $hash = Get-Sha256Hex ([System.Text.Encoding]::UTF8.GetBytes(($ids -join ',')))
     return [pscustomobject]@{ ids = $ids; hash = $hash }
 }
+# Treatment-delivery evidence for environmental manipulations (audit R2-001/
+# R2-002): the schedule hash only covers scenario IDs, so a pinned-sun file
+# derived from its parent hashes identically. Record the file hash and the
+# set of Sunshine values the explicit scenario starts actually deliver.
+function Get-ScenarioTreatment { param([string]$ScenarioPath)
+    $bytes = [System.IO.File]::ReadAllBytes($ScenarioPath)
+    $rows = [System.Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
+    $sun = @()
+    foreach ($row in $rows) {
+        if ($row.PSObject.Properties['id'] -and $row.PSObject.Properties['Sunshine']) { $sun += [double]$row.Sunshine }
+    }
+    $sunValues = @($sun | Sort-Object -Unique)
+    return [pscustomobject]@{
+        file_sha256     = Get-Sha256Hex $bytes
+        sunshine_values = $sunValues
+    }
+}
+# The adapt agent reads its scenario file from lab_profiles.asl
+# (train_scenarios(...)), while the manifests/validators use
+# config phase2.train_scenarios_map. Both must name the same file.
+function Get-AslTrainScenarios { param([string]$Profile)
+    $asl = Get-Content -Raw (Join-Path $ScriptRoot "src\agt\lab_profiles.asl")
+    $pattern = 'lab_profile\("' + [regex]::Escape($Profile) + '",[\s\S]*?train_scenarios\("([^"]+)"\)'
+    $m = [regex]::Match($asl, $pattern)
+    if (-not $m.Success) { throw "lab_profiles.asl: no train_scenarios(...) for profile '$Profile'" }
+    return $m.Groups[1].Value
+}
+# Pre-cell treatment-delivery preflight. A *_lowsun profile must resolve to a
+# scenario file whose every scenario pins Sunshine = 100 (rank 1); any other
+# value means the registered manipulation would not be delivered and the
+# cell must not run (the 2026-07 runs of record failed exactly this way).
+function Assert-ScenarioTreatmentDelivery { param([string]$Profile, [string]$ScenarioRel)
+    $aslRel = Get-AslTrainScenarios -Profile $Profile
+    if ($aslRel -ne $ScenarioRel) {
+        throw "Scenario-file mismatch for '$Profile': config train_scenarios_map='$ScenarioRel' but lab_profiles.asl train_scenarios='$aslRel'"
+    }
+    if ($Profile -like '*_lowsun') {
+        $treat = Get-ScenarioTreatment (Join-Path $ScriptRoot ($ScenarioRel -replace '/', '\'))
+        $bad = @($treat.sunshine_values | Where-Object { $_ -ne 100 })
+        if ($bad.Count -gt 0 -or $treat.sunshine_values.Count -eq 0) {
+            throw "Low-sun treatment NOT delivered for '$Profile': $ScenarioRel schedules Sunshine values {$($treat.sunshine_values -join ', ')}; every scenario must pin 100"
+        }
+    }
+}
 
 try {
     Write-Header "MT-Esra Phase 2 — Fault-Detection / Blacklist / Re-learn  |  $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
@@ -235,6 +279,15 @@ try {
         Write-OK "episodes : $EffEpisodes (override via -Padapt.episodes)"
     } else {
         Write-OK "episodes : per-profile training_params default"
+    }
+
+    # Treatment-delivery preflight for every requested profile BEFORE any
+    # simulator starts (fail fast, pre-data).
+    foreach ($pf in $ProfileList) {
+        $pfRel = Map-Get $P2.train_scenarios_map $pf
+        if ($null -eq $pfRel) { throw "config phase2.train_scenarios_map has no entry for '$pf'" }
+        Assert-ScenarioTreatmentDelivery -Profile $pf -ScenarioRel $pfRel
+        Write-OK ("scenario : {0} -> {1}" -f $pf, $pfRel)
     }
 
     $cellLogDir = Join-Path $ScriptRoot "log"
@@ -431,7 +484,13 @@ try {
                     if ($null -eq $scRel) {
                         throw "config phase2.train_scenarios_map has no entry for '$profile'"
                     }
-                    $schedule = Get-ScenarioSchedule (Join-Path $ScriptRoot ($scRel -replace '/', '\'))
+                    $scAbs = Join-Path $ScriptRoot ($scRel -replace '/', '\')
+                    $schedule = Get-ScenarioSchedule $scAbs
+                    $treatment = Get-ScenarioTreatment $scAbs
+                    $lowsunDelivered = $null
+                    if ($profile -like '*_lowsun') {
+                        $lowsunDelivered = (($treatment.sunshine_values.Count -eq 1) -and ([double]$treatment.sunshine_values[0] -eq 100))
+                    }
                     $qtFiles = @(Get-ChildItem -Path $ScriptRoot -Filter ("qtable_final_stereotypes_{0}{1}*.csv" -f $bool, $cleanSfx) |
                                  ForEach-Object { $_.FullName })
                     $qtHash = ""
@@ -457,6 +516,9 @@ try {
                         train_scenarios_file     = $scRel
                         ordered_scenario_ids     = $schedule.ids
                         scenario_schedule_sha256 = $schedule.hash
+                        scenario_file_sha256     = $treatment.file_sha256
+                        scenario_sunshine_values = @($treatment.sunshine_values)
+                        lowsun_pin_delivered     = $lowsunDelivered
                         parent_qtable_files      = @($qtFiles | ForEach-Object { [System.IO.Path]::GetFileName($_) } | Sort-Object)
                         parent_qtable_sha256     = $qtHash
                     }

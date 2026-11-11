@@ -13,6 +13,18 @@ committed scenario file, and a recovery row stamped by fault-detector-v2 under
 protocol phase2-v2. Paired arms must share the scenario schedule. Parent
 training cells must carry protocol phase1-v2 TRAINING_OK manifests with zero
 scenario fallbacks.
+
+Treatment-delivery gate (round-2 audit R2-001/R2-002, 2026-11): the schedule
+hash covers scenario IDs only, so a pinned-sun scenario file derived from its
+parent hashes identically. Manifests written since 2026-11 additionally carry
+``scenario_file_sha256``, ``scenario_sunshine_values`` and
+``lowsun_pin_delivered``; whenever present they are checked against the
+committed scenario file. With ``require_treatment_delivery=True`` (CLI
+``--require-treatment-delivery``) every ``*_lowsun`` cell MUST carry those keys
+and MUST have been started from a schedule whose every scenario pins
+``Sunshine = 100``. The 2026-07 runs of record fail that stricter gate by
+construction (their low-sun manipulation was not delivered), which is why the
+default stays permissive for the historical reproducers.
 """
 
 from __future__ import annotations
@@ -48,13 +60,38 @@ def _schedule(scenario_rel: str) -> tuple[list[int], str]:
     return ids, digest
 
 
+LOWSUN_LUX = 100.0
+
+
+def _treatment(scenario_rel: str) -> tuple[str, list[float]]:
+    """(file SHA-256, sorted unique Sunshine values) of a committed scenario file."""
+    path = SOURCE_ROOT / scenario_rel
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    rows = _json(path)
+    values = sorted({float(row["Sunshine"]) for row in rows
+                     if isinstance(row, dict) and "id" in row and "Sunshine" in row})
+    return digest, values
+
+
+def _is_lowsun(profile: str) -> bool:
+    return profile.endswith("_lowsun")
+
+
+def _schedule_and_treatment(scenario_rel: str) -> tuple[list[int], str, str, list[float]]:
+    """(ordered ids, schedule hash, file hash, sorted Sunshine values)."""
+    ids, schedule_hash = _schedule(scenario_rel)
+    file_hash, sun = _treatment(scenario_rel)
+    return ids, schedule_hash, file_hash, sun
+
+
 def _config():
     return json.loads((SOURCE_ROOT / "config" / "run_config.json")
                       .read_text(encoding="utf-8-sig"))
 
 
 def validate(root: Path, profiles: list[str], seeds: list[int],
-             require_parents: bool = True) -> list[str]:
+             require_parents: bool = True,
+             require_treatment_delivery: bool = False) -> list[str]:
     errors: list[str] = []
     cfg = _config()["phase2"]
     scenario_map = cfg.get("train_scenarios_map", {})
@@ -70,7 +107,13 @@ def validate(root: Path, profiles: list[str], seeds: list[int],
             if not scenario_rel:
                 errors.append(f"config phase2.train_scenarios_map has no entry for {profile}")
                 continue
-            declared_ids, declared_hash = _schedule(scenario_rel)
+            config_rel = scenario_rel
+            _, _, _, config_sun = _schedule_and_treatment(config_rel)
+            if require_treatment_delivery and _is_lowsun(profile) \
+                    and config_sun != [LOWSUN_LUX]:
+                errors.append(f"{config_rel}: low-sun profile {profile} maps to a "
+                              f"schedule with Sunshine values {config_sun}; every "
+                              f"scenario must pin {LOWSUN_LUX:g}")
             arm_hash: dict[str, str] = {}
             for bool_name, mode in (("true", "ql_true"), ("false", "ql_false")):
                 cell = f"stereotypes_{bool_name}_{profile}"
@@ -81,6 +124,26 @@ def validate(root: Path, profiles: list[str], seeds: list[int],
                     errors.append(f"missing gate manifest: {manifest_path}")
                     continue
                 manifest = _json(manifest_path)
+                has_evidence = "scenario_file_sha256" in manifest
+                # Which committed scenario file must this cell match? Manifests
+                # carrying treatment-delivery evidence (2026-11+) and every cell
+                # under the strict gate must match the CURRENT config map. Legacy
+                # manifests are matched against the committed file they recorded,
+                # so the 2026-07 archives (whose *_lowsun cells recorded the
+                # parent's mixed-sun schedule) keep reproducing under the default
+                # gate while remaining honestly classified as undelivered.
+                scenario_rel = config_rel
+                if not has_evidence and not require_treatment_delivery:
+                    recorded = manifest.get("train_scenarios_file")
+                    if recorded and (SOURCE_ROOT / recorded).is_file():
+                        scenario_rel = recorded
+                try:
+                    declared_ids, declared_hash, declared_file_hash, declared_sun = \
+                        _schedule_and_treatment(scenario_rel)
+                except (OSError, ValueError, KeyError) as exc:
+                    errors.append(f"{manifest_path}: cannot read scenario file "
+                                  f"{scenario_rel}: {exc}")
+                    continue
                 for key, expected in (
                     ("status", "ok"),
                     ("protocol_version", PROTOCOL),
@@ -103,6 +166,31 @@ def validate(root: Path, profiles: list[str], seeds: list[int],
                 if not manifest.get("parent_qtable_sha256"):
                     errors.append(f"{manifest_path}: empty parent_qtable_sha256 (cold start?)")
                 arm_hash[bool_name] = manifest.get("scenario_schedule_sha256", "")
+
+                # Treatment-delivery evidence (present on manifests since 2026-11).
+                if require_treatment_delivery and _is_lowsun(profile) and not has_evidence:
+                    errors.append(f"{manifest_path}: low-sun cell without treatment-delivery "
+                                  "evidence (scenario_file_sha256/scenario_sunshine_values/"
+                                  "lowsun_pin_delivered); the low-sun manipulation cannot be "
+                                  "shown to have been delivered")
+                if has_evidence:
+                    if manifest.get("scenario_file_sha256") != declared_file_hash:
+                        errors.append(f"{manifest_path}: scenario_file_sha256 differs from the "
+                                      f"committed {scenario_rel}")
+                    recorded_sun = sorted(float(v) for v in
+                                          manifest.get("scenario_sunshine_values", []))
+                    if recorded_sun != declared_sun:
+                        errors.append(f"{manifest_path}: scenario_sunshine_values={recorded_sun} "
+                                      f"differ from the committed file's {declared_sun}")
+                    if _is_lowsun(profile):
+                        delivered = manifest.get("lowsun_pin_delivered")
+                        if delivered is not True or recorded_sun != [LOWSUN_LUX]:
+                            errors.append(f"{manifest_path}: low-sun pin NOT delivered "
+                                          f"(lowsun_pin_delivered={delivered!r}, "
+                                          f"Sunshine values {recorded_sun})")
+                    elif manifest.get("lowsun_pin_delivered") is not None:
+                        errors.append(f"{manifest_path}: lowsun_pin_delivered set on a "
+                                      "non-low-sun profile")
 
                 if not recovery_path.is_file():
                     errors.append(f"missing recovery CSV: {recovery_path}")
@@ -164,6 +252,9 @@ def main() -> int:
                         help="seed range 'a-b' or comma list (default: %(default)s)")
     parser.add_argument("--no-parents", action="store_true",
                         help="skip parent TRAINING_OK checks (partial archives)")
+    parser.add_argument("--require-treatment-delivery", action="store_true",
+                        help="every *_lowsun cell must carry treatment-delivery evidence "
+                             "showing Sunshine pinned to 100 in every scenario")
     args = parser.parse_args()
     profiles = [name.strip() for name in args.profiles.split(",") if name.strip()]
     if "-" in args.seeds and "," not in args.seeds:
@@ -171,7 +262,8 @@ def main() -> int:
         seeds = list(range(int(lo), int(hi) + 1))
     else:
         seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
-    errors = validate(args.root, profiles, seeds, require_parents=not args.no_parents)
+    errors = validate(args.root, profiles, seeds, require_parents=not args.no_parents,
+                      require_treatment_delivery=args.require_treatment_delivery)
     if errors:
         print("Phase-2 v2 archive validation FAILED:")
         for error in errors:
