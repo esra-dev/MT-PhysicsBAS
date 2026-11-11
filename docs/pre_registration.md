@@ -1098,6 +1098,17 @@ structural-maskability abstain).** Full report:
 `docs/thesis_chapter_phase2.md` §10 and
 `phase2_v2_corrected/CAMPAIGN_MANIFEST.md`.
 
+### 9.13 Registered re-execution — delivered low-sun cells (added 2026-11-11, pre-data)
+
+Round-2 audit findings R2-001/R2-002 established that the two low-sun Tier-1
+cells of §9.5 (`lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`) never received
+their low-sun treatment under the §9.12 corrected protocol. Their re-execution
+with the pin delivered at scenario level is registered in
+`docs/phase2_lowsun_rerun_registration_2026-11-11.md` (binding; new m = 2
+recovery and detection families over the two cells; the §9.12 m = 8 tables are
+not recomputed). The companion Phase-1b extended-arm re-execution is registered
+in `docs/phase1b_extended_rerun_registration_2026-11-11.md`.
+
 ## §10 Phase-1b addendum (2026-07-26) — knowledge-necessity package
 
 The Phase-1b confirmatory campaign (labrel relevance ladder, labrel8s
@@ -1123,14 +1134,3 @@ hypothesis-generating audit, not a prospective test; its fixed panels,
 definitions, exclusions, sensitivities, and C2 screening gates cannot confer
 prospective status on the sighted data. Any later C2 requires a separate plan
 written before new adaptation data are dispatched.
-
-### 9.13 Registered re-execution — delivered low-sun cells (added 2026-11-11, pre-data)
-
-Round-2 audit findings R2-001/R2-002 established that the two low-sun Tier-1
-cells of §9.5 (`lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`) never received
-their low-sun treatment under the §9.12 corrected protocol. Their re-execution
-with the pin delivered at scenario level is registered in
-`docs/phase2_lowsun_rerun_registration_2026-11-11.md` (binding; new m = 2
-recovery and detection families over the two cells; the §9.12 m = 8 tables are
-not recomputed). The companion Phase-1b extended-arm re-execution is registered
-in `docs/phase1b_extended_rerun_registration_2026-11-11.md`.
