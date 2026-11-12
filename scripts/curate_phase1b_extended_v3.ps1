@@ -22,6 +22,10 @@ param(
 $ErrorActionPreference = "Stop"
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location (Split-Path -Parent $ScriptRoot)
+# Interpreter: prefer the Windows launcher (py -3) when present, else python.
+$PyCmd = @("python")
+if (Get-Command py -ErrorAction SilentlyContinue) { $PyCmd = @("py", "-3") }
+function Invoke-Py { if ($PyCmd.Count -gt 1) { & $PyCmd[0] $PyCmd[1] @args } else { & $PyCmd[0] @args } }
 
 $frozen = @()
 foreach ($r in $FrozenRuns) {
@@ -49,12 +53,14 @@ foreach ($id in $RunIds) {
         Write-Host "artifact provenance for run $id ..."
         $arts = (gh api "repos/{owner}/{repo}/actions/runs/$id/artifacts" | ConvertFrom-Json).artifacts
         foreach ($a in $arts) { if ($a.name -eq "phase1-consolidated") { Write-Host ("  artifact id {0}  digest {1}  size {2}" -f $a.id, $a.digest, $a.size_in_bytes) } }
+    }
+    if (-not (Test-Path (Join-Path $dest "SHA256SUMS.csv"))) {
         Write-Host "inventory for run $id ..."
-        python analysis/phase1_archive_inventory.py --root $dest --out (Join-Path $dest "SHA256SUMS.csv") --include "analysis/**" --include "benchmark/**"
+        Invoke-Py analysis/phase1_archive_inventory.py --root $dest --out (Join-Path $dest "SHA256SUMS.csv") --include "analysis/**" --include "benchmark/**"
         if ($LASTEXITCODE -ne 0) { throw "inventory failed for $id" }
     }
     Write-Host "validating run $id (effective-props + initial-Q divergence gates ON) ..."
-    python analysis/validate_phase1b_archive.py $dest --stage confirmatory --require-effective-props --divergence-against @frozen
+    Invoke-Py analysis/validate_phase1b_archive.py $dest --stage confirmatory --require-effective-props --divergence-against @frozen
     if ($LASTEXITCODE -ne 0) { $failed++; Write-Host "VALIDATION FAILED: $dest" }
 }
 if ($failed -gt 0) { throw "$failed archive(s) failed validation" }

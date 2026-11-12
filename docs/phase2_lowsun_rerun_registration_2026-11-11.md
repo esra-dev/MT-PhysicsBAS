@@ -154,3 +154,33 @@ null. A supported result is a corrected-protocol low-sun finding and nothing
 more; an adverse or null result is reported with the same prominence. The
 2026-07 rows keep their classification, and the two conditions are never
 merged into one count. Historical archives remain untouched.
+
+## Amendment A1 (2026-11-12, POST-DATA, disclosed) — the §5 delivery signature was mis-specified
+
+§5 registered a voiding rule: any record of either cell with `BestEffortRank = 3`
+or `RankShortfall = 0` falsifies treatment delivery. After the run, 29/40
+`lab3_f2dead_lowsun` records and 6/40 `labmon2_f2dead_lowsun` records carry
+exactly those values while every manifest, file hash and the preflight show the
+pinned schedule in force. Inspection of the instrument — not of the outcomes —
+shows the rule itself was wrong: `BestEffortRank` reports `effectiveGoal`, which
+starts equal to the nominal goal (`src/env/tools/QLearner.java`, constructor:
+"effective (best-effort) goal starts equal to the nominal goal") and is lowered
+ONLY by `finishReachabilityProbe`, which the adapt agent runs inside `!on_defect`
+after a component has been blacklisted
+(`src/agt/illuminance_controller_agent_adapt.asl`, best-effort degradation
+block). A record whose cell never detected a fault therefore carries the
+nominal rank by construction, at any sun. The 35 flagged records are exactly
+the 35 never-detected records (lab3: 20 KG + 9 TR; labmon2: 6 KG), and all 45
+detected records show `BestEffortRank = 2`, `RankShortfall = 1`,
+`DegradedMode = 1` — the ceiling the pin predicts for both labs. The same
+artefact explains the 21/40 (= 20 KG + 1 TR non-detections) that audit R2-001
+read as a sun-mixing signature in the 2026-07 record; R2-001's non-delivery
+finding rested on byte identity and stands.
+
+**Decision:** the voiding rule is restated as *conditional on detection*: every
+record in which a fault was detected must show a best-effort rank below the
+nominal goal. Under the restated rule delivery is confirmed 45/45, in addition
+to the manifest evidence. This amendment is made after seeing the data and is
+reported as such. It changes no estimand, family membership, statistic, or
+decision rule of H-P2; the recovery and detection outcomes are reported exactly
+as the frozen analysis produced them.

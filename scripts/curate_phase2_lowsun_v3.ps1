@@ -16,6 +16,10 @@ param(
 $ErrorActionPreference = "Stop"
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location (Split-Path -Parent $ScriptRoot)
+# Interpreter: prefer the Windows launcher (py -3) when present, else python.
+$PyCmd = @("python")
+if (Get-Command py -ErrorAction SilentlyContinue) { $PyCmd = @("py", "-3") }
+function Invoke-Py { if ($PyCmd.Count -gt 1) { & $PyCmd[0] $PyCmd[1] @args } else { & $PyCmd[0] @args } }
 
 $failed = 0
 foreach ($id in $RunIds) {
@@ -39,8 +43,10 @@ foreach ($id in $RunIds) {
         Write-Host "artifact provenance for run $id ..."
         $arts = (gh api "repos/{owner}/{repo}/actions/runs/$id/artifacts" | ConvertFrom-Json).artifacts
         foreach ($a in $arts) { if ($a.name -eq "phase2-consolidated") { Write-Host ("  artifact id {0}  digest {1}  size {2}" -f $a.id, $a.digest, $a.size_in_bytes) } }
+    }
+    if (-not (Test-Path (Join-Path $dest "SHA256SUMS.csv"))) {
         Write-Host "inventory for run $id ..."
-        python analysis/phase1_archive_inventory.py --root $dest --out (Join-Path $dest "SHA256SUMS.csv") --include "analysis/**" --include "recovery_root/**" --include "_artifacts/**"
+        Invoke-Py analysis/phase1_archive_inventory.py --root $dest --out (Join-Path $dest "SHA256SUMS.csv") --include "analysis/**" --include "recovery_root/**" --include "_artifacts/**"
         if ($LASTEXITCODE -ne 0) { throw "inventory failed for $id" }
     }
     $inputs = Get-Content -Raw (Join-Path $dest "analysis\out\workflow_inputs.json") | ConvertFrom-Json
@@ -49,7 +55,7 @@ foreach ($id in $RunIds) {
     $seeds = $inputs.seeds
     if ($seeds -is [array]) { $seeds = $seeds -join "," }
     Write-Host "validating run $id (treatment-delivery gate ON) ..."
-    python analysis/validate_phase2_v2_archive.py $dest --profiles $profiles --seeds $seeds --require-treatment-delivery
+    Invoke-Py analysis/validate_phase2_v2_archive.py $dest --profiles $profiles --seeds $seeds --require-treatment-delivery
     if ($LASTEXITCODE -ne 0) { $failed++; Write-Host "VALIDATION FAILED: $dest" }
 }
 if ($failed -gt 0) { throw "$failed archive(s) failed validation" }
