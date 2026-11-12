@@ -40,3 +40,34 @@ untouched). The benchmark cell of E1 is not an input of M2/M4/M5 (training
 `auc_goal` and the labband `ql_true` benchmark deviation); the E2 training cell
 is an M2 input and had produced no data. Outcome of attempt 2 is appended
 below when both aggregates complete.
+
+### Attempt-2 outcome (2026-11-12)
+
+Both halves completed with conclusion **success** at attempt 2 (E1 at
+08:32Z, E2 at 09:28Z); the re-executed jobs were only the two failed cells and
+their dependents, and every attempt-1 cell kept its original artifact. (The
+per-job tally endpoint of the GitHub API returned HTTP 502 while this record
+was written; the run-level conclusion and the complete consolidated artifacts
+are the evidence of completeness: each archive inventories 5,480 files, 140
+TRAINING_OK manifests and 210 benchmark cells.)
+
+| Half | consolidated artifact (`phase1-consolidated`) | results-branch commit / tag |
+|---|---|---|
+| E1 | id `13927831370`, `sha256:a67a5b993126c542b1c0a9eb9d4683114e16b86a8139bbd0c0eafa70d43c5faa` | `78f2cf06`, tag `results-20261112-083254-phase1b_v2_extended-77e7791f` (verified on the remote) |
+| E2 | id `13930787358`, `sha256:5c658b834b88ae16ac1b4c48edb314c36e78cfce8bef7a99823568cc6382ff38` | `0975fcf6`, tag `results-20261112-092836-phase1b_v2_extended-77e7791f` (verified on the remote) |
+
+## Curation and gates
+
+`scripts/curate_phase1b_extended_v3.ps1 -RunIds 43099281565,43099286057
+-Comparator <phase1b_corrected with raw files>` downloaded both artifacts into
+`phase1b_extended_v3/run_<id>/`, wrote the 5,480-file inventories, and passed
+`analysis/validate_phase1b_archive.py --stage confirmatory
+--require-effective-props --divergence-against <frozen halves>`: all 280
+TRAINING_OK manifests report effective `stereo.irrelevantDvPrior=2.0`,
+`stereo.bandMirrorInit=5.0`, `stereo.bandMirrorPrior=2.0`, and the stereo-true
+initial Q-tables of `labrel16` and `labband` differ from the frozen archive for
+every seed. The comparator halves (baseline 30199243656/30199247467, frozen
+30199257204/30199260042) pass their gates and SHA-256 inventories. Registered
+tables: `phase1b_extended_v3/analysis/registered/`; reproduction:
+`python analysis/reproduce_phase1b_extended_v3.py phase1b_extended_v3
+--comparator <phase1b_corrected with raw files>` (byte-equivalent).

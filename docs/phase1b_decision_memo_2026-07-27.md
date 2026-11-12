@@ -1,5 +1,16 @@
 # Post-Phase-1b decision memo (2026-07-27)
 
+> **Notice (2026-11-12, round-3 re-execution):** the "double null on the new
+> qualitative channels (M2/M4)" invoked below as a reason to defer `labmag` and
+> descope C3 was never measured — the 2026-07 extended arm executed frozen KG
+> (audit AUD-001). After the delivered re-execution
+> (`phase1b_extended_v3/CAMPAIGN_MANIFEST.md`), M2 is an exact null **at a
+> ceiling** (training `auc_goal` = 1.000 in every labrel rung, both arms, all
+> seeds), M4 is null, and exploratory M5 shows a 4.3×-SESOI reduction of
+> labband illuminance deviation (uncorrected p = 0.024). The deferral reasons
+> therefore change from "measured zero effect" to "relevance-ladder endpoint
+> saturated"; the decisions themselves are not revisited here.
+
 Basis: the reproduced Phase-1b confirmatory results
 (`docs/phase1b_results_2026-07-27.md`; archives `phase1b_corrected/`, all
 gates green, tables byte-reproduced). This memo executes Stage 4 of the
