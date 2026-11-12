@@ -1,0 +1,24 @@
+# IV Stats v2 (label-keyed) — ivTrialCount [4 IV ranks]
+SetFan=OFF,0,0,0,0
+SetFan=ON,0,0,0,0
+SetHeater=OFF,0,0,0,0
+SetHeater=ON,0,0,0,0
+SetHumidifier=OFF,0,0,0,0
+SetHumidifier=ON,0,0,0,0
+SetSpeaker=OFF,0,0,0,0
+SetSpeaker=ON,0,0,0,0
+SetZ1Light=OFF,0,0,0,0
+SetZ1Light=ON,0,0,0,0
+DO_NOTHING,0,0,0,0
+# ivSuccessCount [4 IV ranks]
+SetFan=OFF,0,0,0,0
+SetFan=ON,0,0,0,0
+SetHeater=OFF,0,0,0,0
+SetHeater=ON,0,0,0,0
+SetHumidifier=OFF,0,0,0,0
+SetHumidifier=ON,0,0,0,0
+SetSpeaker=OFF,0,0,0,0
+SetSpeaker=ON,0,0,0,0
+SetZ1Light=OFF,0,0,0,0
+SetZ1Light=ON,0,0,0,0
+DO_NOTHING,0,0,0,0

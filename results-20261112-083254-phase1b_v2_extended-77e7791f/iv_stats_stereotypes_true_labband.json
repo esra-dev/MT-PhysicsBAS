@@ -1,0 +1,20 @@
+# IV Stats v2 (label-keyed) — ivTrialCount [4 IV ranks]
+SetAwning=OFF,0,0,0,0
+SetAwning=ON,10,7,4,300
+SetStrongLamp=OFF,0,0,0,0
+SetStrongLamp=ON,0,0,0,0
+SetWeakLamp=OFF,0,0,0,0
+SetWeakLamp=ON,0,0,0,0
+SetZ1Blinds=OFF,0,0,0,0
+SetZ1Blinds=ON,11,6,4,4
+DO_NOTHING,0,0,0,0
+# ivSuccessCount [4 IV ranks]
+SetAwning=OFF,0,0,0,0
+SetAwning=ON,0,0,0,0
+SetStrongLamp=OFF,0,0,0,0
+SetStrongLamp=ON,0,0,0,0
+SetWeakLamp=OFF,0,0,0,0
+SetWeakLamp=ON,0,0,0,0
+SetZ1Blinds=OFF,0,0,0,0
+SetZ1Blinds=ON,0,3,1,3
+DO_NOTHING,0,0,0,0
