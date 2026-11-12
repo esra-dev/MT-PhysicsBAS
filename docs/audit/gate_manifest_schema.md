@@ -20,9 +20,17 @@ Phase-2/3/4 manifests extend the same contract.
 
 ## `TRAINING_OK.json` — Phase-1 v2 training cells (also Phase-2 v2 parents, Phase-4 v2 training)
 
-Existing schema, unchanged: common keys plus `fixed_horizon_episodes` (3000),
+Existing schema: common keys plus `fixed_horizon_episodes` (3000),
 `paired_rng_version` (`common-seed-v1`), `run_mode`. Phase-4 v2 cells add
 `policy_energy_weights_sha256` (hash of the config-driven weight map).
+
+Treatment-delivery keys (added 2026-11 after audit AUD-001, written by every
+training cell since):
+
+| Key | Meaning |
+|---|---|
+| `stereo_requested_props` | The stereotype knob values the run mode requested (`stereo.irrelevantDvPrior`, `stereo.bandMirrorInit`, `stereo.bandMirrorPrior`; 0.0 when not requested). |
+| `stereo_effective_props` | The values the JVM actually used, parsed from the `STEREO_EFFECTIVE_PROPS {json}` line `StereotypeReasoner` logs at construction (also carries `stereo.redundancyOnly`). The runner FAILS the cell before writing the manifest if any requested value differs from the effective one. `analysis/validate_phase1b_archive.py --require-effective-props` re-checks the archive against the mode's registered values. |
 
 ## `ADAPT_OK.json` — Phase-2 v2 adaptation cells
 
@@ -36,6 +44,9 @@ Common keys plus:
 | `detector_version` | `fault-detector-v2` (structural-maskability abstain). |
 | `settled_start_state` | MUST be `true`: start states recorded only after the 250 ms settle. |
 | `mode` | `ql_true` or `ql_false`. |
+| `scenario_file_sha256` | (since 2026-11, audit R2-001/R2-002) SHA-256 of the committed scenario file bytes. The schedule hash covers IDs only, so a pinned-sun file derived from its parent hashes identically there; the file hash distinguishes the delivered environmental treatment. |
+| `scenario_sunshine_values` | (since 2026-11) sorted unique `Sunshine` values of the scenario file the explicit starts actually used. |
+| `lowsun_pin_delivered` | (since 2026-11) for `*_lowsun` profiles: `true` iff every scenario pins `Sunshine = 100`; `null` for every other profile. `analysis/validate_phase2_v2_archive.py --require-treatment-delivery` makes the evidence mandatory for low-sun cells. |
 
 ## `DYNAMICS_OK.json` — Phase-3 v2 dynamics cells
 

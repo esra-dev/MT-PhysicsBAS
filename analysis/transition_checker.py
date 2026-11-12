@@ -7,6 +7,8 @@ model for one scenario and emits a hashable certificate reporting:
   * shortest path length (first passage to goal);
   * every shortest action sequence, or an exact count plus canonical
     lexicographic representatives when enumeration exceeds the cap;
+  * the exact union of first actions over all shortest routes, independent of
+    that enumeration cap;
   * all reachable states and all reachable terminal (absorbing) states;
   * whether the intended mechanism (a set of required action tokens) appears
     in every successful shortest route;
@@ -47,6 +49,7 @@ class CheckerResult:
     shortest_sequence_count: int
     shortest_sequences: Optional[List[List[str]]]  # None when count > cap
     canonical_representatives: List[List[str]]
+    shortest_first_actions: List[str]
     reachable_state_count: int
     reachable_states: List[str]
     reachable_terminal_states: List[str]
@@ -171,6 +174,36 @@ def _count_and_enumerate(model, parents, goal_states, goal_depth,
     return total, None, sequences[:reps]
 
 
+def _all_shortest_first_actions(parents, goal_states, goal_depth) -> List[str]:
+    """Return the exact first-action union over the shortest-path DAG.
+
+    This deliberately does not depend on shortest-sequence enumeration.  The
+    checker caps full sequence materialisation at :data:`ENUMERATION_CAP`, but
+    downstream analyses still need the complete set of actions that can start a
+    shortest successful route.  Walking the parent DAG backwards visits each
+    layered state at most once and therefore remains exact even when the number
+    of shortest paths is exponential.
+    """
+    if goal_depth is None or goal_depth == 0:
+        return []
+
+    first_actions: Set[str] = set()
+    pending = [(goal, goal_depth) for goal in goal_states]
+    visited: Set[Tuple[Hashable, int]] = set()
+    while pending:
+        node = pending.pop()
+        if node in visited:
+            continue
+        visited.add(node)
+        _state, depth = node
+        for prev_state, action in parents.get(node, []):
+            if depth == 1:
+                first_actions.add(action)
+            else:
+                pending.append((prev_state, depth - 1))
+    return sorted(first_actions)
+
+
 def check_scenario(model,
                    horizon: int,
                    intended_mechanism: Sequence[str] = (),
@@ -180,6 +213,7 @@ def check_scenario(model,
     full_dist, _edges, terminals = _full_reachability(model, horizon)
 
     count, seqs, reps = _count_and_enumerate(model, parents, goal_states, goal_depth)
+    first_actions = _all_shortest_first_actions(parents, goal_states, goal_depth)
 
     mechanism = list(intended_mechanism)
     mech_ok: Optional[bool] = None
@@ -232,6 +266,7 @@ def check_scenario(model,
         shortest_sequence_count=count,
         shortest_sequences=seqs,
         canonical_representatives=reps,
+        shortest_first_actions=first_actions,
         reachable_state_count=len(full_dist),
         reachable_states=sorted(state_to_json(s) for s in full_dist),
         reachable_terminal_states=sorted(state_to_json(s) for s in terminals),
@@ -247,6 +282,9 @@ def check_scenario(model,
 
 def result_to_certificate(result: CheckerResult, meta: dict) -> dict:
     """Wrap a CheckerResult in a deterministic, self-hashed certificate dict."""
+    # ``shortest_first_actions`` is a downstream query result, deliberately not
+    # added to the legacy Phase-1b certificate body: changing that registered
+    # schema would invalidate existing certificate hashes.
     body = {"meta": meta, "result": {
         "solvable": result.solvable,
         "shortest_path_length": result.shortest_path_length,

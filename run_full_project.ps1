@@ -194,6 +194,15 @@ if ($RunConfig -and $RunConfig.http_client) {
     if ($hc.backoff_base_ms     -ne $null) { $HttpArgs += "-Psim.http.backoffMs=$($hc.backoff_base_ms)" }
 }
 # Learning hyperparameters (Phase A/C fixes): forwarded as -Dreward.clip etc.
+# Requested stereotype knob values (audit AUD-001 treatment-delivery gate): the
+# runner verifies after every training cell that the JVM reported EXACTLY these
+# effective values (StereotypeReasoner STEREO_EFFECTIVE_PROPS log line) and
+# records both in TRAINING_OK.json. Knobs not requested must be 0.0 (OFF).
+$RequestedStereoProps = [ordered]@{
+    'stereo.irrelevantDvPrior' = 0.0
+    'stereo.bandMirrorInit'    = 0.0
+    'stereo.bandMirrorPrior'   = 0.0
+}
 if ($RunConfig -and $RunConfig.learning) {
     $ln = $RunConfig.learning
     if ($ln.reward_clip                 -ne $null) { $HttpArgs += "-Preward.clip=$($ln.reward_clip)" }
@@ -217,9 +226,9 @@ if ($RunConfig -and $RunConfig.learning) {
     # Phase 1b (extended arm ONLY; defaults 0.0 = OFF): three-valued-relevance
     # irrelevance prior and generic target-direction ("band mirror") channels.
     # The frozen KG arm (phase1b_v2_kg_frozen) must NEVER set these.
-    if ($ln.stereo_irrelevant_dv_prior   -ne $null) { $HttpArgs += "-Pstereo.irrelevantDvPrior=$($ln.stereo_irrelevant_dv_prior)" }
-    if ($ln.stereo_band_mirror_init      -ne $null) { $HttpArgs += "-Pstereo.bandMirrorInit=$($ln.stereo_band_mirror_init)" }
-    if ($ln.stereo_band_mirror_prior     -ne $null) { $HttpArgs += "-Pstereo.bandMirrorPrior=$($ln.stereo_band_mirror_prior)" }
+    if ($ln.stereo_irrelevant_dv_prior   -ne $null) { $HttpArgs += "-Pstereo.irrelevantDvPrior=$($ln.stereo_irrelevant_dv_prior)"; $RequestedStereoProps['stereo.irrelevantDvPrior'] = [double]$ln.stereo_irrelevant_dv_prior }
+    if ($ln.stereo_band_mirror_init      -ne $null) { $HttpArgs += "-Pstereo.bandMirrorInit=$($ln.stereo_band_mirror_init)";       $RequestedStereoProps['stereo.bandMirrorInit']    = [double]$ln.stereo_band_mirror_init }
+    if ($ln.stereo_band_mirror_prior     -ne $null) { $HttpArgs += "-Pstereo.bandMirrorPrior=$($ln.stereo_band_mirror_prior)";     $RequestedStereoProps['stereo.bandMirrorPrior']   = [double]$ln.stereo_band_mirror_prior }
     # Research extensions: PBRS reward shaping + adaptive stereotype trust.
     if ($ln.reward_shaping              -ne $null) { $HttpArgs += "-Preward.shaping=$($ln.reward_shaping)" }
     if ($ln.adaptive_trust              -ne $null) { $HttpArgs += "-Pstereo.adaptiveTrust=$($ln.adaptive_trust)" }
@@ -521,6 +530,38 @@ if ($ScenarioProvenanceCheckOnly) {
     }
     Write-OK "All known profiles resolve a protocol-v2 scenario file."
     exit 0
+}
+
+# Treatment-delivery gate (audit AUD-001): read the effective stereotype knob
+# values the JVM printed (STEREO_EFFECTIVE_PROPS {json}) from a training cell
+# log and verify them against the requested values. A missing line or any
+# mismatch is a hard, pre-manifest failure: a cell whose requested treatment
+# did not reach the JVM must never produce a TRAINING_OK manifest.
+function Get-EffectiveStereoProps {
+    param([string]$LogPath, $Requested)
+    if (-not (Test-Path -LiteralPath $LogPath)) {
+        throw "Effective-props gate: training log not found: $LogPath"
+    }
+    $line = $null
+    foreach ($l in (Get-Content -LiteralPath $LogPath)) {
+        if ($l -match 'STEREO_EFFECTIVE_PROPS\s+(\{.*\})\s*$') { $line = $Matches[1] }
+    }
+    if ($null -eq $line) {
+        throw "Effective-props gate: no STEREO_EFFECTIVE_PROPS line in $LogPath (JVM did not report its stereotype knobs)"
+    }
+    $effective = $line | ConvertFrom-Json
+    $mismatch = @()
+    foreach ($key in $Requested.Keys) {
+        $prop = $effective.PSObject.Properties[$key]
+        if ($null -eq $prop) { $mismatch += "$key missing from effective props"; continue }
+        if ([double]$prop.Value -ne [double]$Requested[$key]) {
+            $mismatch += ("{0}: requested {1}, effective {2}" -f $key, $Requested[$key], $prop.Value)
+        }
+    }
+    if ($mismatch.Count -gt 0) {
+        throw "Effective-props gate FAILED (requested treatment did not reach the JVM): $($mismatch -join '; ')"
+    }
+    return $effective
 }
 
 function Assert-TrainingManifestsComplete {
@@ -984,6 +1025,9 @@ try {
                     throw "Training artifacts missing for profile=$profile stereo=${stereo}: $($missingNow -join ', ')"
                 }
 
+                $effectiveStereoProps = Get-EffectiveStereoProps -LogPath $cellLogFile -Requested $RequestedStereoProps
+                Write-OK ("Effective stereotype knobs verified: " + (($RequestedStereoProps.Keys | ForEach-Object { "{0}={1}" -f $_, $RequestedStereoProps[$_] }) -join ' '))
+
                 $scenarioProvenance = $null
                 if ($P.protocol_version -eq 'phase1-v2') {
                     $scenarioProvenance = Get-Phase1ScenarioProvenance -Profile $profile
@@ -1023,6 +1067,8 @@ try {
                     paired_rng_version = $(if ($P.protocol_version -eq 'phase1-v2') { 'common-seed-v1' } else { 'legacy-arm-mixed' })
                     metric_schema = $(if ($P.metric_schema) { $P.metric_schema } else { 'legacy' })
                     policy_energy_weights = $(if ($P.policy_energy_weights) { $P.policy_energy_weights } else { '' })
+                    stereo_requested_props = $RequestedStereoProps
+                    stereo_effective_props = $effectiveStereoProps
                     scenario_fallback_count = 0
                     timestamp = (Get-Date).ToString("o")
                     artifacts = $expectedArtefacts

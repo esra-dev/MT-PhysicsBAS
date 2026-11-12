@@ -99,6 +99,7 @@ __pycache__/
 
 # Analysis generated outputs
 analysis/out/
+analysis/.tmp_validate_qgap_tests/
 
 # Step-0 sanity / replicability probe outputs (local-machine ephemera)
 tmp_step0_*/
@@ -130,3 +131,14 @@ attic/local_outputs/
 # diagnostics CSV and the power inputs/report are committed explicitly).
 phase1b_pilot/run_*/*/
 phase1b_pilot/staged/
+
+# Raw immutable inputs for the retrospective Phase-1b truncated-curve analysis.
+# Recreated by scripts/download_phase1b_truncation_inputs.ps1; only the small
+# verified analysis outputs are committed.
+/.phase1b_truncation_inputs/
+/.tmp_phase1b_trunc/
+
+# Phase-2b-A rescued source artifacts are immutable local evidence. Their
+# verified ZIPs live outside Git; the extracted ~2.1 GB trees are rebuilt
+# from those ZIPs and bound by phase2b_qgap/analysis/source_manifest.json.
+/phase2b_qgap/source/

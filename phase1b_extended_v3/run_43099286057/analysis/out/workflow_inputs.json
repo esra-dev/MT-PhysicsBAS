@@ -1,0 +1,29 @@
+{
+  "head_sha": "77e7791f42b597e93acd511dc57f0fbd06c58a0a",
+  "profiles": [
+    "labrel0",
+    "labrel4",
+    "labrel8",
+    "labrel16",
+    "labrel8s",
+    "labband",
+    "lab4chain3"
+  ],
+  "publish_results": true,
+  "ref": "refs/heads/round3-rerun-2026-11",
+  "run_id": 43099286057,
+  "run_mode": "phase1b_v2_extended",
+  "seeds": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "workflow": ".github/workflows/phase1.yml"
+}

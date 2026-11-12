@@ -729,6 +729,30 @@ public class StereotypeReasoner {
 
         LOGGER.info("StereotypeReasoner: " + numActions + " actions, "
                    + crossZoneEffects.size() + " cross-zone effects");
+        // Treatment-delivery evidence (audit AUD-001): print the knob values
+        // this JVM actually uses, as one machine-readable line. The runner
+        // (run_full_project.ps1) copies it into TRAINING_OK.json as
+        // stereo_effective_props and fails the cell if a requested override
+        // did not reach the JVM, so a forwarding omission can never again
+        // silently turn an extended arm into a frozen one.
+        LOGGER.info(EFFECTIVE_PROPS_MARKER + " " + effectivePropsJson());
+    }
+
+    /** Marker prefix of the effective-knob log line (grepped by the runner). */
+    public static final String EFFECTIVE_PROPS_MARKER = "STEREO_EFFECTIVE_PROPS";
+
+    /**
+     * JSON object of the stereotype knob values in force in this JVM (the
+     * parsed system-property values, not the requested Gradle properties).
+     * Keys are the system-property names; values use {@link Double#toString}.
+     */
+    public static String effectivePropsJson() {
+        return "{"
+            + "\"stereo.irrelevantDvPrior\":" + IRRELEVANT_DV_PRIOR + ","
+            + "\"stereo.bandMirrorInit\":" + BAND_MIRROR_INIT_MAG + ","
+            + "\"stereo.bandMirrorPrior\":" + BAND_MIRROR_PRIOR_MAG + ","
+            + "\"stereo.redundancyOnly\":" + REDUNDANCY_ONLY
+            + "}";
     }
 
     // -----------------------------------------------------------------------

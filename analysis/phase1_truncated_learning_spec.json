@@ -1,0 +1,116 @@
+{
+  "version": "phase1-prefix-auc-exploratory-v1",
+  "frozen_on": "2026-08-12",
+  "classification": "retrospective_exploratory_outcome_sighted",
+  "training_horizon": 3000,
+  "budgets": [150, 300, 750, 1500, 3000],
+  "endpoints": [
+    {"name": "prefix_auc_goal"},
+    {"name": "trailing_training_goal_rate", "window": 100}
+  ],
+  "bootstrap": {
+    "iterations": 10000,
+    "base_seed": 20260812,
+    "percentile_method": "linear"
+  },
+  "historical_auc_reference": {
+    "value": 0.0111,
+    "source": "Phase-1b scale anchor A",
+    "status": "descriptive_reference_only_not_registered_for_prefixes"
+  },
+  "estimand": "For each original 3000-episode trajectory and budget B, prefix_auc_goal(B) is the mean GoalReached over episodes 0 through B-1 and trailing_training_goal_rate(B) is the mean over episodes B-100 through B-1. Each paired contrast is computed within seed before aggregation.",
+  "limitations": [
+    "The budgets were selected after the source campaigns and this analysis is not confirmatory.",
+    "These are prefixes of the original 3000-episode learner, whose epsilon and stereotype-prior schedules were configured for 3000 episodes; they are not reruns configured with shorter total budgets.",
+    "Only the training-trajectory GoalReached column is available at each prefix. The trailing 100-episode training goal rate is descriptive and is not a greedy-policy benchmark; no intermediate Q-table checkpoints exist, so prefix greedy-policy benchmark goal rate cannot be estimated.",
+    "Paired arms are required to have identical deterministic scenario sequences. Because the 11-scenario Lab 2 cycle does not divide the selected budgets or the 3000-episode horizon exactly, each accepted prefix is near-balanced: every scenario is present and per-scenario counts differ by at most one.",
+    "The historical 0.0111 auc_goal anchor is shown only as context and is not a decision threshold registered for this analysis.",
+    "No p-values, q-values, confirmatory verdicts, or changes to the Phase-1/Phase-1b registered conclusions are produced."
+  ],
+  "campaigns": {
+    "phase1": {
+      "default_input_root": "phase1_v2_corrected",
+      "inventory_style": "campaign",
+      "inventory": "SHA256SUMS.csv",
+      "runs": {
+        "phase1_v2_kg_only": [
+          {"run_id": "29848584965", "seeds": [1, 20]}
+        ],
+        "phase1_v2_redundancy_only": [
+          {"run_id": "29848587274", "seeds": [1, 20]}
+        ]
+      }
+    },
+    "phase1b": {
+      "default_input_root": ".phase1b_truncation_inputs",
+      "default_inventory_root": "phase1b_corrected",
+      "inventory_style": "per_run",
+      "inventory": "SHA256SUMS.csv",
+      "artifact_name": "phase1-consolidated",
+      "runs": {
+        "phase1b_v2_baseline": [
+          {"run_id": "30199243656", "artifact_id": 8633867341, "seeds": [1, 10]},
+          {"run_id": "30199247467", "artifact_id": 8636709628, "seeds": [11, 20]}
+        ],
+        "phase1b_v2_redundancy_only": [
+          {"run_id": "30199251189", "artifact_id": 8633873255, "seeds": [1, 10]},
+          {"run_id": "30199254246", "artifact_id": 8636724549, "seeds": [11, 20]}
+        ],
+        "phase1b_v2_kg_frozen": [
+          {"run_id": "30199257204", "artifact_id": 8633873572, "seeds": [1, 10]},
+          {"run_id": "30199260042", "artifact_id": 8636680828, "seeds": [11, 20]}
+        ]
+      }
+    }
+  },
+  "profiles": {
+    "lab2": {
+      "campaign": "phase1",
+      "scenario_count": 11,
+      "direct_contrasts": {
+        "kg_vs_baseline": {
+          "left": {"mode": "phase1_v2_kg_only", "arm": "true"},
+          "right": {"mode": "phase1_v2_kg_only", "arm": "false"}
+        },
+        "redundancy_vs_baseline": {
+          "left": {"mode": "phase1_v2_redundancy_only", "arm": "true"},
+          "right": {"mode": "phase1_v2_redundancy_only", "arm": "false"}
+        }
+      }
+    },
+    "labrel8": {
+      "campaign": "phase1b",
+      "scenario_count": 2,
+      "direct_contrasts": {
+        "kg_vs_baseline": {
+          "left": {"mode": "phase1b_v2_kg_frozen", "arm": "true"},
+          "right": {"mode": "phase1b_v2_baseline", "arm": "true"}
+        },
+        "redundancy_vs_baseline": {
+          "left": {"mode": "phase1b_v2_redundancy_only", "arm": "true"},
+          "right": {"mode": "phase1b_v2_baseline", "arm": "true"}
+        }
+      }
+    },
+    "lab4chain3": {
+      "campaign": "phase1b",
+      "scenario_count": 6,
+      "direct_contrasts": {
+        "kg_vs_baseline": {
+          "left": {"mode": "phase1b_v2_kg_frozen", "arm": "true"},
+          "right": {"mode": "phase1b_v2_baseline", "arm": "true"}
+        },
+        "redundancy_vs_baseline": {
+          "left": {"mode": "phase1b_v2_redundancy_only", "arm": "true"},
+          "right": {"mode": "phase1b_v2_baseline", "arm": "true"}
+        }
+      }
+    }
+  },
+  "derived_contrast": {
+    "name": "kg_minus_redundancy",
+    "left": "kg_vs_baseline",
+    "right": "redundancy_vs_baseline",
+    "definition": "within-seed difference between the KG treatment effect and the redundancy-only treatment effect"
+  }
+}
