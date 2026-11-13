@@ -1,0 +1,8 @@
+# IV Stats v2 (label-keyed) — ivTrialCount [4 IV ranks]
+SetZ1Light=OFF,0,0,0,0
+SetZ1Light=ON,0,0,0,0
+DO_NOTHING,0,0,0,0
+# ivSuccessCount [4 IV ranks]
+SetZ1Light=OFF,0,0,0,0
+SetZ1Light=ON,0,0,0,0
+DO_NOTHING,0,0,0,0

@@ -27,6 +27,10 @@ REQUIRED_MODES = {
     "phase1_v2_baseline",
     "phase1_v2_pbrs_only",
 }
+# Knowledge-ladder control arm (Addendum 2026-11-10). Optional so the
+# four-arm campaign of record still reproduces; when its archive is present
+# the ladder family is rebuilt and byte-compared as well.
+OPTIONAL_MODES = {"phase1_v2_brick_only"}
 NUMERIC_TABLES = (
     "summary_table_ci.csv",
     "paired_tests.csv",
@@ -45,7 +49,7 @@ def _discover(campaign: Path) -> dict[str, Path]:
             raise ValueError(f"duplicate archive for {mode}")
         found[mode] = provenance.parents[2]
     missing = REQUIRED_MODES - set(found)
-    extra = set(found) - REQUIRED_MODES
+    extra = set(found) - REQUIRED_MODES - OPTIONAL_MODES
     if missing or extra:
         raise ValueError(f"archive modes mismatch; missing={sorted(missing)}, extra={sorted(extra)}")
     return found
@@ -122,6 +126,20 @@ def reproduce(campaign: Path, work: Path) -> None:
              registered / "phase1_v2_registered_family.csv")
     _compare(expected_registered / "phase1_v2_decomposition.json",
              registered / "phase1_v2_decomposition.json")
+
+    if "phase1_v2_brick_only" in archives:
+        ladder = work / "registered_ladder"
+        _run([
+            sys.executable, "analysis/phase1_v2_knowledge_ladder.py",
+            "--arm-c-root", str(archives["phase1_v2_kg_only"]),
+            "--brick-root", str(archives["phase1_v2_brick_only"]),
+            "--redundancy-root", str(archives["phase1_v2_redundancy_only"]),
+            "--out", str(ladder),
+        ])
+        for filename in ("phase1_v2_knowledge_ladder_family.csv",
+                         "phase1_v2_knowledge_ladder_descriptives.csv",
+                         "phase1_v2_knowledge_ladder.json"):
+            _compare(expected_registered / filename, ladder / filename)
 
     compiled = work / "phase1_v2_controls_and_descriptives.csv"
     _run([

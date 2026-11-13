@@ -1,0 +1,52 @@
+# published ontology: core-ontology/elementary.owl.ttl of github.com/autonomous-buildings/elementary, commit b56b3f9c3a25fa8eea63d4e073f11a023c39e337
+# published file sha256: 0aae37ce4873d2ea5b333f9a66db5b831b8c2682d45d5e0b6057a91de3772a10
+# published namespace: http://www.w3id.org/elementary#
+# project namespace(s) for elem: http://w3id.org/elementary#
+# namespaces identical: False
+elem_local_name,uses_in_kg_files,uses_in_reasoner_sources,status,published_type_or_spelling
+Actuator,135,0,declared_in_published_file,owl:Class
+ComponentAction,272,0,not_in_published_file,
+ConnectionPoint,1,0,declared_in_published_file,owl:Class
+Container,1,0,declared_in_published_file,owl:Class
+InletConnectionPoint,148,0,declared_in_published_file,owl:Class
+InternalConnection,66,3,declared_in_published_file,owl:Class
+OutletConnectionPoint,146,0,declared_in_published_file,owl:Class
+PhysicalMechanism,165,1,declared_in_published_file,owl:Class
+PhysicalStuff,59,0,declared_in_published_file,owl:Class
+ProcessVariable,213,2,declared_in_published_file,owl:Class
+ResponseDynamic,1,0,not_in_published_file,
+Sensor,54,0,declared_in_published_file,owl:Class
+Stereotype,164,1,declared_in_published_file,owl:Class
+Stream,47,0,declared_in_published_file,owl:Class
+StreamJoiner,1,0,declared_in_published_file,owl:Class
+StreamKind,51,0,declared_in_published_file,owl:Class
+affectedUpstreamVariable,3,0,declared_in_published_file,owl:ObjectProperty
+contained,1,0,declared_in_published_file,owl:NamedIndividual
+dealsWithStuff,506,0,declared_in_published_file,owl:ObjectProperty
+directProportion,62,3,declared_in_published_file,owl:ObjectProperty
+electrical_power,166,0,declared_in_published_file,owl:NamedIndividual
+electrical_power_input,68,0,not_in_published_file,
+feeds,23,0,declared_in_published_file,owl:ObjectProperty
+hasBehavioralStereotype,203,10,not_in_published_file,
+hasComponentAction,135,8,declared_in_published_file,owl:ObjectProperty
+hasConnectionPoint,293,0,declared_in_published_file,owl:ObjectProperty
+hasDependentVariable,164,8,declared_in_published_file,owl:ObjectProperty
+hasIndependentVariable,56,4,declared_in_published_file,owl:ObjectProperty
+hasManipulatedVariable,95,7,declared_in_published_file,owl:ObjectProperty
+hasPhysicalMechanism,163,9,declared_in_published_file,owl:ObjectProperty
+hasProcessPosition,212,0,declared_in_published_file,owl:ObjectProperty
+hasQuantity,216,8,declared_in_published_file,owl:ObjectProperty
+hasResponseDynamic,2,0,not_in_published_file,
+hasStreamKind,62,0,declared_in_published_file,owl:ObjectProperty
+hasStructuralStereotype,58,4,not_in_published_file,
+increases,74,6,declared_in_published_file,owl:ObjectProperty
+inlet,110,0,declared_in_published_file,owl:NamedIndividual
+inverseProportion,3,3,declared_in_published_file,owl:ObjectProperty
+isPartOf,222,0,declared_in_published_file,owl:ObjectProperty
+isRelatedToVariable,199,0,declared_in_published_file,owl:ObjectProperty
+luminiscence,254,1,not_in_published_file,
+manipulates,94,0,declared_in_published_file,owl:ObjectProperty
+observes,23,0,declared_in_published_file,owl:ObjectProperty
+outlet,101,0,declared_in_published_file,owl:NamedIndividual
+photons,255,0,not_in_published_file,
+suitableFor,159,0,declared_in_published_file,owl:ObjectProperty

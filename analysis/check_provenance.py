@@ -19,11 +19,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROTOCOL = "phase1-v2"
 HEAD_SHA = "d3442385c91fbe11a5714bd15ca83add8f81f115"
+CAMPAIGN_REF = "refs/heads/phase1-correction-2026-07-21"
 RUNS = {
     "29848584965": "phase1_v2_kg_only",
     "29848587274": "phase1_v2_redundancy_only",
     "29848589682": "phase1_v2_baseline",
     "29848592010": "phase1_v2_pbrs_only",
+    # Knowledge-ladder control arm (Addendum 2026-11-10 / 2026-11-13).
+    "42834963612": "phase1_v2_brick_only",
+}
+# Dispatch head and ref per run; the ladder arm ran from its registration commit.
+LADDER_RUN = "42834963612"
+# The dashboard shows the four-arm campaign only; the ladder arm is not on it.
+DASHBOARD_RUNS = set(RUNS) - {LADDER_RUN}
+RUN_HEADS = {run_id: HEAD_SHA for run_id in RUNS}
+RUN_HEADS[LADDER_RUN] = "140906f2b325aefdb32b6c00ffaae063507f215e"
+RUN_REFS = {run_id: CAMPAIGN_REF for run_id in RUNS}
+RUN_REFS[LADDER_RUN] = "refs/heads/phase234-correction-2026-07-22"
+EXPECTED_LADDER = {
+    "1_arm_c_minus_brick_lab2_auc_goal": (0.0, "null"),
+    "2_arm_c_minus_brick_lab3_auc_goal": (0.0038500000000000144, "elementary_adds"),
 }
 EXPECTED_TESTS = {
     "1_arm_c_lab2_auc_goal": 0.0037,
@@ -63,9 +78,9 @@ def check(root: Path = ROOT) -> list[str]:
         data = _json(path)
         require(str(data.get("run_id")) == run_id, f"{rel}: wrong run_id")
         require(data.get("run_mode") == mode, f"{rel}: wrong run_mode")
-        require(data.get("head_sha") == HEAD_SHA, f"{rel}: wrong head_sha")
+        require(data.get("head_sha") == RUN_HEADS[run_id], f"{rel}: wrong head_sha")
         require(data.get("workflow") == ".github/workflows/phase1.yml", f"{rel}: wrong workflow")
-        require(data.get("ref") == "refs/heads/phase1-correction-2026-07-21", f"{rel}: wrong ref")
+        require(data.get("ref") == RUN_REFS[run_id], f"{rel}: wrong ref")
         require(data.get("profiles") == ["lab1", "lab2", "lab3"], f"{rel}: wrong profiles")
         require(data.get("seeds") == list(range(1, 21)), f"{rel}: wrong seeds")
         require(data.get("publish_results") is True, f"{rel}: results were not published")
@@ -100,6 +115,37 @@ def check(root: Path = ROOT) -> list[str]:
                     require(math.isclose(actual, EXPECTED_TESTS[name], rel_tol=0.0, abs_tol=1e-15),
                             f"{name}: registered mean changed ({actual!r})")
 
+    ladder_path = archive_root / "analysis/registered/phase1_v2_knowledge_ladder_family.csv"
+    require(ladder_path.is_file(), "missing registered knowledge-ladder family CSV")
+    if ladder_path.is_file():
+        with ladder_path.open(encoding="utf-8", newline="") as handle:
+            ladder = list(csv.DictReader(handle))
+        require({row.get("registered_test") for row in ladder} == set(EXPECTED_LADDER)
+                and len(ladder) == 2, "ladder family must contain exactly the two registered tests")
+        for row in ladder:
+            name = row.get("registered_test", "")
+            require(row.get("n_paired") == "20", f"{name}: n_paired is not 20")
+            require(row.get("bh_family_m") == "2", f"{name}: BH family is not m=2")
+            for field in ("p_signflip_two_sided", "p_sign_exact_two_sided", "q_signflip_bh_m2"):
+                try:
+                    value = float(row[field])
+                except (KeyError, TypeError, ValueError):
+                    errors.append(f"{name}: invalid {field}")
+                    continue
+                require(math.isfinite(value) and 0.0 < value <= 1.0,
+                        f"{name}: {field} must be finite and in (0, 1]")
+            if name in EXPECTED_LADDER:
+                mean, category = EXPECTED_LADDER[name]
+                try:
+                    actual = float(row["mean_paired_difference"])
+                except (KeyError, TypeError, ValueError):
+                    errors.append(f"{name}: invalid mean_paired_difference")
+                else:
+                    require(math.isclose(actual, mean, rel_tol=0.0, abs_tol=1e-15),
+                            f"{name}: registered ladder mean changed ({actual!r})")
+                require(row.get("registered_category") == category,
+                        f"{name}: registered ladder category changed")
+
     decomp_path = archive_root / "analysis/registered/phase1_v2_decomposition.json"
     require(decomp_path.is_file(), "missing registered decomposition JSON")
     if decomp_path.is_file():
@@ -117,13 +163,13 @@ def check(root: Path = ROOT) -> list[str]:
         require(summary.get("protocol_version") == PROTOCOL, "protocol summary has wrong version")
         require(summary.get("all_gates_pass") is True, "protocol summary does not pass all gates")
         rows = summary.get("runs", [])
-        require(len(rows) == 4, "protocol summary must contain four runs")
+        require(len(rows) == len(RUNS), "protocol summary must contain all five runs")
         for row in rows:
             rid = str(row.get("run_id"))
             require(rid in RUNS, f"protocol summary has unexpected run {rid}")
             if rid in RUNS:
                 require(row.get("run_mode") == RUNS[rid], f"run {rid}: summary mode mismatch")
-            require(row.get("head_sha") == HEAD_SHA, f"run {rid}: summary SHA mismatch")
+            require(row.get("head_sha") == RUN_HEADS.get(rid), f"run {rid}: summary SHA mismatch")
             require(row.get("training_cells") == 120, f"run {rid}: expected 120 training cells")
             require(row.get("benchmark_cells") == 180, f"run {rid}: expected 180 benchmark cells")
             require(row.get("fixed_horizons") == [3000], f"run {rid}: horizon is not 3000")
@@ -142,7 +188,7 @@ def check(root: Path = ROOT) -> list[str]:
         require(dashboard.get("protocol_version") == PROTOCOL, "dashboard is not protocol v2")
         require(dashboard.get("status") == "current thesis evidence", "dashboard status is not current")
         require(dashboard.get("head_sha") == HEAD_SHA, "dashboard SHA differs from archives")
-        require(set(map(str, dashboard.get("runs", {}).values())) == set(RUNS),
+        require(set(map(str, dashboard.get("runs", {}).values())) == DASHBOARD_RUNS,
                 "dashboard run IDs differ from the corrected campaign")
         dashboard_family = dashboard.get("registered_family", [])
         require(len(dashboard_family) == 5, "dashboard must expose five registered tests")
@@ -361,7 +407,7 @@ def main() -> int:
         for error in errors:
             print(f"  {error}")
         return 1
-    print("provenance check OK (4 corrected runs, registered family, dashboard, docs, physics)")
+    print("provenance check OK (5 corrected runs, registered family, ladder family, dashboard, docs, physics)")
     return 0
 
 

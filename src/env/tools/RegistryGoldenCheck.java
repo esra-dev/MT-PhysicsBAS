@@ -37,73 +37,86 @@ public final class RegistryGoldenCheck {
 
     public static void main(String[] args) throws IOException {
         Path goldenDir = Paths.get(args.length > 0 ? args[0] : "config/golden_registry");
-        boolean allOk = true;
-        int checked = 0, permuted = 0;
+        int[] counters = new int[3]; // allOk(0/1), checked, permuted
+        counters[0] = 1;
 
         for (Map.Entry<String, String[]> e : ActionRegistryDump.ONTOLOGY_SETS.entrySet()) {
-            String name = e.getKey();
-            Path golden = goldenDir.resolve("registry_" + name + ".csv");
-            if (!Files.exists(golden)) {
-                System.out.println("[FAIL] " + name + ": golden file missing: " + golden);
-                allOk = false;
-                continue;
-            }
-            Map<String, String> goldenMeta = new LinkedHashMap<>();
-            Map<String, Integer> goldenIdx = new LinkedHashMap<>();
-            parse(Files.readAllLines(golden, StandardCharsets.UTF_8), goldenMeta, goldenIdx);
-
-            Map<String, String> liveMeta = new LinkedHashMap<>();
-            Map<String, Integer> liveIdx = new LinkedHashMap<>();
-            parse(ActionRegistryDump.liveRows(e.getValue()), liveMeta, liveIdx);
-
-            boolean ok = true;
-            for (String k : new TreeSet<>(goldenMeta.keySet())) {
-                if (!liveMeta.containsKey(k)) {
-                    System.out.println("[FAIL] " + name + ": action MISSING from live registry: " + k);
-                    ok = false;
-                }
-            }
-            for (String k : new TreeSet<>(liveMeta.keySet())) {
-                if (!goldenMeta.containsKey(k)) {
-                    System.out.println("[FAIL] " + name + ": EXTRA action in live registry: " + k);
-                    ok = false;
-                }
-            }
-            for (String k : new TreeSet<>(goldenMeta.keySet())) {
-                String g = goldenMeta.get(k), l = liveMeta.get(k);
-                if (l != null && !g.equals(l)) {
-                    System.out.println("[FAIL] " + name + ": metadata mismatch for " + k);
-                    System.out.println("         golden: " + g);
-                    System.out.println("         live  : " + l);
-                    ok = false;
-                }
-            }
-            List<String> perm = new ArrayList<>();
-            for (String k : new TreeSet<>(goldenIdx.keySet())) {
-                Integer gi = goldenIdx.get(k), li = liveIdx.get(k);
-                if (li != null && !gi.equals(li)) perm.add(k + " " + gi + "->" + li);
-            }
-            if (ok) {
-                if (perm.isEmpty()) {
-                    System.out.println("[OK]   " + name + ": " + liveMeta.size()
-                        + " actions, metadata identical, indices identical");
-                } else {
-                    permuted++;
-                    System.out.println("[OK]   " + name + ": " + liveMeta.size()
-                        + " actions, metadata identical; INDEX PERMUTATION (informational, "
-                        + perm.size() + " moved):");
-                    for (String p : perm) System.out.println("         " + p);
-                }
-            }
-            allOk &= ok;
-            checked++;
+            checkSet(goldenDir, e.getKey(), e.getValue(),
+                     StereotypeReasoner.KnowledgeLayer.FULL, counters);
+        }
+        Path brickDir = goldenDir.resolve(ActionRegistryDump.BRICK_SUBDIR);
+        for (Map.Entry<String, String[]> e : ActionRegistryDump.BRICK_ONTOLOGY_SETS.entrySet()) {
+            checkSet(brickDir, e.getKey(), e.getValue(),
+                     StereotypeReasoner.KnowledgeLayer.BRICK, counters);
         }
 
+        boolean allOk = counters[0] == 1;
         System.out.println();
-        System.out.println("RegistryGoldenCheck: " + checked + " ontology set(s) checked against "
+        System.out.println("RegistryGoldenCheck: " + counters[1] + " ontology set(s) checked against "
             + goldenDir + " — " + (allOk ? "CONTRACT HOLDS" : "CONTRACT VIOLATED")
-            + (permuted > 0 ? " (" + permuted + " set(s) index-permuted; label-remap makes this safe)" : ""));
+            + (counters[2] > 0 ? " (" + counters[2] + " set(s) index-permuted; label-remap makes this safe)" : ""));
         if (!allOk) System.exit(1);
+    }
+
+    private static void checkSet(Path goldenDir, String setName, String[] onts,
+                                 StereotypeReasoner.KnowledgeLayer layer, int[] counters) throws IOException {
+        String name = layer == StereotypeReasoner.KnowledgeLayer.FULL
+                    ? setName : setName + "[" + layer + "]";
+        Path golden = goldenDir.resolve("registry_" + setName + ".csv");
+        if (!Files.exists(golden)) {
+            System.out.println("[FAIL] " + name + ": golden file missing: " + golden);
+            counters[0] = 0;
+            return;
+        }
+        Map<String, String> goldenMeta = new LinkedHashMap<>();
+        Map<String, Integer> goldenIdx = new LinkedHashMap<>();
+        parse(Files.readAllLines(golden, StandardCharsets.UTF_8), goldenMeta, goldenIdx);
+
+        Map<String, String> liveMeta = new LinkedHashMap<>();
+        Map<String, Integer> liveIdx = new LinkedHashMap<>();
+        parse(ActionRegistryDump.liveRows(onts, layer), liveMeta, liveIdx);
+
+        boolean ok = true;
+        for (String k : new TreeSet<>(goldenMeta.keySet())) {
+            if (!liveMeta.containsKey(k)) {
+                System.out.println("[FAIL] " + name + ": action MISSING from live registry: " + k);
+                ok = false;
+            }
+        }
+        for (String k : new TreeSet<>(liveMeta.keySet())) {
+            if (!goldenMeta.containsKey(k)) {
+                System.out.println("[FAIL] " + name + ": EXTRA action in live registry: " + k);
+                ok = false;
+            }
+        }
+        for (String k : new TreeSet<>(goldenMeta.keySet())) {
+            String g = goldenMeta.get(k), l = liveMeta.get(k);
+            if (l != null && !g.equals(l)) {
+                System.out.println("[FAIL] " + name + ": metadata mismatch for " + k);
+                System.out.println("         golden: " + g);
+                System.out.println("         live  : " + l);
+                ok = false;
+            }
+        }
+        List<String> perm = new ArrayList<>();
+        for (String k : new TreeSet<>(goldenIdx.keySet())) {
+            Integer gi = goldenIdx.get(k), li = liveIdx.get(k);
+            if (li != null && !gi.equals(li)) perm.add(k + " " + gi + "->" + li);
+        }
+        if (ok) {
+            if (perm.isEmpty()) {
+                System.out.println("[OK]   " + name + ": " + liveMeta.size()
+                    + " actions, metadata identical, indices identical");
+            } else {
+                counters[2]++;
+                System.out.println("[OK]   " + name + ": " + liveMeta.size()
+                    + " actions, metadata identical; INDEX PERMUTATION (informational, "
+                    + perm.size() + " moved):");
+                for (String p : perm) System.out.println("         " + p);
+            }
+        }
+        if (!ok) counters[0] = 0;
+        counters[1]++;
     }
 
     /** Parses canonical rows into metadata (all columns except actionIndex) and index maps. */

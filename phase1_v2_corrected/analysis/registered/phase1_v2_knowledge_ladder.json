@@ -1,0 +1,18 @@
+{
+  "family": "m=2 (lab2, lab3 auc_goal), BH within family",
+  "lab2": {
+    "arm_c_mean_effect": 0.0036999999999999976,
+    "brick_mean_effect": 0.0036999999999999976,
+    "brick_share_of_arm_c": 1.0,
+    "elementary_increment_mean": 0.0,
+    "registered_category": "null"
+  },
+  "lab3": {
+    "arm_c_mean_effect": -0.002299999999999991,
+    "brick_mean_effect": -0.006150000000000005,
+    "brick_share_of_arm_c": 2.6739130434782736,
+    "elementary_increment_mean": 0.0038500000000000144,
+    "registered_category": "elementary_adds"
+  },
+  "rule": "per primary member: 95% paired-bootstrap CI of (A3 effect - A2 effect) above 0 => elementary_adds; below 0 => elementary_costs; else null. brick_share is descriptive only."
+}

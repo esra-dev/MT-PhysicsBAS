@@ -38,7 +38,7 @@
 #>
 
 param(
-    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase1b_v2_baseline","phase1b_v2_redundancy_only","phase1b_v2_kg_frozen","phase1b_v2_extended","phase4","phase4_v2")]
+    [ValidateSet("dev","paper","paper_h40","paper_h60","phase1","phase1_baseline","phase1_kg_only","phase1_kg_only_ib5","phase1_kg_only_e750","phase1_kg_only_e3000","phase1_pbrs_only","phase1_full","phase1_kg_xzone","phase1_redundancy_only","phase1_v2_kg_only","phase1_v2_redundancy_only","phase1_v2_brick_only","phase1_v2_baseline","phase1_v2_pbrs_only","phase1b_v2_baseline","phase1b_v2_redundancy_only","phase1b_v2_kg_frozen","phase1b_v2_extended","phase4","phase4_v2")]
     [string]$RunMode = "dev",
 
     # Optional comma-separated subset of profiles to train and benchmark.
@@ -215,6 +215,9 @@ if ($RunConfig -and $RunConfig.learning) {
     # Audit control arm (Addendum 2026-07-19e): registry-only redundancy prior,
     # knowledge layer disabled (profile phase1_redundancy_only).
     if ($ln.stereo_redundancy_only      -ne $null) { $HttpArgs += "-Pstereo.redundancyOnly=$($ln.stereo_redundancy_only)" }
+    # Knowledge-ladder arm (Addendum 2026-11-10): which KG layer the reasoner
+    # may consume — full | brick | redundancy (profile phase1_v2_brick_only).
+    if ($ln.stereo_knowledge_layer      -ne $null) { $HttpArgs += "-Pstereo.knowledgeLayer=$($ln.stereo_knowledge_layer)" }
     # Research Phase C: constructive optimistic Q-init bonus (H5 ablation sets 0.0).
     if ($ln.stereo_init_bonus           -ne $null) { $HttpArgs += "-Pstereo.initBonus=$($ln.stereo_init_bonus)" }
     # KG-X (Part B): cross-zone structural exploration prior (default 0.0 = OFF).

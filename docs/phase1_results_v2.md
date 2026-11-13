@@ -94,15 +94,143 @@ shows plainly that the arm-C lab3 energy cost is not an inevitable consequence o
 suppressing repeated actuator settings. Source: run `29848587274`, the same two analysis
 tables.
 
+## Knowledge-ladder control arm: Brick structure without the Elementary layer
+
+Registered in `docs/_audit/THESIS_STATE_REPORT.md`, Addendum 2026-11-10, before dispatch;
+reported in Addendum 2026-11-13. Run `42834963612` (mode `phase1_v2_brick_only`, commit
+`140906f2`) repeats arm C with one change: the knowledge arm's reasoner reads the WoT
+contract, Brick topology, and SOSA/QUDT observation typing, and no Elementary mechanism
+triple. The only Elementary construct that differs between the two arms in Phase 1 is the
+independent-variable gate on the blinds ("opening a blind adds light only when the sun is
+up"). The arms form a ladder: A0 tabula rasa, A1 redundancy only, A2 Brick structure, A3
+full KG (arm C). A rung increment is the by-seed difference of two arms' paired
+`ql_true − ql_false` effects.
+
+### Validity of the fifth run
+
+Run `42834963612` passes the same protocol gate as the four campaign runs: 120 training
+cells, 180 benchmark cells, exactly 3,000 episodes per cell, zero scenario fallbacks, and
+zero schedule mismatches. All 302 workflow jobs of run `42834963612` concluded successfully.
+The downloaded artifact of run `42834963612` reproduces the digest recorded by GitHub, and
+its 4,978-row inventory verifies without error. Source:
+`phase1_v2_corrected/run_42834963612/ARCHIVE_MANIFEST.md`.
+
+Treatment delivery is evidenced in `phase1_v2_corrected/run_42834963612/verification/`. The
+initial Q-tables of the Brick arm and of arm C differ only on the two blind-activation
+columns and only at sun rank 0: 256 cells on lab2 and 512 cells on lab3 in the combined
+tables. In the Brick arm those columns do not depend on the sun rank. All 120 training job
+logs of run `42834963612` report `knowledgeLayer=BRICK` and no other layer.
+
+The two arms come from different commits, so their comparability was checked directly. In
+all three labs and all 20 seeds, the tabula-rasa training cells of run `42834963612` are
+byte-identical to those of run `29848584965` (episode metrics, initial and final Q-tables,
+first-goal rows). The `ql_false` and `rule_based` benchmark files differ only in the
+excluded wall-clock energy diagnostic. On lab1, which has no blinds, the knowledge-arm
+training cells are byte-identical as well. Source:
+`phase1_v2_corrected/run_42834963612/verification/cross_run_identity_vs_run_29848584965.json`.
+
+### Registered ladder family
+
+Both members are the Elementary increment A3 − A2 on `auc_goal`, paired by seed, n = 20.
+Statistics are those of the primary family above; q-values use the frozen
+Benjamini–Hochberg family of two. The pre-committed category is read from the 95% bootstrap
+interval: above zero is `elementary_adds`, below zero is `elementary_costs`, otherwise
+`null`. Source:
+`phase1_v2_corrected/analysis/registered/phase1_v2_knowledge_ladder_family.csv`.
+
+| Ladder member | Mean increment | Median | 95% bootstrap CI | Sign-flip p | Exact sign p | BH q | Paired rank-biserial | Registered category |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 1. lab2 `auc_goal`, A3 − A2 | 0.000000 | 0.000000 | [0.000000, 0.000000] | 1.0000 | 1.0000 | 1.0000 | 0.000 | `null`: Brick structure reproduces arm C's lab2 effect. |
+| 2. lab3 `auc_goal`, A3 − A2 | +0.003850 | +0.002667 | [+0.001533, +0.006683] | 0.004292 | 0.06357 | 0.008583 | +0.695 | `elementary_adds`: the gate adds training success beyond Brick structure. |
+
+Ladder member 1 is an exact tie in every one of the 20 seeds. The Brick arm's own lab2
+effect is `+0.003700` with interval `[+0.002700, +0.004917]`, the same as arm C, so the
+descriptive Brick share of arm C's lab2 effect is `1.0`. The endpoint is saturated for both
+knowledge arms: `ql_true` training success is `1.000000` in all 20 seeds of the Brick arm
+and in all 20 seeds of arm C, against `0.996300` for tabula rasa. Ladder member 1 therefore
+shows that the Elementary gate was not needed to reach the lab2 ceiling; it cannot show
+whether the gate would help on a harder lab2 endpoint. Source:
+`phase1_v2_corrected/analysis/registered/phase1_v2_knowledge_ladder.json`.
+
+Ladder member 2 has 14 positive seeds, one tie, and five negative seeds. Its reading needs
+the absolute levels: on lab3 both knowledge arms train worse than tabula rasa. Mean
+training success is `0.990917` for the Brick arm, `0.994767` for arm C, and `0.997067` for
+tabula rasa, which corresponds to 27.25, 15.70, and 8.80 failed episodes out of 3,000. The
+Elementary gate recovers part of a loss that the structural priors cause; it does not make
+the knowledge arm better than no knowledge on lab3.
+
+### Registered ladder descriptives
+
+These rows carry no threshold. Source:
+`phase1_v2_corrected/analysis/registered/phase1_v2_knowledge_ladder_descriptives.csv`.
+
+| Ladder descriptive (paired, n = 20) | lab2 | lab3 |
+|---|---:|---:|
+| A1 redundancy `auc_goal` effect | +0.002583 | +0.002400 |
+| A2 Brick `auc_goal` effect | +0.003700 | −0.006150 |
+| A3 full-KG `auc_goal` effect | +0.003700 | −0.002300 |
+| Rung A2 − A1 `auc_goal` | +0.001117 | −0.008550 |
+| A2 Brick benchmark goal rate | +0.04875 | −0.02875 |
+| A2 Brick benchmark policy energy | −1.22125 | +1.67000 |
+| A2 Brick benchmark cycling | −0.36000 | +1.17500 |
+| Rung A3 − A2 benchmark goal rate | 0.00000 | +0.01500 |
+| Rung A3 − A2 benchmark policy energy | −0.05875 | −0.59562 |
+| Rung A3 − A2 benchmark cycling | −0.02312 | −1.10125 |
+| Rung A3 − A2 benchmark wasted steps | 0.00000 | +0.72750 |
+
+On lab2 the rung A2 − A1 equals registered member 3 of the primary family (`+0.001117`,
+interval `[+0.000767, +0.001467]`): the part of arm C's lab2 advantage that redundancy does
+not reproduce is carried entirely by Brick structure. No lab2 benchmark increment of the
+rung A3 − A2 has an interval that excludes zero.
+
+On lab3 the rung A2 − A1 is `−0.008550` with interval `[−0.011317, −0.006233]`, negative in
+every seed that differs: adding structural priors to the redundancy rule lowers training
+success. The registered question whether the Brick arm reproduces arm C's lab3
+policy-energy cost has the answer yes, and more: the Brick arm's cost is `+1.67000`
+(interval `[+1.24186, +2.08564]`) against arm C's `+1.07438`. The cost is therefore not
+attributable to the Elementary gate; the gate lowers it by `0.59562` (interval
+`[−0.90500, −0.26437]`). The gate also removes most of the Brick arm's extra actuator
+cycling (`−1.10125`, interval `[−1.26000, −0.90750]`) and raises wasted steps (`+0.72750`,
+interval `[+0.47062, +0.98189]`). The lab3 benchmark goal-rate increment `+0.01500` has an
+interval that spans zero. All lab1 ladder rows are exactly zero, as registered for the
+saturated control.
+
+### Deviations and limits of the ladder arm
+
+1. The registered delivery signature read "no −50 cell on any blind-ON column at sun rank
+   0". No knowledge arm can satisfy that wording, because the registry-derived redundancy
+   rule writes the same value when a blind is already open. The signature was restated
+   after data contact as conditional on the blind being closed; the restated signature
+   holds in every table of run `42834963612`, and the literal count is reported beside it
+   in `phase1_v2_corrected/run_42834963612/verification/elementary_layer_off_proof.json`.
+2. The registered log line `knowledge layer = BRICK` is written by a logger that the job
+   log does not capture. The learner's progress line carries the same information and is
+   the evidence used for run `42834963612`.
+3. The analysis ran from a tree that merges the registration commit into the later main
+   branch. The registered analysis files (`analysis/phase1_v2_knowledge_ladder.py`,
+   `analysis/sweep_report.py`, `analysis/phase1_v2_registered_family.py`) are byte-identical
+   to their versions at the registration commit, and the ladder script ran once.
+4. The registration was written with the four-arm results of this report known. Only the
+   Brick arm's own effect and the two increments were unseen.
+5. The increment isolates one Elementary construct, the blind gate. It says nothing about
+   coupling classes, power gates, or cost annotations, which Phase 1 does not consume.
+
 ## What Phase 1 now supports
 
 Phase 1 supports a small lab2 learning advantage for the bundled KG-prior arm inside this
 discrete simulator. About 70% of the mean advantage is reproduced by an ontology-free
-redundancy rule, while a smaller residual arm-C advantage remains. It does not support the
-old lab3 first-goal regression or the old cycling headline. It does reveal a small adverse
-lab3 full-horizon training-success difference and a descriptive deterministic policy-energy
-cost for arm C. None of these simulator results proves that RDF/SPARQL is the cheapest way
-to represent the information or that a real building would benefit.
+redundancy rule, while a smaller residual arm-C advantage remains. The knowledge-ladder arm
+shows that this residual is carried by Brick structure: on lab2 the Elementary layer adds
+no training success beyond it, at an endpoint that both knowledge arms saturate. On lab3
+the Elementary gate adds training success beyond Brick structure, while both knowledge arms
+remain below tabula rasa. Phase 1 does not support the old lab3 first-goal regression or
+the old cycling headline. It does reveal a small adverse lab3 full-horizon training-success
+difference and a descriptive deterministic policy-energy cost for arm C, and the ladder arm
+attributes that cost to the structural priors, not to the Elementary gate. Phase 1
+therefore does not show that physics knowledge makes clean learning faster than no
+knowledge: on lab2 structure alone reaches the ceiling, and on lab3 the gate only reduces a
+loss relative to tabula rasa. None of these simulator results proves that RDF/SPARQL is the
+cheapest way to represent the information or that a real building would benefit.
 
 The analysis-execution deviations discovered after archive download are fully disclosed in
 `docs/phase1_correction_analysis_deviation_2026-07-22.md`. Neither changed an input row,

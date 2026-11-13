@@ -1,0 +1,961 @@
+{
+  "benchmark_result_columns_with_differing_cells": {
+    "ql_false/lab1": {
+      "LegacyWallClockTotalEnergyCost": 351
+    },
+    "ql_false/lab2": {
+      "LegacyWallClockTotalEnergyCost": 867
+    },
+    "ql_false/lab3": {
+      "LegacyWallClockTotalEnergyCost": 772
+    },
+    "ql_true/lab1": {
+      "LegacyWallClockTotalEnergyCost": 349
+    },
+    "ql_true/lab2": {
+      "ActuatorCyclingCount": 277,
+      "CumIlluminanceDeviation": 292,
+      "LegacyWallClockTotalEnergyCost": 941,
+      "PolicyEnergyCost": 360,
+      "Steps": 277
+    },
+    "ql_true/lab3": {
+      "ActuatorCyclingCount": 318,
+      "CrossZoneInterferences": 58,
+      "CumIlluminanceDeviation": 296,
+      "GoalReached": 46,
+      "LegacyWallClockTotalEnergyCost": 893,
+      "PolicyEnergyCost": 370,
+      "Steps": 292,
+      "WastedSteps": 97
+    },
+    "rule_based/lab1": {
+      "LegacyWallClockTotalEnergyCost": 318
+    },
+    "rule_based/lab2": {
+      "LegacyWallClockTotalEnergyCost": 885
+    },
+    "rule_based/lab3": {
+      "LegacyWallClockTotalEnergyCost": 832
+    }
+  },
+  "check_lab1_knowledge_arm_training_identical_all_seeds": true,
+  "check_lab1_ql_true_benchmark_differs_only_in_wallclock_column": true,
+  "check_ql_false_and_rule_based_benchmarks_differ_only_in_wallclock_column": true,
+  "check_tabula_rasa_training_identical_all_labs_all_seeds": true,
+  "files_identical_or_different_by_cell_kind_and_lab": {
+    "ql_false/bench_step_log_ql_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/benchmark_results_ql_false.csv": {
+      "lab1": {
+        "different": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/coverage_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/coverage_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/first_goal_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/first_goal_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "different": 12,
+        "identical": 8
+      }
+    },
+    "ql_false/iv_stats_stereotypes_false.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/iv_stats_stereotypes_true.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/learned_stereotypes_false.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/learned_stereotypes_true.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/metrics_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/metrics_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_false_trust.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_false_visits.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_false_zone1.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_false_zone2.csv": {
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_true_trust.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_true_visits.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_true_zone1.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/qtable_final_stereotypes_true_zone2.csv": {
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_false/trace_bench_ql_false.jsonl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/bench_step_log_ql_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/benchmark_results_ql_true.csv": {
+      "lab1": {
+        "different": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/coverage_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/coverage_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/first_goal_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/first_goal_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "different": 12,
+        "identical": 8
+      }
+    },
+    "ql_true/iv_stats_stereotypes_false.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/iv_stats_stereotypes_true.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/learned_stereotypes_false.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/learned_stereotypes_true.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/metrics_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/metrics_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_false_trust.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_false_visits.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_false_zone1.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_false_zone2.csv": {
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_true_trust.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_true_visits.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_true_zone1.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/qtable_final_stereotypes_true_zone2.csv": {
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "ql_true/trace_bench_ql_true.jsonl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/bench_step_log_rule_based.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/benchmark_results_rule_based.csv": {
+      "lab1": {
+        "different": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/coverage_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/coverage_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/first_goal_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/first_goal_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "different": 12,
+        "identical": 8
+      }
+    },
+    "rule_based/iv_stats_stereotypes_false.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/iv_stats_stereotypes_true.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/learned_stereotypes_false.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/learned_stereotypes_true.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/metrics_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/metrics_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_false_trust.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_false_visits.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_false_zone1.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_false_zone2.csv": {
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_true_trust.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_true_visits.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_true_zone1.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "rule_based/qtable_final_stereotypes_true_zone2.csv": {
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_false/TRAINING_OK.json": {
+      "lab1": {
+        "different": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_false/coverage_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "training_stereo_false/first_goal_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "training_stereo_false/iv_stats_stereotypes_false.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_false/learned_stereotypes_false.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "training_stereo_false/metrics_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "training_stereo_false/qtable_final_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "training_stereo_false/qtable_initial_stereotypes_false.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "identical": 20
+      }
+    },
+    "training_stereo_true/TRAINING_OK.json": {
+      "lab1": {
+        "different": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_true/coverage_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_true/first_goal_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "identical": 20
+      },
+      "lab3": {
+        "different": 12,
+        "identical": 8
+      }
+    },
+    "training_stereo_true/iv_stats_stereotypes_true.json": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_true/learned_stereotypes_true.ttl": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_true/metrics_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_true/qtable_final_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    },
+    "training_stereo_true/qtable_initial_stereotypes_true.csv": {
+      "lab1": {
+        "identical": 20
+      },
+      "lab2": {
+        "different": 20
+      },
+      "lab3": {
+        "different": 20
+      }
+    }
+  },
+  "other_archive": "run_42834963612",
+  "reference_archive": "run_29848584965",
+  "same_inventory_path_set": true
+}

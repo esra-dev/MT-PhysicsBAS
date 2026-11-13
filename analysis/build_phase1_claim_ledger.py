@@ -57,7 +57,20 @@ HISTORICAL_DEFAULT = (
 CORRECTED_DEFAULT = "phase1_v2_corrected/analysis/registered/phase1_v2_registered_family.csv"
 # A tuple is intentional: some claims cite several corrected runs, so evidence
 # selection must not depend on Python's randomized set iteration order.
-CORRECTED_RUN_IDS = ("29848584965", "29848587274", "29848589682", "29848592010")
+CORRECTED_RUN_IDS = ("29848584965", "29848587274", "29848589682", "29848592010",
+                     # Knowledge-ladder control arm (Addendum 2026-11-10 / 2026-11-13).
+                     "42834963612")
+LADDER_FAMILY = "phase1_v2_corrected/analysis/registered/phase1_v2_knowledge_ladder_family.csv"
+LADDER_DESCRIPTIVES = (
+    "phase1_v2_corrected/analysis/registered/phase1_v2_knowledge_ladder_descriptives.csv")
+LADDER_SUMMARY = "phase1_v2_corrected/analysis/registered/phase1_v2_knowledge_ladder.json"
+LADDER_RUN_MANIFEST = "phase1_v2_corrected/run_42834963612/ARCHIVE_MANIFEST.md"
+LADDER_LEVELS = "phase1_v2_corrected/run_42834963612/analysis/out/learning_speed_table.csv"
+# The ladder arm is routed by SECTION HEADING, not by words in the claim line:
+# generic words such as "Brick" or "Elementary" occur in lines that predate
+# the arm and must keep their evidence. No earlier heading contains these
+# phrases.
+LADDER_REPORT_HEADING = "brick-structure-only control arm executed"
 
 
 def _headings(lines: list[str]) -> list[str]:
@@ -109,6 +122,8 @@ def _classification(path: str, number: int, line: str, heading: str) -> str:
             return "historical_protocol_affected"
         if heading.startswith("### 5.") or heading.startswith("## 5."):
             return "corrected_result"
+        if LADDER_REPORT_HEADING in heading:
+            return "corrected_result"
         if "addendum" in heading and ("phase-1" in heading or "phase 1" in heading):
             return "historical_protocol_affected"
         if line.lstrip().startswith("| 1 —"):
@@ -151,11 +166,30 @@ def _nearest_run(lines: list[str], index: int) -> str | None:
     return None
 
 
-def _corrected_evidence(line: str) -> str:
+def _ladder_evidence(lower: str, heading: str) -> str | None:
+    """Evidence file for a claim line inside the knowledge-ladder sections."""
+    if LADDER_REPORT_HEADING in heading or "registered ladder family" in heading:
+        if "brick share" in lower or "saturated" in lower:
+            return LADDER_SUMMARY
+        if "training success" in lower or "failed episodes" in lower:
+            return LADDER_LEVELS
+        return LADDER_FAMILY
+    if "registered ladder descriptives" in heading:
+        return LADDER_DESCRIPTIVES
+    if ("knowledge-ladder control arm" in heading or "validity of the fifth run" in heading
+            or "deviations and limits of the ladder arm" in heading):
+        return LADDER_RUN_MANIFEST
+    return None
+
+
+def _corrected_evidence(line: str, heading: str = "") -> str:
     lower = line.lower()
     for run_id in CORRECTED_RUN_IDS:
         if run_id in line:
             return f"phase1_v2_corrected/run_{run_id}/ARCHIVE_MANIFEST.md"
+    ladder = _ladder_evidence(lower, heading)
+    if ladder:
+        return ladder
     if any(token in lower for token in (
             "training_cells", "benchmark_cells", "fallback", "schedule", "horizon",
             "first_goal_rows", "3,000", "3000", "protocol gate", "protocol-gate")):
@@ -183,7 +217,7 @@ def build(sources_path: Path, output: Path) -> int:
                 continue
             classification = _classification(source_name, index + 1, line, headings[index])
             if classification == "corrected_result":
-                evidence = _corrected_evidence(line)
+                evidence = _corrected_evidence(line, headings[index])
                 status = "current protocol-v2 result; exact committed numeric table"
                 match_result = "match"
             elif classification == "historical_protocol_affected":
