@@ -139,10 +139,17 @@ Reading of the two components of `avg_redundant`:
 | policy energy | +1.796250 [+0.908125, +2.695625] | 0.0012 | −0.631250 [−1.280000, −0.141875] | 0.0188 |
 | deviation | +0.836875 [+0.574375, +1.070625] | 4.578e-05 | +0.575625 [+0.304375, +0.833750] | 9.880e-04 |
 
-The A0 level of `energy_compliance` is 0.710000. Without the cost annotation the
-structure-only arm shows no compliance gain, and it cycles actuators more, spends more
-policy energy, takes more steps, and reaches the goal slightly less often than tabula
-rasa. These are descriptive rows.
+Without the cost annotation the structure-only arm shows no compliance gain, and it
+cycles actuators more, spends more policy energy, takes more steps, and reaches the goal
+slightly less often than tabula rasa. These are descriptive rows.
+
+Absolute compliance levels are not quoted in this manifest. The registered scripts score a
+benchmark scenario-run that has no step row, because the goal already holds at its
+declared start, as if every actuator were off. That fallback raises the absolute level of
+every arm by the same amount per seed and cancels in every paired effect and increment.
+The `mean_archived_ql_false` and `mean_control_ql_false` columns of the comparability table
+carry that fallback for lab5; they document identity between the campaigns and must not
+be cited as compliance levels.
 
 ### Training success (`auc_goal`, mean of ten seeds per dispatch)
 
