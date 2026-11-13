@@ -86,6 +86,18 @@ public final class ActionRegistryDump {
         BRICK_ONTOLOGY_SETS.put("lab1", ONTOLOGY_SETS.get("lab1"));
         BRICK_ONTOLOGY_SETS.put("lab2", ONTOLOGY_SETS.get("lab2"));
         BRICK_ONTOLOGY_SETS.put("lab3", ONTOLOGY_SETS.get("lab3"));
+        // Phase-4 knowledge-ladder control arm (Addendum 2026-11-13b): the
+        // dependency and energy labs under the BRICK layer. No power gate, no
+        // IV gate, and energyCost 0 on every row; a plug or breaker located in
+        // a zone is claimed to affect that zone (structure-only
+        // over-approximation, stated in the registration).
+        BRICK_ONTOLOGY_SETS.put("lab4",      ONTOLOGY_SETS.get("lab4"));
+        BRICK_ONTOLOGY_SETS.put("lab4dual",  ONTOLOGY_SETS.get("lab4dual"));
+        BRICK_ONTOLOGY_SETS.put("lab4chain", ONTOLOGY_SETS.get("lab4chain"));
+        BRICK_ONTOLOGY_SETS.put("lab5",      ONTOLOGY_SETS.get("lab5"));
+        // Record only (no run): the Phase-2 dual-monitor parent lab, to
+        // document what the BRICK layer would claim there.
+        BRICK_ONTOLOGY_SETS.put("labmon2",   ONTOLOGY_SETS.get("labmon2"));
     }
     static final String BRICK_SUBDIR = "brick_only";
 
