@@ -1,0 +1,26 @@
+{
+  "head_sha": "ee656178dc3528d56b69a7123c1a37ed43919936",
+  "profiles": [
+    "lab4",
+    "lab4dual",
+    "lab4chain",
+    "lab5"
+  ],
+  "publish_results": true,
+  "ref": "refs/heads/phase4-knowledge-ladder-2026-11",
+  "run_id": 43494933613,
+  "run_mode": "phase4_v2_brick_only",
+  "seeds": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "workflow": ".github/workflows/phase1.yml"
+}

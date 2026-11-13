@@ -89,7 +89,26 @@ PHASES = {
                 "phase4_v2_corrected/run_29926341581/SHA256SUMS.csv",
             "phase4_v2_corrected/run_29926354783/ARCHIVE_MANIFEST.md":
                 "phase4_v2_corrected/run_29926354783/SHA256SUMS.csv",
+            # Knowledge-ladder control campaign (THESIS_STATE_REPORT.md
+            # Addenda 2026-11-13b and 2026-11-14).
+            "phase4_v2_ladder/CAMPAIGN_MANIFEST.md":
+                "phase4_v2_ladder/analysis/registered/phase4_v2_knowledge_ladder_family.csv",
+            "phase4_v2_ladder/run_43494914019/ARCHIVE_MANIFEST.md":
+                "phase4_v2_ladder/run_43494914019/SHA256SUMS.csv",
+            "phase4_v2_ladder/run_43494933613/ARCHIVE_MANIFEST.md":
+                "phase4_v2_ladder/run_43494933613/SHA256SUMS.csv",
+            "phase4_v2_ladder/run_43494955158/ARCHIVE_MANIFEST.md":
+                "phase4_v2_ladder/run_43494955158/SHA256SUMS.csv",
+            "phase4_v2_ladder/run_43494975441/ARCHIVE_MANIFEST.md":
+                "phase4_v2_ladder/run_43494975441/SHA256SUMS.csv",
         },
+        # A second corrected campaign of the same phase. Checked before the
+        # primary prefix, and only for lines that name it, so every line that
+        # predates the campaign keeps its evidence.
+        "extra_campaigns": (
+            ("phase4_v2_ladder/", ("43494914019", "43494933613",
+                                   "43494955158", "43494975441")),
+        ),
     },
 }
 
@@ -99,6 +118,7 @@ def _make_classifier(config):
     run_ids = config["corrected_run_ids"]
     tokens = config["historical_tokens"]
     corrected_docs = config.get("corrected_docs", {})
+    extra_campaigns = config.get("extra_campaigns", ())
 
     def classify(doc, lineno, line, heading):
         lower = line.lower()
@@ -106,6 +126,20 @@ def _make_classifier(config):
                 token in lower for token in (t.lower() for t in tokens)):
             return ("corrected_result", corrected_docs[doc],
                     "current protocol-v2 result; committed archive", "match")
+        for extra_prefix, extra_run_ids in extra_campaigns:
+            if extra_prefix in line or any(run_id in line for run_id in extra_run_ids):
+                evidence = extra_prefix + "CAMPAIGN_MANIFEST.md"
+                for word in line.replace("`", " ").split():
+                    if word.startswith(extra_prefix) and (
+                            common.ROOT / word.rstrip(".,;:)")).is_file():
+                        evidence = word.rstrip(".,;:)")
+                        break
+                if not (common.ROOT / evidence).is_file():
+                    return ("non_result", doc,
+                            "corrected-campaign identifier; archive pending",
+                            "non_result")
+                return ("corrected_result", evidence,
+                        "current protocol-v2 result; committed archive", "match")
         if prefix in line or any(run_id in line for run_id in run_ids):
             evidence = prefix + "CAMPAIGN_MANIFEST.md"
             for word in line.replace("`", " ").split():
@@ -141,7 +175,9 @@ def main() -> int:
     sources = common.ROOT / config["sources"]
     ledger = common.ROOT / config["ledger"]
     if args.lint:
-        errors = common.lint(ledger, sources, config["corrected_prefix"])
+        prefixes = (config["corrected_prefix"],) + tuple(
+            prefix for prefix, _ in config.get("extra_campaigns", ()))
+        errors = common.lint(ledger, sources, prefixes)
         if errors:
             print("\n".join(errors))
             return 1

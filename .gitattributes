@@ -36,3 +36,6 @@ phase1b_corrected/** -text -whitespace !eol
 
 # Phase-1b pilot inputs/markers are also frozen evidence, not source files.
 phase1b_pilot/** -text -whitespace !eol
+
+# Phase-4 knowledge-ladder archives: byte-preserved like phase1_v2_corrected.
+phase4_v2_ladder/** -text -whitespace !eol

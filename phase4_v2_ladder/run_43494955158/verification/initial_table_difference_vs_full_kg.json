@@ -1,0 +1,311 @@
+{
+  "arm": "A1_redundancy",
+  "every_difference_at_gate_off_or_sun_rank_0": false,
+  "labs": {
+    "lab4": {
+      "columns_different": {
+        "SetPlugZ1=ON": {
+          "by_condition": {
+            "sun_rank=0": 384,
+            "sun_rank=1": 384,
+            "sun_rank=2": 384,
+            "sun_rank=3": 384
+          },
+          "cells": 1536
+        },
+        "SetSpotlight=ON": {
+          "by_condition": {
+            "sun_rank=0": 512,
+            "sun_rank=1": 512,
+            "sun_rank=2": 512,
+            "sun_rank=3": 512
+          },
+          "cells": 2048
+        },
+        "SetZ1Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 512,
+            "sun_rank=1": 416,
+            "sun_rank=2": 416,
+            "sun_rank=3": 416
+          },
+          "cells": 1760
+        },
+        "SetZ1Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 256,
+            "gate=0 sun_rank=1": 256,
+            "gate=0 sun_rank=2": 256,
+            "gate=0 sun_rank=3": 256,
+            "gate=1 sun_rank=0": 208,
+            "gate=1 sun_rank=1": 208,
+            "gate=1 sun_rank=2": 208,
+            "gate=1 sun_rank=3": 208
+          },
+          "cells": 1856
+        },
+        "SetZ2Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 512,
+            "sun_rank=1": 416,
+            "sun_rank=2": 416,
+            "sun_rank=3": 416
+          },
+          "cells": 1760
+        },
+        "SetZ2Light=ON": {
+          "by_condition": {
+            "sun_rank=0": 416,
+            "sun_rank=1": 416,
+            "sun_rank=2": 416,
+            "sun_rank=3": 416
+          },
+          "cells": 1664
+        }
+      },
+      "columns_identical": [
+        "DO_NOTHING",
+        "SetPlugZ1=OFF",
+        "SetSpotlight=OFF",
+        "SetZ1Blinds=OFF",
+        "SetZ1Light=OFF",
+        "SetZ2Blinds=OFF",
+        "SetZ2Light=OFF"
+      ],
+      "distinct_table_sha256_reference": 1,
+      "distinct_table_sha256_this_arm": 1,
+      "every_difference_at_gate_off_or_sun_rank_0": false,
+      "n_states": 4096,
+      "seed_compared": 1,
+      "seeds_in_both_arms": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "status": "ok"
+    },
+    "lab4chain": {
+      "columns_different": {
+        "SetMasterSwitch=ON": {
+          "by_condition": {
+            "sun_rank=0": 768,
+            "sun_rank=1": 768,
+            "sun_rank=2": 768,
+            "sun_rank=3": 768
+          },
+          "cells": 3072
+        },
+        "SetPlugZ1=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512,
+            "gate=1 sun_rank=0": 384,
+            "gate=1 sun_rank=1": 384,
+            "gate=1 sun_rank=2": 384,
+            "gate=1 sun_rank=3": 384
+          },
+          "cells": 3584
+        },
+        "SetSpotlight=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024,
+            "sun_rank=1": 1024,
+            "sun_rank=2": 1024,
+            "sun_rank=3": 1024
+          },
+          "cells": 4096
+        },
+        "SetZ1Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024,
+            "sun_rank=1": 832,
+            "sun_rank=2": 832,
+            "sun_rank=3": 832
+          },
+          "cells": 3520
+        },
+        "SetZ1Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512,
+            "gate=1 sun_rank=0": 416,
+            "gate=1 sun_rank=1": 416,
+            "gate=1 sun_rank=2": 416,
+            "gate=1 sun_rank=3": 416
+          },
+          "cells": 3712
+        },
+        "SetZ2Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024,
+            "sun_rank=1": 832,
+            "sun_rank=2": 832,
+            "sun_rank=3": 832
+          },
+          "cells": 3520
+        },
+        "SetZ2Light=ON": {
+          "by_condition": {
+            "sun_rank=0": 832,
+            "sun_rank=1": 832,
+            "sun_rank=2": 832,
+            "sun_rank=3": 832
+          },
+          "cells": 3328
+        }
+      },
+      "columns_identical": [
+        "DO_NOTHING",
+        "SetMasterSwitch=OFF",
+        "SetPlugZ1=OFF",
+        "SetSpotlight=OFF",
+        "SetZ1Blinds=OFF",
+        "SetZ1Light=OFF",
+        "SetZ2Blinds=OFF",
+        "SetZ2Light=OFF"
+      ],
+      "distinct_table_sha256_reference": 1,
+      "distinct_table_sha256_this_arm": 1,
+      "every_difference_at_gate_off_or_sun_rank_0": false,
+      "n_states": 8192,
+      "seed_compared": 1,
+      "seeds_in_both_arms": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "status": "ok"
+    },
+    "lab4dual": {
+      "columns_different": {
+        "SetPlugZ1=ON": {
+          "by_condition": {
+            "sun_rank=0": 768,
+            "sun_rank=1": 768,
+            "sun_rank=2": 768,
+            "sun_rank=3": 768
+          },
+          "cells": 3072
+        },
+        "SetPlugZ2=ON": {
+          "by_condition": {
+            "sun_rank=0": 768,
+            "sun_rank=1": 768,
+            "sun_rank=2": 768,
+            "sun_rank=3": 768
+          },
+          "cells": 3072
+        },
+        "SetSpotlight=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024,
+            "sun_rank=1": 1024,
+            "sun_rank=2": 1024,
+            "sun_rank=3": 1024
+          },
+          "cells": 4096
+        },
+        "SetZ1Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024,
+            "sun_rank=1": 832,
+            "sun_rank=2": 832,
+            "sun_rank=3": 832
+          },
+          "cells": 3520
+        },
+        "SetZ1Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512,
+            "gate=1 sun_rank=0": 416,
+            "gate=1 sun_rank=1": 416,
+            "gate=1 sun_rank=2": 416,
+            "gate=1 sun_rank=3": 416
+          },
+          "cells": 3712
+        },
+        "SetZ2Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024,
+            "sun_rank=1": 832,
+            "sun_rank=2": 832,
+            "sun_rank=3": 832
+          },
+          "cells": 3520
+        },
+        "SetZ2Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512,
+            "gate=1 sun_rank=0": 416,
+            "gate=1 sun_rank=1": 416,
+            "gate=1 sun_rank=2": 416,
+            "gate=1 sun_rank=3": 416
+          },
+          "cells": 3712
+        }
+      },
+      "columns_identical": [
+        "DO_NOTHING",
+        "SetPlugZ1=OFF",
+        "SetPlugZ2=OFF",
+        "SetSpotlight=OFF",
+        "SetZ1Blinds=OFF",
+        "SetZ1Light=OFF",
+        "SetZ2Blinds=OFF",
+        "SetZ2Light=OFF"
+      ],
+      "distinct_table_sha256_reference": 1,
+      "distinct_table_sha256_this_arm": 1,
+      "every_difference_at_gate_off_or_sun_rank_0": false,
+      "n_states": 8192,
+      "seed_compared": 1,
+      "seeds_in_both_arms": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "status": "ok"
+    },
+    "lab5": {
+      "status": "no_common_seed"
+    }
+  },
+  "reference_roots": [
+    "run_29926341581",
+    "run_29926354783"
+  ],
+  "roots": [
+    "run_43494955158"
+  ]
+}

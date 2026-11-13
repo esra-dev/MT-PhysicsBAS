@@ -1,0 +1,4 @@
+profile,condition,n_seeds,mean_first_goal,ci_lo,ci_hi
+lab4,pbrs_on,10,1.02,1.0,1.05
+lab4chain,pbrs_on,10,1.06,1.02,1.1
+lab4dual,pbrs_on,10,1.04,1.0,1.08

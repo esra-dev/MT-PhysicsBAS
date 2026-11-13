@@ -1,0 +1,40 @@
+{
+  "family_R": {
+    "lab4": {
+      "category": "adds",
+      "mean_increment": -0.305,
+      "share_category": "between_one_third_and_two_thirds",
+      "share_lower_of_upper": 0.5611510791366906
+    },
+    "lab4chain": {
+      "category": "adds",
+      "mean_increment": -0.29562499999999997,
+      "share_category": "between_one_third_and_two_thirds",
+      "share_lower_of_upper": 0.5974468085106384
+    },
+    "lab4dual": {
+      "category": "adds",
+      "mean_increment": -0.4525,
+      "share_category": "between_one_third_and_two_thirds",
+      "share_lower_of_upper": 0.3926174496644295
+    }
+  },
+  "family_S": {
+    "lab4": {
+      "category": "adds",
+      "mean_increment": -0.040625
+    },
+    "lab4chain": {
+      "category": "null",
+      "mean_increment": -0.015625
+    },
+    "lab4dual": {
+      "category": "adds",
+      "mean_increment": -0.05375
+    }
+  },
+  "registration": "docs/_audit/THESIS_STATE_REPORT.md Addendum 2026-11-13b",
+  "rule": "per member: 95% paired-bootstrap interval of the rung increment entirely on the favourable side of zero => adds; entirely on the unfavourable side => costs; else null. avg_redundant: lower is better. energy_compliance: higher is better.",
+  "secondary_lab5_energy_compliance": "adds",
+  "tabula_rasa_identical_in_all_seeds": true
+}

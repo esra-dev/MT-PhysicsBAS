@@ -1,0 +1,209 @@
+{
+  "all_gated_columns_invariant": false,
+  "arm": "A3_full_reference",
+  "labs": {
+    "lab4": {
+      "all_gated_columns_invariant": false,
+      "distinct_table_sha256": 1,
+      "first_seed": 1,
+      "first_seed_sha256": "a34227689301a8b03f01964727db05c0cd5ac3ca6fef2c062cbacaa11b196a6e",
+      "gated_actions": {
+        "SetZ1Light=ON": {
+          "gate_invariant": false,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 1024,
+          "state_pairs": 2048,
+          "values_gate_off_action_off": {
+            "-100.00": 768,
+            "-125.00": 256
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 64,
+            "-17.50": 64,
+            "-2.50": 64,
+            "-25.00": 64,
+            "0.00": 192,
+            "15.00": 192,
+            "22.50": 192,
+            "7.50": 192
+          }
+        }
+      },
+      "n_states": 4096,
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    },
+    "lab4chain": {
+      "all_gated_columns_invariant": false,
+      "distinct_table_sha256": 1,
+      "first_seed": 1,
+      "first_seed_sha256": "be569de97d95f95e9c344cdc3dd3e7846339ceb11bca6d874c399574155d2283",
+      "gated_actions": {
+        "SetPlugZ1=ON": {
+          "gate_invariant": false,
+          "gate_slot": 8,
+          "own_slot": 7,
+          "pairs_that_differ": 2048,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "-100.00": 2048
+          },
+          "values_gate_on_action_off": {
+            "0.00": 512,
+            "15.00": 512,
+            "22.50": 512,
+            "7.50": 512
+          }
+        },
+        "SetZ1Light=ON": {
+          "gate_invariant": false,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 2048,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "-100.00": 1536,
+            "-125.00": 512
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          }
+        }
+      },
+      "n_states": 8192,
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    },
+    "lab4dual": {
+      "all_gated_columns_invariant": false,
+      "distinct_table_sha256": 1,
+      "first_seed": 1,
+      "first_seed_sha256": "0ac9c51af98a5d238d35312958e4ef0068172106b0f793b4ec6e1d534e574776",
+      "gated_actions": {
+        "SetZ1Light=ON": {
+          "gate_invariant": false,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 2048,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "-100.00": 1536,
+            "-125.00": 512
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          }
+        },
+        "SetZ2Light=ON": {
+          "gate_invariant": false,
+          "gate_slot": 8,
+          "own_slot": 3,
+          "pairs_that_differ": 2048,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "-100.00": 1536,
+            "-125.00": 512
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          }
+        }
+      },
+      "n_states": 8192,
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    }
+  },
+  "roots": [
+    "run_29926341581",
+    "run_29926354783"
+  ]
+}

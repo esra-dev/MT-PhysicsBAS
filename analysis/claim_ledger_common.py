@@ -95,8 +95,10 @@ def build(sources_path: Path, output: Path, classify) -> int:
     return len(rows)
 
 
-def lint(ledger_path: Path, sources_path: Path, corrected_prefix: str) -> list[str]:
+def lint(ledger_path: Path, sources_path: Path,
+         corrected_prefix: str | tuple[str, ...]) -> list[str]:
     errors: list[str] = []
+    prefixes = (corrected_prefix,) if isinstance(corrected_prefix, str) else tuple(corrected_prefix)
     source_names = json.loads(sources_path.read_text(encoding="utf-8"))["sources"]
     expected = quantitative_lines(source_names)
 
@@ -133,7 +135,8 @@ def lint(ledger_path: Path, sources_path: Path, corrected_prefix: str) -> list[s
         if row["match_result"] not in MATCH_RESULTS:
             errors.append(f"ledger row {row_number}: invalid match_result {row['match_result']!r}")
         if row["classification"] == "corrected_result":
-            if row["match_result"] != "match" or corrected_prefix not in row["run_or_file"]:
+            if row["match_result"] != "match" or not any(
+                    prefix in row["run_or_file"] for prefix in prefixes):
                 errors.append(f"ledger row {row_number}: corrected result lacks committed archive match")
             elif not (ROOT / row["run_or_file"]).is_file():
                 errors.append(f"ledger row {row_number}: corrected source file is missing")
