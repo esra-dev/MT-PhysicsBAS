@@ -18,7 +18,8 @@ def _discover(campaign: Path) -> dict[str, tuple[int, Path]]:
         "phase1_v2_kg_only", "phase1_v2_redundancy_only",
         "phase1_v2_baseline", "phase1_v2_pbrs_only",
     }
-    if set(found) != expected:
+    optional = {"phase1_v2_brick_only"}  # knowledge-ladder arm, Addendum 2026-11-10
+    if not expected <= set(found) or set(found) - expected - optional:
         raise ValueError(f"mode set differs: {sorted(found)}")
     return found
 
@@ -32,6 +33,11 @@ def _classification(mode: str, profile: str, metric: str, domain: str) -> str:
     }
     if (mode, profile, metric, domain) in primary:
         return "registered_primary_member"
+    if mode == "phase1_v2_brick_only":
+        # The brick arm's within-arm effects are the A2 rung inputs; the
+        # registered ladder members are the A3-A2 increments computed in
+        # phase1_v2_knowledge_ladder.py, not any single within-arm row.
+        return "registered_ladder_input"
     if mode in {"phase1_v2_baseline", "phase1_v2_pbrs_only"}:
         return "registered_control"
     if metric == "avg_legacy_wallclock_energy":

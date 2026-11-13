@@ -254,6 +254,8 @@ def _httpKeys = ['sim.http.connectMs','sim.http.responseMs','sim.http.maxRetries
                  // KG. StereotypeReasoner now logs the effective values and
                  // the runner records/verifies them in TRAINING_OK.json.
                  'stereo.irrelevantDvPrior','stereo.bandMirrorInit','stereo.bandMirrorPrior',
+                 // Knowledge-ladder arm (Addendum 2026-11-10): full | brick | redundancy.
+                 'stereo.knowledgeLayer',
                  // Phase 4 (lab5 energy): non-fading energy prior weight. Only
                  // lab5's KG declares ws:energyCost, so it is inert on labs 1-4.
                  'stereo.energyPriorWeight',

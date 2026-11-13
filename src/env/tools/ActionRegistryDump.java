@@ -74,6 +74,21 @@ public final class ActionRegistryDump {
     static final String HEADER =
         "key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex";
 
+    /**
+     * Knowledge-ladder control arm (Brick-only, registered THESIS_STATE_REPORT
+     * Addendum 2026-11-10): the clean Phase-1 labs discovered under
+     * {@link StereotypeReasoner.KnowledgeLayer#BRICK}. Goldens live in the
+     * {@code brick_only/} sub-directory so the FULL-arm goldens above stay
+     * byte-identical.
+     */
+    static final Map<String, String[]> BRICK_ONTOLOGY_SETS = new LinkedHashMap<>();
+    static {
+        BRICK_ONTOLOGY_SETS.put("lab1", ONTOLOGY_SETS.get("lab1"));
+        BRICK_ONTOLOGY_SETS.put("lab2", ONTOLOGY_SETS.get("lab2"));
+        BRICK_ONTOLOGY_SETS.put("lab3", ONTOLOGY_SETS.get("lab3"));
+    }
+    static final String BRICK_SUBDIR = "brick_only";
+
     /** Stable identity of an action independent of discovery order. */
     static String key(StereotypeReasoner.ActionInfo ai) {
         if (ai.wotActionType == null) return "DO_NOTHING";
@@ -104,34 +119,50 @@ public final class ActionRegistryDump {
     }
 
     static List<String> liveRows(String[] onts) {
-        StereotypeReasoner r = new StereotypeReasoner(onts, 0.75);
+        return liveRows(onts, StereotypeReasoner.KnowledgeLayer.FULL);
+    }
+
+    static List<String> liveRows(String[] onts, StereotypeReasoner.KnowledgeLayer layer) {
+        StereotypeReasoner r = new StereotypeReasoner(onts, 0.75, layer);
         List<String> rows = new ArrayList<>();
         for (StereotypeReasoner.ActionInfo ai : r.getAllActions()) rows.add(row(ai));
         Collections.sort(rows); // key-sorted → file content is order-independent
         return rows;
     }
 
+    private static void writeSet(Path outDir, String name, String[] onts,
+                                 StereotypeReasoner.KnowledgeLayer layer) throws IOException {
+        Path f = outDir.resolve("registry_" + name + ".csv");
+        try (BufferedWriter w = Files.newBufferedWriter(f, StandardCharsets.UTF_8)) {
+            w.write("# action registry golden — ontology set '" + name
+                  + "' = " + String.join(" + ", onts)
+                  + (layer == StereotypeReasoner.KnowledgeLayer.FULL ? "" : " [knowledgeLayer=" + layer + "]"));
+            w.newLine();
+            w.write("# contract = key-set + metadata columns; actionIndex is informational only");
+            w.newLine();
+            w.write(HEADER);
+            w.newLine();
+            for (String row : liveRows(onts, layer)) {
+                w.write(row);
+                w.newLine();
+            }
+        }
+        System.out.println("[dump] " + f);
+    }
+
     public static void main(String[] args) throws IOException {
         Path outDir = Paths.get(args.length > 0 ? args[0] : "config/golden_registry");
         Files.createDirectories(outDir);
         for (Map.Entry<String, String[]> e : ONTOLOGY_SETS.entrySet()) {
-            Path f = outDir.resolve("registry_" + e.getKey() + ".csv");
-            try (BufferedWriter w = Files.newBufferedWriter(f, StandardCharsets.UTF_8)) {
-                w.write("# action registry golden — ontology set '" + e.getKey()
-                      + "' = " + String.join(" + ", e.getValue()));
-                w.newLine();
-                w.write("# contract = key-set + metadata columns; actionIndex is informational only");
-                w.newLine();
-                w.write(HEADER);
-                w.newLine();
-                for (String row : liveRows(e.getValue())) {
-                    w.write(row);
-                    w.newLine();
-                }
-            }
-            System.out.println("[dump] " + f);
+            writeSet(outDir, e.getKey(), e.getValue(), StereotypeReasoner.KnowledgeLayer.FULL);
         }
-        System.out.println("[dump] " + ONTOLOGY_SETS.size() + " registries written to " + outDir);
+        Path brickDir = outDir.resolve(BRICK_SUBDIR);
+        Files.createDirectories(brickDir);
+        for (Map.Entry<String, String[]> e : BRICK_ONTOLOGY_SETS.entrySet()) {
+            writeSet(brickDir, e.getKey(), e.getValue(), StereotypeReasoner.KnowledgeLayer.BRICK);
+        }
+        System.out.println("[dump] " + ONTOLOGY_SETS.size() + " FULL registries written to " + outDir
+                         + "; " + BRICK_ONTOLOGY_SETS.size() + " BRICK registries written to " + brickDir);
     }
 
     private ActionRegistryDump() { }
