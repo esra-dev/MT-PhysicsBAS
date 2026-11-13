@@ -1,0 +1,3 @@
+registered_test,metric,n_paired,seeds_paired,mean_paired_difference,median_paired_difference,ci_lo_bootstrap,ci_hi_bootstrap,p_signflip_two_sided,p_sign_exact_two_sided,paired_rank_biserial,cliffs_delta_unpaired_descriptive,q_signflip_bh_m2,bh_family_m,registered_category
+1_arm_c_minus_brick_lab2_auc_goal,auc_goal_treatment_effect_difference,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.0,1.0,2,null
+2_arm_c_minus_brick_lab3_auc_goal,auc_goal_treatment_effect_difference,20,1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20,0.0038500000000000144,0.0026666666666666505,0.0015329166666666761,0.006683333333333347,0.004291534423828125,0.063568115234375,0.6947368421052632,0.45,0.00858306884765625,2,elementary_adds

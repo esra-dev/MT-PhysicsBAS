@@ -1,0 +1,380 @@
+{
+  "arm_c_archive": "run_29848584965",
+  "brick_archive": "run_42834963612",
+  "elementary_layer_off": true,
+  "labs": {
+    "lab2": {
+      "all_checks_pass": true,
+      "blind_on_columns": {
+        "SetZ1Blinds=ON": 4,
+        "SetZ2Blinds=ON": 5
+      },
+      "check_sunshine_is_least_significant_slot": true,
+      "check_zone_tables_sum_to_archived_seed1_combined_table": true,
+      "combined_tables_all_seeds": {
+        "arm_c_sha256": [
+          "2db71bf127049bf1ee13f887cfdc38fc90cb28b46f3c93b0aca76e9533fdac59"
+        ],
+        "brick_sha256": [
+          "8ff1d33e04e773187d1f1b0a107756ace5b0fbf922ae973e39a2f08a8f2eb103"
+        ],
+        "check_identical_across_20_seeds": true,
+        "comparison": {
+          "arm_c_values_in_differing_cells": {
+            "-100.00": 256
+          },
+          "brick_values_in_differing_cells": {
+            "0.00": 64,
+            "15.00": 64,
+            "22.50": 64,
+            "7.50": 64
+          },
+          "check_blind_open_cells_identical_between_arms": true,
+          "check_brick_blind_on_columns_do_not_depend_on_sun_rank": true,
+          "check_brick_has_rule5_bonus_values_blind_closed_sun0": true,
+          "check_differences_only_at_sun_rank_0": true,
+          "check_differences_only_on_blind_on_columns": true,
+          "differing_cells": 256,
+          "differing_cells_by_column": {
+            "SetZ1Blinds=ON": 128,
+            "SetZ2Blinds=ON": 128
+          },
+          "differing_cells_by_sun_rank": {
+            "0": 256
+          },
+          "registered_literal_criterion": {
+            "brick_cells_equal_to_well": 256,
+            "holds": false,
+            "text": "no -100.00 cell on any blind-ON column at sun rank 0"
+          },
+          "restated_criterion_blind_closed": {
+            "arm_c_values": {
+              "-100.00": 256
+            },
+            "brick_values": {
+              "0.00": 64,
+              "15.00": 64,
+              "22.50": 64,
+              "7.50": 64
+            },
+            "holds": true,
+            "text": "no -100.00 cell on a blind-ON column at sun rank 0 in states where that blind is closed (non-redundant)"
+          }
+        }
+      },
+      "per_zone_tables_seed1": {
+        "zone1": {
+          "arm_c_sha256": "abc06c6b09eae6b20c33cd26aee42bc91d61ce7bc3b394937a18ede732dcbe3c",
+          "brick_sha256": "51d6b250a745f76fd5b77d0b99b52c852c2652f3c101183e26aace836912d3a8",
+          "comparison": {
+            "arm_c_values_in_differing_cells": {
+              "-50.00": 256
+            },
+            "brick_values_in_differing_cells": {
+              "0.00": 160,
+              "15.00": 32,
+              "22.50": 32,
+              "7.50": 32
+            },
+            "check_blind_open_cells_identical_between_arms": true,
+            "check_brick_blind_on_columns_do_not_depend_on_sun_rank": true,
+            "check_brick_has_rule5_bonus_values_blind_closed_sun0": true,
+            "check_differences_only_at_sun_rank_0": true,
+            "check_differences_only_on_blind_on_columns": true,
+            "differing_cells": 256,
+            "differing_cells_by_column": {
+              "SetZ1Blinds=ON": 128,
+              "SetZ2Blinds=ON": 128
+            },
+            "differing_cells_by_sun_rank": {
+              "0": 256
+            },
+            "registered_literal_criterion": {
+              "brick_cells_equal_to_well": 256,
+              "holds": false,
+              "text": "no -50.00 cell on any blind-ON column at sun rank 0"
+            },
+            "restated_criterion_blind_closed": {
+              "arm_c_values": {
+                "-50.00": 256
+              },
+              "brick_values": {
+                "0.00": 160,
+                "15.00": 32,
+                "22.50": 32,
+                "7.50": 32
+              },
+              "holds": true,
+              "text": "no -50.00 cell on a blind-ON column at sun rank 0 in states where that blind is closed (non-redundant)"
+            }
+          }
+        },
+        "zone2": {
+          "arm_c_sha256": "9362338eceff4efb2e9be5942e0b43ed468a7b75caaf5fdcbcc97e6f76251f19",
+          "brick_sha256": "5b85f581ddb09429e4f59b0011dbe14f7a2e96f9eb9545d3bf9febfa23088cb3",
+          "comparison": {
+            "arm_c_values_in_differing_cells": {
+              "-50.00": 256
+            },
+            "brick_values_in_differing_cells": {
+              "0.00": 160,
+              "15.00": 32,
+              "22.50": 32,
+              "7.50": 32
+            },
+            "check_blind_open_cells_identical_between_arms": true,
+            "check_brick_blind_on_columns_do_not_depend_on_sun_rank": true,
+            "check_brick_has_rule5_bonus_values_blind_closed_sun0": true,
+            "check_differences_only_at_sun_rank_0": true,
+            "check_differences_only_on_blind_on_columns": true,
+            "differing_cells": 256,
+            "differing_cells_by_column": {
+              "SetZ1Blinds=ON": 128,
+              "SetZ2Blinds=ON": 128
+            },
+            "differing_cells_by_sun_rank": {
+              "0": 256
+            },
+            "registered_literal_criterion": {
+              "brick_cells_equal_to_well": 256,
+              "holds": false,
+              "text": "no -50.00 cell on any blind-ON column at sun rank 0"
+            },
+            "restated_criterion_blind_closed": {
+              "arm_c_values": {
+                "-50.00": 256
+              },
+              "brick_values": {
+                "0.00": 160,
+                "15.00": 32,
+                "22.50": 32,
+                "7.50": 32
+              },
+              "holds": true,
+              "text": "no -50.00 cell on a blind-ON column at sun rank 0 in states where that blind is closed (non-redundant)"
+            }
+          }
+        }
+      },
+      "state_layout": {
+        "n_states": 1024,
+        "sizes": [
+          4,
+          4,
+          2,
+          2,
+          2,
+          2,
+          4
+        ],
+        "strides": [
+          256,
+          64,
+          32,
+          16,
+          8,
+          4,
+          1
+        ],
+        "sun_slot": 6
+      }
+    },
+    "lab3": {
+      "all_checks_pass": true,
+      "blind_on_columns": {
+        "SetZ1Blinds=ON": 4,
+        "SetZ2Blinds=ON": 5
+      },
+      "check_sunshine_is_least_significant_slot": true,
+      "check_zone_tables_sum_to_archived_seed1_combined_table": true,
+      "combined_tables_all_seeds": {
+        "arm_c_sha256": [
+          "b3e021febe495675b792eacefdb1821837303f22fb4e0cd1c51f40a47201ff42"
+        ],
+        "brick_sha256": [
+          "2a2fc4acd9f968b3c1e0b7d2ec133c2255c5dc0aeb7bcffd2f730bce69748afb"
+        ],
+        "check_identical_across_20_seeds": true,
+        "comparison": {
+          "arm_c_values_in_differing_cells": {
+            "-100.00": 384,
+            "-125.00": 128
+          },
+          "brick_values_in_differing_cells": {
+            "-10.00": 32,
+            "-17.50": 32,
+            "-2.50": 32,
+            "-25.00": 32,
+            "0.00": 96,
+            "15.00": 96,
+            "22.50": 96,
+            "7.50": 96
+          },
+          "check_blind_open_cells_identical_between_arms": true,
+          "check_brick_blind_on_columns_do_not_depend_on_sun_rank": true,
+          "check_brick_has_rule5_bonus_values_blind_closed_sun0": true,
+          "check_differences_only_at_sun_rank_0": true,
+          "check_differences_only_on_blind_on_columns": true,
+          "differing_cells": 512,
+          "differing_cells_by_column": {
+            "SetZ1Blinds=ON": 256,
+            "SetZ2Blinds=ON": 256
+          },
+          "differing_cells_by_sun_rank": {
+            "0": 512
+          },
+          "registered_literal_criterion": {
+            "brick_cells_equal_to_well": 512,
+            "holds": false,
+            "text": "no -100.00 cell on any blind-ON column at sun rank 0"
+          },
+          "restated_criterion_blind_closed": {
+            "arm_c_values": {
+              "-100.00": 384,
+              "-125.00": 128
+            },
+            "brick_values": {
+              "-10.00": 32,
+              "-17.50": 32,
+              "-2.50": 32,
+              "-25.00": 32,
+              "0.00": 96,
+              "15.00": 96,
+              "22.50": 96,
+              "7.50": 96
+            },
+            "holds": true,
+            "text": "no -100.00 cell on a blind-ON column at sun rank 0 in states where that blind is closed (non-redundant)"
+          }
+        }
+      },
+      "per_zone_tables_seed1": {
+        "zone1": {
+          "arm_c_sha256": "0b7fad904f1b295ce12a13879d2d95af65b5285deb0c8a7c014008866de78ade",
+          "brick_sha256": "8409db79a22bb38116aa48d1d2a2b66b648862972f8fe588865e8c43fceccf35",
+          "comparison": {
+            "arm_c_values_in_differing_cells": {
+              "-50.00": 448,
+              "-75.00": 64
+            },
+            "brick_values_in_differing_cells": {
+              "-25.00": 64,
+              "0.00": 256,
+              "15.00": 64,
+              "22.50": 64,
+              "7.50": 64
+            },
+            "check_blind_open_cells_identical_between_arms": true,
+            "check_brick_blind_on_columns_do_not_depend_on_sun_rank": true,
+            "check_brick_has_rule5_bonus_values_blind_closed_sun0": true,
+            "check_differences_only_at_sun_rank_0": true,
+            "check_differences_only_on_blind_on_columns": true,
+            "differing_cells": 512,
+            "differing_cells_by_column": {
+              "SetZ1Blinds=ON": 256,
+              "SetZ2Blinds=ON": 256
+            },
+            "differing_cells_by_sun_rank": {
+              "0": 512
+            },
+            "registered_literal_criterion": {
+              "brick_cells_equal_to_well": 512,
+              "holds": false,
+              "text": "no -50.00 cell on any blind-ON column at sun rank 0"
+            },
+            "restated_criterion_blind_closed": {
+              "arm_c_values": {
+                "-50.00": 448,
+                "-75.00": 64
+              },
+              "brick_values": {
+                "-25.00": 64,
+                "0.00": 256,
+                "15.00": 64,
+                "22.50": 64,
+                "7.50": 64
+              },
+              "holds": true,
+              "text": "no -50.00 cell on a blind-ON column at sun rank 0 in states where that blind is closed (non-redundant)"
+            }
+          }
+        },
+        "zone2": {
+          "arm_c_sha256": "fe6935c0980ed112d3ec3acd011ac7fbac61757ce17379dcae3a53345791832d",
+          "brick_sha256": "9fd596aead73a0b8cf02e0bf22735ec6321a6913c338e862ded5f8102667858f",
+          "comparison": {
+            "arm_c_values_in_differing_cells": {
+              "-50.00": 448,
+              "-75.00": 64
+            },
+            "brick_values_in_differing_cells": {
+              "-25.00": 64,
+              "0.00": 256,
+              "15.00": 64,
+              "22.50": 64,
+              "7.50": 64
+            },
+            "check_blind_open_cells_identical_between_arms": true,
+            "check_brick_blind_on_columns_do_not_depend_on_sun_rank": true,
+            "check_brick_has_rule5_bonus_values_blind_closed_sun0": true,
+            "check_differences_only_at_sun_rank_0": true,
+            "check_differences_only_on_blind_on_columns": true,
+            "differing_cells": 512,
+            "differing_cells_by_column": {
+              "SetZ1Blinds=ON": 256,
+              "SetZ2Blinds=ON": 256
+            },
+            "differing_cells_by_sun_rank": {
+              "0": 512
+            },
+            "registered_literal_criterion": {
+              "brick_cells_equal_to_well": 512,
+              "holds": false,
+              "text": "no -50.00 cell on any blind-ON column at sun rank 0"
+            },
+            "restated_criterion_blind_closed": {
+              "arm_c_values": {
+                "-50.00": 448,
+                "-75.00": 64
+              },
+              "brick_values": {
+                "-25.00": 64,
+                "0.00": 256,
+                "15.00": 64,
+                "22.50": 64,
+                "7.50": 64
+              },
+              "holds": true,
+              "text": "no -50.00 cell on a blind-ON column at sun rank 0 in states where that blind is closed (non-redundant)"
+            }
+          }
+        }
+      },
+      "state_layout": {
+        "n_states": 2048,
+        "sizes": [
+          4,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4
+        ],
+        "strides": [
+          512,
+          128,
+          64,
+          32,
+          16,
+          8,
+          4,
+          1
+        ],
+        "sun_slot": 7
+      }
+    }
+  },
+  "registration": "THESIS_STATE_REPORT.md Addendum 2026-11-10"
+}

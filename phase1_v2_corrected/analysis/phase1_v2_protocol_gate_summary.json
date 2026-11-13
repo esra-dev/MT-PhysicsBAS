@@ -97,6 +97,30 @@
       "scenario_fallback_count": 0,
       "schedule_pair_mismatches": 0,
       "training_cells": 120
+    },
+    {
+      "benchmark_cells": 180,
+      "first_goal_censored_rows": 0,
+      "first_goal_rows": 1080,
+      "first_goal_terminal_at_start_rows": 440,
+      "fixed_horizons": [
+        3000
+      ],
+      "head_sha": "140906f2b325aefdb32b6c00ffaae063507f215e",
+      "metric_schemas": [
+        "phase1-benchmark-v2"
+      ],
+      "paired_rng_versions": [
+        "common-seed-v1"
+      ],
+      "protocol_versions": [
+        "phase1-v2"
+      ],
+      "run_id": 42834963612,
+      "run_mode": "phase1_v2_brick_only",
+      "scenario_fallback_count": 0,
+      "schedule_pair_mismatches": 0,
+      "training_cells": 120
     }
   ]
 }

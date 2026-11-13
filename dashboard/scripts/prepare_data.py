@@ -226,7 +226,11 @@ def build_phase1(out_dir=None):
     archives. Fails loudly on any inconsistency instead of guessing."""
     out_dir = OUT if out_dir is None else out_dir
     gates = json.load(open(PHASE1_GATES_JSON, encoding="utf-8"))
-    run_rows = gates["runs"]
+    # The dashboard shows the four-arm campaign. The gate summary also lists
+    # the knowledge-ladder control arm (Addendum 2026-11-10), which ran from a
+    # later commit and is not displayed here, so it is left out of the
+    # campaign-consistency checks below.
+    run_rows = [row for row in gates["runs"] if row["run_mode"] in PHASE1_RUN_KEYS]
     head_shas = {row["head_sha"] for row in run_rows}
     if len(head_shas) != 1:
         raise SystemExit("phase1 gate summary: inconsistent head_sha across runs")
