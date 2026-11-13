@@ -1,0 +1,23 @@
+{
+  "tag": "results-20261113-224550-phase4_v2_brick_only-ee656178",
+  "utc": "20261113-224550",
+  "runMode": "phase4_v2_brick_only",
+  "profiles": [
+    "lab4",
+    "lab4dual",
+    "lab4chain",
+    "lab5"
+  ],
+  "bench_modes": [
+    "rule_based",
+    "ql_false",
+    "ql_true"
+  ],
+  "git_sha": "ee656178dc3528d56b69a7123c1a37ed43919936",
+  "git_short_sha": "ee656178",
+  "git_branch": "phase4-knowledge-ladder-2026-11",
+  "artifact_count": 0,
+  "artifacts": [],
+  "host": null,
+  "user": null
+}
