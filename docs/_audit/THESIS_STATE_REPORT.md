@@ -3756,3 +3756,39 @@ of the log file.
 **Not tested.** A separation of the power gate from the blind sunshine gate; the
 redundancy arm on lab5; a structure-only fault detector (out of scope in the
 registration).
+
+
+## Addendum 2026-11-14b - REGISTRATION (pre-dispatch): Phase-2 structure-only fault-detection campaign (`phase2_v3_structonly`) - the sharper Elementary test
+
+**What is registered.** The Phase-2 dispatch named "out of scope" in Addendum
+2026-11-10: four archived fault cells (`lab2_f1bdead`, `lab3_f1bdead`,
+`lab3_f2dead_lowsun`, `labmon2_f2dead_lowsun`) re-run with the adaptation
+step's knowledge layer switched to BRICK in both arms, compared per (cell,
+arm) against the full-layer runs of record, paired by seed (1-20). The
+binding registration - prediction first, mechanism, frozen estimands
+(including the new WrongBlameEvents endpoint and its frozen injected-component
+sets), three m=8 families, decision rule, comparator mapping with the
+cross-head disclosure, delivery gates, dispatch inputs (282 jobs), archive and
+completion gates - is `docs/phase2_structonly_registration_2026-11-14.md`,
+committed on branch `phase2-structonly-2026-11` before any cell is
+dispatched.
+
+**The registered prediction (P1).** Without the Elementary physics layer the
+detector cannot abstain on IV-gated (blind) components and is predicted to
+blacklist healthy blinds below sun rank 2: WrongBlameEvents
+Delta = structonly - record > 0 at q <= 0.05. The runs of record carry zero
+false-positive blacklist events in all four cells, so any wrong blame is
+attributable to the layer. The DetectEpisode and RecoveryEpisodes families
+are registered two-sided with no directional prediction (the lost blind
+self-test and the lost sun-rank gate pull detection in opposite directions on
+the dead-blind cells).
+
+**Treatment delivery.** `-Pstereo.knowledgeLayer=brick` reaches the adapt JVM
+through the existing Gradle forwarding; every ADAPT_OK manifest records the
+requested AND the log-verified layer (`knowledge_layer`,
+`knowledge_layer_delivered`), the archive validator's
+`--require-knowledge-layer brick` gate makes both mandatory, and
+`analysis/tests/test_phase2_structonly_pipeline.py` pins the chain. Clean
+parents keep the full layer (`phase1_v2_kg_only`), so both sides of every
+pair start from the same policies; parent `parent_qtable_sha256` identity is
+a registered descriptive.
