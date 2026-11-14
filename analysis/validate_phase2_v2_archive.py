@@ -91,7 +91,15 @@ def _config():
 
 def validate(root: Path, profiles: list[str], seeds: list[int],
              require_parents: bool = True,
-             require_treatment_delivery: bool = False) -> list[str]:
+             require_treatment_delivery: bool = False,
+             require_knowledge_layer: str | None = None) -> list[str]:
+    """``require_knowledge_layer`` (structure-only campaign, 2026-11-14): when
+    set, EVERY adapt cell's manifest must record that layer as both requested
+    (``knowledge_layer``) and delivered (``knowledge_layer_delivered``, read
+    back from the adapt JVM's StereotypeReasoner banner at run time). Archives
+    written before 2026-11-14 carry neither key and fail the gate by
+    construction, so the default stays ``None`` for the historical reproducers.
+    """
     errors: list[str] = []
     cfg = _config()["phase2"]
     scenario_map = cfg.get("train_scenarios_map", {})
@@ -165,6 +173,12 @@ def validate(root: Path, profiles: list[str], seeds: list[int],
                                   f"{scenario_rel}")
                 if not manifest.get("parent_qtable_sha256"):
                     errors.append(f"{manifest_path}: empty parent_qtable_sha256 (cold start?)")
+                if require_knowledge_layer is not None:
+                    for key in ("knowledge_layer", "knowledge_layer_delivered"):
+                        if manifest.get(key) != require_knowledge_layer:
+                            errors.append(
+                                f"{manifest_path}: {key}={manifest.get(key)!r}, expected "
+                                f"{require_knowledge_layer!r} (knowledge-layer delivery gate)")
                 arm_hash[bool_name] = manifest.get("scenario_schedule_sha256", "")
 
                 # Treatment-delivery evidence (present on manifests since 2026-11).
@@ -255,6 +269,10 @@ def main() -> int:
     parser.add_argument("--require-treatment-delivery", action="store_true",
                         help="every *_lowsun cell must carry treatment-delivery evidence "
                              "showing Sunshine pinned to 100 in every scenario")
+    parser.add_argument("--require-knowledge-layer", default=None,
+                        choices=("full", "brick", "redundancy"),
+                        help="every adapt cell must record this layer as requested AND "
+                             "delivered (knowledge_layer / knowledge_layer_delivered)")
     args = parser.parse_args()
     profiles = [name.strip() for name in args.profiles.split(",") if name.strip()]
     if "-" in args.seeds and "," not in args.seeds:
@@ -263,7 +281,8 @@ def main() -> int:
     else:
         seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
     errors = validate(args.root, profiles, seeds, require_parents=not args.no_parents,
-                      require_treatment_delivery=args.require_treatment_delivery)
+                      require_treatment_delivery=args.require_treatment_delivery,
+                      require_knowledge_layer=args.require_knowledge_layer)
     if errors:
         print("Phase-2 v2 archive validation FAILED:")
         for error in errors:

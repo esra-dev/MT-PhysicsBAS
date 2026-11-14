@@ -18,6 +18,10 @@ def main() -> int:
     parser.add_argument("--profiles", required=True)
     parser.add_argument("--seeds", required=True)
     parser.add_argument("--publish-results", required=True)
+    # Phase-2 structure-only campaign (2026-11-14): the adapt-step KG layer.
+    # Optional and omitted from the payload when not passed, so the Phase-1 and
+    # Phase-4 workflows (which do not use it) keep their payload shape.
+    parser.add_argument("--knowledge-layer", default=None)
     args = parser.parse_args()
     payload = {
         "workflow": ".github/workflows/phase1.yml",
@@ -29,6 +33,8 @@ def main() -> int:
         "seeds": [int(value) for value in args.seeds.split(",") if value.strip()],
         "publish_results": args.publish_results.strip().lower() == "true",
     }
+    if args.knowledge_layer is not None:
+        payload["knowledge_layer"] = args.knowledge_layer.strip().lower()
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
