@@ -64,7 +64,13 @@ param(
     # Per-run RNG seed forwarded as -Prun.seed (XORed into QLearner's baseSeed).
     # -1 (default) leaves the seed unset so the JVM uses its built-in default;
     # CI passes distinct seeds for paired multi-replica statistics.
-    [int]$RunSeed = -1
+    [int]$RunSeed = -1,
+    # Knowledge-ladder layer for the WHOLE adaptation step (fault detector AND
+    # re-learn priors, in BOTH arms): full (default) | brick | redundancy.
+    # A non-default value is forwarded as -Pstereo.knowledgeLayer — the same
+    # flag the training runner uses — and is recorded AND log-verified in every
+    # ADAPT_OK manifest (registered structure-only campaign, 2026-11-14).
+    [string]$KnowledgeLayer = "full"
 )
 
 $ErrorActionPreference = "Stop"
@@ -137,6 +143,17 @@ if ($AdaptProfiles.Trim() -ne "") {
     $ProfileList = @($P2.adapt_profiles)
 }
 $ModeList = $Modes.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+
+# Knowledge-layer selection (structure-only campaign, 2026-11-14). The empty
+# string and "full" both mean the runs-of-record default: NO flag is forwarded,
+# so the default path stays byte-identical to the archived campaigns.
+$KnowledgeLayer = $KnowledgeLayer.Trim().ToLowerInvariant()
+if ($KnowledgeLayer -eq "") { $KnowledgeLayer = "full" }
+if (@("full", "brick", "redundancy") -notcontains $KnowledgeLayer) {
+    Write-Fail "KnowledgeLayer must be full|brick|redundancy, got '$KnowledgeLayer'"
+    if ($LogStream) { $LogStream.Close() }
+    exit 1
+}
 
 # ─── Simulator health check ───────────────────────────────────────────────────
 function Wait-Simulator {
@@ -255,6 +272,22 @@ function Get-AslTrainScenarios { param([string]$Profile)
 # scenario file whose every scenario pins Sunshine = 100 (rank 1); any other
 # value means the registered manipulation would not be delivered and the
 # cell must not run (the 2026-07 runs of record failed exactly this way).
+# Knowledge-layer treatment delivery (structure-only campaign): the layer the
+# adapt JVM ACTUALLY ran is read back from the StereotypeReasoner banner in the
+# cell's gradle log ("StereotypeReasoner: knowledge layer = BRICK"). The LAST
+# banner wins (one reasoner per adapt JVM). Returns lowercase, or "unknown"
+# when the banner is absent (which the campaign validator treats as failure).
+function Get-DeliveredKnowledgeLayer { param([string]$LogPath)
+    if (-not (Test-Path $LogPath)) { return "unknown" }
+    $banner = $null
+    try {
+        $banner = Select-String -Path $LogPath `
+            -Pattern 'StereotypeReasoner: knowledge layer = (\w+)' -ErrorAction Stop
+    } catch { return "unknown" }
+    if (-not $banner) { return "unknown" }
+    return (@($banner) | Select-Object -Last 1).Matches[0].Groups[1].Value.ToLowerInvariant()
+}
+
 function Assert-ScenarioTreatmentDelivery { param([string]$Profile, [string]$ScenarioRel)
     $aslRel = Get-AslTrainScenarios -Profile $Profile
     if ($aslRel -ne $ScenarioRel) {
@@ -275,6 +308,7 @@ try {
     Write-OK   "gradle   : $GradleExe"
     Write-OK   "profiles : $($ProfileList -join ', ')"
     Write-OK   "modes    : $($ModeList -join ', ')"
+    Write-OK   "KG layer : $KnowledgeLayer"
     if ($EffEpisodes -gt 0) {
         Write-OK "episodes : $EffEpisodes (override via -Padapt.episodes)"
     } else {
@@ -371,6 +405,7 @@ try {
             $gArgs = @("taskAdapt", "-Pprofile=$profile", "-Pmode=$mode")
             if ($EffEpisodes -gt 0) { $gArgs += "-Padapt.episodes=$EffEpisodes" }
             if ($RunSeed -ge 0)     { $gArgs += "-Prun.seed=$RunSeed" }
+            if ($KnowledgeLayer -ne "full") { $gArgs += "-Pstereo.knowledgeLayer=$KnowledgeLayer" }
             $gArgs += "--console=plain"
 
             $gpArgs = @{
@@ -500,6 +535,11 @@ try {
                         $epRows = @(Get-Content $metricsFile | Where-Object {
                             $_ -and -not $_.StartsWith('Episode') -and -not $_.StartsWith('#') }).Count
                     }
+                    $deliveredLayer = Get-DeliveredKnowledgeLayer -LogPath $cellLog
+                    if ($deliveredLayer -ne $KnowledgeLayer) {
+                        Write-Fail "Knowledge-layer treatment NOT verified for $profile/${mode}: requested '$KnowledgeLayer', log shows '$deliveredLayer'"
+                        $script:HadFatalError = $true
+                    }
                     $manifest = [ordered]@{
                         status                   = if ($qtFiles.Count -gt 0) { "ok" } else { "cold_start" }
                         protocol_version         = "phase2-v2"
@@ -511,6 +551,8 @@ try {
                         parent_profile           = $parentName
                         mode                     = $mode
                         run_seed                 = $RunSeed
+                        knowledge_layer          = $KnowledgeLayer
+                        knowledge_layer_delivered = $deliveredLayer
                         adapt_episodes_effective = $epRows
                         adapt_episodes_override  = $EffEpisodes
                         train_scenarios_file     = $scRel

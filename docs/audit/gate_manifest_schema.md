@@ -47,6 +47,8 @@ Common keys plus:
 | `scenario_file_sha256` | (since 2026-11, audit R2-001/R2-002) SHA-256 of the committed scenario file bytes. The schedule hash covers IDs only, so a pinned-sun file derived from its parent hashes identically there; the file hash distinguishes the delivered environmental treatment. |
 | `scenario_sunshine_values` | (since 2026-11) sorted unique `Sunshine` values of the scenario file the explicit starts actually used. |
 | `lowsun_pin_delivered` | (since 2026-11) for `*_lowsun` profiles: `true` iff every scenario pins `Sunshine = 100`; `null` for every other profile. `analysis/validate_phase2_v2_archive.py --require-treatment-delivery` makes the evidence mandatory for low-sun cells. |
+| `knowledge_layer` | (since 2026-11-14, structure-only campaign) the KG layer REQUESTED for the adapt JVM: `full` (runs-of-record default), `brick`, or `redundancy`. |
+| `knowledge_layer_delivered` | (since 2026-11-14) the layer the adapt JVM ACTUALLY constructed, read back from the `StereotypeReasoner: knowledge layer = …` banner in the cell log (`unknown` when absent, which fails the cell). `analysis/validate_phase2_v2_archive.py --require-knowledge-layer <layer>` makes both keys mandatory and equal for every cell. |
 
 ## `DYNAMICS_OK.json` — Phase-3 v2 dynamics cells
 
