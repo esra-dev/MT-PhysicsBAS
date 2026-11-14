@@ -1,0 +1,18 @@
+# action registry golden — ontology set 'lab4dual' = building_8_dualplug.ttl [knowledgeLayer=BRICK]
+# contract = key-set + metadata columns; actionIndex is informational only
+key,label,wotStateType,svBit,expectedBit,zones,hasIV,ivIdx,ivMinRank,energyCost,kgSilent,relevance,illumDirection,ivGates,actionIndex
+DO_NOTHING,DO_NOTHING,,-1,-1,,false,-1,1,0.0,false,UNKNOWN,0,,14
+http://example.org/was#SetPlugZ1|OFF,SetPlugZ1=OFF,http://example.org/was#PlugZ1,7,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,0
+http://example.org/was#SetPlugZ1|ON,SetPlugZ1=ON,http://example.org/was#PlugZ1,7,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,1
+http://example.org/was#SetPlugZ2|OFF,SetPlugZ2=OFF,http://example.org/was#PlugZ2,8,0,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,2
+http://example.org/was#SetPlugZ2|ON,SetPlugZ2=ON,http://example.org/was#PlugZ2,8,1,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,3
+http://example.org/was#SetSpotlight|OFF,SetSpotlight=OFF,http://example.org/was#Spotlight,6,0,0|1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,4
+http://example.org/was#SetSpotlight|ON,SetSpotlight=ON,http://example.org/was#Spotlight,6,1,0|1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,5
+http://example.org/was#SetZ1Blinds|OFF,SetZ1Blinds=OFF,http://example.org/was#Z1Blinds,4,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,6
+http://example.org/was#SetZ1Blinds|ON,SetZ1Blinds=ON,http://example.org/was#Z1Blinds,4,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,7
+http://example.org/was#SetZ1Light|OFF,SetZ1Light=OFF,http://example.org/was#Z1Light,2,0,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,8
+http://example.org/was#SetZ1Light|ON,SetZ1Light=ON,http://example.org/was#Z1Light,2,1,0,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,9
+http://example.org/was#SetZ2Blinds|OFF,SetZ2Blinds=OFF,http://example.org/was#Z2Blinds,5,0,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,10
+http://example.org/was#SetZ2Blinds|ON,SetZ2Blinds=ON,http://example.org/was#Z2Blinds,5,1,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,11
+http://example.org/was#SetZ2Light|OFF,SetZ2Light=OFF,http://example.org/was#Z2Light,3,0,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,12
+http://example.org/was#SetZ2Light|ON,SetZ2Light=ON,http://example.org/was#Z2Light,3,1,1,false,-1,1,0.0,false,EXPLICIT_RELEVANT,0,,13

@@ -1,0 +1,247 @@
+{
+  "arm": "A2_brick",
+  "every_difference_at_gate_off_or_sun_rank_0": true,
+  "labs": {
+    "lab4": {
+      "columns_different": {
+        "SetZ1Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 512
+          },
+          "cells": 512
+        },
+        "SetZ1Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 256,
+            "gate=0 sun_rank=1": 256,
+            "gate=0 sun_rank=2": 256,
+            "gate=0 sun_rank=3": 256
+          },
+          "cells": 1024
+        },
+        "SetZ2Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 512
+          },
+          "cells": 512
+        }
+      },
+      "columns_identical": [
+        "DO_NOTHING",
+        "SetPlugZ1=OFF",
+        "SetPlugZ1=ON",
+        "SetSpotlight=OFF",
+        "SetSpotlight=ON",
+        "SetZ1Blinds=OFF",
+        "SetZ1Light=OFF",
+        "SetZ2Blinds=OFF",
+        "SetZ2Light=OFF",
+        "SetZ2Light=ON"
+      ],
+      "distinct_table_sha256_reference": 1,
+      "distinct_table_sha256_this_arm": 1,
+      "every_difference_at_gate_off_or_sun_rank_0": true,
+      "n_states": 4096,
+      "seed_compared": 11,
+      "seeds_in_both_arms": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok"
+    },
+    "lab4chain": {
+      "columns_different": {
+        "SetPlugZ1=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512
+          },
+          "cells": 2048
+        },
+        "SetZ1Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024
+          },
+          "cells": 1024
+        },
+        "SetZ1Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512
+          },
+          "cells": 2048
+        },
+        "SetZ2Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024
+          },
+          "cells": 1024
+        }
+      },
+      "columns_identical": [
+        "DO_NOTHING",
+        "SetMasterSwitch=OFF",
+        "SetMasterSwitch=ON",
+        "SetPlugZ1=OFF",
+        "SetSpotlight=OFF",
+        "SetSpotlight=ON",
+        "SetZ1Blinds=OFF",
+        "SetZ1Light=OFF",
+        "SetZ2Blinds=OFF",
+        "SetZ2Light=OFF",
+        "SetZ2Light=ON"
+      ],
+      "distinct_table_sha256_reference": 1,
+      "distinct_table_sha256_this_arm": 1,
+      "every_difference_at_gate_off_or_sun_rank_0": true,
+      "n_states": 8192,
+      "seed_compared": 11,
+      "seeds_in_both_arms": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok"
+    },
+    "lab4dual": {
+      "columns_different": {
+        "SetZ1Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024
+          },
+          "cells": 1024
+        },
+        "SetZ1Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512
+          },
+          "cells": 2048
+        },
+        "SetZ2Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024
+          },
+          "cells": 1024
+        },
+        "SetZ2Light=ON": {
+          "by_condition": {
+            "gate=0 sun_rank=0": 512,
+            "gate=0 sun_rank=1": 512,
+            "gate=0 sun_rank=2": 512,
+            "gate=0 sun_rank=3": 512
+          },
+          "cells": 2048
+        }
+      },
+      "columns_identical": [
+        "DO_NOTHING",
+        "SetPlugZ1=OFF",
+        "SetPlugZ1=ON",
+        "SetPlugZ2=OFF",
+        "SetPlugZ2=ON",
+        "SetSpotlight=OFF",
+        "SetSpotlight=ON",
+        "SetZ1Blinds=OFF",
+        "SetZ1Light=OFF",
+        "SetZ2Blinds=OFF",
+        "SetZ2Light=OFF"
+      ],
+      "distinct_table_sha256_reference": 1,
+      "distinct_table_sha256_this_arm": 1,
+      "every_difference_at_gate_off_or_sun_rank_0": true,
+      "n_states": 8192,
+      "seed_compared": 11,
+      "seeds_in_both_arms": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok"
+    },
+    "lab5": {
+      "columns_different": {
+        "SetZ1Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024
+          },
+          "cells": 1024
+        },
+        "SetZ2Blinds=ON": {
+          "by_condition": {
+            "sun_rank=0": 1024
+          },
+          "cells": 1024
+        }
+      },
+      "columns_identical": [
+        "DO_NOTHING",
+        "SetSpotlight=OFF",
+        "SetSpotlight=ON",
+        "SetZ1Blinds=OFF",
+        "SetZ1Eff=OFF",
+        "SetZ1Eff=ON",
+        "SetZ1Ineff=OFF",
+        "SetZ1Ineff=ON",
+        "SetZ2Blinds=OFF",
+        "SetZ2Eff=OFF",
+        "SetZ2Eff=ON",
+        "SetZ2Ineff=OFF",
+        "SetZ2Ineff=ON"
+      ],
+      "distinct_table_sha256_reference": 1,
+      "distinct_table_sha256_this_arm": 1,
+      "every_difference_at_gate_off_or_sun_rank_0": true,
+      "n_states": 8192,
+      "seed_compared": 11,
+      "seeds_in_both_arms": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok"
+    }
+  },
+  "reference_roots": [
+    "run_29926341581",
+    "run_29926354783"
+  ],
+  "roots": [
+    "run_43494933613"
+  ]
+}

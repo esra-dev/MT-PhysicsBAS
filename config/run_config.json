@@ -374,6 +374,48 @@
         "stereo_energy_prior_weight": 2.0
       }
     },
+    "phase4_v2_redundancy_only": {
+      "note": "CORRECTED PROTOCOL V2 Phase-4 knowledge-ladder control A1 (registered in THESIS_STATE_REPORT.md Addendum 2026-11-13b): registry-only redundancy prior versus paired tabula rasa on the dependency labs. Byte-identical to phase4_v2 except stereo_redundancy_only=true — the ql_true arm keeps only Rule 1 (actuator already in the commanded state) and the redundant-action soft prior; no power gate, IV gate, cross-zone, shared-actuator, or constructive-bonus rule fires. Dispatched on lab4, lab4dual, lab4chain only: on lab5 this layer would still read ws:energyCost through the full enrichment query and receive the non-fading energy prior, so lab5 is out of scope for this arm.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "policy_energy_weights": "ineff:4,eff:1,spotlight:2,plug:0,masterswitch:0,light:1,blind:0",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "none",
+        "adaptive_trust": false,
+        "stereo_energy_prior_weight": 2.0,
+        "stereo_redundancy_only": true
+      }
+    },
+    "phase4_v2_brick_only": {
+      "note": "CORRECTED PROTOCOL V2 Phase-4 knowledge-ladder control A2 (registered in THESIS_STATE_REPORT.md Addendum 2026-11-13b): Brick-structure-only KG prior versus paired tabula rasa. Byte-identical to phase4_v2 except stereo_knowledge_layer=brick — the ql_true arm's StereotypeReasoner reads the WoT contract, brick:isLocatedIn / brick:feeds, and SOSA/QUDT observation typing; no ws:powerGates, ws:energyCost, or Elementary mechanism triple is consulted, so no action is power-gated or IV-gated, energyCost is 0 (the energy prior weight is inert), and cross-zone arcs are untyped. On the dependency labs the structure-only layer also claims that a plug or breaker located in a zone affects that zone's illuminance; that over-approximation is a property of the arm and is stated in the registration.",
+      "protocol_version": "phase1-v2",
+      "metric_schema": "phase1-benchmark-v2",
+      "policy_energy_weights": "ineff:4,eff:1,spotlight:2,plug:0,masterswitch:0,light:1,blind:0",
+      "tick": "0.05",
+      "num_episodes": 3000,
+      "max_steps_per_episode": 20,
+      "action_delay_ms": 65,
+      "exec_delay_ms_ql": 100,
+      "exec_max_steps_ql": 20,
+      "bench_runs": 5,
+      "exec_max_steps_bench": 20,
+      "exec_delay_ms_bench": 100,
+      "learning_overrides": {
+        "reward_shaping": "none",
+        "adaptive_trust": false,
+        "stereo_energy_prior_weight": 2.0,
+        "stereo_knowledge_layer": "brick"
+      }
+    },
     "phase4": {
       "note": "Phase 4 dependency + energy labs (lab4 smart-plug, lab5 energy). Same learning stack and timing as the default phase1 (KG prior ON, PBRS ON, adaptive-trust ON) but ADDS the non-fading energy prior (stereo_energy_prior_weight=2.0). The energy prior only affects lab5 because only lab5's KG declares ws:energyCost (labs 1-4 actuators have energyCost 0, so the term is inert there). lab4's hidden smart-plug power dependency is exploited through the REUSED IV-gate machinery (the gated lamp's ON action is treated as IV-gated on the plug state via ws:powerGates), so it needs no extra knob. phase4.yml passes -OnlyProfiles lab4|lab5 per matrix cell; the ql_true vs ql_false within-lab delta is the headline finding. energyPriorWeight is tunable post-smoke.",
       "tick": "0.05",

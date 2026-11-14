@@ -13,6 +13,14 @@
 > `docs/PHASE4_PROTOCOL_AFFECTED_NOTICE_2026-07-22.md`. This document is
 > retained as the historical record until the corrected rewrite.
 
+> **Attribution update (2026-11-14).** The corrected campaign and a registered
+> knowledge-ladder control campaign are archived
+> (`phase4_v2_ladder/CAMPAIGN_MANIFEST.md`). On the dependency labs an agent that keeps
+> only Brick structure reproduces most of the reduction in redundant actions; the gate
+> annotations add a small supported increment on two labs and none that is detectable on
+> the chain lab. Statements below that credit declared dependencies for the whole
+> advantage are superseded by that manifest.
+
 **Date:** 2026-07-12 (implemented on branch `kg-crosszone-coupling-mid`, post action-space inversion)
 **Builds on:** [PHASE4.md](PHASE4.md) (lab4 smart-plug + lab5 energy, certified pre-inversion) and
 [ACTION_SPACE_INVERSION.md](ACTION_SPACE_INVERSION.md) (WoT-contract enumeration, 2026-07-10).

@@ -1,0 +1,143 @@
+{
+  "all_gated_columns_invariant": true,
+  "arm": "A1_redundancy",
+  "labs": {
+    "lab4": {
+      "all_gated_columns_invariant": true,
+      "distinct_table_sha256": 1,
+      "first_seed": 11,
+      "first_seed_sha256": "1d4177a2ccde597dc585725847d79cde138b05f1c2caa6f097110bf320b61b92",
+      "gated_actions": {
+        "SetZ1Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 0,
+          "state_pairs": 2048,
+          "values_gate_off_action_off": {
+            "0.00": 1024
+          },
+          "values_gate_on_action_off": {
+            "0.00": 1024
+          }
+        }
+      },
+      "n_states": 4096,
+      "seeds": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    },
+    "lab4chain": {
+      "all_gated_columns_invariant": true,
+      "distinct_table_sha256": 1,
+      "first_seed": 11,
+      "first_seed_sha256": "c11108aa418afb6823ad8a24a849afc600a2c5e533059b248b36c4357cd0acd5",
+      "gated_actions": {
+        "SetPlugZ1=ON": {
+          "gate_invariant": true,
+          "gate_slot": 8,
+          "own_slot": 7,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "0.00": 2048
+          },
+          "values_gate_on_action_off": {
+            "0.00": 2048
+          }
+        },
+        "SetZ1Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "0.00": 2048
+          },
+          "values_gate_on_action_off": {
+            "0.00": 2048
+          }
+        }
+      },
+      "n_states": 8192,
+      "seeds": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    },
+    "lab4dual": {
+      "all_gated_columns_invariant": true,
+      "distinct_table_sha256": 1,
+      "first_seed": 11,
+      "first_seed_sha256": "5ad609e1c04dc5a31965fa06b1cb79565dd66c6efdaf6761bc67ab406b832c8a",
+      "gated_actions": {
+        "SetZ1Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "0.00": 2048
+          },
+          "values_gate_on_action_off": {
+            "0.00": 2048
+          }
+        },
+        "SetZ2Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 8,
+          "own_slot": 3,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "0.00": 2048
+          },
+          "values_gate_on_action_off": {
+            "0.00": 2048
+          }
+        }
+      },
+      "n_states": 8192,
+      "seeds": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    }
+  },
+  "roots": [
+    "run_43494975441"
+  ]
+}

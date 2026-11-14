@@ -1,0 +1,8 @@
+control_arm,lab,metric,n_seeds,n_seeds_identical,max_abs_difference,mean_archived_ql_false,mean_control_ql_false
+A2_brick,lab4,avg_redundant,20,20,0.0,1.5825,1.5825
+A2_brick,lab4dual,avg_redundant,20,20,0.0,1.876875,1.876875
+A2_brick,lab4chain,avg_redundant,20,20,0.0,1.66875,1.66875
+A1_redundancy,lab4,avg_redundant,20,20,0.0,1.5825,1.5825
+A1_redundancy,lab4dual,avg_redundant,20,20,0.0,1.876875,1.876875
+A1_redundancy,lab4chain,avg_redundant,20,20,0.0,1.66875,1.66875
+A2_brick,lab5,energy_compliance,20,20,0.0,0.71,0.71

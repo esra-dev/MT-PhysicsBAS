@@ -24,6 +24,15 @@
 >    step were deleted; the LLM figures that previously appeared in §10/§10a were exploratory
 >    (no uncertainty quantification) and are no longer part of the record.
 
+> **Attribution update (2026-11-14).** A registered knowledge-ladder control campaign
+> removed parts of the knowledge arm (`phase4_v2_ladder/CAMPAIGN_MANIFEST.md`). On the
+> dependency labs an agent that keeps only Brick structure, without `ws:powerGates`,
+> reproduces most of the reduction in redundant actions. The gate annotations add a small
+> further reduction that is supported on two labs and not detectable on the chain lab, and
+> the ontology-free redundancy rule alone reproduces a partial share. On the energy lab
+> the compliance gain depends on `ws:energyCost`. Statements in this document that credit
+> the declared dependency for the whole advantage are superseded by that manifest.
+
 **Project:** MT-Esra (Knowledge-Guided RL for Building Automation)
 **Stack:** JaCaMo (Jason AgentSpeak BDI + CArtAgO) · Q-Learning · Knowledge Graph / Stereotypes · Node-RED labs
 **Branch:** `phase4-dependencies-energy`

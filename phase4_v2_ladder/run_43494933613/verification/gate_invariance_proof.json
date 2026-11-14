@@ -1,0 +1,205 @@
+{
+  "all_gated_columns_invariant": true,
+  "arm": "A2_brick",
+  "labs": {
+    "lab4": {
+      "all_gated_columns_invariant": true,
+      "distinct_table_sha256": 1,
+      "first_seed": 11,
+      "first_seed_sha256": "2a3e371011674e359cf980d7af8bf62f614b4e7bbccc31dbdefc4f85f2c56d5b",
+      "gated_actions": {
+        "SetZ1Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 0,
+          "state_pairs": 2048,
+          "values_gate_off_action_off": {
+            "-10.00": 64,
+            "-17.50": 64,
+            "-2.50": 64,
+            "-25.00": 64,
+            "0.00": 192,
+            "15.00": 192,
+            "22.50": 192,
+            "7.50": 192
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 64,
+            "-17.50": 64,
+            "-2.50": 64,
+            "-25.00": 64,
+            "0.00": 192,
+            "15.00": 192,
+            "22.50": 192,
+            "7.50": 192
+          }
+        }
+      },
+      "n_states": 4096,
+      "seeds": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    },
+    "lab4chain": {
+      "all_gated_columns_invariant": true,
+      "distinct_table_sha256": 1,
+      "first_seed": 11,
+      "first_seed_sha256": "a0296d0c100ecc5d2b175163f2a2c617b9bff4621c570368a0d9e2aad56d6fb0",
+      "gated_actions": {
+        "SetPlugZ1=ON": {
+          "gate_invariant": true,
+          "gate_slot": 8,
+          "own_slot": 7,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "0.00": 512,
+            "15.00": 512,
+            "22.50": 512,
+            "7.50": 512
+          },
+          "values_gate_on_action_off": {
+            "0.00": 512,
+            "15.00": 512,
+            "22.50": 512,
+            "7.50": 512
+          }
+        },
+        "SetZ1Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          }
+        }
+      },
+      "n_states": 8192,
+      "seeds": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    },
+    "lab4dual": {
+      "all_gated_columns_invariant": true,
+      "distinct_table_sha256": 1,
+      "first_seed": 11,
+      "first_seed_sha256": "694c1d4570714f8118492e7e927e9181a278e6f8609fd62685589a016f43ca5d",
+      "gated_actions": {
+        "SetZ1Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 7,
+          "own_slot": 2,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          }
+        },
+        "SetZ2Light=ON": {
+          "gate_invariant": true,
+          "gate_slot": 8,
+          "own_slot": 3,
+          "pairs_that_differ": 0,
+          "state_pairs": 4096,
+          "values_gate_off_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          },
+          "values_gate_on_action_off": {
+            "-10.00": 128,
+            "-17.50": 128,
+            "-2.50": 128,
+            "-25.00": 128,
+            "0.00": 384,
+            "15.00": 384,
+            "22.50": 384,
+            "7.50": 384
+          }
+        }
+      },
+      "n_states": 8192,
+      "seeds": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "status": "ok",
+      "verdict_consistent_across_seeds": true
+    }
+  },
+  "roots": [
+    "run_43494933613"
+  ]
+}

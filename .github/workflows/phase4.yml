@@ -58,7 +58,7 @@ on:
         required: false
         default: "1,2,3,4,5,6,7,8,9,10"
       run_mode:
-        description: "run_config.json profile: phase4_v2 (corrected protocol: fixed 3000-episode horizon, strict scenario IDs, v2 bench schema, deterministic policy-energy weights — required for corrected campaigns) | phase4 (legacy) | dev (50x20, quick gate)"
+        description: "run_config.json profile: phase4_v2 (corrected protocol: fixed 3000-episode horizon, strict scenario IDs, v2 bench schema, deterministic policy-energy weights — required for corrected campaigns) | phase4_v2_redundancy_only / phase4_v2_brick_only (knowledge-ladder control arms, THESIS_STATE_REPORT Addendum 2026-11-13b; phase4_v2 plus one layer switch) | phase4 (legacy) | dev (50x20, quick gate)"
         required: false
         default: "phase4_v2"
       publish_results:

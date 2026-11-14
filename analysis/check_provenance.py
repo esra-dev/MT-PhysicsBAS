@@ -233,6 +233,7 @@ def check(root: Path = ROOT) -> list[str]:
     errors.extend(check_phase34(root))
     errors.extend(check_phase2(root))
     errors.extend(check_phase1b(root))
+    errors.extend(check_phase4_ladder(root))
     return errors
 
 
@@ -485,6 +486,86 @@ def check_phase1b(root: Path) -> list[str]:
                 errors.append(f"phase1b {member}: q reported as zero")
         elif row["bh_family_m"] != "exploratory":
             errors.append(f"phase1b {member}: exploratory marker lost")
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Phase-4 knowledge ladder (registration: THESIS_STATE_REPORT.md Addendum
+# 2026-11-13b; additive block per convention - no existing pin is touched)
+# ---------------------------------------------------------------------------
+
+PHASE4_LADDER_HEAD = "ee656178dc3528d56b69a7123c1a37ed43919936"
+PHASE4_LADDER_REF = "refs/heads/phase4-knowledge-ladder-2026-11"
+PHASE4_LADDER_RUNS = {
+    "43494914019": ("phase4_v2_brick_only", ["lab4", "lab4dual", "lab4chain", "lab5"],
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+    "43494933613": ("phase4_v2_brick_only", ["lab4", "lab4dual", "lab4chain", "lab5"],
+                    [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]),
+    "43494955158": ("phase4_v2_redundancy_only", ["lab4", "lab4dual", "lab4chain"],
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+    "43494975441": ("phase4_v2_redundancy_only", ["lab4", "lab4dual", "lab4chain"],
+                    [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]),
+}
+# registered_test -> (mean_increment, registered_category, bh_family_m)
+PHASE4_LADDER_EXPECTED = {
+    "A3_minus_A1_lab4_avg_redundant": (-0.305, "adds", "3"),
+    "A3_minus_A1_lab4dual_avg_redundant": (-0.4525, "adds", "3"),
+    "A3_minus_A1_lab4chain_avg_redundant": (-0.29562499999999997, "adds", "3"),
+    "A3_minus_A2_lab4_avg_redundant": (-0.040625, "adds", "3"),
+    "A3_minus_A2_lab4dual_avg_redundant": (-0.05375, "adds", "3"),
+    "A3_minus_A2_lab4chain_avg_redundant": (-0.015625, "null", "3"),
+    "A3_minus_A2_lab5_energy_compliance": (0.075, "adds", "1"),
+}
+
+
+def check_phase4_ladder(root: Path) -> list[str]:
+    errors: list[str] = []
+    campaign = root / "phase4_v2_ladder"
+    for run_id, (mode, profiles, seeds) in PHASE4_LADDER_RUNS.items():
+        provenance = campaign / f"run_{run_id}" / "analysis/out/workflow_inputs.json"
+        if not provenance.is_file():
+            errors.append(f"phase4 ladder: missing provenance {provenance}")
+            continue
+        payload = _json(provenance)
+        if str(payload.get("run_id")) != run_id:
+            errors.append(f"phase4 ladder run {run_id}: run_id mismatch {payload.get('run_id')}")
+        if payload.get("run_mode") != mode:
+            errors.append(f"phase4 ladder run {run_id}: mode {payload.get('run_mode')} != {mode}")
+        if payload.get("profiles") != profiles:
+            errors.append(f"phase4 ladder run {run_id}: profile list mismatch")
+        if payload.get("seeds") != seeds:
+            errors.append(f"phase4 ladder run {run_id}: seed block mismatch")
+        if payload.get("head_sha") != PHASE4_LADDER_HEAD:
+            errors.append(f"phase4 ladder run {run_id}: head {payload.get('head_sha')}"
+                          f" != {PHASE4_LADDER_HEAD}")
+        if payload.get("ref") != PHASE4_LADDER_REF:
+            errors.append(f"phase4 ladder run {run_id}: ref {payload.get('ref')}"
+                          f" != {PHASE4_LADDER_REF}")
+    family = campaign / "analysis/registered/phase4_v2_knowledge_ladder_family.csv"
+    if not family.is_file():
+        errors.append(f"phase4 ladder: missing registered family {family}")
+        return errors
+    with family.open(encoding="utf-8", newline="") as handle:
+        rows = {row["registered_test"]: row for row in csv.DictReader(handle)}
+    if set(rows) != set(PHASE4_LADDER_EXPECTED):
+        errors.append(f"phase4 ladder: family member set changed: {sorted(rows)}")
+        return errors
+    for member, (expected, category, family_m) in PHASE4_LADDER_EXPECTED.items():
+        row = rows[member]
+        if row["n_paired"] != "20":
+            errors.append(f"phase4 ladder {member}: n_paired {row['n_paired']} != 20")
+        if abs(float(row["mean_increment"]) - expected) > 1e-15:
+            errors.append(f"phase4 ladder {member}: frozen mean changed "
+                          f"({row['mean_increment']} != {expected})")
+        if row["registered_category"] != category:
+            errors.append(f"phase4 ladder {member}: category {row['registered_category']}"
+                          f" != {category}")
+        if row["bh_family_m"] != family_m:
+            errors.append(f"phase4 ladder {member}: BH family m {row['bh_family_m']} != {family_m}")
+        for field in ("p_signflip_two_sided", "q_signflip_bh"):
+            value = float(row[field])
+            if not (math.isfinite(value) and 0.0 < value <= 1.0):
+                errors.append(f"phase4 ladder {member}: {field} must be finite and in (0, 1]")
     return errors
 
 
